@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  TRUSTED
+  REVIEWER
+  ADMIN
+}
+
+enum SubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum SourceType {
+  PDF
+  MARKDOWN
+}
+
+enum SongType {
+  ACORDES
+  PARTITURA
+}
+
+enum Instrument {
+  ORGAO
+  GUITARRA
+  PIANO
+  CORO
+  OUTRO
+}
+
+enum LiturgicalMoment {
+  ENTRADA
+  ATO_PENITENCIAL
+  GLORIA
+  SALMO
+  ACLAMACAO
+  OFERTORIO
+  SANTO
+  COMUNHAO
+  ACAO_DE_GRACAS
+  FINAL
+}
+
+model User {
+  id            Int              @id @default(autoincrement())
+  name          String?
+  email         String           @unique
+  passwordHash  String
+  role          Role             @default(USER)
+  image         String?
+  bio           String?
+  submissions   SongSubmission[] @relation("SubmissionSubmitter")
+  reviewed      SongSubmission[] @relation("SubmissionReviewer")
+  songVersions  SongVersion[]    @relation("VersionAuthor")
+  favorites     Favorite[]
+  auditLogs     AuditLog[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+}
+
+model Song {
+  id               String        @id @default(cuid())
+  title            String
+  moments          LiturgicalMoment[]
+  type             SongType
+  mainInstrument   Instrument
+  tags             String[]
+  currentVersionId String?       @unique
+  currentVersion   SongVersion?  @relation("CurrentVersion", fields: [currentVersionId], references: [id])
+  versions         SongVersion[]
+  favorites        Favorite[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+}
+
+model SongVersion {
+  id            String    @id @default(cuid())
+  songId        String
+  versionNumber Int
+  sourceType    SourceType
+  sourcePdfKey  String?
+  sourceText    String?
+  renderedHtml  String?
+  keyOriginal   String?
+  lyricsPlain   String
+  chordsJson    Json?
+  abcBlocks     Json?
+  mediaUrl      String?
+  spotifyLink   String?   
+  youtubeLink   String?   
+  approvedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  song         Song  @relation(fields: [songId], references: [id])
+  createdById  Int
+  createdBy    User  @relation("VersionAuthor", fields: [createdById], references: [id])
+  currentOf    Song? @relation("CurrentVersion")
+}
+
+model SongSubmission {
+  id               String            @id @default(cuid())
+  title            String
+  moment           LiturgicalMoment[]
+  type             SongType
+  mainInstrument   Instrument
+  tags             String[]
+  submitterId      Int
+  submitter        User              @relation("SubmissionSubmitter", fields: [submitterId], references: [id])
+  status           SubmissionStatus  @default(PENDING)
+  rejectionReason  String?
+  tempSourceType   SourceType
+  tempPdfKey       String?
+  tempText         String?
+  parsedPreview    Json?
+  mediaUrl         String?
+  spotifyLink      String?           
+  youtubeLink      String?           
+  createdAt        DateTime          @default(now())
+  reviewedAt       DateTime?
+  reviewerId       Int?
+  reviewer         User?             @relation("SubmissionReviewer", fields: [reviewerId], references: [id])
+}
+
+model Favorite {
+  userId    Int
+  songId    String
+  createdAt DateTime @default(now())
+
+  user   User @relation(fields: [userId], references: [id])
+  song   Song @relation(fields: [songId], references: [id])
+
+  @@id([userId, songId])
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  entity    String?
+  entityId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+}
