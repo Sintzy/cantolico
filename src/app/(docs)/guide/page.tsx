@@ -1,7 +1,7 @@
 import Link from "next/link";
 import MarkdownIt from "markdown-it";
 import chords from "markdown-it-chords";
-import "../../../public/styles/chords.css"; // importa o CSS correto
+import "../../../../public/styles/chords.css"; // importa o CSS correto
 
 const example = `[Cm7]Tive um sonho e quando acordei
 [F]Viajei no tempo e desejei
