@@ -1,4 +1,10 @@
 import { LoginForm } from "@/components/forms/LoginForm";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Entrar",
+  description: "Entra na tua conta para submeter e gerir os teus cânticos católicos.",
+};
 
 export default function LoginPage() {
   return (

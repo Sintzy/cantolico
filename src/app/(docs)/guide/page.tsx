@@ -1,7 +1,13 @@
 import Link from "next/link";
 import MarkdownIt from "markdown-it";
 import chords from "markdown-it-chords";
+import { Metadata } from "next";
 import "../../../../public/styles/chords.css"; // importa o CSS correto
+
+export const metadata: Metadata = {
+  title: "Guia de Utilização",
+  description: "Aprende a usar o sistema de acordes em markdown para submeter cânticos católicos no Can♱ólico!",
+};
 
 const example = `[Cm7]Tive um sonho e quando acordei
 [F]Viajei no tempo e desejei

@@ -1,4 +1,10 @@
 import { RegisterForm } from "@/components/forms/RegisterForm";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Criar Conta",
+  description: "Cria uma conta para submeter os teus cânticos católicos e contribuir para a comunidade.",
+};
 
 export default function RegisterPage() {
   return (

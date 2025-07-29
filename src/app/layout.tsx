@@ -11,9 +11,17 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: {
     default: "Can♱ólico!",
-    template: "Can♱ólico! | %s"
+    template: "%s | Can♱ólico!"
   },
-  description: "Submete, edita e encontra cânticos católicos!",
+  description: "Encontra, submete e partilha cânticos católicos. Um projeto aberto para servir a liturgia com música de qualidade.",
+  keywords: ["cânticos", "católicos", "liturgia", "música", "igreja", "cancioneiro", "acordes", "partituras"],
+  authors: [{ name: "Can♱ólico!" }],
+  openGraph: {
+    title: "Can♱ólico!",
+    description: "Encontra, submete e partilha cânticos católicos. Um projeto aberto para servir a liturgia com música de qualidade.",
+    type: "website",
+    locale: "pt_PT",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
