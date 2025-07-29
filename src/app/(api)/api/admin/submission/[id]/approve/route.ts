@@ -4,6 +4,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { createClient } from "@supabase/supabase-js";
 import { LiturgicalMoment, SourceType, Instrument } from "@prisma/client";
+import { sendEmail, createApprovalEmailTemplate } from "@/lib/email";
+import { logAdmin, logEmails, logErrors } from "@/lib/logs";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -12,16 +14,24 @@ const supabase = createClient(
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
-  const submissionId = params.id;
+  const resolvedParams = await params;
+  const submissionId = resolvedParams.id;
 
   if (!submissionId) {
+    await logAdmin('WARN', 'Tentativa de aprovação sem ID', 'ID da submissão não fornecido', {
+      action: 'approve_missing_id'
+    });
     return NextResponse.json({ error: "ID da submissão não fornecido" }, { status: 400 });
   }
 
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
+    await logAdmin('WARN', 'Tentativa de aprovação sem autenticação', 'Utilizador não autenticado', {
+      submissionId,
+      action: 'approve_unauthorized'
+    });
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   }
 
@@ -30,6 +40,12 @@ export async function POST(
   });
 
   if (!reviewer || !["ADMIN", "REVIEWER"].includes(reviewer.role)) {
+    await logAdmin('WARN', 'Tentativa de aprovação sem permissões', 'Utilizador sem role adequado', {
+      userId: reviewer?.id,
+      userRole: reviewer?.role,
+      submissionId,
+      action: 'approve_forbidden'
+    });
     return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
   }
 
@@ -38,8 +54,21 @@ export async function POST(
   });
 
   if (!submission) {
+    await logAdmin('WARN', 'Tentativa de aprovação de submissão inexistente', 'Submissão não encontrada', {
+      userId: reviewer.id,
+      submissionId,
+      action: 'approve_not_found'
+    });
     return NextResponse.json({ error: "Submissão não encontrada" }, { status: 404 });
   }
+
+  await logAdmin('INFO', 'Processo de aprovação iniciado', 'Revisor iniciou aprovação de submissão', {
+    userId: reviewer.id,
+    userRole: reviewer.role,
+    submissionId,
+    submissionTitle: submission.title,
+    action: 'approve_started'
+  });
 
   try {
     const formData = await req.formData();
@@ -159,8 +188,164 @@ export async function POST(
       },
     });
 
-    return NextResponse.json({ success: true });
+    await logAdmin('SUCCESS', 'Submissão aprovada com sucesso', 'Música aprovada e criada no sistema', {
+      userId: reviewer.id,
+      userRole: reviewer.role,
+      submissionId: submission.id,
+      submissionTitle: submission.title,
+      songId: song.id,
+      action: 'submission_approved'
+    });
+
+    // Registrar log de auditoria
+    await prisma.auditLog.create({
+      data: {
+        userId: reviewer.id,
+        action: "SUBMISSION_APPROVED",
+        entity: "SongSubmission",
+        entityId: submission.id,
+        metadata: {
+          submissionTitle: submission.title,
+          songId: song.id,
+          submitterId: submission.submitterId,
+          reviewedAt: new Date().toISOString()
+        }
+      }
+    });
+
+    // Buscar dados atualizados para email
+    const updatedSubmission = await prisma.songSubmission.findUnique({
+      where: { id: submission.id },
+      include: {
+        submitter: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        reviewer: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      }
+    });
+
+    // Enviar email de notificação (não bloquear o processo se falhar)
+    if (updatedSubmission) {
+      try {
+        const emailTemplate = createApprovalEmailTemplate(
+          updatedSubmission.submitter.name || "Utilizador",
+          updatedSubmission.title,
+          song.id,
+          updatedSubmission.reviewer?.name || undefined
+        );
+
+        const emailResult = await sendEmail({
+          to: updatedSubmission.submitter.email,
+          subject: `Submissão aprovada: ${updatedSubmission.title}`,
+          html: emailTemplate
+        });
+
+        if (emailResult.success) {
+          console.log(`Email de aprovação enviado para ${updatedSubmission.submitter.email}`);
+          
+          await logEmails('SUCCESS', 'Email de aprovação enviado', 'Notificação de aprovação enviada ao submissor', {
+            userId: reviewer.id,
+            submissionId: submission.id,
+            submissionTitle: submission.title,
+            emailType: 'APPROVAL_NOTIFICATION',
+            recipientEmail: updatedSubmission.submitter.email,
+            action: 'email_sent'
+          });
+          
+          // Registrar log de email enviado
+          await prisma.auditLog.create({
+            data: {
+              userId: reviewer.id,
+              action: "EMAIL_SENT",
+              entity: "SongSubmission",
+              entityId: submission.id,
+              metadata: {
+                emailType: "APPROVAL_NOTIFICATION",
+                recipientEmail: updatedSubmission.submitter.email,
+                submissionTitle: submission.title,
+                songId: song.id,
+                sentAt: new Date().toISOString()
+              }
+            }
+          });
+        } else {
+          console.error(`Falha ao enviar email: ${emailResult.error}`);
+          
+          await logEmails('ERROR', 'Falha no envio de email de aprovação', 'Erro ao enviar notificação de aprovação', {
+            userId: reviewer.id,
+            submissionId: submission.id,
+            submissionTitle: submission.title,
+            emailType: 'APPROVAL_NOTIFICATION',
+            recipientEmail: updatedSubmission.submitter.email,
+            error: emailResult.error,
+            action: 'email_failed'
+          });
+          
+          // Registrar log de falha no email
+          await prisma.auditLog.create({
+            data: {
+              userId: reviewer.id,
+              action: "EMAIL_FAILED",
+              entity: "SongSubmission",
+              entityId: submission.id,
+              metadata: {
+                emailType: "APPROVAL_NOTIFICATION",
+                recipientEmail: updatedSubmission.submitter.email,
+                error: emailResult.error,
+                failedAt: new Date().toISOString()
+              }
+            }
+          });
+        }
+      } catch (emailError) {
+        console.error("Erro inesperado ao enviar email de notificação:", emailError);
+        
+        await logEmails('ERROR', 'Erro inesperado no envio de email', 'Erro interno durante envio de notificação', {
+          userId: reviewer.id,
+          submissionId: submission.id,
+          emailType: 'APPROVAL_NOTIFICATION',
+          error: emailError instanceof Error ? emailError.message : 'Erro desconhecido',
+          action: 'email_error'
+        });
+        
+        // Registrar log de erro no email
+        try {
+          await prisma.auditLog.create({
+            data: {
+              userId: reviewer.id,
+              action: "EMAIL_ERROR",
+              entity: "SongSubmission",
+              entityId: submission.id,
+              metadata: {
+                emailType: "APPROVAL_NOTIFICATION",
+                error: emailError instanceof Error ? emailError.message : "Erro desconhecido",
+                errorAt: new Date().toISOString()
+              }
+            }
+          });
+        } catch (auditEmailError) {
+          console.error("Erro ao registrar log de erro de email:", auditEmailError);
+        }
+      }
+    }
+
+    return NextResponse.json({ success: true, songId: song.id });
   } catch (error) {
+    await logErrors('ERROR', 'Erro no processo de aprovação', 'Erro interno durante aprovação da submissão', {
+      submissionId,
+      error: error instanceof Error ? error.message : 'Erro desconhecido',
+      action: 'approval_process_error'
+    });
     console.error("Erro ao processar submissão:", error);
     return NextResponse.json({ error: "Erro interno ao processar submissão" }, { status: 500 });
   }

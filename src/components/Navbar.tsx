@@ -52,6 +52,23 @@ export default function Navbar() {
                 <div className="hidden md:flex items-center gap-8">
                     <Link href="/musics" className="text-gray-700 hover:text-blue-600">Músicas</Link>
                     <Link href="/musics/create" className="text-gray-700 hover:text-blue-600">Nova Música</Link>
+                    
+                    {/* Admin/Reviewer Links */}
+                    {session?.user?.role === "ADMIN" && (
+                        <>
+                            <Link href="/admin/dashboard" className="text-gray-700 hover:text-purple-600 font-medium">
+                                Administração
+                            </Link>
+                            <Link href="/admin/review" className="text-gray-700 hover:text-orange-600 font-medium">
+                                Revisão
+                            </Link>
+                        </>
+                    )}
+                    {session?.user?.role === "REVIEWER" && (
+                        <Link href="/admin/review" className="text-gray-700 hover:text-orange-600 font-medium">
+                            Revisão
+                        </Link>
+                    )}
 
                     {/* Searchbar */}
                     <div className="relative">
@@ -107,6 +124,34 @@ export default function Navbar() {
                                     >
                                         Ver Perfil
                                     </Link>
+                                    
+                                    {/* Admin/Reviewer options in dropdown */}
+                                    {session.user.role === "ADMIN" && (
+                                        <>
+                                            <Link
+                                                href="/admin/dashboard"
+                                                className="block px-4 py-2 text-sm text-purple-600 hover:bg-purple-50 font-medium"
+                                            >
+                                                Dashboard Admin
+                                            </Link>
+                                            <Link
+                                                href="/admin/review"
+                                                className="block px-4 py-2 text-sm text-orange-600 hover:bg-orange-50 font-medium"
+                                            >
+                                                Painel Revisão
+                                            </Link>
+                                        </>
+                                    )}
+                                    {session.user.role === "REVIEWER" && (
+                                        <Link
+                                            href="/admin/review"
+                                            className="block px-4 py-2 text-sm text-orange-600 hover:bg-orange-50 font-medium"
+                                        >
+                                            Painel Revisão
+                                        </Link>
+                                    )}
+                                    
+                                    <hr className="my-1" />
                                     <button
                                         onClick={() => signOut()}
                                         className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -147,6 +192,24 @@ export default function Navbar() {
                 <div className="md:hidden border-t border-gray-200 px-4 py-3 space-y-3">
                     <Link href="/musics" className="block text-gray-700">Músicas</Link>
                     <Link href="/musics/create" className="block text-gray-700">Nova Música</Link>
+                    
+                    {/* Admin/Reviewer Links Mobile */}
+                    {session?.user?.role === "ADMIN" && (
+                        <>
+                            <Link href="/admin/dashboard" className="block text-purple-600 font-medium">
+                                Administração
+                            </Link>
+                            <Link href="/admin/review" className="block text-orange-600 font-medium">
+                                Revisão
+                            </Link>
+                        </>
+                    )}
+                    {session?.user?.role === "REVIEWER" && (
+                        <Link href="/admin/review" className="block text-orange-600 font-medium">
+                            Revisão
+                        </Link>
+                    )}
+                    
                     <input
                         type="text"
                         placeholder="Pesquisar..."

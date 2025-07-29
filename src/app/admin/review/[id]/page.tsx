@@ -87,13 +87,13 @@ export default function ReviewSubmissionPage() {
   };
 
   const handleReject = async () => {
-    const reason = prompt("Motivo da rejeição:");
-    if (!reason) return;
+    const rejectionReason = prompt("Motivo da rejeição:");
+    if (!rejectionReason) return;
 
     await fetch(`/api/admin/submission/${submissionId}/reject`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reason }),
+      body: JSON.stringify({ rejectionReason }),
     });
 
     router.push("/admin/review");

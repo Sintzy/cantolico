@@ -178,7 +178,7 @@ export default function CreateNewMusicPage() {
             </select>
           </div>
           <div>
-            <Label>Instrumento</Label>
+            <Label>Instrumento principal</Label>
             <select
               className="w-full border rounded px-3 py-2"
               value={form.instrument}

@@ -52,20 +52,22 @@ enum LiturgicalMoment {
 }
 
 model User {
-  id            Int              @id @default(autoincrement())
-  name          String?
-  email         String           @unique
-  passwordHash  String
-  role          Role             @default(USER)
-  image         String?
-  bio           String?
-  submissions   SongSubmission[] @relation("SubmissionSubmitter")
-  reviewed      SongSubmission[] @relation("SubmissionReviewer")
-  songVersions  SongVersion[]    @relation("VersionAuthor")
-  favorites     Favorite[]
-  auditLogs     AuditLog[]
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  id           Int      @id @default(autoincrement())
+  name         String?
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(USER)
+  image        String?
+  bio          String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  songVersions SongVersion[] @relation("VersionAuthor")
+  favorites    Favorite[]
+  submissions  SongSubmission[] @relation("SubmissionSubmitter")
+  reviews      SongSubmission[] @relation("SubmissionReviewer")
+  auditLogs    AuditLog[]
 }
 
 model Song {

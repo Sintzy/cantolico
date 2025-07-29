@@ -1,5 +1,5 @@
 
-xport enum LiturgicalMoment {
+export enum LiturgicalMoment {
     ENTRADA = "ENTRADA",
     ATO_PENITENCIAL = "ATO_PENITENCIAL",
     GLORIA = "GLORIA",

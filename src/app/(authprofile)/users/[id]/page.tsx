@@ -5,12 +5,13 @@ import { notFound } from "next/navigation";
 import ProfileView from "./ProfileView";
 
 export type ProfilePageProps = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
 export default async function ProfilePage({ params }: ProfilePageProps) {
   const session = await getServerSession(authOptions);
-  const userId = Number(params.id);
+  const { id } = await params;
+  const userId = Number(id);
   if (isNaN(userId)) return notFound();
 
   const user = await prisma.user.findUnique({

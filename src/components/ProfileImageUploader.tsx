@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import imageCompression from "browser-image-compression";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { supabase } from "@/lib/supabase";
 import Image from "next/image";
 
 type Props = {
@@ -14,7 +14,6 @@ type Props = {
 export default function ProfileImageUploader({ userId, currentImage, onUpload }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
-  const supabase = createClientComponentClient();
 
   const handleImageClick = () => {
     inputRef.current?.click();
