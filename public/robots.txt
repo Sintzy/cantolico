@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://cantolico.pt/sitemap.xml
+
+# Disallow admin pages from search engines
+Disallow: /admin/
+Disallow: /api/
+
+# Allow important pages
+Allow: /musics/
+Allow: /guide/
+Allow: /terms/
+Allow: /login/
+Allow: /register/
