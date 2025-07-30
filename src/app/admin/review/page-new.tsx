@@ -288,11 +288,7 @@ export default function AdminReviewPage() {
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-2">
                   <User className="w-4 h-4 text-muted-foreground" />
-                  <UserHoverCard user={{
-                    ...submission.submitter,
-                    name: submission.submitter.name || "Utilizador",
-                    image: submission.submitter.image || ""
-                  }} />
+                  <UserHoverCard user={submission.submitter} />
                   {getRoleBadge(submission.submitter.role)}
                 </div>
 
