@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { logGeneral, logErrors } from "@/lib/logs";
+import { findSongBySlug } from "@/lib/slugs";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
@@ -12,7 +13,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       action: 'fetch_single_music'
     });
 
-    const song = await prisma.song.findUnique({
+    // Tentar encontrar por ID primeiro, depois por slug
+    let song = await prisma.song.findUnique({
       where: { id },
       include: {
         currentVersion: {
@@ -24,6 +26,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         }
       }
     });
+
+    // Se não encontrou por ID, tentar por slug
+    if (!song) {
+      song = await findSongBySlug(id);
+    }
 
     if (!song) {
       await logGeneral('WARN', 'Música não encontrada', 'Tentativa de acesso a música inexistente', {

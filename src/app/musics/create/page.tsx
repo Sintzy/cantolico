@@ -7,6 +7,7 @@ import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { TurnstileCaptcha } from "@/components/TurnstileCaptcha";
 
 import MarkdownIt from "markdown-it";
 import chords from "markdown-it-chords";
@@ -45,6 +46,8 @@ export default function CreateNewMusicPage() {
   });
 
   const [preview, setPreview] = useState("");
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     setPreview(mdParser.render(form.markdown || ""));
@@ -80,30 +83,46 @@ export default function CreateNewMusicPage() {
   };
 
   const handleSubmit = async () => {
-    const formData = new FormData();
-    formData.append("id", form.id);
-    formData.append("title", form.title);
-    formData.append("instrument", form.instrument);
-    formData.append("type", form.type);
-    formData.append("markdown", form.markdown);
-    formData.append("tags", form.tags.join(","));
-    formData.append("moments", JSON.stringify(form.moments));
-    if (form.pdfFile) formData.append("pdf", form.pdfFile);
-    if (form.mp3File) formData.append("audio", form.mp3File);
-    formData.append("youtubeLink", form.youtubeLink);
-    formData.append("spotifyLink", form.spotifyLink);
+    if (!captchaToken) {
+      toast.error("Por favor, complete o captcha antes de submeter.");
+      return;
+    }
 
-    const res = await fetch("/api/musics/create", {
-      method: "POST",
-      body: formData,
-    });
+    setIsSubmitting(true);
 
-    const data = await res.json();
-    if (data.success) {
-      router.push(`/musics`);
-      toast.success("A tua musica foi enviada para revisão com sucesso!");
-    } else {
-      toast.error(data.error || "Erro ao submeter a música");
+    try {
+      const formData = new FormData();
+      formData.append("id", form.id);
+      formData.append("title", form.title);
+      formData.append("instrument", form.instrument);
+      formData.append("type", form.type);
+      formData.append("markdown", form.markdown);
+      formData.append("tags", form.tags.join(","));
+      formData.append("moments", JSON.stringify(form.moments));
+      formData.append("captchaToken", captchaToken);
+      if (form.pdfFile) formData.append("pdf", form.pdfFile);
+      if (form.mp3File) formData.append("audio", form.mp3File);
+      formData.append("youtubeLink", form.youtubeLink);
+      formData.append("spotifyLink", form.spotifyLink);
+
+      const res = await fetch("/api/musics/create", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        router.push(`/musics`);
+        toast.success("A tua musica foi enviada para revisão com sucesso!");
+      } else {
+        toast.error(data.error || "Erro ao submeter a música");
+        setCaptchaToken(null); // Reset captcha on error
+      }
+    } catch (error) {
+      toast.error("Erro ao submeter a música");
+      setCaptchaToken(null); // Reset captcha on error
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -235,9 +254,21 @@ export default function CreateNewMusicPage() {
           </div> */}
         </div>
 
+        {/* Cloudflare Turnstile Captcha */}
+        <TurnstileCaptcha
+          onSuccess={(token: string) => setCaptchaToken(token)}
+          onError={() => setCaptchaToken(null)}
+          onExpire={() => setCaptchaToken(null)}
+        />
+
         <div className="pt-6">
-          <Button onClick={handleSubmit} className="w-full md:w-auto">
-            <Upload className="w-4 h-4 mr-2" /> Submeter Música
+          <Button 
+            onClick={handleSubmit} 
+            className="w-full md:w-auto" 
+            disabled={!captchaToken || isSubmitting}
+          >
+            <Upload className="w-4 h-4 mr-2" /> 
+            {isSubmitting ? "A submeter..." : "Submeter Música"}
           </Button>
         </div>
       </div>

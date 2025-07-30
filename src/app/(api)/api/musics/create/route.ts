@@ -33,6 +33,27 @@ async function uploadToSupabase(
   return path;
 }
 
+async function validateTurnstileToken(token: string): Promise<boolean> {
+  try {
+    const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        secret: process.env.TURNSTILE_SECRET_KEY,
+        response: token,
+      }),
+    });
+
+    const data = await response.json();
+    return data.success === true;
+  } catch (error) {
+    console.error('Erro ao validar Turnstile token:', error);
+    return false;
+  }
+}
+
 export async function POST(req: Request) {
   try {
     
@@ -67,6 +88,25 @@ export async function POST(req: Request) {
 
     const formData = await req.formData();
     console.log("FormData recebido:", formData);
+
+    // Validar Turnstile captcha
+    const captchaToken = formData.get("captchaToken")?.toString();
+    if (!captchaToken) {
+      await logSubmissions('WARN', 'Submissão sem captcha', 'Token do captcha não fornecido', {
+        userId: user.id,
+        action: 'submission_missing_captcha'
+      });
+      return NextResponse.json({ error: "Token do captcha é obrigatório" }, { status: 400 });
+    }
+
+    const isValidCaptcha = await validateTurnstileToken(captchaToken);
+    if (!isValidCaptcha) {
+      await logSubmissions('WARN', 'Captcha inválido', 'Token do captcha não é válido', {
+        userId: user.id,
+        action: 'submission_invalid_captcha'
+      });
+      return NextResponse.json({ error: "Captcha inválido. Tente novamente." }, { status: 400 });
+    }
 
     const title = formData.get("title")?.toString() ?? "";
     const type = formData.get("type")?.toString() as SongType;
