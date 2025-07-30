@@ -10,14 +10,14 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: {
-    default: "Can♱ólico!",
-    template: "%s | Can♱ólico!"
+    default: "Cantólico!",
+    template: "%s | Cantólico!"
   },
   description: "Encontra, submete e partilha cânticos católicos. Um projeto aberto para servir a liturgia com música de qualidade.",
   keywords: ["cânticos", "católicos", "liturgia", "música", "igreja", "cancioneiro", "acordes", "partituras", "missa", "oração"],
   authors: [{ name: "Can♱ólico!" }],
-  creator: "Can♱ólico!",
-  publisher: "Can♱ólico!",
+  creator: "Cantólico!",
+  publisher: "Cantólico!",
   robots: {
     index: true,
     follow: true,
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     google: 'google-site-verification-code-here', // Substituir pelo código real
   },
   openGraph: {
-    title: "Can♱ólico!",
+    title: "Cantólico!",
     description: "Encontra, submete e partilha cânticos católicos. Um projeto aberto para servir a liturgia com música de qualidade.",
     type: "website",
     locale: "pt_PT",
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Can♱ólico!",
+    title: "Cantólico!",
     description: "Encontra, submete e partilha cânticos católicos. Um projeto aberto para servir a liturgia com música de qualidade.",
     creator: "@cantolico",
   },
