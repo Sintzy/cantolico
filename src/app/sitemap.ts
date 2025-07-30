@@ -54,6 +54,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const songs = await prisma.song.findMany({
     select: {
       id: true,
+      slug: true,
       title: true,
       updatedAt: true,
     },
@@ -62,9 +63,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   })
 
-  // Dynamic music pages
+  // Dynamic music pages - use slug if available, fallback to ID
   const musicPages = songs.map((song) => ({
-    url: `${baseUrl}/musics/${song.id}`,
+    url: `${baseUrl}/musics/${song.slug || song.id}`,
     lastModified: song.updatedAt,
     changeFrequency: 'weekly' as const,
     priority: 0.8,

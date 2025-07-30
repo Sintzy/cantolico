@@ -6,6 +6,7 @@ import { createClient } from "@supabase/supabase-js";
 import { LiturgicalMoment, SourceType, Instrument } from "@prisma/client";
 import { sendEmail, createApprovalEmailTemplate } from "@/lib/email";
 import { logAdmin, logEmails, logErrors } from "@/lib/logs";
+import { titleToSlug, generateUniqueSlug } from "@/lib/slugs";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -143,9 +144,14 @@ export async function POST(
       return NextResponse.json({ error: "Instrumento inválido" }, { status: 400 });
     }
 
+    // Gerar slug único para a música
+    const baseSlug = titleToSlug(submission.title);
+    const uniqueSlug = await generateUniqueSlug(baseSlug);
+
     const song = await prisma.song.create({
       data: {
         title: submission.title,
+        slug: uniqueSlug,
         type: submission.type,
         mainInstrument: instrument as Instrument,
         tags: tagList,

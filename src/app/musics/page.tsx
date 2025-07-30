@@ -33,6 +33,7 @@ const allMoments = [
 type Song = {
   id: string;
   title: string;
+  slug: string;
   moments: string[];
   tags: string[];
   mainInstrument: string;
@@ -185,7 +186,7 @@ export default function MusicsPage() {
               >
                 <CardContent className="p-4 space-y-3">
                   <Link
-                    href={`/musics/${song.id}`}
+                    href={`/musics/${song.slug || song.id}`}
                     className="font-semibold text-lg hover:underline"
                   >
                     {song.title}

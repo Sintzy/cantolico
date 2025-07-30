@@ -73,6 +73,7 @@ model User {
 model Song {
   id               String        @id @default(cuid())
   title            String
+  slug             String        @unique
   moments          LiturgicalMoment[]
   type             SongType
   mainInstrument   Instrument

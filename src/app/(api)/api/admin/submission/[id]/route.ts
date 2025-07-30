@@ -10,7 +10,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
   try {
     await logAdmin('INFO', 'Consulta de submissão individual', 'Administrador a consultar detalhes da submissão', {
       submissionId: id,
-      action: 'fetch_submission_details'
+      action: 'fetch_submission_details_1'
     });
 
     const submission = await prisma.songSubmission.findUnique({
