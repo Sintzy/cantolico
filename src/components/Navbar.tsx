@@ -5,6 +5,7 @@ import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import Image from "next/image";
 import * as Icons from "@/lib/site-images";
+import UserAvatar from "./ui/user-avatar";
 type Music = {
   id: string;
   title: string;
@@ -17,8 +18,6 @@ export default function Navbar() {
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<Music[]>([]);
     const [isSearching, setIsSearching] = useState(false);
-
-    const image = session?.user?.image || "/default-profile.png";
 
 
     useEffect(() => {
@@ -109,12 +108,12 @@ export default function Navbar() {
                                 onClick={() => setDropdownOpen(!dropdownOpen)}
                                 className="w-9 h-9 rounded-full border border-gray-300 overflow-hidden focus:outline-none"
                             >
-                                <Image
-                                    src={image}
-                                    width={32}
-                                    height={32}
-                                    className="w-8 h-8 rounded-full"
-                                    alt="Foto de perfil"
+                                <UserAvatar 
+                                    user={{
+                                        name: session.user.name || "Utilizador",
+                                        image: session.user.image
+                                    }} 
+                                    size={32} 
                                 />
                             </button>
                             {dropdownOpen && (

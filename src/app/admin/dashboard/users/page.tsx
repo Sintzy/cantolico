@@ -30,7 +30,7 @@ import {
   Eye
 } from 'lucide-react';
 import { toast } from 'sonner';
-import Image from 'next/image';
+import UserAvatar from '@/components/ui/user-avatar';
 
 interface User {
   id: string;
@@ -293,15 +293,13 @@ export default function UsersManagement() {
                 className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
               >
                 <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200">
-                    <Image
-                      src={user.profileImage || '/default-profile.png'}
-                      alt={`Foto de ${user.name}`}
-                      width={48}
-                      height={48}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
+                  <UserAvatar 
+                    user={{
+                      name: user.name,
+                      image: user.profileImage
+                    }} 
+                    size={48} 
+                  />
                   
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
