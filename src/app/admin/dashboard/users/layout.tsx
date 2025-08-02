@@ -2,7 +2,7 @@ import { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Gestão de Utilizadores",
-  description: "Administrar utilizadores, roles e permissões no Can♱ólico!",
+  description: "Administrar utilizadores, roles e permissões no Cantólico!",
 };
 
 export default function UsersLayout({

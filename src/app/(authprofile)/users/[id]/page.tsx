@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
   return {
     title: `${user.name || "Utilizador"}`,
-    description: user.bio || `Perfil de ${user.name || "utilizador"} no Can♱ólico! - Cancioneiro católico colaborativo.`,
+    description: user.bio || `Perfil de ${user.name || "utilizador"} no Cantólico! - Cancioneiro católico colaborativo.`,
   };
 }
 

@@ -4,8 +4,11 @@ import { Mail, Github, Music, Instagram } from "lucide-react";
 import Link from "next/link";
 
 export default function Footer() {
-  const commit = process.env.NEXT_PUBLIC_COMMIT_SHA?.slice(0, 7) || "dev";
-  const branch = process.env.NEXT_PUBLIC_BRANCH || "local";
+  // Vercel provides these automatically, fallback to custom env vars for local dev
+  const commit = process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || 
+                 process.env.NEXT_PUBLIC_COMMIT_SHA?.slice(0, 7) || "dev";
+  const branch = process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_REF || 
+                 process.env.NEXT_PUBLIC_BRANCH || "local";
 
   return (
     <footer className="border-t border-gray-200 bg-white mt-16">
