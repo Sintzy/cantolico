@@ -141,16 +141,44 @@ export async function DELETE(request: Request) {
     // Get song details for logging
     const song = await prisma.song.findUnique({
       where: { id: songId },
-      select: { title: true, type: true }
+      select: { 
+        title: true, 
+        type: true,
+        _count: {
+          select: {
+            versions: true,
+            favorites: true
+          }
+        }
+      }
     });
 
     if (!song) {
       return NextResponse.json({ error: "Música não encontrada" }, { status: 404 });
     }
 
-    // Delete song (cascade will handle versions, favorites, etc.)
-    await prisma.song.delete({
-      where: { id: songId }
+    // Delete in the correct order to avoid foreign key constraint violations
+    // Use a transaction to ensure atomicity
+    const deletionResult = await prisma.$transaction(async (tx) => {
+      // 1. Delete favorites first
+      const favoritesDeleted = await tx.favorite.deleteMany({
+        where: { songId: songId }
+      });
+
+      // 2. Delete song versions
+      const versionsDeleted = await tx.songVersion.deleteMany({
+        where: { songId: songId }
+      });
+
+      // 3. Finally delete the song
+      await tx.song.delete({
+        where: { id: songId }
+      });
+
+      return {
+        favoritesDeleted: favoritesDeleted.count,
+        versionsDeleted: versionsDeleted.count
+      };
     });
 
     await logAdmin('SUCCESS', 'Música eliminada', 'Música removida do sistema', {
@@ -158,10 +186,19 @@ export async function DELETE(request: Request) {
       songId,
       songTitle: song.title,
       songType: song.type,
+      versionsDeleted: deletionResult.versionsDeleted,
+      favoritesDeleted: deletionResult.favoritesDeleted,
       action: 'music_deleted'
     });
 
-    return NextResponse.json({ message: "Música eliminada com sucesso" });
+    return NextResponse.json({ 
+      message: "Música eliminada com sucesso",
+      details: {
+        songTitle: song.title,
+        versionsDeleted: deletionResult.versionsDeleted,
+        favoritesDeleted: deletionResult.favoritesDeleted
+      }
+    });
   } catch (error) {
     await logErrors('ERROR', 'Erro ao eliminar música', 'Falha na eliminação de música', {
       error: error instanceof Error ? error.message : 'Erro desconhecido',

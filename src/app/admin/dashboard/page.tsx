@@ -80,7 +80,7 @@ export default function AdminDashboard() {
     }
 
     fetchStats();
-  }, [session, status, router]);
+  }, [session, status]); // Removido router das dependências
 
   const fetchStats = async () => {
     try {

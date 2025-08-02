@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Pencil, Music2, Mail, CalendarDays, Star, User } from "lucide-react";
 import { toast } from "sonner";
+import UserAvatar from "@/components/ui/user-avatar";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -176,15 +177,25 @@ export default function ProfileView({ user, isOwner }: ProfileViewProps) {
       {/* Avatar and Profile Info */}
       <div className="flex flex-col md:flex-row items-start gap-8">
         <div className="relative w-32 h-32 rounded-full overflow-hidden border border-gray-300 dark:border-neutral-700 group cursor-pointer">
-          <Image
-            src={form.image || "/default-profile.png"}
-            alt="Avatar"
-            fill
-            className="object-cover"
-            onClick={() => {
-              if (editMode) inputRef.current?.click();
-            }}
-          />
+          {editMode ? (
+            <Image
+              src={form.image || "/default-profile.png"}
+              alt="Avatar"
+              fill
+              className="object-cover"
+              onClick={() => {
+                if (editMode) inputRef.current?.click();
+              }}
+            />
+          ) : (
+            <UserAvatar 
+              user={{
+                name: user.name || "Utilizador",
+                image: user.image
+              }} 
+              size={128} 
+            />
+          )}
           <input
             ref={inputRef}
             type="file"

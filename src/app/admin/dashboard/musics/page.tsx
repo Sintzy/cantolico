@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { 
   Music, 
   Search, 
@@ -32,7 +33,7 @@ import {
   UserCheck
 } from 'lucide-react';
 import { toast } from 'sonner';
-import Image from 'next/image';
+import UserAvatar from '@/components/ui/user-avatar';
 
 interface Song {
   id: string;
@@ -95,6 +96,10 @@ export default function MusicsManagement() {
   const [banningUser, setBanningUser] = useState<string | null>(null);
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [expandedSongs, setExpandedSongs] = useState<Set<string>>(new Set());
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showBanDialog, setShowBanDialog] = useState(false);
+  const [songToDelete, setSongToDelete] = useState<Song | null>(null);
+  const [userToBan, setUserToBan] = useState<{id: string, name: string} | null>(null);
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -105,7 +110,7 @@ export default function MusicsManagement() {
     }
 
     fetchSongs();
-  }, [session, status, router, currentPage, searchTerm, typeFilter]);
+  }, [session, status, currentPage, searchTerm, typeFilter]); // Removido router das dependências
 
   const fetchSongs = async () => {
     try {
@@ -122,7 +127,8 @@ export default function MusicsManagement() {
       const response = await fetch(`/api/admin/music?${params}`);
       
       if (!response.ok) {
-        throw new Error('Erro ao carregar músicas');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao carregar músicas');
       }
       
       const data: SongsResponse = await response.json();
@@ -131,77 +137,88 @@ export default function MusicsManagement() {
       setTotalCount(data.totalCount);
     } catch (error) {
       console.error('Erro ao carregar músicas:', error);
-      setError(error instanceof Error ? error.message : 'Erro desconhecido');
-      toast.error('Erro ao carregar músicas');
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      setError(errorMessage);
+      toast.error(`Erro ao carregar músicas: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeleteSong = async (songId: string) => {
-    if (!confirm('Tem a certeza que pretende eliminar esta música? Esta ação não pode ser desfeita.')) {
-      return;
-    }
+  const handleDeleteSong = async () => {
+    if (!songToDelete) return;
 
     try {
-      setDeletingSong(songId);
+      setDeletingSong(songToDelete.id);
       
       const response = await fetch(`/api/admin/music`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ songId }),
+        body: JSON.stringify({ songId: songToDelete.id }),
       });
 
       if (!response.ok) {
-        throw new Error('Erro ao eliminar música');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao eliminar música');
       }
 
-      setSongs(songs.filter(song => song.id !== songId));
+      const result = await response.json();
+      setSongs(songs.filter(song => song.id !== songToDelete.id));
       setTotalCount(prev => prev - 1);
       
-      toast.success('Música eliminada com sucesso!');
+      // Show detailed success message
+      const details = result.details;
+      const detailsText = details ? 
+        ` (${details.versionsDeleted} versões e ${details.favoritesDeleted} favoritos eliminados)` : '';
+      
+      toast.success(`Música "${songToDelete.title}" eliminada com sucesso${detailsText}!`);
     } catch (error) {
       console.error('Erro ao eliminar música:', error);
-      toast.error('Erro ao eliminar música');
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao eliminar música';
+      toast.error(errorMessage);
+      throw error; // Para que o dialog possa lidar com o erro
     } finally {
       setDeletingSong(null);
+      setSongToDelete(null);
     }
   };
 
-  const handleBanUser = async (userId: string, userName: string) => {
-    if (!confirm(`Tem a certeza que pretende banir o utilizador "${userName}"? Esta ação irá impedir o utilizador de aceder ao sistema.`)) {
-      return;
-    }
+  const handleBanUser = async () => {
+    if (!userToBan) return;
 
     try {
-      setBanningUser(userId);
+      setBanningUser(userToBan.id);
       
       const response = await fetch('/api/admin/users', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ userId, banned: true }),
+        body: JSON.stringify({ userId: userToBan.id, banned: true }),
       });
 
       if (!response.ok) {
-        throw new Error('Erro ao banir utilizador');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao banir utilizador');
       }
 
       setSongs(songs.map(song => 
-        song.author?.id === userId 
+        song.author?.id === userToBan.id 
           ? { ...song, author: { ...song.author, banned: true } }
           : song
       ));
 
-      toast.success(`Utilizador "${userName}" foi banido com sucesso!`);
+      toast.success(`Utilizador "${userToBan.name}" foi banido com sucesso!`);
     } catch (error) {
       console.error('Erro ao banir utilizador:', error);
-      toast.error('Erro ao banir utilizador');
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao banir utilizador';
+      toast.error(errorMessage);
+      throw error; // Para que o dialog possa lidar com o erro
     } finally {
       setBanningUser(null);
+      setUserToBan(null);
     }
   };
 
@@ -368,15 +385,13 @@ export default function MusicsManagement() {
               >
                 <div className="flex items-center justify-between p-4">
                   <div className="flex items-center space-x-4 flex-1">
-                    <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
-                      <Image
-                        src={song.author?.profileImage || '/default-profile.png'}
-                        alt={`Foto de ${song.author?.name || 'Utilizador'}`}
-                        width={48}
-                        height={48}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
+                    <UserAvatar 
+                      user={{
+                        name: song.author?.name || 'Utilizador',
+                        image: song.author?.profileImage
+                      }} 
+                      size={48} 
+                    />
                     
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
@@ -474,15 +489,13 @@ export default function MusicsManagement() {
                                 Informações do Autor
                               </h4>
                               <div className="flex items-center space-x-4">
-                                <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200">
-                                  <Image
-                                    src={song.author.profileImage || '/default-profile.png'}
-                                    alt={`Foto de ${song.author.name}`}
-                                    width={40}
-                                    height={40}
-                                    className="w-full h-full object-cover"
-                                  />
-                                </div>
+                                <UserAvatar 
+                                  user={{
+                                    name: song.author.name,
+                                    image: song.author.profileImage
+                                  }} 
+                                  size={40} 
+                                />
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2">
                                     <span className="font-medium">{song.author.name}</span>
@@ -525,7 +538,10 @@ export default function MusicsManagement() {
                                     <Button 
                                       variant="destructive" 
                                       size="sm"
-                                      onClick={() => handleBanUser(song.author!.id, song.author!.name)}
+                                      onClick={() => {
+                                        setUserToBan({id: song.author!.id, name: song.author!.name});
+                                        setShowBanDialog(true);
+                                      }}
                                       disabled={banningUser === song.author.id}
                                     >
                                       {banningUser === song.author.id ? (
@@ -555,7 +571,10 @@ export default function MusicsManagement() {
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={() => handleDeleteSong(song.id)}
+                      onClick={() => {
+                        setSongToDelete(song);
+                        setShowDeleteDialog(true);
+                      }}
                       disabled={deletingSong === song.id}
                     >
                       {deletingSong === song.id ? (
@@ -673,6 +692,37 @@ export default function MusicsManagement() {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialog de confirmação para eliminar música */}
+      <ConfirmationDialog
+        isOpen={showDeleteDialog}
+        onClose={() => {
+          setShowDeleteDialog(false);
+          setSongToDelete(null);
+        }}
+        onConfirm={handleDeleteSong}
+        title="Eliminar Música"
+        description={`Tem a certeza que pretende eliminar a música "${songToDelete?.title}"? Esta ação não pode ser desfeita.`}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+      />
+
+      {/* Dialog de confirmação para banir utilizador */}
+      <ConfirmationDialog
+        isOpen={showBanDialog}
+        onClose={() => {
+          setShowBanDialog(false);
+          setUserToBan(null);
+        }}
+        onConfirm={handleBanUser}
+        title="Banir Utilizador"
+        description={`Tem a certeza que pretende banir o utilizador "${userToBan?.name}"? Esta ação irá impedir o utilizador de aceder ao sistema.`}
+        confirmText="Banir"
+        cancelText="Cancelar"
+        requireReason={true}
+        reasonPlaceholder="Motivo do banimento..."
+        reasonLabel="Motivo do Banimento"
+      />
     </div>
   );
 }

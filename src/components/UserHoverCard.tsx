@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { format } from 'date-fns';
+import UserAvatar from './ui/user-avatar';
 
 interface User {
   name: string;
@@ -15,7 +16,6 @@ interface UserHoverCardProps {
 }
 
 const UserHoverCard: React.FC<UserHoverCardProps> = ({ user }) => {
-
   const createdDate = new Date(user.createdAt);
   const createdInfo = !isNaN(createdDate.getTime())
     ? format(createdDate, 'PPP')
@@ -25,11 +25,7 @@ const UserHoverCard: React.FC<UserHoverCardProps> = ({ user }) => {
     <div className="group inline-block relative">
       {/* Avatar e nome principais */}
       <div className="flex items-center cursor-pointer">
-        <img
-          src={user.image}
-          alt={user.name}
-          className="w-8 h-8 rounded-full"
-        />
+        <UserAvatar user={user} size={32} />
         <span className="ml-2 text-sm font-medium text-gray-800">
           {user.name}
         </span>
@@ -42,11 +38,7 @@ const UserHoverCard: React.FC<UserHoverCardProps> = ({ user }) => {
                     bg-white rounded-2xl shadow-lg pointer-events-none z-20"
       >
         <div className="flex flex-col items-center">
-          <img
-            src={user.image}
-            alt={user.name}
-            className="w-16 h-16 rounded-full mb-2"
-          />
+          <UserAvatar user={user} size={64} className="mb-2" />
           <h3 className="text-lg font-semibold text-gray-900">
             {user.name}
           </h3>

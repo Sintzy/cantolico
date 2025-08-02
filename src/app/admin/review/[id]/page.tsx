@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import "../../../../../public/styles/chords.css";
 import { SpellCheck } from "lucide-react";
 
@@ -41,6 +42,7 @@ export default function ReviewSubmissionPage() {
   const [instrument, setInstrument] = useState("ORGAO");
   const [moments, setMoments] = useState<string[]>([]);
   const [tags, setTags] = useState<string>("");
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
 
   useEffect(() => {
     if (!submissionId) return;
@@ -86,17 +88,25 @@ export default function ReviewSubmissionPage() {
     }
   };
 
-  const handleReject = async () => {
-    const rejectionReason = prompt("Motivo da rejeição:");
-    if (!rejectionReason) return;
+  const handleReject = async (rejectionReason: string) => {
+    try {
+      const response = await fetch(`/api/admin/submission/${submissionId}/reject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rejectionReason }),
+      });
 
-    await fetch(`/api/admin/submission/${submissionId}/reject`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ rejectionReason }),
-    });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro interno do servidor');
+      }
 
-    router.push("/admin/review");
+      router.push("/admin/review");
+    } catch (error) {
+      console.error("Erro ao rejeitar submissão:", error);
+      alert(`Erro ao rejeitar: ${error instanceof Error ? error.message : 'Erro de conexão'}`);
+      throw error; // Para que o dialog possa lidar com o erro
+    }
   };
 
   const toggleMoment = (moment: string) => {
@@ -213,8 +223,21 @@ export default function ReviewSubmissionPage() {
 
       <div className="flex gap-4 pt-6">
         <Button onClick={handleApprove} className="bg-green-600 text-white">Aprovar Música</Button>
-        <Button variant="destructive" onClick={handleReject}>Rejeitar Música</Button>
+        <Button variant="destructive" onClick={() => setShowRejectDialog(true)}>Rejeitar Música</Button>
       </div>
+
+      <ConfirmationDialog
+        isOpen={showRejectDialog}
+        onClose={() => setShowRejectDialog(false)}
+        onConfirm={handleReject}
+        title="Rejeitar Música"
+        description="Tem a certeza que pretende rejeitar esta submissão? Forneça um motivo para o utilizador."
+        confirmText="Rejeitar"
+        cancelText="Cancelar"
+        requireReason={true}
+        reasonPlaceholder="Explique o motivo da rejeição..."
+        reasonLabel="Motivo da Rejeição"
+      />
     </div>
   );
 }

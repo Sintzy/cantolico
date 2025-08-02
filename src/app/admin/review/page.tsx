@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import UserHoverCard from "@/components/UserHoverCard";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { 
   CheckCircle, 
   XCircle, 
@@ -54,6 +55,8 @@ export default function AdminReviewPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [loadingActions, setLoadingActions] = useState<Record<string, boolean>>({});
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [submissionToReject, setSubmissionToReject] = useState<string | null>(null);
 
   const fetchSubmissions = async () => {
     try {
@@ -121,28 +124,33 @@ export default function AdminReviewPage() {
     }
   };
 
-  const handleReject = async (submissionId: string) => {
-    const reason = prompt("Motivo da rejeição (opcional):");
+  const handleReject = async (rejectionReason: string) => {
+    if (!submissionToReject) return;
     
-    setLoadingActions(prev => ({ ...prev, [submissionId]: true }));
+    setLoadingActions(prev => ({ ...prev, [submissionToReject]: true }));
     
     try {
-      const res = await fetch(`/api/admin/submission/${submissionId}/reject`, {
+      const res = await fetch(`/api/admin/submission/${submissionToReject}/reject`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason: reason || "Não especificado" }),
+        body: JSON.stringify({ rejectionReason: rejectionReason.trim() }),
       });
 
+      const data = await res.json();
+
       if (res.ok) {
-        toast.success("Submissão rejeitada");
+        toast.success("Submissão rejeitada com sucesso");
         fetchSubmissions();
       } else {
-        toast.error("Erro ao rejeitar submissão");
+        toast.error(data.error || "Erro ao rejeitar submissão");
+        throw new Error(data.error || "Erro ao rejeitar submissão");
       }
     } catch (error) {
-      toast.error("Erro ao rejeitar submissão");
+      console.error("Erro ao rejeitar submissão:", error);
+      throw error; // Para que o dialog possa lidar com o erro
     } finally {
-      setLoadingActions(prev => ({ ...prev, [submissionId]: false }));
+      setLoadingActions(prev => ({ ...prev, [submissionToReject]: false }));
+      setSubmissionToReject(null);
     }
   };
 
@@ -347,7 +355,10 @@ export default function AdminReviewPage() {
                     </Button>
                     <Button
                       variant="destructive"
-                      onClick={() => handleReject(submission.id)}
+                      onClick={() => {
+                        setSubmissionToReject(submission.id);
+                        setShowRejectDialog(true);
+                      }}
                       disabled={loadingActions[submission.id]}
                       size="sm"
                     >
@@ -361,6 +372,23 @@ export default function AdminReviewPage() {
           ))
         )}
       </div>
+
+      {/* Dialog de confirmação para rejeitar submissão */}
+      <ConfirmationDialog
+        isOpen={showRejectDialog}
+        onClose={() => {
+          setShowRejectDialog(false);
+          setSubmissionToReject(null);
+        }}
+        onConfirm={handleReject}
+        title="Rejeitar Submissão"
+        description="Tem a certeza que pretende rejeitar esta submissão? Forneça um motivo detalhado para o utilizador."
+        confirmText="Rejeitar"
+        cancelText="Cancelar"
+        requireReason={true}
+        reasonPlaceholder="Explique o motivo da rejeição (ex: qualidade do áudio, letra incorreta, etc.)..."
+        reasonLabel="Motivo da Rejeição"
+      />
     </div>
   );
 }
