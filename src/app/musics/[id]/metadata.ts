@@ -53,7 +53,7 @@ export async function generateMetadata({ params }: MusicPageProps): Promise<Meta
         locale: "pt_PT",
         images: [
           {
-            url: `/api/og?title=${encodeURIComponent(song.title)}&type=seo`,
+            url: SITE_IMAGES.ogImage,
             width: 1200,
             height: 630,
             alt: `${song.title} - Can♱ólico!`,
@@ -64,7 +64,7 @@ export async function generateMetadata({ params }: MusicPageProps): Promise<Meta
         card: "summary_large_image",
         title: `${song.title} | Can♱ólico!`,
         description: `${song.title} - Cântico católico para ${momentos}`,
-        images: [`/api/og?title=${encodeURIComponent(song.title)}&type=default`],
+        images: [SITE_IMAGES.twitterImage],
       }
     };
   } catch (error) {
