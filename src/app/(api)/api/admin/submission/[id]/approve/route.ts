@@ -7,6 +7,7 @@ import { LiturgicalMoment, SourceType, Instrument } from "@prisma/client";
 import { sendEmail, createApprovalEmailTemplate } from "@/lib/email";
 import { logAdmin, logEmails, logErrors } from "@/lib/logs";
 import { titleToSlug, generateUniqueSlug } from "@/lib/slugs";
+import { modernContentDiscovery } from "@/lib/sitemap-notify";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -201,6 +202,13 @@ export async function POST(
       submissionTitle: submission.title,
       songId: song.id,
       action: 'submission_approved'
+    });
+
+    // 🚀 Descoberta moderna de conteúdo (método atualizado 2023)
+    modernContentDiscovery(song.slug || song.id, submission.title).then((result) => {
+      console.log(`🔍 Descoberta iniciada para nova música "${submission.title}":`, result.success);
+    }).catch((error) => {
+      console.error('❌ Erro na descoberta de conteúdo:', error);
     });
 
     // Registrar log de auditoria

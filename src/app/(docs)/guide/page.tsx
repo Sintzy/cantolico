@@ -6,7 +6,7 @@ import "../../../../public/styles/chords.css"; // importa o CSS correto
 
 export const metadata: Metadata = {
   title: "Guia de Utilização",
-  description: "Aprende a usar o sistema de acordes em markdown para submeter cânticos católicos no Can♱ólico!",
+  description: "Aprende a usar o sistema de acordes em markdown para submeter cânticos católicos no Cantólico!",
 };
 
 const example = `[Cm7]Tive um sonho e quando acordei

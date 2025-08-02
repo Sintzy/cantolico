@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { SITE_IMAGES } from "@/lib/site-images";
 import { notFound } from "next/navigation";
 
 interface MusicPageProps {
@@ -50,11 +51,20 @@ export async function generateMetadata({ params }: MusicPageProps): Promise<Meta
         description: `${song.title} - Cântico católico para ${momentos}. Descobre este e outros cânticos no Can♱ólico!`,
         type: "article",
         locale: "pt_PT",
+        images: [
+          {
+            url: `/api/og?title=${encodeURIComponent(song.title)}&type=seo`,
+            width: 1200,
+            height: 630,
+            alt: `${song.title} - Can♱ólico!`,
+          }
+        ],
       },
       twitter: {
-        card: "summary",
+        card: "summary_large_image",
         title: `${song.title} | Can♱ólico!`,
         description: `${song.title} - Cântico católico para ${momentos}`,
+        images: [`/api/og?title=${encodeURIComponent(song.title)}&type=default`],
       }
     };
   } catch (error) {
