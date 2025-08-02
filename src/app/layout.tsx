@@ -62,7 +62,7 @@ export const metadata: Metadata = {
     siteName: SITE_CONFIG.name,
     images: [
       {
-        url: `/api/og?title=${encodeURIComponent('Cancioneiro Católico Online')}&type=seo`,
+        url: SITE_IMAGES.ogImage,
         width: 1200,
         height: 630,
         alt: SITE_CONFIG.description,
@@ -74,7 +74,7 @@ export const metadata: Metadata = {
     title: SITE_CONFIG.name,
     description: SITE_CONFIG.description,
     creator: "@cantolico",
-    images: [`/api/og?title=${encodeURIComponent('Cancioneiro Católico Online')}&type=default`],
+    images: [SITE_IMAGES.twitterImage],
   },
   alternates: {
     canonical: "https://cantolico.pt",
