@@ -2,6 +2,8 @@
 
 import { Mail, Github, Music, Instagram } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
+import * as Icons from "@/lib/site-images";
 
 export default function Footer() {
   // Vercel provides these automatically, fallback to custom env vars for local dev
@@ -16,8 +18,10 @@ export default function Footer() {
         {/* Coluna 1: Sobre */}
         <div className="space-y-3">
           <h4 className="font-semibold text-gray-900 text-base flex items-center gap-2">
-            <Music className="h-5 w-5" />
-            Can♱ólico!
+            <Link href="/" className="flex items-center space-x-2">
+              <Image src={Icons.SITE_IMAGES.logo} alt="Logo" width={30} height={30} />
+              <span className="text-xl font-semibold text-gray-800">Can♱ólico!</span>
+            </Link>
           </h4>
           <p>
             Encontra, submete e partilha cânticos católicos. Um projeto aberto para servir a liturgia com música de qualidade.

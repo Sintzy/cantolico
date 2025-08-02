@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import Image from "next/image";
-
+import * as Icons from "@/lib/site-images";
 type Music = {
   id: string;
   title: string;
@@ -45,6 +45,7 @@ export default function Navbar() {
             <div className="max-w-screen-xl mx-auto px-4 py-3 flex items-center justify-between">
                 {/* Logo */}
                 <Link href="/" className="flex items-center space-x-2">
+                    <Image src={Icons.SITE_IMAGES.logo} alt="Logo" width={30} height={30} />
                     <span className="text-xl font-semibold text-gray-800">Can♱ólico!</span>
                 </Link>
 
