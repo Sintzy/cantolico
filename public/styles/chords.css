@@ -6,7 +6,7 @@
 	display: inline-block;
 	position: relative;
 	user-select: none;
-	height: 3.2em;
+	height: 2.5em;
 	font-size: 80%;
 }
 
@@ -18,7 +18,7 @@
 	position: absolute;
 	display: block;
 	left: 0;
-	bottom: 1.3em;
+	bottom: 0.8em;
 	color: #1d4ed8;
 	font-weight: bold;
 	white-space: nowrap;
@@ -50,7 +50,7 @@
 
 /* Acordes seguidos (sem texto entre eles) ficam lado a lado horizontalmente */
 .chord + .chord {
-	margin-left: 8px;
+	margin-left: 16px;
 }
 
 /* Acordes seguidos não devem quebrar linha */

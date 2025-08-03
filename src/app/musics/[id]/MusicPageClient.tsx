@@ -42,39 +42,32 @@ type Props = {
 };
 
 function transposeChord(chord: string, interval: number): string {
-  const semitones = ['C', 'C#', 'D', 'Eb', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'];
-  const sharpToFlat: Record<string, string> = {
-    'C#': 'Db', 'D#': 'Eb', 'F#': 'Gb', 'G#': 'Ab', 'A#': 'Bb',
+  // Array completo de semitons (usando sustenidos como padrão)
+  const semitones = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  
+  // Mapeamento de bemóis para sustenidos para normalização
+  const flatToSharp: Record<string, string> = {
+    'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#'
   };
 
+  // Regex melhorada para capturar acordes complexos
   const regex = /^([A-G][#b]?)(.*)$/;
   const match = chord.match(regex);
   if (!match) return chord;
 
   let [_, root, suffix] = match;
 
-  // Convert sharp to flat if needed for easier processing
-  if (root in sharpToFlat) {
-    root = sharpToFlat[root];
-  }
+  // Normalizar bemóis para sustenidos
+  root = flatToSharp[root] || root;
 
-  let rootIndex = semitones.indexOf(root);
-  if (rootIndex === -1) {
-    // Handle flat notes
-    const flatToSharp: Record<string, string> = {
-      'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#',
-    };
-    if (root in flatToSharp) {
-      rootIndex = semitones.indexOf(flatToSharp[root]);
-    }
-  }
+  const index = semitones.indexOf(root);
+  if (index === -1) return chord;
 
-  if (rootIndex === -1) return chord;
+  // Calcular nova posição com wraparound
+  const newIndex = (index + interval + semitones.length) % semitones.length;
+  const transposed = semitones[newIndex];
 
-  const newRootIndex = (rootIndex + interval + 12) % 12;
-  const newRoot = semitones[newRootIndex];
-
-  return newRoot + suffix;
+  return transposed + suffix;
 }
 
 function transposeChords(text: string, interval: number): string {

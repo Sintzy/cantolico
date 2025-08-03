@@ -38,23 +38,28 @@ type SongData = {
   };
 };
 function transposeChord(chord: string, interval: number): string {
-  const semitones = ['C', 'C#', 'D', 'Eb', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'];
-  const sharpToFlat: Record<string, string> = {
-    'C#': 'Db', 'D#': 'Eb', 'F#': 'Gb', 'G#': 'Ab', 'A#': 'Bb',
+  // Array completo de semitons (usando sustenidos como padrão)
+  const semitones = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  
+  // Mapeamento de bemóis para sustenidos para normalização
+  const flatToSharp: Record<string, string> = {
+    'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#'
   };
 
+  // Regex melhorada para capturar acordes complexos
   const regex = /^([A-G][#b]?)(.*)$/;
   const match = chord.match(regex);
   if (!match) return chord;
 
   let [_, root, suffix] = match;
 
-  // Converter sustenido para bemol, se necessário
-  root = sharpToFlat[root] || root;
+  // Normalizar bemóis para sustenidos
+  root = flatToSharp[root] || root;
 
   const index = semitones.indexOf(root);
   if (index === -1) return chord;
 
+  // Calcular nova posição com wraparound
   const newIndex = (index + interval + semitones.length) % semitones.length;
   const transposed = semitones[newIndex];
 
