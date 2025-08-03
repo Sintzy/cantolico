@@ -28,6 +28,17 @@ const allMoments = [
   'COMUNHAO',
   'ACAO_DE_GRACAS',
   'FINAL',
+  'ADORACAO',
+  'ASPERSAO',
+  'BAPTISMO',
+  'BENCAO_DAS_ALIANCAS',
+  'CORDEIRO_DE_DEUS',
+  'CRISMA',
+  'INTRODUCAO_DA_PALAVRA',
+  'LOUVOR',
+  'PAI_NOSSO',
+  'REFLEXAO',
+  'TERCO_MISTERIO',
 ];
 
 type Song = {
@@ -195,15 +206,15 @@ export default function MusicsPage() {
                     {song.mainInstrument}
                   </p>
                   <div className="flex flex-wrap gap-1">
-                    {song.moments.map((moment) => (
-                      <Badge key={moment} variant="outline">
+                    {song.moments.map((moment, momentIndex) => (
+                      <Badge key={`${song.id}-moment-${momentIndex}`} variant="outline">
                         {moment.replaceAll('_', ' ')}
                       </Badge>
                     ))}
                   </div>
                   <div className="flex flex-wrap gap-1">
-                    {song.tags.map((tag) => (
-                      <Badge key={tag} className="bg-blue-100 text-blue-800">
+                    {song.tags.map((tag, tagIndex) => (
+                      <Badge key={`${song.id}-tag-${tagIndex}`} className="bg-blue-100 text-blue-800">
                         #{tag}
                       </Badge>
                     ))}

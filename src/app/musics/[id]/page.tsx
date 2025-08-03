@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import MarkdownIt from 'markdown-it';
 import chords from 'markdown-it-chords';
+import { processChordHtml } from '@/lib/chord-processor';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
@@ -71,10 +72,12 @@ export default function SongPage() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [transposition, setTransposition] = useState<number>(0);
   const [showChords, setShowChords] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchSong = async () => {
       try {
+        setLoading(true);
         const res = await fetch(`/api/musics/${id}`);
         const data = await res.json();
 
@@ -104,6 +107,8 @@ export default function SongPage() {
         }
       } catch (err) {
         console.error('Erro ao buscar música:', err);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -122,9 +127,12 @@ export default function SongPage() {
       src = transposeMarkdownChords(src, transposition);
     }
   
-    return mdParser.render(src);
+    const rawHtml = mdParser.render(src);
+    return processChordHtml(rawHtml);
   }, [song?.currentVersion?.sourceText, showChords, transposition]);
   
+
+  if (loading) return <div className="p-6 text-center"><Spinner size="medium"/>A carregar música...</div>;
 
   if (!song) {
     return <div className="p-6 text-muted-foreground text-center"><Spinner size="medium" />A carregar música...</div>;
@@ -159,23 +167,91 @@ export default function SongPage() {
 
       {/* Conteúdo */}
       <div className="max-w-7xl mx-auto px-6 md:px-10 py-10 md:py-16 flex flex-col md:flex-row gap-12">
-        {/* Coluna esquerda (principal) */}
-        <div className="flex-1 space-y-10 leading-relaxed">
+        {/* Coluna esquerda (controlos) */}
+        <aside className="w-full md:w-72 space-y-10">
+          {/* Controlos de transposição */}
+          <div className="space-y-3">
+            <SidebarTitle>Controlos de transposição</SidebarTitle>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-8"
+                onClick={() => setTransposition(transposition - 1)}
+              >
+                -
+              </Button>
+              <span className="text-sm font-medium flex-1 text-center">
+                {transposition >= 0 ? `+${transposition}` : transposition}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-8"
+                onClick={() => setTransposition(transposition + 1)}
+              >
+                +
+              </Button>
+            </div>
+          </div>
+
+          {/* Momentos */}
+          <div className="space-y-3">
+            <SidebarTitle>Momentos</SidebarTitle>
+            <div className="space-y-2">
+              {moments.map((m, momentIndex) => (
+                <div
+                  key={`music-${id}-moment-${momentIndex}`}
+                  className="border rounded px-3 py-2 text-sm flex justify-between items-center"
+                >
+                  <span>{m.replaceAll('_', ' ')}</span>
+                  <span className="text-muted-foreground">›</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Informações */}
           <section className="space-y-3">
-          <SectionTitle>Informações da musica</SectionTitle>
+            <SidebarTitle>Informações da música</SidebarTitle>
 
-            <p>
+            <p className="text-sm">
               <strong>Autor(a):</strong> {currentVersion?.createdBy?.name || 'Desconhecido'}
             </p>
-            <p>
+            <p className="text-sm">
               <strong>Instrumento principal:</strong> {mainInstrument}
-            </p>
-            <p>
-              {/* <strong>Data da Submissão:</strong> {new Date(song. || '').toLocaleDateString('pt-PT')} */}
             </p>
           </section>
 
+          {/* Tags */}
+          {tags?.length > 0 && (
+            <section className="space-y-2">
+              <SidebarTitle>Tags</SidebarTitle>
+              <div className="flex flex-wrap gap-1">
+                {tags.map((t, tagIndex) => (
+                  <Badge key={`music-${id}-tag-${tagIndex}`} className="bg-blue-100 text-blue-800">
+                    {t}
+                  </Badge>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Download rápido */}
+          {pdfUrl && (
+            <div className="space-y-3">
+              <SidebarTitle>Download</SidebarTitle>
+              <Button className="w-full" asChild>
+                <a href={`/musics/${id}/pdf`} target="_blank" rel="noopener noreferrer">
+                  <Guitar className="h-4 w-4 mr-2" /> Download PDF com Acordes
+                </a>
+              </Button>
+            </div>
+          )}
+        </aside>
+
+        {/* Coluna direita (letra e conteúdo principal) */}
+        <div className="flex-1 space-y-10 leading-relaxed">
           {/* Letra */}
           {currentVersion?.sourceText && (
             <section className="space-y-4">
@@ -204,9 +280,29 @@ export default function SongPage() {
               </div>
 
               <div
-                className="prose prose-sm md:prose-base max-w-none bg-white rounded-md border p-6 overflow-auto"
+                className="bg-white rounded-md border p-6 overflow-auto font-mono text-sm leading-relaxed"
+                style={{ lineHeight: '1.8' }}
                 dangerouslySetInnerHTML={{ __html: renderedHtml }}
               />
+            </section>
+          )}
+
+          {/* YouTube */}
+          {currentVersion?.youtubeLink && (
+            <section className="space-y-4">
+              <SectionTitle>YouTube</SectionTitle>
+              <YouTube videoId={getYoutubeId(currentVersion.youtubeLink)} />
+            </section>
+          )}
+
+          {/* Áudio */}
+          {audioUrl && (
+          <section className="space-y-4">
+              <SectionTitle>Áudio</SectionTitle>
+              <audio controls className="w-full">
+                <source src={audioUrl} type="audio/mpeg" />
+                O seu navegador não suporta o elemento de áudio.
+              </audio>
             </section>
           )}
 
@@ -232,97 +328,7 @@ export default function SongPage() {
               />
             </section>
           )}
-
-          {/* Áudio */}
-          {audioUrl && (
-          <section className="space-y-4">
-              <SectionTitle>Áudio</SectionTitle>
-              <audio controls className="w-full">
-                <source src={audioUrl} type="audio/mpeg" />
-                O seu navegador não suporta o elemento de áudio.
-              </audio>
-            </section>
-          )}
-
-          {/* YouTube */}
-          {currentVersion?.youtubeLink && (
-            <section className="space-y-4">
-              <SectionTitle>YouTube</SectionTitle>
-              <YouTube videoId={getYoutubeId(currentVersion.youtubeLink)} />
-            </section>
-          )}
-
-          {/* Tags */}
-          {tags?.length > 0 && (
-            <section className="space-y-2">
-              <SectionTitle>Tags</SectionTitle>
-              <div className="flex flex-wrap gap-1">
-                {tags.map((t) => (
-                  <Badge key={t} className="bg-blue-100 text-blue-800">
-                    {t}
-                  </Badge>
-                ))}
-              </div>
-            </section>
-          )}
         </div>
-
-        {/* Coluna direita (sidebar) */}
-        <aside className="w-full md:w-72 space-y-10">
-          {/* Controlos (espelho do Musicristo) */}
-          <div className="space-y-3">
-            <SidebarTitle>Controlos de transposição</SidebarTitle>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-8"
-                onClick={() => setTransposition(transposition - 1)}
-              >
-                -
-              </Button>
-              <span className="text-sm font-medium flex-1 text-center">
-                {transposition >= 0 ? `+${transposition}` : transposition}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-8"
-                onClick={() => setTransposition(transposition + 1)}
-              >
-                +
-              </Button>
-            </div>
-          </div>
-
-          {/* Download rápido */}
-          {pdfUrl && (
-            <div className="space-y-3">
-              <SidebarTitle>Download</SidebarTitle>
-              <Button className="w-full" asChild>
-                <a href={`/musics/${id}/pdf`} target="_blank" rel="noopener noreferrer">
-                  <Guitar className="h-4 w-4 mr-2" /> Download PDF com Acordes
-                </a>
-              </Button>
-            </div>
-          )}
-
-          {/* Momentos */}
-          <div className="space-y-3">
-            <SidebarTitle>Momentos</SidebarTitle>
-            <div className="space-y-2">
-              {moments.map((m) => (
-                <div
-                  key={m}
-                  className="border rounded px-3 py-2 text-sm flex justify-between items-center"
-                >
-                  <span>{m.replaceAll('_', ' ')}</span>
-                  <span className="text-muted-foreground">›</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </aside>
       </div>
     </div>
   );

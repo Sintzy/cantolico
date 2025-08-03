@@ -11,6 +11,7 @@ import { TurnstileCaptcha } from "@/components/TurnstileCaptcha";
 
 import MarkdownIt from "markdown-it";
 import chords from "markdown-it-chords";
+import { processChordHtml } from "@/lib/chord-processor";
 
 import { Instrument, LiturgicalMoment, SongType } from "@prisma/client";
 
@@ -50,7 +51,9 @@ export default function CreateNewMusicPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    setPreview(mdParser.render(form.markdown || ""));
+    const rawHtml = mdParser.render(form.markdown || "");
+    const processedHtml = processChordHtml(rawHtml);
+    setPreview(processedHtml);
   }, [form.markdown]);
 
   useEffect(() => {
@@ -174,8 +177,8 @@ export default function CreateNewMusicPage() {
             <Button type="button" onClick={handleAddTag}><Plus className="w-4 h-4 mr-1" /> Adicionar</Button>
           </div>
           <div className="flex gap-2 mt-3 flex-wrap">
-            {form.tags.map((tag) => (
-              <Badge key={tag} onClick={() => handleRemoveTag(tag)} className="cursor-pointer">
+            {form.tags.map((tag, tagIndex) => (
+              <Badge key={`create-tag-${tagIndex}`} onClick={() => handleRemoveTag(tag)} className="cursor-pointer">
                 {tag} ✕
               </Badge>
             ))}

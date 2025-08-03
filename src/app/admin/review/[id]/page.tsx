@@ -6,6 +6,7 @@ import { useRouter, useParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import MarkdownIt from "markdown-it";
 import chords from "markdown-it-chords";
+import { processChordHtml } from "@/lib/chord-processor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,7 +22,9 @@ const mdParser = new MarkdownIt({ breaks: true }).use(chords);
 const allInstruments = ["ORGAO", "GUITARRA", "PIANO", "CORO", "OUTRO"];
 const allMoments = [
   "ENTRADA", "ATO_PENITENCIAL", "GLORIA", "SALMO", "ACLAMACAO", "OFERTORIO",
-  "SANTO", "COMUNHAO", "ACAO_DE_GRACAS", "FINAL",
+  "SANTO", "COMUNHAO", "ACAO_DE_GRACAS", "FINAL", "ADORACAO", "ASPERSAO",
+  "BAPTISMO", "BENCAO_DAS_ALIANCAS", "CORDEIRO_DE_DEUS", "CRISMA",
+  "INTRODUCAO_DA_PALAVRA", "LOUVOR", "PAI_NOSSO", "REFLEXAO", "TERCO_MISTERIO",
 ];
 
 export default function ReviewSubmissionPage() {
@@ -57,8 +60,8 @@ export default function ReviewSubmissionPage() {
         setYoutubeLink(data.youtubeLink || "");
         setPdfPreviewUrl(data.tempPdfUrl || null);
         setMp3PreviewUrl(data.mediaUrl || null);
-        setInstrument(data.mainInstrument || "Guitarra");
-        setMoments(data.moments || []);
+        setInstrument(data.mainInstrument || "ORGAO");
+        setMoments(data.moment || []);  // Changed from 'moments' to 'moment' to match schema
         setTags((data.tags || []).join(", "));
         setLoading(false);
       });
@@ -135,7 +138,7 @@ export default function ReviewSubmissionPage() {
         <Label>Preview</Label>
         <div
           className="border rounded-md p-4 bg-white text-sm overflow-auto prose dark:prose-invert"
-          dangerouslySetInnerHTML={{ __html: mdParser.render(markdown) }}
+          dangerouslySetInnerHTML={{ __html: processChordHtml(mdParser.render(markdown)) }}
         />
       </div>
 

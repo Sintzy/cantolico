@@ -1,6 +1,7 @@
 import Link from "next/link";
 import MarkdownIt from "markdown-it";
 import chords from "markdown-it-chords";
+import { processChordHtml } from "@/lib/chord-processor";
 import { Metadata } from "next";
 import "../../../../public/styles/chords.css"; // importa o CSS correto
 
@@ -42,7 +43,7 @@ export default function ChordsSystemPage() {
           <div>
             <h3 className="font-medium mb-2">Preview</h3>
             <div className="prose dark:prose-invert border p-4 rounded-md overflow-auto text-sm">
-              <div dangerouslySetInnerHTML={{ __html: mdParser.render(example) }} />
+              <div dangerouslySetInnerHTML={{ __html: processChordHtml(mdParser.render(example)) }} />
             </div>
           </div>
         </div>
@@ -61,7 +62,7 @@ export default function ChordsSystemPage() {
             O acorde será exibido automaticamente por cima da sílaba onde se deve cantar ou tocar:
           </p>
           <div className="prose dark:prose-invert border rounded-md p-4">
-            <div dangerouslySetInnerHTML={{ __html: mdParser.render(`[Am]Canto Ale[Em]luia ao Sen[Am]hor`) }} />
+            <div dangerouslySetInnerHTML={{ __html: processChordHtml(mdParser.render(`[Am]Canto Ale[Em]luia ao Sen[Am]hor`)) }} />
           </div>
         </div>
       </section>

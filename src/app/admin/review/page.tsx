@@ -307,8 +307,8 @@ export default function AdminReviewPage() {
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="outline">{submission.type}</Badge>
                   <Badge variant="outline">{submission.mainInstrument}</Badge>
-                  {submission.moment.map((m) => (
-                    <Badge key={m} variant="outline" className="text-xs">
+                  {submission.moment.map((m, momentIndex) => (
+                    <Badge key={`${submission.id}-moment-${momentIndex}`} variant="outline" className="text-xs">
                       {m.replace(/_/g, " ")}
                     </Badge>
                   ))}
@@ -316,8 +316,8 @@ export default function AdminReviewPage() {
 
                 {submission.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1">
-                    {submission.tags.map((tag) => (
-                      <Badge key={tag} variant="secondary" className="text-xs">
+                    {submission.tags.map((tag, tagIndex) => (
+                      <Badge key={`${submission.id}-tag-${tagIndex}`} variant="secondary" className="text-xs">
                         #{tag}
                       </Badge>
                     ))}
