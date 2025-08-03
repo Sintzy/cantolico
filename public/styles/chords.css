@@ -6,10 +6,10 @@
 	position: relative;
 	user-select: none;
 	height: 3.2em;
-	font-size: 100%;
-  color: #003366;
-  font-weight: bold;
-  font-style: normal;
+	font-size: 85%;
+	font-weight: bold;
+	margin-right: 2px;
+	min-width: 1.5em;
 }
 .chord.diagram {
 	height: calc(1.5em + (3.5 * var(--chord-diagram-font-size)))
@@ -17,12 +17,19 @@
 .chord .inner {
 	position: absolute;
 	display: block;
-	left: 0;
+	left: 50%;
+	transform: translateX(-50%);
 	bottom: 1.3em;
+	color: #1d4ed8;
+	font-weight: bold;
+	font-size: 1.1em;
+	white-space: nowrap;
+	min-width: fit-content;
 }
 .chord i {
 	font-style: normal;
 	display: inline-block;
+	min-width: 0.5em;
 }
 .chord i.diagram {
 	font: 100 var(--chord-diagram-font-size) Courier;
@@ -39,4 +46,14 @@
 .chord:not(.diagram) .inner:hover i.diagram {
 	background: white;
 	z-index: 5;
+}
+
+/* Prevenir sobreposição em sequências de acordes */
+.chord + .chord {
+	margin-left: 6px;
+}
+
+/* Para acordes no meio de texto, manter espaçamento mínimo */
+.chord:not(:first-child):not(:last-child) {
+	margin-right: 1px;
 }

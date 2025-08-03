@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import MarkdownIt from 'markdown-it';
 import chords from 'markdown-it-chords';
+import { processChordHtml } from '@/lib/chord-processor';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -117,7 +118,8 @@ export function MusicPageClient({ songData }: Props) {
     if (!songData.currentVersion?.sourceText) return '';
     
     const transposedText = transposeChords(songData.currentVersion.sourceText, transpose);
-    return mdParser.render(transposedText);
+    const rawHtml = mdParser.render(transposedText);
+    return processChordHtml(rawHtml);
   }, [songData.currentVersion?.sourceText, transpose]);
 
   const handleKeyChange = (keyIndex: number) => {
