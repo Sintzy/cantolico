@@ -1,36 +1,34 @@
 :root {
 	--chord-diagram-font-size: 10px;
 }
+
 .chord {
 	display: inline-block;
 	position: relative;
 	user-select: none;
-	height: 3.2em;
-	font-size: 85%;
-	font-weight: bold;
-	margin-right: 2px;
-	min-width: 1.5em;
+	height: 2.5em;
+	font-size: 80%;
 }
+
 .chord.diagram {
 	height: calc(1.5em + (3.5 * var(--chord-diagram-font-size)))
 }
+
 .chord .inner {
 	position: absolute;
 	display: block;
-	left: 50%;
-	transform: translateX(-50%);
-	bottom: 1.3em;
+	left: 0;
+	bottom: 0.8em;
 	color: #1d4ed8;
 	font-weight: bold;
-	font-size: 1.1em;
 	white-space: nowrap;
-	min-width: fit-content;
 }
+
 .chord i {
 	font-style: normal;
 	display: inline-block;
-	min-width: 0.5em;
 }
+
 .chord i.diagram {
 	font: 100 var(--chord-diagram-font-size) Courier;
 	line-height: .5em;
@@ -38,22 +36,24 @@
 	bottom: 0;
 	display: none;
 }
+
 .chord .inner:hover i.diagram,
 .chord.diagram i.diagram,
 .chord i.diagram.show {
 	display: inline-block;
 }
+
 .chord:not(.diagram) .inner:hover i.diagram {
 	background: white;
 	z-index: 5;
 }
 
-/* Prevenir sobreposição em sequências de acordes */
+/* Acordes seguidos (sem texto entre eles) ficam lado a lado horizontalmente */
 .chord + .chord {
-	margin-left: 6px;
+	margin-left: 16px;
 }
 
-/* Para acordes no meio de texto, manter espaçamento mínimo */
-.chord:not(:first-child):not(:last-child) {
-	margin-right: 1px;
+/* Acordes seguidos não devem quebrar linha */
+.chord + .chord .inner {
+	left: 0;
 }
