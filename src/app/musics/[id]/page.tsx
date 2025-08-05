@@ -133,60 +133,40 @@ export default function SongPage() {
     return 'separate';
   };
 
-  // Sistema customizado para processar acordes normais (não markdown-it-chords)
-  const processNormalChords = (text: string): string => {
-    const lines = text.split('\n');
-    const result: string[] = [];
+  // Sistema atualizado para processar acordes usando o chord-processor moderno
+  const processChords = (text: string): string => {
+    // Importa o sistema correto do chord-processor
+    const { 
+      detectChordFormat, 
+      processChords: processAboveChords,
+      processMixedChords,
+      processSimpleInline
+    } = require('@/lib/chord-processor');
     
-    for (let i = 0; i < lines.length; i++) {
-      const currentLine = lines[i];
-      const nextLine = i + 1 < lines.length ? lines[i + 1] : '';
-      
-      // Verifica se é uma linha só com acordes
-      const isChordOnlyLine = /^(?:\s*\[[A-G][#b]?[^\]]*\]\s*)+\s*$/.test(currentLine.trim());
-      const isTextLine = nextLine.trim() && !/^\s*\[/.test(nextLine.trim());
-      
-      if (isChordOnlyLine && isTextLine) {
-        // Extrai acordes e suas posições
-        const chordMatches = [];
-        const chordRegex = /\[[A-G][#b]?[^\]]*\]/g;
-        let match;
-        while ((match = chordRegex.exec(currentLine)) !== null) {
-          chordMatches.push({
-            chord: match[0].slice(1, -1), // Remove [ ]
-            position: match.index
-          });
-        }
-        
-        const textLine = nextLine.trim();
-        let html = '<div style="position: relative; margin-bottom: 1.5em;">';
-        
-        // Linha dos acordes (invisível, apenas para estrutura)
-        html += '<div style="height: 1.2em; position: relative;">';
-        chordMatches.forEach(({ chord, position }) => {
-          // Calcula posição proporcional do acorde
-          const relativePos = (position / currentLine.length) * 100;
-          html += `<span style="position: absolute; left: ${relativePos}%; color: #1d4ed8; font-weight: bold; font-size: 0.85em; white-space: nowrap;">${chord}</span>`;
-        });
-        html += '</div>';
-        
-        // Linha do texto
-        html += `<div style="margin-top: 0.2em;">${textLine}</div>`;
-        html += '</div>';
-        
-        result.push(html);
-        i++; // Pula a próxima linha pois já foi processada
+    // Detecta o formato original
+    const originalFormat = detectChordFormat(text);
+    
+    let processedHtml: string;
+    let wrapperClass: string;
+    
+    if (originalFormat === 'inline') {
+      // Verifica se tem seções de intro/ponte junto com inline (formato misto)
+      if (/^(Intro|Ponte|Solo|Bridge|Instrumental|Interlude):?\s*$/im.test(text)) {
+        // Formato misto: processa tudo usando processMixedChords
+        processedHtml = processMixedChords(text);
+        wrapperClass = 'chord-container-inline';
       } else {
-        // Para linhas normais (não acordes), converte markdown básico
-        if (currentLine.trim()) {
-          result.push(`<p>${currentLine}</p>`);
-        } else {
-          result.push('<br>');
-        }
+        // Formato inline puro - usa processamento simples
+        processedHtml = processSimpleInline(text);
+        wrapperClass = 'chord-container-inline';
       }
+    } else {
+      // Formato above (acordes acima da letra)
+      processedHtml = processAboveChords(text, 'above');
+      wrapperClass = 'chord-container-above';
     }
     
-    return result.join('\n');
+    return `<div class="${wrapperClass}">${processedHtml}</div>`;
   };
 
   // Processa acordes em linha separada para formato inline
@@ -237,10 +217,7 @@ export default function SongPage() {
   const renderedHtml = useMemo(() => {
     if (!song?.currentVersion?.sourceText) return '';
     
-    // Detecta o formato original ANTES de qualquer processamento (baseado na presença de #mic#)
-    const originalFormat = detectChordFormat(song.currentVersion.sourceText);
-    
-    // Remove a tag #mic# do texto para processamento
+    // Remove a tag #mic# do texto para processamento se presente
     let src = song.currentVersion.sourceText.replace(/^#mic#\s*\n?/, '').trim();
   
     if (!showChords) {
@@ -252,34 +229,104 @@ export default function SongPage() {
       }
     }
   
-    let processedHtml: string;
-    let wrapperClass: string;
-    
-    if (originalFormat === 'inline') {
-      // Usa markdown-it-chords para formato inline
-      const rawHtml = mdParser.render(src);
-      processedHtml = processChordHtml(rawHtml);
-      wrapperClass = 'chord-container-inline';
+    // Usa o novo sistema de processamento
+    if (showChords) {
+      return processChords(src);
     } else {
-      // Usa sistema customizado para formato separado
-      if (showChords) {
-        processedHtml = processNormalChords(src);
-      } else {
-        // Se não mostra acordes, só converte texto simples
-        const lines = src.split('\n');
-        const textOnly = lines.map(line => {
-          if (/^(?:\s*\[[A-G][#b]?[^\]]*\]\s*)+\s*$/.test(line.trim())) {
-            return ''; // Remove linhas só com acordes
-          }
-          return line.trim() ? `<p>${line}</p>` : '<br>';
-        }).filter(line => line).join('\n');
-        processedHtml = textOnly;
-      }
-      wrapperClass = 'chord-container-separate';
+      // Se não mostra acordes, só converte texto simples
+      const lines = src.split('\n');
+      const textOnly = lines.map(line => {
+        if (/^(?:\s*\[[A-G][#b]?[^\]]*\]\s*)+\s*$/.test(line.trim())) {
+          return ''; // Remove linhas só com acordes
+        }
+        return line.trim() ? `<p>${line}</p>` : '<br>';
+      }).filter(line => line).join('\n');
+      return `<div class="chord-container-above">${textOnly}</div>`;
+    }
+  }, [song?.currentVersion?.sourceText, showChords, transposition]);
+  
+  // Função para dividir o conteúdo em duas colunas baseado em mudanças de estrofe
+  const splitContentIntoColumns = (htmlContent: string): { leftColumn: string; rightColumn: string } => {
+    if (!htmlContent) return { leftColumn: '', rightColumn: '' };
+    
+    // Remove o wrapper div temporariamente
+    const unwrapped = htmlContent.replace(/^<div class="[^"]*">/, '').replace(/<\/div>$/, '');
+    
+    // Tenta diferentes estratégias de divisão baseadas no formato
+    let sections: string[] = [];
+    
+    // Estratégia 1: Divide por duplas quebras de linha (<br><br>)
+    if (unwrapped.includes('<br><br>')) {
+      sections = unwrapped.split(/(<br>\s*<br>)/);
+      // Remove elementos vazios e reagrupa corretamente
+      sections = sections.filter(s => s.trim() && !s.match(/^<br>\s*<br>$/));
     }
     
-    return `<div class="${wrapperClass}">${processedHtml}</div>`;
-  }, [song?.currentVersion?.sourceText, showChords, transposition]);
+    // Estratégia 2: Divide por seções intro/ponte se não houver duplas quebras
+    if (sections.length <= 2 && unwrapped.includes('intro-section')) {
+      sections = unwrapped.split(/(<div class="intro-section[^"]*">.*?<\/div>)/);
+      sections = sections.filter(s => s.trim());
+    }
+    
+    // Estratégia 3: Divide por chord-section se for formato above
+    if (sections.length <= 2 && unwrapped.includes('chord-section')) {
+      const chordSections = unwrapped.match(/<div class="chord-section">.*?<\/div>/g) || [];
+      const otherContent = unwrapped.replace(/<div class="chord-section">.*?<\/div>/g, '|||SPLIT|||');
+      const otherParts = otherContent.split('|||SPLIT|||').filter(s => s.trim());
+      
+      // Intercala seções de acordes com outro conteúdo
+      sections = [];
+      let chordIndex = 0;
+      let otherIndex = 0;
+      
+      const totalElements = chordSections.length + otherParts.length;
+      for (let i = 0; i < totalElements; i++) {
+        if (unwrapped.indexOf(chordSections[chordIndex] || '') < unwrapped.indexOf(otherParts[otherIndex] || '')) {
+          if (chordIndex < chordSections.length) sections.push(chordSections[chordIndex++]);
+        } else {
+          if (otherIndex < otherParts.length) sections.push(otherParts[otherIndex++]);
+        }
+      }
+    }
+    
+    // Estratégia 4: Se ainda não há divisões suficientes, divide por parágrafos
+    if (sections.length <= 2) {
+      sections = unwrapped.split(/(<p>.*?<\/p>|<br>)/);
+      sections = sections.filter(s => s.trim() && s !== '<br>');
+    }
+    
+    // Se há poucas seções, não divide
+    if (sections.length <= 3) {
+      return { leftColumn: htmlContent, rightColumn: '' };
+    }
+    
+    // Divide aproximadamente ao meio, mas tenta manter seções relacionadas juntas
+    const midPoint = Math.ceil(sections.length / 2);
+    let leftSections = sections.slice(0, midPoint);
+    let rightSections = sections.slice(midPoint);
+    
+    // Ajuste para evitar dividir intro/refrão ao meio
+    const lastLeftSection = leftSections[leftSections.length - 1];
+    const firstRightSection = rightSections[0];
+    
+    if (lastLeftSection?.includes('Refrão') && firstRightSection && !firstRightSection.includes('intro-section')) {
+      // Move a última seção da esquerda para a direita
+      rightSections.unshift(leftSections.pop()!);
+    }
+    
+    // Reconstrói o HTML com os wrappers apropriados
+    const wrapperMatch = htmlContent.match(/^<div class="([^"]*)">/);
+    const wrapperClass = wrapperMatch ? wrapperMatch[1] : 'chord-container-above';
+    
+    const leftColumn = `<div class="${wrapperClass}">${leftSections.join('')}</div>`;
+    const rightColumn = rightSections.length > 0 ? `<div class="${wrapperClass}">${rightSections.join('')}</div>` : '';
+    
+    return { leftColumn, rightColumn };
+  };
+
+  const { leftColumn, rightColumn } = useMemo(() => {
+    return splitContentIntoColumns(renderedHtml);
+  }, [renderedHtml]);
   
 
   if (loading) return <div className="p-6 text-center"><Spinner size="medium"/>A carregar música...</div>;
@@ -429,11 +476,25 @@ export default function SongPage() {
                 </DropdownMenu>
               </div>
 
-              <div
-                className="bg-white rounded-md border p-6 overflow-auto font-mono text-sm leading-relaxed"
-                style={{ lineHeight: '1.8' }}
-                dangerouslySetInnerHTML={{ __html: renderedHtml }}
-              />
+              {/* Conteúdo da música - Sistema de duas colunas para telas grandes */}
+              {rightColumn ? (
+                // Duas colunas dentro da mesma caixa (apenas em telas grandes)
+                <div className="music-content-container">
+                  <div className="music-columns-container">
+                    <div className="music-column">
+                      <div dangerouslySetInnerHTML={{ __html: leftColumn }} />
+                    </div>
+                    <div className="music-column">
+                      <div dangerouslySetInnerHTML={{ __html: rightColumn }} />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                // Uma coluna (conteúdo curto ou telas pequenas)
+                <div className="music-content-container">
+                  <div dangerouslySetInnerHTML={{ __html: leftColumn || renderedHtml }} />
+                </div>
+              )}
             </section>
           )}
 

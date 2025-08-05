@@ -3,7 +3,14 @@
 import { useEffect, useState, useMemo } from 'react';
 import MarkdownIt from 'markdown-it';
 import chords from 'markdown-it-chords';
-import { processChordHtml } from '@/lib/chord-processor';
+import { 
+  processChordHtml, 
+  detectChordFormat, 
+  processChords,
+  processMixedChords,
+  processSimpleInline,
+  ChordFormat 
+} from '@/lib/chord-processor';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -76,76 +83,6 @@ function transposeChords(text: string, interval: number): string {
   });
 }
 
-// Detecta o tipo de formatação dos acordes
-const detectChordFormat = (text: string): 'inline' | 'separate' => {
-  // Se encontrar acordes seguidos de texto na mesma linha (ex: [C]Palavra), é inline
-  if (/\[[A-G][#b]?[^\]]*\][a-zA-ZÀ-ÿ]/.test(text)) {
-    return 'inline';
-  }
-  // Se encontrar linhas só com acordes seguidas de linhas com texto, é separate
-  const lines = text.split('\n');
-  for (let i = 0; i < lines.length - 1; i++) {
-    const currentLine = lines[i].trim();
-    const nextLine = lines[i + 1].trim();
-    
-    // Linha atual só tem acordes e espaços
-    const isChordOnlyLine = /^(?:\s*\[[A-G][#b]?[^\]]*\]\s*)+$/.test(currentLine);
-    // Próxima linha tem texto mas não começa com acorde
-    const isTextLine = nextLine && /\S/.test(nextLine) && !/^\s*\[/.test(nextLine);
-    
-    if (isChordOnlyLine && isTextLine) {
-      return 'separate';
-    }
-  }
-  
-  return 'inline';
-};
-
-// Processa acordes em linha separada para formato inline
-const convertSeparateToInline = (text: string): string => {
-  const lines = text.split('\n');
-  const result: string[] = [];
-  
-  for (let i = 0; i < lines.length; i++) {
-    const currentLine = lines[i].trim();
-    const nextLine = i + 1 < lines.length ? lines[i + 1].trim() : '';
-    
-    // Verifica se é uma linha só com acordes
-    const isChordOnlyLine = /^(?:\s*\[[A-G][#b]?[^\]]*\]\s*)+$/.test(currentLine);
-    const isTextLine = nextLine && /\S/.test(nextLine) && !/^\s*\[/.test(nextLine);
-    
-    if (isChordOnlyLine && isTextLine) {
-      // Extrai os acordes da linha atual
-      const chords = currentLine.match(/\[[A-G][#b]?[^\]]*\]/g) || [];
-      const textWords = nextLine.split(/\s+/).filter(word => word.length > 0);
-      
-      // Distribui os acordes pelas palavras com menos espaçamento
-      let convertedLine = '';
-      const maxLength = Math.max(chords.length, textWords.length);
-      
-      for (let j = 0; j < maxLength; j++) {
-        if (j < chords.length) {
-          convertedLine += chords[j];
-        }
-        if (j < textWords.length) {
-          convertedLine += textWords[j];
-          // Adiciona apenas um espaço simples entre palavras
-          if (j < textWords.length - 1) {
-            convertedLine += ' ';
-          }
-        }
-      }
-      
-      result.push(convertedLine);
-      i++; // Pula a próxima linha pois já foi processada
-    } else {
-      result.push(lines[i]); // Mantém a linha original com espaços
-    }
-  }
-  
-  return result.join('\n');
-};
-
 function getKeyOptions(): { label: string; value: number }[] {
   const keys = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'];
   return keys.map((key, index) => ({
@@ -180,24 +117,42 @@ export function MusicPageClient({ songData }: Props) {
   const transposedContent = useMemo(() => {
     if (!songData.currentVersion?.sourceText) return '';
     
-    // Detecta o formato original ANTES de qualquer processamento
-    const originalFormat = detectChordFormat(songData.currentVersion.sourceText);
+    // Aplica transposição primeiro
+    const transposedText = transposeChords(songData.currentVersion.sourceText, transpose);
     
-    let text = songData.currentVersion.sourceText;
+    // Detecta o formato original
+    const originalFormat = detectChordFormat(transposedText);
     
-    // Detecta e converte formato se necessário
-    const chordFormat = detectChordFormat(text);
-    if (chordFormat === 'separate') {
-      text = convertSeparateToInline(text);
+    // Debug temporário
+    console.log('🔍 Debug formato na página de música:', {
+      text: transposedText.slice(0, 100) + '...',
+      format: originalFormat,
+      hasIntro: /^(Intro|Ponte|Solo|Bridge|Instrumental|Interlude):?\s*$/im.test(transposedText),
+      hasMic: transposedText.includes('#mic#')
+    });
+    
+    let processedHtml: string;
+    let wrapperClass: string;
+    
+    if (originalFormat === 'inline') {
+      // Verifica se tem seções de intro/ponte junto com inline (formato misto)
+      if (/^(Intro|Ponte|Solo|Bridge|Instrumental|Interlude):?\s*$/im.test(transposedText)) {
+        // Formato misto: processa tudo usando processMixedChords
+        console.log('📝 Processando formato misto na página de música');
+        processedHtml = processMixedChords(transposedText);
+        wrapperClass = 'chord-container-inline';
+      } else {
+        // Formato inline puro - usa processamento simples
+        console.log('📝 Processando formato inline puro na página de música');
+        processedHtml = processSimpleInline(transposedText);
+        wrapperClass = 'chord-container-inline';
+      }
+    } else {
+      // Formato above (acordes acima da letra)
+      console.log('📝 Processando formato above na página de música');
+      processedHtml = processChords(transposedText, 'above');
+      wrapperClass = 'chord-container-above';
     }
-    
-    // Aplica transposição
-    const transposedText = transposeChords(text, transpose);
-    const rawHtml = mdParser.render(transposedText);
-    const processedHtml = processChordHtml(rawHtml);
-    
-    // Usa o formato original para determinar a classe CSS
-    const wrapperClass = originalFormat === 'inline' ? 'chord-container-inline' : 'chord-container-separate';
     
     return `<div class="${wrapperClass}">${processedHtml}</div>`;
   }, [songData.currentVersion?.sourceText, transpose]);
@@ -334,7 +289,8 @@ export function MusicPageClient({ songData }: Props) {
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Letra e Acordes</h2>
             <div 
-              className="markdown-content p-4 bg-card rounded-lg border font-mono text-sm leading-relaxed"
+              className="prose border rounded-md p-4 bg-white dark:bg-neutral-900 overflow-auto font-mono text-sm"
+              style={{ lineHeight: '1.8' }}
               dangerouslySetInnerHTML={{ __html: transposedContent }}
             />
           </div>

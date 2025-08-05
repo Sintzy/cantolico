@@ -13,6 +13,25 @@ const REVERSE_CHORD_MAP = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A',
 export type ChordFormat = 'inline' | 'above' | 'intro';
 
 /**
+ * Processa formatação básica de Markdown (bold, italic, underline)
+ */
+export function processMarkdownFormatting(text: string): string {
+  if (!text) return text;
+  
+  return text
+    // Bold: **texto** ou __texto__
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/__(.*?)__/g, '<strong>$1</strong>')
+    // Italic: *texto* ou _texto_ (evitando conflito com acordes e bold)
+    .replace(/(?<!\*)\*([^*\[\]]+?)\*(?!\*)/g, '<em>$1</em>')
+    .replace(/(?<!_)_([^_\[\]]+?)_(?!_)/g, '<em>$1</em>')
+    // Underline: ~~texto~~
+    .replace(/~~(.*?)~~/g, '<u>$1</u>')
+    // Line breaks
+    .replace(/\n/g, '<br>');
+}
+
+/**
  * Detecta o formato dos acordes no texto de forma inteligente
  */
 export function detectChordFormat(text: string): ChordFormat {
@@ -129,12 +148,12 @@ export function processAboveChords(text: string): string {
           return `<span class="chord intro-chord" data-chord-length="${chord.length}"><span class="inner">${chord}</span></span>`;
         });
         result.push(`<div class="intro-section">`);
-        result.push(`<div class="intro-label">${currentLine.trim()}</div>`);
+        result.push(`<div class="intro-label">${processMarkdownFormatting(currentLine.trim())}</div>`);
         result.push(`<div class="intro-line">${chordHtml}</div>`);
         result.push(`</div>`);
         i++; // Pula a próxima linha pois já foi processada
       } else {
-        result.push(`<p>${currentLine}</p>`);
+        result.push(`<p>${processMarkdownFormatting(currentLine)}</p>`);
       }
     } else if (isChordOnlyLine && isTextLine) {
       // Processa linha de acordes normais acima da letra
@@ -144,7 +163,7 @@ export function processAboveChords(text: string): string {
       
       result.push(`<div class="chord-section">`);
       result.push(`<div class="chord-line">${chordHtml}</div>`);
-      result.push(`<div class="text-line">${nextLine.trim()}</div>`);
+      result.push(`<div class="text-line">${processMarkdownFormatting(nextLine.trim())}</div>`);
       result.push(`</div>`);
       
       i++; // Pula a próxima linha pois já foi processada
@@ -157,7 +176,7 @@ export function processAboveChords(text: string): string {
     } else {
       // Linha normal de texto
       if (currentLine.trim()) {
-        result.push(`<p>${currentLine}</p>`);
+        result.push(`<p>${processMarkdownFormatting(currentLine)}</p>`);
       } else {
         result.push('<br>');
       }
@@ -222,7 +241,7 @@ export function processMixedChords(text: string): string {
           return `<span class="chord intro-chord" data-chord-length="${chord.length}"><span class="inner">${chord}</span></span>`;
         });
         result.push(`<div class="intro-section mixed">`);
-        result.push(`<div class="intro-label">${currentLine.trim()}</div>`);
+        result.push(`<div class="intro-label">${processMarkdownFormatting(currentLine.trim())}</div>`);
         result.push(`<div class="intro-line">${chordHtml}</div>`);
         result.push(`</div>`);
         i++; // Pula a próxima linha pois já foi processada
@@ -233,14 +252,42 @@ export function processMixedChords(text: string): string {
     // Processa linha normal (pode ter acordes inline)
     if (currentLine.trim()) {
       if (/\[[A-G][#b]?[^\]]*\]/.test(currentLine)) {
-        // Linha com acordes inline - converte para HTML
-        let processedLine = currentLine.replace(/\[([A-G][#b]?[^\]]*)\]/g, (match, chord) => {
+        // Linha com acordes inline - processa acordes e markdown separadamente
+        let processedLine = currentLine;
+        
+        // Primeiro extrai acordes para preservá-los
+        const chordMatches: { match: string; chord: string; index: number }[] = [];
+        const chordRegex = /\[([A-G][#b]?[^\]]*)\]/g;
+        let match;
+        while ((match = chordRegex.exec(currentLine)) !== null) {
+          chordMatches.push({
+            match: match[0],
+            chord: match[1],
+            index: match.index
+          });
+        }
+        
+        // Remove acordes temporariamente
+        let textWithoutChords = currentLine;
+        chordMatches.reverse().forEach(({ match, index }) => {
+          textWithoutChords = textWithoutChords.slice(0, index) + '|||CHORD|||' + textWithoutChords.slice(index + match.length);
+        });
+        
+        // Aplica formatação markdown ao texto sem acordes
+        textWithoutChords = processMarkdownFormatting(textWithoutChords);
+        
+        // Reinsere acordes processados
+        let chordIndex = 0;
+        processedLine = textWithoutChords.replace(/\|\|\|CHORD\|\|\|/g, () => {
+          const { chord } = chordMatches[chordMatches.length - 1 - chordIndex];
+          chordIndex++;
           return `<span class="chord" data-chord-length="${chord.length}"><span class="inner">${chord}</span></span>`;
         });
+        
         result.push(`<p>${processedLine}</p>`);
       } else {
         // Linha de texto normal
-        result.push(`<p>${currentLine}</p>`);
+        result.push(`<p>${processMarkdownFormatting(currentLine)}</p>`);
       }
     }
   }
@@ -261,14 +308,42 @@ export function processSimpleInline(text: string): string {
   
   for (const line of lines) {
     if (/\[[A-G][#b]?[^\]]*\]/.test(line)) {
-      // Linha com acordes
-      let processedLine = line.replace(/\[([A-G][#b]?[^\]]*)\]/g, (match, chord) => {
+      // Linha com acordes - processa acordes e markdown separadamente
+      let processedLine = line;
+      
+      // Primeiro extrai acordes para preservá-los
+      const chordMatches: { match: string; chord: string; index: number }[] = [];
+      const chordRegex = /\[([A-G][#b]?[^\]]*)\]/g;
+      let match;
+      while ((match = chordRegex.exec(line)) !== null) {
+        chordMatches.push({
+          match: match[0],
+          chord: match[1],
+          index: match.index
+        });
+      }
+      
+      // Remove acordes temporariamente
+      let textWithoutChords = line;
+      chordMatches.reverse().forEach(({ match, index }) => {
+        textWithoutChords = textWithoutChords.slice(0, index) + '|||CHORD|||' + textWithoutChords.slice(index + match.length);
+      });
+      
+      // Aplica formatação markdown ao texto sem acordes
+      textWithoutChords = processMarkdownFormatting(textWithoutChords);
+      
+      // Reinsere acordes processados
+      let chordIndex = 0;
+      processedLine = textWithoutChords.replace(/\|\|\|CHORD\|\|\|/g, () => {
+        const { chord } = chordMatches[chordMatches.length - 1 - chordIndex];
+        chordIndex++;
         return `<span class="chord" data-chord-length="${chord.length}"><span class="inner">${chord}</span></span>`;
       });
+      
       result.push(`<p>${processedLine}</p>`);
     } else {
       // Linha normal
-      result.push(`<p>${line}</p>`);
+      result.push(`<p>${processMarkdownFormatting(line)}</p>`);
     }
   }
   

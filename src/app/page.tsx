@@ -6,6 +6,7 @@ import { Music, Info, ShieldCheck, Github, UserPlus, BookOpenCheck } from 'lucid
 import { generateStructuredData } from '@/lib/structured-data';
 import { Metadata } from 'next';
 import { SITE_CONFIG } from '@/lib/site-images';
+import BannerDisplay from '@/components/BannerDisplay';
 
 export const metadata: Metadata = {
   title: SITE_CONFIG.name,
@@ -59,6 +60,9 @@ export default function HomePage() {
           __html: JSON.stringify(organizationStructuredData),
         }}
       />
+
+      {/* Banners do topo */}
+      <BannerDisplay page="HOME" />
 
       <main className="max-w-6xl mx-auto px-4 py-12 space-y-16">
         {/* Hero */}

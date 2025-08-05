@@ -62,6 +62,29 @@ enum LiturgicalMoment {
   TERCO_MISTERIO
 }
 
+enum BannerType {
+  ANNOUNCEMENT
+  ALERT
+  CHANGELOG
+  WARNING
+  REQUEST
+  INFO
+  SUCCESS
+  ERROR
+}
+
+enum BannerPosition {
+  TOP
+  BOTTOM
+}
+
+enum BannerPage {
+  HOME
+  MUSICS
+  ADMIN
+  ALL
+}
+
 model User {
   id           Int      @id @default(autoincrement())
   name         String?
@@ -79,6 +102,7 @@ model User {
   submissions  SongSubmission[] @relation("SubmissionSubmitter")
   reviews      SongSubmission[] @relation("SubmissionReviewer")
   auditLogs    AuditLog[]
+  banners      Banner[] @relation("BannerCreator")
 }
 
 model Song {
@@ -165,4 +189,21 @@ model AuditLog {
   entityId  String?
   metadata  Json?
   createdAt DateTime @default(now())
+}
+
+model Banner {
+  id          String        @id @default(cuid())
+  title       String
+  message     String
+  type        BannerType
+  position    BannerPosition @default(TOP)
+  pages       BannerPage[]
+  isActive    Boolean       @default(true)
+  priority    Int           @default(0) // Higher number = higher priority
+  startDate   DateTime?
+  endDate     DateTime?
+  createdById Int
+  createdBy   User          @relation("BannerCreator", fields: [createdById], references: [id])
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 }
