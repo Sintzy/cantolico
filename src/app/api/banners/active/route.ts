@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { BannerPage } from '@prisma/client';
 
 // GET - Buscar banners ativos para uma página específica
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const page = searchParams.get('page') || 'ALL';
+    const pageParam = searchParams.get('page') || 'ALL';
+    
+    // Validar se o parâmetro é um valor válido do enum
+    const validPages: BannerPage[] = ['HOME', 'MUSICS', 'ADMIN', 'ALL'];
+    const page = validPages.includes(pageParam as BannerPage) ? pageParam as BannerPage : 'ALL';
     
     const now = new Date();
     
