@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Spinner } from '@/components/ui/spinner';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { Users, Music, Clock, TrendingUp, Activity, AlertCircle } from 'lucide-react';
+import BannerDisplay from '@/components/BannerDisplay';
 
 interface DashboardStats {
   totalUsers: number;
@@ -131,22 +132,29 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-8">
+    <>
+      {/* Banners para área administrativa */}
+      <BannerDisplay page="ADMIN" />
+      
+      <div className="container mx-auto px-4 py-8 space-y-8">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard Administrativo</h1>
+          <h1 className="text-2xl lg:text-3xl font-bold">Dashboard Administrativo</h1>
           <p className="text-gray-600">Bem-vindo, {session?.user?.name}</p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={fetchStats} variant="outline" size="sm">
+        <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+          <Button onClick={fetchStats} variant="outline" size="sm" className="w-full sm:w-auto">
             Atualizar
           </Button>
-          <Button asChild variant="outline">
+          <Button asChild variant="outline" className="w-full sm:w-auto">
             <Link href="/admin/dashboard/users">Gestão Utilizadores</Link>
           </Button>
-          <Button asChild variant="outline">
+          <Button asChild variant="outline" className="w-full sm:w-auto">
             <Link href="/admin/dashboard/musics">Gestão Músicas</Link>
+          </Button>
+          <Button asChild variant="outline" className="w-full sm:w-auto">
+            <Link href="/admin/dashboard/banners">Gestão Banners</Link>
           </Button>
         </div>
       </div>
@@ -247,19 +255,19 @@ export default function AdminDashboard() {
       </div>
 
       {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Submissions by Month */}
         <Card>
           <CardHeader>
-            <CardTitle>Submissões por Mês</CardTitle>
+            <CardTitle className="text-lg">Submissões por Mês</CardTitle>
             <CardDescription>Evolução das submissões ao longo do tempo</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               <LineChart data={stats.submissionsByMonth}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
+                <XAxis dataKey="month" fontSize={12} />
+                <YAxis fontSize={12} />
                 <Tooltip />
                 <Line type="monotone" dataKey="count" stroke="#8884d8" strokeWidth={2} />
               </LineChart>
@@ -270,11 +278,11 @@ export default function AdminDashboard() {
         {/* Users by Role */}
         <Card>
           <CardHeader>
-            <CardTitle>Utilizadores por Role</CardTitle>
+            <CardTitle className="text-lg">Utilizadores por Role</CardTitle>
             <CardDescription>Distribuição de papéis dos utilizadores</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               <PieChart>
                 <Pie
                   data={stats.usersByRole}
@@ -282,9 +290,10 @@ export default function AdminDashboard() {
                   cy="50%"
                   labelLine={false}
                   label={({ role, percent }) => `${role} ${(percent ? percent * 100 : 0).toFixed(0)}%`}
-                  outerRadius={80}
+                  outerRadius={70}
                   fill="#8884d8"
                   dataKey="count"
+                  fontSize={12}
                 >
                   {stats.usersByRole.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -299,15 +308,15 @@ export default function AdminDashboard() {
         {/* Songs by Type */}
         <Card>
           <CardHeader>
-            <CardTitle>Músicas por Tipo</CardTitle>
+            <CardTitle className="text-lg">Músicas por Tipo</CardTitle>
             <CardDescription>Distribuição das músicas por categoria litúrgica</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               <BarChart data={stats.songsByType}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="type" />
-                <YAxis />
+                <XAxis dataKey="type" fontSize={12} />
+                <YAxis fontSize={12} />
                 <Tooltip />
                 <Bar dataKey="count" fill="#82ca9d" />
               </BarChart>
@@ -318,19 +327,19 @@ export default function AdminDashboard() {
         {/* Recent Activities */}
         <Card>
           <CardHeader>
-            <CardTitle>Atividade Recente</CardTitle>
+            <CardTitle className="text-lg">Atividade Recente</CardTitle>
             <CardDescription>Últimas ações no sistema</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-3 max-h-64 overflow-y-auto">
               {stats.recentActivities.map((activity) => (
                 <div key={activity.id} className={`flex items-start space-x-3 p-3 rounded-lg border ${getActivityColor(activity.type)}`}>
                   {getActivityIcon(activity.type)}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">{activity.description}</p>
-                    <div className="flex items-center space-x-2 mt-1">
+                    <p className="text-sm font-medium truncate">{activity.description}</p>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-1">
                       <p className="text-xs text-gray-500">Por {activity.user}</p>
-                      <span className="text-xs text-gray-400">•</span>
+                      <span className="text-xs text-gray-400 hidden sm:inline">•</span>
                       <p className="text-xs text-gray-500">
                         {new Date(activity.timestamp).toLocaleDateString('pt-PT', {
                           day: '2-digit',
@@ -341,7 +350,7 @@ export default function AdminDashboard() {
                       </p>
                     </div>
                   </div>
-                  <Badge variant="outline">
+                  <Badge variant="outline" className="text-xs">
                     {activity.type.replace('_', ' ')}
                   </Badge>
                 </div>
@@ -354,38 +363,47 @@ export default function AdminDashboard() {
       {/* Quick Actions */}
       <Card>
         <CardHeader>
-          <CardTitle>Ações Rápidas</CardTitle>
+          <CardTitle className="text-lg">Ações Rápidas</CardTitle>
           <CardDescription>Acesso rápido às funções mais utilizadas</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button asChild className="h-20 flex-col">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Button asChild className="h-16 flex-col text-center p-4">
               <Link href="/admin/review">
-                <svg className="h-6 w-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-5 w-5 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                Revisar Submissões
+                <span className="text-sm">Revisar Submissões</span>
               </Link>
             </Button>
-            <Button asChild variant="outline" className="h-20 flex-col">
+            <Button asChild variant="outline" className="h-16 flex-col text-center p-4">
               <Link href="/admin/dashboard/users">
-                <svg className="h-6 w-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-5 w-5 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
                 </svg>
-                Gestão Utilizadores
+                <span className="text-sm">Gestão Utilizadores</span>
               </Link>
             </Button>
-            <Button asChild variant="outline" className="h-20 flex-col">
+            <Button asChild variant="outline" className="h-16 flex-col text-center p-4">
               <Link href="/admin/dashboard/musics">
-                <svg className="h-6 w-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-5 w-5 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-2v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-2" />
                 </svg>
-                Gestão Músicas
+                <span className="text-sm">Gestão Músicas</span>
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="h-16 flex-col text-center p-4">
+              <Link href="/admin/dashboard/banners">
+                <svg className="h-5 w-5 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                </svg>
+                <span className="text-sm">Gestão Banners</span>
               </Link>
             </Button>
           </div>
         </CardContent>
       </Card>
     </div>
+    </>
   );
 }

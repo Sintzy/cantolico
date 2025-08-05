@@ -6,107 +6,63 @@ import { useRouter, useParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import MarkdownIt from "markdown-it";
 import chords from "markdown-it-chords";
-import { processChordHtml } from "@/lib/chord-processor";
+import { 
+  processChordHtml, 
+  detectChordFormat, 
+  processChords,
+  processMixedChords,
+  processSimpleInline,
+  ChordFormat 
+} from "@/lib/chord-processor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { ChordGuideButton } from "@/components/ChordGuidePopup";
 import "../../../../../public/styles/chords.css";
 import { SpellCheck } from "lucide-react";
 
 const SimpleMDE = dynamic(() => import("react-simplemde-editor"), { ssr: false });
 const mdParser = new MarkdownIt({ breaks: true }).use(chords);
 
-// Detecta o tipo de formatação dos acordes baseado na tag #mic#
-const detectChordFormat = (text: string): 'inline' | 'separate' => {
-  if (!text) return 'separate';
-  // Se contém #mic# no início, é markdown-it-chords (inline)
-  if (text.trim().startsWith('#mic#')) {
-    return 'inline';
-  }
-  // Caso contrário, é markdown normal (separate)
-  return 'separate';
-};
-
-// Sistema customizado para processar acordes normais (não markdown-it-chords)
-const processNormalChords = (text: string): string => {
-  const lines = text.split('\n');
-  const result: string[] = [];
-  
-  for (let i = 0; i < lines.length; i++) {
-    const currentLine = lines[i];
-    const nextLine = i + 1 < lines.length ? lines[i + 1] : '';
-    
-    // Verifica se é uma linha só com acordes
-    const isChordOnlyLine = /^(?:\s*\[[A-G][#b]?[^\]]*\]\s*)+\s*$/.test(currentLine.trim());
-    const isTextLine = nextLine.trim() && !/^\s*\[/.test(nextLine.trim());
-    
-    if (isChordOnlyLine && isTextLine) {
-      // Extrai acordes e suas posições
-      const chordMatches = [];
-      const chordRegex = /\[[A-G][#b]?[^\]]*\]/g;
-      let match;
-      while ((match = chordRegex.exec(currentLine)) !== null) {
-        chordMatches.push({
-          chord: match[0].slice(1, -1), // Remove [ ]
-          position: match.index
-        });
-      }
-      
-      const textLine = nextLine.trim();
-      let html = '<div style="position: relative; margin-bottom: 1.5em;">';
-      
-      // Linha dos acordes (invisível, apenas para estrutura)
-      html += '<div style="height: 1.2em; position: relative;">';
-      chordMatches.forEach(({ chord, position }) => {
-        // Calcula posição proporcional do acorde
-        const relativePos = (position / currentLine.length) * 100;
-        html += `<span style="position: absolute; left: ${relativePos}%; color: #1d4ed8; font-weight: bold; font-size: 0.85em; white-space: nowrap;">${chord}</span>`;
-      });
-      html += '</div>';
-      
-      // Linha do texto
-      html += `<div style="margin-top: 0.2em;">${textLine}</div>`;
-      html += '</div>';
-      
-      result.push(html);
-      i++; // Pula a próxima linha pois já foi processada
-    } else {
-      // Para linhas normais (não acordes), converte markdown básico
-      if (currentLine.trim()) {
-        result.push(`<p>${currentLine}</p>`);
-      } else {
-        result.push('<br>');
-      }
-    }
-  }
-  
-  return result.join('\n');
-};
-
+// Função avançada para gerar preview com suporte completo a todos os formatos
 const generatePreview = (markdownText: string): string => {
   if (!markdownText) return '';
   
-  // Remove a tag #mic# do texto para o preview
-  const cleanText = markdownText.replace(/^#mic#\s*\n?/, '').trim();
-  
-  // Detecta o formato original (baseado na presença de #mic#)
+  // Detecta o formato original
   const originalFormat = detectChordFormat(markdownText);
+  
+  // Debug temporário
+  console.log('🔍 Debug formato no review:', {
+    text: markdownText.slice(0, 100) + '...',
+    format: originalFormat,
+    hasIntro: /^(Intro|Ponte|Solo|Bridge|Instrumental|Interlude):?\s*$/im.test(markdownText),
+    hasMic: markdownText.includes('#mic#')
+  });
   
   let processedHtml: string;
   let wrapperClass: string;
   
   if (originalFormat === 'inline') {
-    // Usa markdown-it-chords para formato inline
-    const rawHtml = mdParser.render(cleanText);
-    processedHtml = processChordHtml(rawHtml);
-    wrapperClass = 'chord-container-inline';
+    // Verifica se tem seções de intro/ponte junto com inline (formato misto)
+    if (/^(Intro|Ponte|Solo|Bridge|Instrumental|Interlude):?\s*$/im.test(markdownText)) {
+      // Formato misto: processa tudo usando processMixedChords
+      console.log('📝 Processando formato misto no review');
+      processedHtml = processMixedChords(markdownText);
+      wrapperClass = 'chord-container-inline';
+    } else {
+      // Formato inline puro - usa processamento simples
+      console.log('📝 Processando formato inline puro no review');
+      processedHtml = processSimpleInline(markdownText);
+      wrapperClass = 'chord-container-inline';
+    }
   } else {
-    // Usa sistema customizado para formato separado
-    processedHtml = processNormalChords(cleanText);
-    wrapperClass = 'chord-container-separate';
+    // Formato above (acordes acima da letra)
+    console.log('📝 Processando formato above no review');
+    processedHtml = processChords(markdownText, 'above');
+    wrapperClass = 'chord-container-above';
   }
   
   return `<div class="${wrapperClass}">${processedHtml}</div>`;
@@ -129,6 +85,7 @@ export default function ReviewSubmissionPage() {
   const [submission, setSubmission] = useState<any>(null);
   const [title, setTitle] = useState("");
   const [markdown, setMarkdown] = useState("");
+  const [preview, setPreview] = useState("");
   const [spotifyLink, setSpotifyLink] = useState("");
   const [youtubeLink, setYoutubeLink] = useState("");
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
@@ -139,6 +96,11 @@ export default function ReviewSubmissionPage() {
   const [moments, setMoments] = useState<string[]>([]);
   const [tags, setTags] = useState<string>("");
   const [showRejectDialog, setShowRejectDialog] = useState(false);
+
+  // Atualiza o preview quando o markdown muda
+  useEffect(() => {
+    setPreview(generatePreview(markdown));
+  }, [markdown]);
 
   useEffect(() => {
     if (!submissionId) return;
@@ -222,18 +184,40 @@ export default function ReviewSubmissionPage() {
         <Input value={title} onChange={(e) => setTitle(e.target.value)} />
       </div>
 
-      <div>
-        <Label>Editor Markdown</Label>
-        <SimpleMDE value={markdown}  onChange={setMarkdown} />
-      </div>
-
-      <div>
-        <Label>Preview</Label>
-        <div
-          className="border rounded-md p-4 bg-white text-sm overflow-auto prose dark:prose-invert font-mono"
-          style={{ lineHeight: '1.8' }}
-          dangerouslySetInnerHTML={{ __html: generatePreview(markdown) }}
-        />
+      <div className="grid md:grid-cols-2 gap-6">
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <Label>Editor Markdown</Label>
+            <ChordGuideButton />
+          </div>
+          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
+            <h4 className="font-semibold text-sm mb-2">Formatos de acordes suportados:</h4>
+            <ul className="text-xs space-y-1">
+              <li><strong>Inline:</strong> <code>#mic#</code> seguido de <code>[C]Deus est[Am]á aqui</code></li>
+              <li><strong>Acima da letra:</strong> <code>[C] [Am] [F]</code> numa linha e <code>Deus está aqui</code> na seguinte</li>
+              <li><strong>Intro/Ponte:</strong> <code>Intro:</code> seguido de <code>[A] [G] [C]</code> na linha seguinte</li>
+              <li><strong>Formato misto:</strong> Podes combinar inline com intro/ponte na mesma música!</li>
+            </ul>
+          </div>
+          <SimpleMDE value={markdown} onChange={setMarkdown} />
+        </div>
+        <div>
+          <Label>Preview</Label>
+          <div className="mb-2 p-2 bg-gray-50 dark:bg-gray-800 rounded-md border text-xs">
+            <strong>Formato detectado:</strong> {detectChordFormat(markdown)}
+            {detectChordFormat(markdown) === 'inline' && markdown.includes('#mic#') && (
+              <span className="ml-2 text-green-600">✓ Tag #mic# encontrada</span>
+            )}
+            {/^(Intro|Ponte|Solo|Bridge|Instrumental|Interlude):?\s*$/im.test(markdown) && (
+              <span className="ml-2 text-blue-600">✓ Seções de intro/ponte detectadas</span>
+            )}
+          </div>
+          <div
+            className="prose border rounded-md p-4 bg-white dark:bg-neutral-900 overflow-auto max-h-[500px] font-mono text-sm"
+            style={{ lineHeight: '1.8' }}
+            dangerouslySetInnerHTML={{ __html: preview }}
+          />
+        </div>
       </div>
 
       {pdfPreviewUrl && (

@@ -9,6 +9,58 @@
 }
 
 /* ===============================
+   OVERRIDES GLOBAIS - GARANTEM FUNCIONAMENTO EM TODAS AS PÁGINAS
+   =============================== */
+
+/* Garante que os containers de acordes sempre funcionem */
+[class*="chord-container"] {
+	font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+	line-height: 1.6 !important;
+	color: var(--text-color) !important;
+}
+
+[class*="chord-container"] p {
+	margin: 0.3em 0 !important;
+	padding: 0 !important;
+	line-height: inherit !important;
+	color: inherit !important;
+	background: transparent !important;
+}
+
+/* Garante que acordes sempre tenham o estilo correto */
+[class*="chord-container"] .chord .inner,
+[class*="chord-container"] .above-chord .inner,
+[class*="chord-container"] .intro-chord .inner {
+	color: var(--chord-color) !important;
+	background: var(--chord-bg) !important;
+	border: 1px solid var(--chord-border) !important;
+	border-radius: 6px !important;
+	box-shadow: var(--shadow-sm) !important;
+	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
+	font-weight: var(--chord-font-weight) !important;
+	transition: all 0.15s ease !important;
+	white-space: nowrap !important;
+	padding: 2px 6px !important;
+	display: inline-block !important;
+}
+
+/* Garantir que todos os acordes apareçam juntos na linha */
+[class*="chord-container"] .chord,
+[class*="chord-container"] .above-chord,
+[class*="chord-container"] .intro-chord {
+	display: inline-block !important;
+	margin-right: 8px !important;
+	vertical-align: baseline !important;
+}
+
+[class*="chord-container"] .chord .inner:hover,
+[class*="chord-container"] .above-chord .inner:hover,
+[class*="chord-container"] .intro-chord .inner:hover {
+	background: var(--chord-color) !important;
+	color: white !important;
+}
+
+/* ===============================
    ESTILO PARA MARKDOWN-IT-CHORDS (INLINE)
    =============================== */
 
@@ -16,30 +68,30 @@
 	display: inline-block;
 	position: relative;
 	user-select: none;
-	height: 3em;
+	height: 2.2em; /* Reduzido de 3em para 2.2em */
 	font-size: 75%;
 	vertical-align: baseline;
 	margin-right: 1px;
 }
 
 .chord-container-inline .chord .inner {
-	position: absolute;
-	display: block;
-	left: 0;
-	bottom: 1.5em;
-	color: var(--chord-color);
-	font-weight: var(--chord-font-weight);
-	white-space: nowrap;
-	font-style: normal;
-	z-index: 1;
-	font-size: 0.85em;
-	padding: 2px 6px;
-	background: var(--chord-bg);
-	border-radius: 6px;
-	border: 1px solid var(--chord-border);
-	box-shadow: var(--shadow-sm);
-	transition: all 0.15s ease;
-	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+	position: absolute !important;
+	display: block !important;
+	left: 0 !important;
+	bottom: 1em !important; /* Reduzido de 1.5em para 1em */
+	color: var(--chord-color) !important;
+	font-weight: var(--chord-font-weight) !important;
+	white-space: nowrap !important;
+	font-style: normal !important;
+	z-index: 1 !important;
+	font-size: 0.85em !important;
+	padding: 2px 6px !important;
+	background: var(--chord-bg) !important;
+	border-radius: 6px !important;
+	border: 1px solid var(--chord-border) !important;
+	box-shadow: var(--shadow-sm) !important;
+	transition: all 0.15s ease !important;
+	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
 }
 
 .chord-container-inline .chord .inner:hover {
@@ -52,30 +104,30 @@
 	display: inline-block;
 	position: relative;
 	user-select: none;
-	height: 3em;
+	height: 2.2em; /* Reduzido de 3em para 2.2em */
 	font-size: 75%;
 	vertical-align: baseline;
 	margin-right: 1px;
 }
 
 .chord-container-inline p .chord .inner {
-	position: absolute;
-	display: block;
-	left: 0;
-	bottom: 1.5em;
-	color: var(--chord-color);
-	font-weight: var(--chord-font-weight);
-	white-space: nowrap;
-	font-style: normal;
-	z-index: 1;
-	font-size: 0.85em;
-	padding: 2px 6px;
-	background: var(--chord-bg);
-	border-radius: 6px;
-	border: 1px solid var(--chord-border);
-	box-shadow: var(--shadow-sm);
-	transition: all 0.15s ease;
-	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+	position: absolute !important;
+	display: block !important;
+	left: 0 !important;
+	bottom: 1em !important; /* Reduzido de 1.5em para 1em */
+	color: var(--chord-color) !important;
+	font-weight: var(--chord-font-weight) !important;
+	white-space: nowrap !important;
+	font-style: normal !important;
+	z-index: 1 !important;
+	font-size: 0.85em !important;
+	padding: 2px 6px !important;
+	background: var(--chord-bg) !important;
+	border-radius: 6px !important;
+	border: 1px solid var(--chord-border) !important;
+	box-shadow: var(--shadow-sm) !important;
+	transition: all 0.15s ease !important;
+	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
 }
 
 .chord-container-inline p .chord .inner:hover {
@@ -94,35 +146,48 @@
 }
 
 .chord-container-above .chord-section {
-	margin-bottom: 1.5em;
+	margin-bottom: 0.8em !important; /* Reduzido de 1.2em para 0.8em */
 }
 
 .chord-container-above .chord-line {
-	display: flex;
-	gap: 8px;
-	margin-bottom: 2px;
-	min-height: 1.5em;
-	align-items: flex-end;
-	flex-wrap: wrap;
+	display: flex !important;
+	gap: 6px !important; /* Reduzido de 8px para 6px */
+	margin-bottom: -3px !important; /* Mais negativo para ficar ainda mais próximo */
+	min-height: 1em !important; /* Reduzido de 1.1em para 1em */
+	align-items: flex-end !important;
+	flex-wrap: wrap !important;
 }
 
 .chord-container-above .text-line {
-	line-height: 1.5;
-	color: var(--text-color);
+	line-height: 1.35 !important; /* Ajuste fino de 1.4 para 1.35 */
+	color: var(--text-color) !important;
+	padding-top: 1px !important; /* Reduzido de 2px para 1px */
 }
 
 .chord-container-above .above-chord .inner {
-	color: var(--chord-color);
-	font-weight: var(--chord-font-weight);
-	font-size: 0.8em;
-	white-space: nowrap;
-	padding: 2px 6px;
-	background: var(--chord-bg);
-	border-radius: 6px;
-	border: 1px solid var(--chord-border);
-	box-shadow: var(--shadow-sm);
-	transition: all 0.15s ease;
-	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+	color: var(--chord-color) !important;
+	font-weight: var(--chord-font-weight) !important;
+	font-size: 0.8em !important;
+	white-space: nowrap !important;
+	padding: 2px 6px !important;
+	background: var(--chord-bg) !important;
+	border-radius: 6px !important;
+	border: 1px solid var(--chord-border) !important;
+	box-shadow: var(--shadow-sm) !important;
+	transition: all 0.15s ease !important;
+	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
+	display: inline-block !important;
+	position: static !important;
+}
+
+.chord-container-above .above-chord {
+	display: inline-block !important;
+	margin-right: 8px !important;
+	position: static !important;
+	user-select: none !important;
+	height: auto !important;
+	vertical-align: baseline !important;
+	font-size: 1em !important;
 }
 
 .chord-container-above .above-chord .inner:hover {
@@ -136,52 +201,52 @@
 
 .chord-container-above .intro-section,
 .chord-container-inline .intro-section {
-	margin: 1.5em 0;
-	padding: 0;
+	margin: 1.5em 0 !important;
+	padding: 0 !important;
 }
 
 .chord-container-above .intro-label,
 .chord-container-inline .intro-label {
-	font-weight: 600;
-	color: var(--chord-color);
-	margin-bottom: 0.5em;
-	font-size: 0.875em;
+	font-weight: 600 !important;
+	color: var(--chord-color) !important;
+	margin-bottom: 0.5em !important;
+	font-size: 0.875em !important;
 }
 
 .chord-container-above .intro-line,
 .chord-container-inline .intro-line {
-	display: flex;
-	gap: 8px;
-	flex-wrap: wrap;
-	align-items: center;
-	margin-bottom: 1em;
-	line-height: normal;
+	display: flex !important;
+	gap: 8px !important;
+	flex-wrap: wrap !important;
+	align-items: center !important;
+	margin-bottom: 1em !important;
+	line-height: normal !important;
 }
 
 .chord-container-above .intro-chord,
 .chord-container-inline .intro-chord {
-	display: inline-block;
+	display: inline-block !important;
 	position: static !important;
-	user-select: none;
-	margin-right: 0;
+	user-select: none !important;
+	margin-right: 0 !important;
 	height: auto !important;
-	vertical-align: baseline;
+	vertical-align: baseline !important;
 	font-size: 1em !important;
 }
 
 .chord-container-above .intro-chord .inner,
 .chord-container-inline .intro-chord .inner {
-	color: var(--chord-color);
-	font-weight: var(--chord-font-weight);
-	font-size: 0.9em;
-	white-space: nowrap;
-	padding: 4px 8px;
-	background: var(--chord-bg);
-	border-radius: 6px;
-	border: 1px solid var(--chord-border);
-	box-shadow: var(--shadow-sm);
-	transition: all 0.15s ease;
-	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+	color: var(--chord-color) !important;
+	font-weight: var(--chord-font-weight) !important;
+	font-size: 0.9em !important;
+	white-space: nowrap !important;
+	padding: 4px 8px !important;
+	background: var(--chord-bg) !important;
+	border-radius: 6px !important;
+	border: 1px solid var(--chord-border) !important;
+	box-shadow: var(--shadow-sm) !important;
+	transition: all 0.15s ease !important;
+	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
 	position: static !important;
 	display: inline-block !important;
 	left: auto !important;
@@ -196,7 +261,7 @@
 }
 
 /* ===============================
-   ESTILOS GERAIS
+   ESTILOS GERAIS E FORMATAÇÃO MARKDOWN
    =============================== */
 
 .chord-container-inline,
@@ -209,16 +274,142 @@
 
 .chord-container-inline p,
 .chord-container-above p {
-	margin: 0.5em 0;
-	padding: 0;
+	margin: 0.3em 0 !important; /* !important para sobrescrever outros estilos */
+	padding: 0 !important;
+	color: var(--text-color) !important;
+	background: transparent !important;
+	line-height: inherit !important;
+}
+
+/* Garantir que os estilos dos acordes não sejam sobrescritos */
+.chord-container-inline .chord,
+.chord-container-above .chord,
+.chord-container-inline .above-chord,
+.chord-container-above .above-chord,
+.chord-container-inline .intro-chord,
+.chord-container-above .intro-chord {
+	all: unset;
+	/* Reaplica os estilos necessários */
+}
+
+/* Reaplica estilos para .above-chord após reset */
+.chord-container-above .above-chord,
+.chord-container-inline .above-chord {
+	display: inline-block !important;
+	position: static !important;
+	user-select: none !important;
+	margin-right: 8px !important;
+	height: auto !important;
+	vertical-align: baseline !important;
+	font-size: 1em !important;
+}
+
+.chord-container-above .above-chord .inner,
+.chord-container-inline .above-chord .inner {
+	color: var(--chord-color) !important;
+	font-weight: var(--chord-font-weight) !important;
+	font-size: 0.8em !important;
+	white-space: nowrap !important;
+	padding: 2px 6px !important;
+	background: var(--chord-bg) !important;
+	border-radius: 6px !important;
+	border: 1px solid var(--chord-border) !important;
+	box-shadow: var(--shadow-sm) !important;
+	transition: all 0.15s ease !important;
+	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
+	display: inline-block !important;
+	position: static !important;
+}
+
+.chord-container-above .above-chord .inner:hover,
+.chord-container-inline .above-chord .inner:hover {
+	background: var(--chord-color) !important;
+	color: white !important;
+}
+
+/* Reaplica estilos para .intro-chord após reset */
+.chord-container-above .intro-chord,
+.chord-container-inline .intro-chord {
+	display: inline-block !important;
+	position: static !important;
+	user-select: none !important;
+	margin-right: 8px !important;
+	height: auto !important;
+	vertical-align: baseline !important;
+	font-size: 1em !important;
+}
+
+.chord-container-above .intro-chord .inner,
+.chord-container-inline .intro-chord .inner {
+	color: var(--chord-color) !important;
+	font-weight: var(--chord-font-weight) !important;
+	font-size: 0.9em !important;
+	white-space: nowrap !important;
+	padding: 4px 8px !important;
+	background: var(--chord-bg) !important;
+	border-radius: 6px !important;
+	border: 1px solid var(--chord-border) !important;
+	box-shadow: var(--shadow-sm) !important;
+	transition: all 0.15s ease !important;
+	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
+	position: static !important;
+	display: inline-block !important;
+	left: auto !important;
+	bottom: auto !important;
+	z-index: auto !important;
+}
+
+.chord-container-above .intro-chord .inner:hover,
+.chord-container-inline .intro-chord .inner:hover {
+	background: var(--chord-color) !important;
+	color: white !important;
+}
+
+.chord-container-inline .chord {
+	display: inline-block !important;
+	position: relative !important;
+	user-select: none !important;
+	height: 2.2em !important;
+	font-size: 75% !important;
+	vertical-align: baseline !important;
+	margin-right: 1px !important;
+}
+
+/* Formatação Markdown */
+.chord-container-inline strong,
+.chord-container-above strong,
+.chord-container-inline b,
+.chord-container-above b {
+	font-weight: 700;
 	color: var(--text-color);
-	background: transparent;
+}
+
+.chord-container-inline em,
+.chord-container-above em,
+.chord-container-inline i,
+.chord-container-above i {
+	font-style: italic;
+	color: var(--text-color);
+}
+
+.chord-container-inline u,
+.chord-container-above u {
+	text-decoration: underline;
+	text-decoration-color: var(--chord-color);
+	text-decoration-thickness: 1px;
+	text-underline-offset: 2px;
 }
 
 /* Responsividade */
 @media (max-width: 768px) {
 	.chord-container-inline .chord {
 		font-size: 70%;
+		height: 2em; /* Reduzido também para mobile */
+	}
+	
+	.chord-container-inline .chord .inner,
+	.chord-container-inline p .chord .inner {
+		bottom: 0.8em; /* Reduzido também para mobile */
 	}
 	
 	.chord-container-above .above-chord .inner,
@@ -226,5 +417,98 @@
 	.chord-container-inline .intro-chord .inner {
 		font-size: 0.75em;
 		padding: 1px 4px;
+	}
+	
+	.chord-container-above .chord-line {
+		min-height: 0.9em; /* Reduzido de 1em para 0.9em no mobile */
+		margin-bottom: -4px; /* Ainda mais próximo no mobile */
+		gap: 4px; /* Gap menor no mobile */
+	}
+	
+	.chord-container-above .text-line {
+		line-height: 1.25; /* Reduzido também no mobile */
+		padding-top: 0px; /* Sem padding no mobile */
+	}
+	
+	.chord-container-above .chord-section {
+		margin-bottom: 0.6em; /* Reduzido também no mobile */
+	}
+}
+
+/* ===============================
+   SISTEMA DE DUAS COLUNAS PARA MÚSICAS
+   =============================== */
+
+/* Container principal que mantém tudo na mesma caixa */
+.music-content-container {
+	background: white;
+	border-radius: 6px;
+	border: 1px solid #e5e7eb;
+	padding: 1.5rem;
+	overflow: auto;
+	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+	font-size: 0.875rem;
+	line-height: 1.8;
+}
+
+/* Grid de duas colunas com altura igual */
+.music-columns-container {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0;
+	align-items: start;
+	height: 100%;
+}
+
+.music-column {
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+/* Em telas pequenas, sempre uma coluna */
+@media (max-width: 1023px) {
+	.music-columns-container {
+		grid-template-columns: 1fr;
+		gap: 0;
+	}
+	
+	.music-content-container {
+		padding: 1rem;
+	}
+}
+
+/* Garante que os acordes funcionem bem em ambas as colunas */
+.music-column .chord-container-above,
+.music-column .chord-container-inline {
+	width: 100%;
+	height: 100%;
+}
+
+/* Ajusta o espaçamento entre seções nas colunas */
+.music-column .chord-container-above .chord-section:last-child,
+.music-column .chord-container-inline .intro-section:last-child {
+	margin-bottom: 0 !important;
+}
+
+/* Separador visual entre colunas */
+.music-columns-container .music-column:first-child {
+	border-right: 1px solid #e5e7eb;
+	padding-right: 2rem;
+}
+
+.music-columns-container .music-column:last-child {
+	padding-left: 2rem;
+}
+
+/* Remove separador em mobile */
+@media (max-width: 1023px) {
+	.music-columns-container .music-column:first-child {
+		border-right: none;
+		padding-right: 0;
+	}
+	
+	.music-columns-container .music-column:last-child {
+		padding-left: 0;
 	}
 }

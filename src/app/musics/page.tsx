@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import removeAccents from 'remove-accents';
 import Link from 'next/link';
 import { Search, Filter, Tags, ArrowDownAZ, Music } from 'lucide-react';
+import BannerDisplay from '@/components/BannerDisplay';
 
 const allMoments = [
   'ENTRADA',
@@ -105,7 +106,11 @@ export default function MusicsPage() {
   );
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-10 space-y-8">
+    <>
+      {/* Banners */}
+      <BannerDisplay page="MUSICS" />
+      
+      <div className="max-w-6xl mx-auto px-4 py-10 space-y-8">
       <div>
         <h1 className="text-4xl font-bold flex items-center gap-3">
           <Music className="text-blue-600" /> Músicas
@@ -258,6 +263,7 @@ export default function MusicsPage() {
           </div>
         </>
       )}
-    </div>
+      </div>
+    </>
   );
 }
