@@ -122,18 +122,163 @@ export default function SongPage() {
 
   const strippedMarkdown = (md: string) => md.replace(/\[[^\]]*\]/g, '');
 
+  // Detecta o tipo de formatação dos acordes baseado na tag #mic#
+  const detectChordFormat = (text: string): 'inline' | 'separate' => {
+    if (!text) return 'separate';
+    // Se contém #mic# no início, é markdown-it-chords (inline)
+    if (text.trim().startsWith('#mic#')) {
+      return 'inline';
+    }
+    // Caso contrário, é markdown normal (separate)
+    return 'separate';
+  };
+
+  // Sistema customizado para processar acordes normais (não markdown-it-chords)
+  const processNormalChords = (text: string): string => {
+    const lines = text.split('\n');
+    const result: string[] = [];
+    
+    for (let i = 0; i < lines.length; i++) {
+      const currentLine = lines[i];
+      const nextLine = i + 1 < lines.length ? lines[i + 1] : '';
+      
+      // Verifica se é uma linha só com acordes
+      const isChordOnlyLine = /^(?:\s*\[[A-G][#b]?[^\]]*\]\s*)+\s*$/.test(currentLine.trim());
+      const isTextLine = nextLine.trim() && !/^\s*\[/.test(nextLine.trim());
+      
+      if (isChordOnlyLine && isTextLine) {
+        // Extrai acordes e suas posições
+        const chordMatches = [];
+        const chordRegex = /\[[A-G][#b]?[^\]]*\]/g;
+        let match;
+        while ((match = chordRegex.exec(currentLine)) !== null) {
+          chordMatches.push({
+            chord: match[0].slice(1, -1), // Remove [ ]
+            position: match.index
+          });
+        }
+        
+        const textLine = nextLine.trim();
+        let html = '<div style="position: relative; margin-bottom: 1.5em;">';
+        
+        // Linha dos acordes (invisível, apenas para estrutura)
+        html += '<div style="height: 1.2em; position: relative;">';
+        chordMatches.forEach(({ chord, position }) => {
+          // Calcula posição proporcional do acorde
+          const relativePos = (position / currentLine.length) * 100;
+          html += `<span style="position: absolute; left: ${relativePos}%; color: #1d4ed8; font-weight: bold; font-size: 0.85em; white-space: nowrap;">${chord}</span>`;
+        });
+        html += '</div>';
+        
+        // Linha do texto
+        html += `<div style="margin-top: 0.2em;">${textLine}</div>`;
+        html += '</div>';
+        
+        result.push(html);
+        i++; // Pula a próxima linha pois já foi processada
+      } else {
+        // Para linhas normais (não acordes), converte markdown básico
+        if (currentLine.trim()) {
+          result.push(`<p>${currentLine}</p>`);
+        } else {
+          result.push('<br>');
+        }
+      }
+    }
+    
+    return result.join('\n');
+  };
+
+  // Processa acordes em linha separada para formato inline
+  const convertSeparateToInline = (text: string): string => {
+    const lines = text.split('\n');
+    const result: string[] = [];
+    
+    for (let i = 0; i < lines.length; i++) {
+      const currentLine = lines[i].trim();
+      const nextLine = i + 1 < lines.length ? lines[i + 1].trim() : '';
+      
+      // Verifica se é uma linha só com acordes
+      const isChordOnlyLine = /^(?:\s*\[[A-G][#b]?[^\]]*\]\s*)+$/.test(currentLine);
+      const isTextLine = nextLine && /\S/.test(nextLine) && !/^\s*\[/.test(nextLine);
+      
+      if (isChordOnlyLine && isTextLine) {
+        // Extrai os acordes da linha atual
+        const chords = currentLine.match(/\[[A-G][#b]?[^\]]*\]/g) || [];
+        const textWords = nextLine.split(/\s+/).filter(word => word.length > 0);
+        
+        // Distribui os acordes pelas palavras com menos espaçamento
+        let convertedLine = '';
+        const maxLength = Math.max(chords.length, textWords.length);
+        
+        for (let j = 0; j < maxLength; j++) {
+          if (j < chords.length) {
+            convertedLine += chords[j];
+          }
+          if (j < textWords.length) {
+            convertedLine += textWords[j];
+            // Adiciona apenas um espaço simples entre palavras
+            if (j < textWords.length - 1) {
+              convertedLine += ' ';
+            }
+          }
+        }
+        
+        result.push(convertedLine);
+        i++; // Pula a próxima linha pois já foi processada
+      } else {
+        result.push(lines[i]); // Mantém a linha original com espaços
+      }
+    }
+    
+    return result.join('\n');
+  };
+
   const renderedHtml = useMemo(() => {
     if (!song?.currentVersion?.sourceText) return '';
-    let src = song.currentVersion.sourceText;
+    
+    // Detecta o formato original ANTES de qualquer processamento (baseado na presença de #mic#)
+    const originalFormat = detectChordFormat(song.currentVersion.sourceText);
+    
+    // Remove a tag #mic# do texto para processamento
+    let src = song.currentVersion.sourceText.replace(/^#mic#\s*\n?/, '').trim();
   
     if (!showChords) {
       src = strippedMarkdown(src);
-    } else if (transposition !== 0) {
-      src = transposeMarkdownChords(src, transposition);
+    } else {
+      // Aplica transposição se necessário
+      if (transposition !== 0) {
+        src = transposeMarkdownChords(src, transposition);
+      }
     }
   
-    const rawHtml = mdParser.render(src);
-    return processChordHtml(rawHtml);
+    let processedHtml: string;
+    let wrapperClass: string;
+    
+    if (originalFormat === 'inline') {
+      // Usa markdown-it-chords para formato inline
+      const rawHtml = mdParser.render(src);
+      processedHtml = processChordHtml(rawHtml);
+      wrapperClass = 'chord-container-inline';
+    } else {
+      // Usa sistema customizado para formato separado
+      if (showChords) {
+        processedHtml = processNormalChords(src);
+      } else {
+        // Se não mostra acordes, só converte texto simples
+        const lines = src.split('\n');
+        const textOnly = lines.map(line => {
+          if (/^(?:\s*\[[A-G][#b]?[^\]]*\]\s*)+\s*$/.test(line.trim())) {
+            return ''; // Remove linhas só com acordes
+          }
+          return line.trim() ? `<p>${line}</p>` : '<br>';
+        }).filter(line => line).join('\n');
+        processedHtml = textOnly;
+      }
+      wrapperClass = 'chord-container-separate';
+    }
+    
+    return `<div class="${wrapperClass}">${processedHtml}</div>`;
   }, [song?.currentVersion?.sourceText, showChords, transposition]);
   
 

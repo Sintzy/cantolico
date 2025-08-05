@@ -19,7 +19,7 @@ export default function TermsPage() {
         <AccordionItem value="1">
           <AccordionTrigger>1. Objeto e Titularidade</AccordionTrigger>
           <AccordionContent>
-            Este site é propriedade e responsabilidade de XYZ, com o objetivo de disponibilizar um cancioneiro digital católico. A utilização do site implica a aceitação plena e sem reservas dos presentes termos.
+            Este site é propriedade e responsabilidade de Cantólico!, com o objetivo de disponibilizar um cancioneiro digital católico. A utilização do site implica a aceitação plena e sem reservas dos presentes termos.
           </AccordionContent>
         </AccordionItem>
 

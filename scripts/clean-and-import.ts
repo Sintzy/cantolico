@@ -72,12 +72,19 @@ function mapMoments(jsonMoments: string[]): string[] {
   return mappedMoments;
 }
 
-async function importSongs() {
+async function cleanAndImportSongs() {
   try {
-    console.log('🎵 IMPORTAÇÃO DE MÚSICAS CANTÓLICO');
+    console.log('🧹 LIMPEZA E IMPORTAÇÃO DE MÚSICAS CANTÓLICO');
     console.log('=' .repeat(50));
 
-    // Verificar se existe utilizador com ID 0 ou encontrar um admin
+    // 1. LIMPEZA: Remover todas as submissions pendentes
+    console.log('🗑️  Removendo submissions pendentes...');
+    const deleteResult = await prisma.songSubmission.deleteMany({
+      where: { status: 'PENDING' }
+    });
+    console.log(`✅ ${deleteResult.count} submissions pendentes removidas`);
+
+    // 2. VERIFICAÇÃO: Encontrar submitter
     let submitterId = 0;
     const cantolicoUser = await prisma.user.findUnique({ where: { id: 0 } });
     
@@ -98,7 +105,10 @@ async function importSongs() {
       console.log(`✅ Utilizador Cantólico encontrado: ${cantolicoUser.name} (ID: 0)`);
     }
 
-    // Carregar músicas do JSON
+    // 3. IMPORTAÇÃO: Carregar músicas do JSON
+    console.log('\n📥 INICIANDO IMPORTAÇÃO');
+    console.log('-' .repeat(30));
+    
     const jsonPath = path.join(__dirname, 'scrapper', 'data', 'all-songs-final-formatted.json');
     const songs = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
     
@@ -120,21 +130,11 @@ async function importSongs() {
           continue;
         }
 
-        // Verificar se já existe uma submission com o mesmo título
-        const existingSubmission = await prisma.songSubmission.findFirst({
-          where: { title: song.title }
-        });
-
-        if (existingSubmission) {
-          console.log(`⏭️  [${index + 1}/${songs.length}] Pulando "${song.title}" - já existe`);
-          skipped++;
-          continue;
-        }
-
-        // Processar o markdown das letras
+        // Processar o markdown das letras com o novo sistema de acordes
         const processedHtml = processLyrics(song.lyrics);
+        const chordFormat = detectChordFormat(song.lyrics);
         
-        // Criar a submission
+        // Criar a submission com o HTML processado
         await prisma.songSubmission.create({
           data: {
             title: song.title,
@@ -147,8 +147,9 @@ async function importSongs() {
             tempText: song.lyrics,
             parsedPreview: {
               html: processedHtml,
-              format: detectChordFormat(song.lyrics),
-              processedAt: new Date().toISOString()
+              format: chordFormat,
+              processedAt: new Date().toISOString(),
+              originalMarkdown: song.lyrics
             },
             status: 'PENDING'
           }
@@ -172,13 +173,45 @@ async function importSongs() {
     console.log(`⏭️  Músicas puladas: ${skipped}`);
     console.log(`❌ Erros: ${errors}`);
     console.log(`📊 Total processado: ${imported + skipped + errors}/${songs.length}`);
+    
+    // Estatísticas dos formatos processados
+    console.log('\n📈 ESTATÍSTICAS DOS FORMATOS');
+    console.log('-' .repeat(30));
+    
+    const submissions = await prisma.songSubmission.findMany({
+      where: { submitterId },
+      select: { parsedPreview: true }
+    });
+    
+    let inlineCount = 0;
+    let aboveCount = 0;
+    let mixedCount = 0;
+    
+    submissions.forEach(sub => {
+      if (sub.parsedPreview && typeof sub.parsedPreview === 'object') {
+        const preview = sub.parsedPreview as any;
+        if (preview.format === 'inline') {
+          if (preview.html?.includes('intro-section')) {
+            mixedCount++;
+          } else {
+            inlineCount++;
+          }
+        } else if (preview.format === 'above') {
+          aboveCount++;
+        }
+      }
+    });
+    
+    console.log(`🎵 Formato Inline: ${inlineCount}`);
+    console.log(`🎼 Formato Above: ${aboveCount}`);
+    console.log(`🎭 Formato Misto: ${mixedCount}`);
 
   } catch (error) {
-    console.error('💥 Erro fatal durante importação:', error);
+    console.error('💥 Erro fatal durante operação:', error);
   } finally {
     await prisma.$disconnect();
   }
 }
 
-// Executar importação
-importSongs();
+// Executar limpeza e importação
+cleanAndImportSongs();

@@ -11,7 +11,15 @@ import { TurnstileCaptcha } from "@/components/TurnstileCaptcha";
 
 import MarkdownIt from "markdown-it";
 import chords from "markdown-it-chords";
-import { processChordHtml } from "@/lib/chord-processor";
+import { 
+  processChordHtml, 
+  detectChordFormat, 
+  processChords,
+  processMixedChords,
+  processSimpleInline,
+  ChordFormat 
+} from "@/lib/chord-processor";
+import { ChordGuideButton } from "@/components/ChordGuidePopup";
 
 import { Instrument, LiturgicalMoment, SongType } from "@prisma/client";
 
@@ -50,10 +58,49 @@ export default function CreateNewMusicPage() {
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Atualiza o preview quando o texto muda
   useEffect(() => {
-    const rawHtml = mdParser.render(form.markdown || "");
-    const processedHtml = processChordHtml(rawHtml);
-    setPreview(processedHtml);
+    if (!form.markdown) {
+      setPreview('');
+      return;
+    }
+    
+    // Detecta o formato original
+    const originalFormat = detectChordFormat(form.markdown);
+    
+    // Debug temporário
+    console.log('🔍 Debug formato:', {
+      text: form.markdown,
+      format: originalFormat,
+      hasIntro: /^(Intro|Ponte|Solo|Bridge|Instrumental|Interlude):?\s*$/im.test(form.markdown),
+      hasMic: form.markdown.includes('#mic#')
+    });
+    
+    let processedHtml: string;
+    let wrapperClass: string;
+    
+    if (originalFormat === 'inline') {
+      // Verifica se tem seções de intro/ponte junto com inline (formato misto)
+      if (/^(Intro|Ponte|Solo|Bridge|Instrumental|Interlude):?\s*$/im.test(form.markdown)) {
+        // Formato misto: processa tudo usando processMixedChords
+        console.log('📝 Processando formato misto');
+        processedHtml = processMixedChords(form.markdown);
+        wrapperClass = 'chord-container-inline';
+      } else {
+        // Formato inline puro - usa processamento simples
+        console.log('📝 Processando formato inline puro');
+        processedHtml = processSimpleInline(form.markdown);
+        wrapperClass = 'chord-container-inline';
+      }
+    } else {
+      // Formato above (acordes acima da letra)
+      console.log('📝 Processando formato above');
+      processedHtml = processChords(form.markdown, 'above');
+      wrapperClass = 'chord-container-above';
+    }
+    
+    const wrappedHtml = `<div class="${wrapperClass}">${processedHtml}</div>`;
+    setPreview(wrappedHtml);
   }, [form.markdown]);
 
   useEffect(() => {
@@ -216,10 +263,22 @@ export default function CreateNewMusicPage() {
 
         <div className="grid md:grid-cols-2 gap-6">
           <div>
-            <Label>Editor Markdown</Label>
+            <div className="flex items-center justify-between mb-2">
+              <Label>Editor Markdown</Label>
+              <ChordGuideButton />
+            </div>
             <p className="text-sm text-gray-500 mb-2">
               <a href="/guide" className="hover:underline">Aprende a usar o sistema Markdown</a>
             </p>
+            <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
+              <h4 className="font-semibold text-sm mb-2">Formatos de acordes suportados:</h4>
+              <ul className="text-xs space-y-1">
+                <li><strong>Inline:</strong> <code>#mic#</code> seguido de <code>[C]Deus est[Am]á aqui</code></li>
+                <li><strong>Acima da letra:</strong> <code>[C] [Am] [F]</code> numa linha e <code>Deus está aqui</code> na seguinte</li>
+                <li><strong>Intro/Ponte:</strong> <code>Intro:</code> seguido de <code>[A] [G] [C]</code> na linha seguinte</li>
+                <li><strong>Formato misto:</strong> Podes combinar inline com intro/ponte na mesma música!</li>
+              </ul>
+            </div>
             <SimpleMDE
               value={form.markdown}
               onChange={(val) => setForm({ ...form, markdown: val })}
@@ -228,8 +287,10 @@ export default function CreateNewMusicPage() {
           </div>
           <div>
             <Label>Preview</Label>
+            
             <div
-              className="prose border rounded-md p-4 bg-white dark:bg-neutral-900 overflow-auto max-h-[500px]"
+              className="prose border rounded-md p-4 bg-white dark:bg-neutral-900 overflow-auto max-h-[500px] font-mono text-sm mt-2"
+              style={{ lineHeight: '1.8' }}
               dangerouslySetInnerHTML={{ __html: preview }}
             />
           </div>

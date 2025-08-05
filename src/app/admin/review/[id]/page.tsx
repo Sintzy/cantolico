@@ -19,6 +19,99 @@ import { SpellCheck } from "lucide-react";
 const SimpleMDE = dynamic(() => import("react-simplemde-editor"), { ssr: false });
 const mdParser = new MarkdownIt({ breaks: true }).use(chords);
 
+// Detecta o tipo de formatação dos acordes baseado na tag #mic#
+const detectChordFormat = (text: string): 'inline' | 'separate' => {
+  if (!text) return 'separate';
+  // Se contém #mic# no início, é markdown-it-chords (inline)
+  if (text.trim().startsWith('#mic#')) {
+    return 'inline';
+  }
+  // Caso contrário, é markdown normal (separate)
+  return 'separate';
+};
+
+// Sistema customizado para processar acordes normais (não markdown-it-chords)
+const processNormalChords = (text: string): string => {
+  const lines = text.split('\n');
+  const result: string[] = [];
+  
+  for (let i = 0; i < lines.length; i++) {
+    const currentLine = lines[i];
+    const nextLine = i + 1 < lines.length ? lines[i + 1] : '';
+    
+    // Verifica se é uma linha só com acordes
+    const isChordOnlyLine = /^(?:\s*\[[A-G][#b]?[^\]]*\]\s*)+\s*$/.test(currentLine.trim());
+    const isTextLine = nextLine.trim() && !/^\s*\[/.test(nextLine.trim());
+    
+    if (isChordOnlyLine && isTextLine) {
+      // Extrai acordes e suas posições
+      const chordMatches = [];
+      const chordRegex = /\[[A-G][#b]?[^\]]*\]/g;
+      let match;
+      while ((match = chordRegex.exec(currentLine)) !== null) {
+        chordMatches.push({
+          chord: match[0].slice(1, -1), // Remove [ ]
+          position: match.index
+        });
+      }
+      
+      const textLine = nextLine.trim();
+      let html = '<div style="position: relative; margin-bottom: 1.5em;">';
+      
+      // Linha dos acordes (invisível, apenas para estrutura)
+      html += '<div style="height: 1.2em; position: relative;">';
+      chordMatches.forEach(({ chord, position }) => {
+        // Calcula posição proporcional do acorde
+        const relativePos = (position / currentLine.length) * 100;
+        html += `<span style="position: absolute; left: ${relativePos}%; color: #1d4ed8; font-weight: bold; font-size: 0.85em; white-space: nowrap;">${chord}</span>`;
+      });
+      html += '</div>';
+      
+      // Linha do texto
+      html += `<div style="margin-top: 0.2em;">${textLine}</div>`;
+      html += '</div>';
+      
+      result.push(html);
+      i++; // Pula a próxima linha pois já foi processada
+    } else {
+      // Para linhas normais (não acordes), converte markdown básico
+      if (currentLine.trim()) {
+        result.push(`<p>${currentLine}</p>`);
+      } else {
+        result.push('<br>');
+      }
+    }
+  }
+  
+  return result.join('\n');
+};
+
+const generatePreview = (markdownText: string): string => {
+  if (!markdownText) return '';
+  
+  // Remove a tag #mic# do texto para o preview
+  const cleanText = markdownText.replace(/^#mic#\s*\n?/, '').trim();
+  
+  // Detecta o formato original (baseado na presença de #mic#)
+  const originalFormat = detectChordFormat(markdownText);
+  
+  let processedHtml: string;
+  let wrapperClass: string;
+  
+  if (originalFormat === 'inline') {
+    // Usa markdown-it-chords para formato inline
+    const rawHtml = mdParser.render(cleanText);
+    processedHtml = processChordHtml(rawHtml);
+    wrapperClass = 'chord-container-inline';
+  } else {
+    // Usa sistema customizado para formato separado
+    processedHtml = processNormalChords(cleanText);
+    wrapperClass = 'chord-container-separate';
+  }
+  
+  return `<div class="${wrapperClass}">${processedHtml}</div>`;
+};
+
 const allInstruments = ["ORGAO", "GUITARRA", "PIANO", "CORO", "OUTRO"];
 const allMoments = [
   "ENTRADA", "ATO_PENITENCIAL", "GLORIA", "SALMO", "ACLAMACAO", "OFERTORIO",
@@ -137,8 +230,9 @@ export default function ReviewSubmissionPage() {
       <div>
         <Label>Preview</Label>
         <div
-          className="border rounded-md p-4 bg-white text-sm overflow-auto prose dark:prose-invert"
-          dangerouslySetInnerHTML={{ __html: processChordHtml(mdParser.render(markdown)) }}
+          className="border rounded-md p-4 bg-white text-sm overflow-auto prose dark:prose-invert font-mono"
+          style={{ lineHeight: '1.8' }}
+          dangerouslySetInnerHTML={{ __html: generatePreview(markdown) }}
         />
       </div>
 

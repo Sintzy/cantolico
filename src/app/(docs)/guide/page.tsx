@@ -1,86 +1,123 @@
 import Link from "next/link";
-import MarkdownIt from "markdown-it";
-import chords from "markdown-it-chords";
-import { processChordHtml } from "@/lib/chord-processor";
+import { ChordExamples } from "@/components/ChordExamples";
 import { Metadata } from "next";
-import "../../../../public/styles/chords.css"; // importa o CSS correto
+import "../../../../public/styles/chords.css";
 
 export const metadata: Metadata = {
-  title: "Guia de Utilização",
-  description: "Aprende a usar o sistema de acordes em markdown para submeter cânticos católicos no Cantólico!",
+  title: "Guia de Utilização - Sistema de Acordes",
+  description: "Aprende a usar o sistema completo de acordes em markdown para submeter cânticos católicos no Cantólico! Suporte a múltiplos formatos e transposição automática.",
 };
-
-const example = `[Cm7]Tive um sonho e quando acordei
-[F]Viajei no tempo e desejei
-[G]entregar-Te a vida,
-[C7]Estender a taça toda a transbordar, cantei!
-
-[F]Ir mais além, subindo as estrelas do céu
-[C7]Descendo ao fundo da Terra só Contigo eu vou,
-[Dm7]Embalado nos Teus passos vou,
-[C7]Abandonado em teus abraços sou,
-[Dm7]Aprendiz de viajante e até me perco em Ti.`;
-
-const mdParser = new MarkdownIt({ breaks: true }).use(chords);
 
 export default function ChordsSystemPage() {
   return (
-    <div className="max-w-5xl mx-auto px-4 py-10 space-y-10">
-      <h1 className="text-4xl font-bold text-center">🎸 Sistema de Acordes Markdown</h1>
-      <p className="text-center text-lg text-muted-foreground">
-        Aprende a escrever músicas com acordes de forma simples, clara e compatível com transposição automática.
-      </p>
+    <div className="max-w-6xl mx-auto px-4 py-10 space-y-12">
+      <div className="text-center space-y-4">
+        <h1 className="text-4xl font-bold">🎸 Sistema de Acordes Completo</h1>
+        <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+          Sistema avançado para escrever músicas com acordes de forma simples, clara e compatível com transposição automática. 
+          Suporta múltiplos formatos para diferentes necessidades.
+        </p>
+      </div>
 
-      <section className="space-y-4">
-        <h2 className="text-2xl font-semibold">✨ Exemplo Convertido</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <h3 className="font-medium mb-2">Markdown</h3>
-            <pre className="bg-muted border p-4 text-sm rounded-md overflow-x-auto font-mono">
-{example}
-            </pre>
+      <ChordExamples />
+
+      <section className="space-y-6">
+        <h2 className="text-3xl font-semibold text-center">🚀 Funcionalidades</h2>
+        
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border">
+            <h3 className="text-xl font-semibold mb-3 text-blue-600">📝 Múltiplos Formatos</h3>
+            <ul className="space-y-2 text-sm">
+              <li>• <strong>Inline:</strong> Acordes embutidos no texto</li>
+              <li>• <strong>Above:</strong> Acordes acima da letra</li>
+              <li>• <strong>Intro:</strong> Seções instrumentais</li>
+            </ul>
           </div>
-          <div>
-            <h3 className="font-medium mb-2">Preview</h3>
-            <div className="prose dark:prose-invert border p-4 rounded-md overflow-auto text-sm">
-              <div dangerouslySetInnerHTML={{ __html: processChordHtml(mdParser.render(example)) }} />
+
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border">
+            <h3 className="text-xl font-semibold mb-3 text-green-600">🎵 Transposição</h3>
+            <ul className="space-y-2 text-sm">
+              <li>• Todos os tons suportados</li>
+              <li>• Funciona em todos os formatos</li>
+              <li>• Interface intuitiva</li>
+              <li>• Preview em tempo real</li>
+            </ul>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border">
+            <h3 className="text-xl font-semibold mb-3 text-purple-600">✨ Visual Limpo</h3>
+            <ul className="space-y-2 text-sm">
+              <li>• Acordes destacados em azul</li>
+              <li>• Sem sobreposição de texto</li>
+              <li>• Espaçamento otimizado</li>
+              <li>• Suporte a modo escuro</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-6">
+        <h2 className="text-3xl font-semibold text-center">� Dicas de Uso</h2>
+        
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-3">Quando usar cada formato:</h3>
+              <ul className="space-y-2 text-sm">
+                <li><strong>Formato Inline (#mic#):</strong> Para acordes que mudam no meio das palavras ou quando precisas de precisão máxima</li>
+                <li><strong>Formato Above:</strong> Para uma visualização mais limpa e tradicional, especialmente útil para impressão</li>
+                <li><strong>Formato Intro:</strong> Para introduções, pontes, solos e seções instrumentais</li>
+              </ul>
+            </div>
+            
+            <div>
+              <h3 className="text-lg font-semibold mb-3">Formatos de acordes suportados:</h3>
+              <ul className="space-y-1 text-sm font-mono">
+                <li>[C], [Am], [F], [G7]</li>
+                <li>[Cmaj7], [Am7], [F#dim]</li>
+                <li>[D/F#], [G/B] (baixos)</li>
+                <li>[Em9], [A13], [Bb+]</li>
+              </ul>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="space-y-4">
-        <h2 className="text-2xl font-semibold">🛠️ Como Escrever</h2>
-        <div className="bg-muted border p-4 rounded-md font-mono text-sm space-y-2">
-          <p>
-            Escreve os acordes entre colchetes diretamente na linha da letra onde devem ser tocados:
-          </p>
-          <pre className="bg-background border rounded p-3 overflow-x-auto">
-[Am]Canto Ale[Em]luia ao Sen[Am]hor</pre>
-
-          <p>
-            O acorde será exibido automaticamente por cima da sílaba onde se deve cantar ou tocar:
-          </p>
-          <div className="prose dark:prose-invert border rounded-md p-4">
-            <div dangerouslySetInnerHTML={{ __html: processChordHtml(mdParser.render(`[Am]Canto Ale[Em]luia ao Sen[Am]hor`)) }} />
+      <section className="space-y-6">
+        <h2 className="text-3xl font-semibold text-center">� Exemplos de Aplicação</h2>
+        
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg">
+            <h3 className="text-lg font-semibold mb-3">Para Músicos Iniciantes</h3>
+            <p className="text-sm mb-4">Use o formato Above para maior clareza:</p>
+            <pre className="bg-white dark:bg-gray-900 p-3 rounded text-xs font-mono">
+[C] [Am] [F] [G]
+Santo, santo, santo
+[C] [Am] [F] [G] [C]
+Santo é o Senhor
+            </pre>
+          </div>
+          
+          <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg">
+            <h3 className="text-lg font-semibold mb-3">Para Músicos Avançados</h3>
+            <p className="text-sm mb-4">Use o formato Inline para precisão:</p>
+            <pre className="bg-white dark:bg-gray-900 p-3 rounded text-xs font-mono">
+#mic#
+[Cmaj7]San[Am7]to, san[Fmaj7]to, san[G7]to
+[Cmaj7]San[Am7]to é o Se[Fmaj7]nhor[G7][C]
+            </pre>
           </div>
         </div>
       </section>
 
-      <section className="space-y-4">
-        <h2 className="text-2xl font-semibold">📚 Dicas Avançadas</h2>
-        <ul className="list-disc list-inside space-y-1">
-          <li>Usa <code className="font-mono">[Am7]</code>, <code className="font-mono">[F#]</code>, <code className="font-mono">[Cmaj7]</code>, etc — todos os formatos são válidos.</li>
-          <li>Também podes escrever tablaturas assim: <code className="font-mono">[D|x00232]</code></li>
-          <li>O sistema ignora as linhas sem acordes — perfeito para versos normais.</li>
-          <li>Os acordes são renderizados com gráficos se incluíres a digitação: <code>[G|320003]</code></li>
-        </ul>
-      </section>
-
-      <section className="text-center pt-8">
+      <section className="text-center pt-8 space-y-4">
+        <h2 className="text-2xl font-semibold">Pronto para começar?</h2>
+        <p className="text-muted-foreground">
+          Experimenta o novo sistema e cria músicas com acordes profissionais!
+        </p>
         <Link href="/musics/create">
-          <button className="bg-black text-white px-6 py-2 rounded-md text-lg hover:bg-neutral-800">
-            Começar a Escrever uma Música
+          <button className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg text-lg font-semibold transition-colors">
+            Criar Nova Música
           </button>
         </Link>
       </section>
