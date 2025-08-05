@@ -76,6 +76,76 @@ function transposeChords(text: string, interval: number): string {
   });
 }
 
+// Detecta o tipo de formatação dos acordes
+const detectChordFormat = (text: string): 'inline' | 'separate' => {
+  // Se encontrar acordes seguidos de texto na mesma linha (ex: [C]Palavra), é inline
+  if (/\[[A-G][#b]?[^\]]*\][a-zA-ZÀ-ÿ]/.test(text)) {
+    return 'inline';
+  }
+  // Se encontrar linhas só com acordes seguidas de linhas com texto, é separate
+  const lines = text.split('\n');
+  for (let i = 0; i < lines.length - 1; i++) {
+    const currentLine = lines[i].trim();
+    const nextLine = lines[i + 1].trim();
+    
+    // Linha atual só tem acordes e espaços
+    const isChordOnlyLine = /^(?:\s*\[[A-G][#b]?[^\]]*\]\s*)+$/.test(currentLine);
+    // Próxima linha tem texto mas não começa com acorde
+    const isTextLine = nextLine && /\S/.test(nextLine) && !/^\s*\[/.test(nextLine);
+    
+    if (isChordOnlyLine && isTextLine) {
+      return 'separate';
+    }
+  }
+  
+  return 'inline';
+};
+
+// Processa acordes em linha separada para formato inline
+const convertSeparateToInline = (text: string): string => {
+  const lines = text.split('\n');
+  const result: string[] = [];
+  
+  for (let i = 0; i < lines.length; i++) {
+    const currentLine = lines[i].trim();
+    const nextLine = i + 1 < lines.length ? lines[i + 1].trim() : '';
+    
+    // Verifica se é uma linha só com acordes
+    const isChordOnlyLine = /^(?:\s*\[[A-G][#b]?[^\]]*\]\s*)+$/.test(currentLine);
+    const isTextLine = nextLine && /\S/.test(nextLine) && !/^\s*\[/.test(nextLine);
+    
+    if (isChordOnlyLine && isTextLine) {
+      // Extrai os acordes da linha atual
+      const chords = currentLine.match(/\[[A-G][#b]?[^\]]*\]/g) || [];
+      const textWords = nextLine.split(/\s+/).filter(word => word.length > 0);
+      
+      // Distribui os acordes pelas palavras com menos espaçamento
+      let convertedLine = '';
+      const maxLength = Math.max(chords.length, textWords.length);
+      
+      for (let j = 0; j < maxLength; j++) {
+        if (j < chords.length) {
+          convertedLine += chords[j];
+        }
+        if (j < textWords.length) {
+          convertedLine += textWords[j];
+          // Adiciona apenas um espaço simples entre palavras
+          if (j < textWords.length - 1) {
+            convertedLine += ' ';
+          }
+        }
+      }
+      
+      result.push(convertedLine);
+      i++; // Pula a próxima linha pois já foi processada
+    } else {
+      result.push(lines[i]); // Mantém a linha original com espaços
+    }
+  }
+  
+  return result.join('\n');
+};
+
 function getKeyOptions(): { label: string; value: number }[] {
   const keys = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'];
   return keys.map((key, index) => ({
@@ -110,9 +180,26 @@ export function MusicPageClient({ songData }: Props) {
   const transposedContent = useMemo(() => {
     if (!songData.currentVersion?.sourceText) return '';
     
-    const transposedText = transposeChords(songData.currentVersion.sourceText, transpose);
+    // Detecta o formato original ANTES de qualquer processamento
+    const originalFormat = detectChordFormat(songData.currentVersion.sourceText);
+    
+    let text = songData.currentVersion.sourceText;
+    
+    // Detecta e converte formato se necessário
+    const chordFormat = detectChordFormat(text);
+    if (chordFormat === 'separate') {
+      text = convertSeparateToInline(text);
+    }
+    
+    // Aplica transposição
+    const transposedText = transposeChords(text, transpose);
     const rawHtml = mdParser.render(transposedText);
-    return processChordHtml(rawHtml);
+    const processedHtml = processChordHtml(rawHtml);
+    
+    // Usa o formato original para determinar a classe CSS
+    const wrapperClass = originalFormat === 'inline' ? 'chord-container-inline' : 'chord-container-separate';
+    
+    return `<div class="${wrapperClass}">${processedHtml}</div>`;
   }, [songData.currentVersion?.sourceText, transpose]);
 
   const handleKeyChange = (keyIndex: number) => {

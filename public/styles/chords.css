@@ -1,59 +1,230 @@
 :root {
 	--chord-diagram-font-size: 10px;
+	--chord-color: hsl(221.2 83.2% 53.3%);
+	--chord-bg: hsl(0 0% 100%);
+	--chord-border: hsl(214.3 31.8% 91.4%);
+	--chord-font-weight: 500;
+	--text-color: hsl(222.2 84% 4.9%);
+	--shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
 }
 
-.chord {
+/* ===============================
+   ESTILO PARA MARKDOWN-IT-CHORDS (INLINE)
+   =============================== */
+
+.chord-container-inline .chord {
 	display: inline-block;
 	position: relative;
 	user-select: none;
-	height: 2.5em;
-	font-size: 80%;
+	height: 3em;
+	font-size: 75%;
+	vertical-align: baseline;
+	margin-right: 1px;
 }
 
-.chord.diagram {
-	height: calc(1.5em + (3.5 * var(--chord-diagram-font-size)))
-}
-
-.chord .inner {
+.chord-container-inline .chord .inner {
 	position: absolute;
 	display: block;
 	left: 0;
-	bottom: 0.8em;
-	color: #1d4ed8;
-	font-weight: bold;
+	bottom: 1.5em;
+	color: var(--chord-color);
+	font-weight: var(--chord-font-weight);
 	white-space: nowrap;
-}
-
-.chord i {
 	font-style: normal;
-	display: inline-block;
+	z-index: 1;
+	font-size: 0.85em;
+	padding: 2px 6px;
+	background: var(--chord-bg);
+	border-radius: 6px;
+	border: 1px solid var(--chord-border);
+	box-shadow: var(--shadow-sm);
+	transition: all 0.15s ease;
+	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
 }
 
-.chord i.diagram {
-	font: 100 var(--chord-diagram-font-size) Courier;
-	line-height: .5em;
+.chord-container-inline .chord .inner:hover {
+	background: var(--chord-color);
+	color: white;
+}
+
+/* Acordes inline específicos para texto (não intro) */
+.chord-container-inline p .chord {
+	display: inline-block;
+	position: relative;
+	user-select: none;
+	height: 3em;
+	font-size: 75%;
+	vertical-align: baseline;
+	margin-right: 1px;
+}
+
+.chord-container-inline p .chord .inner {
 	position: absolute;
-	bottom: 0;
-	display: none;
-}
-
-.chord .inner:hover i.diagram,
-.chord.diagram i.diagram,
-.chord i.diagram.show {
-	display: inline-block;
-}
-
-.chord:not(.diagram) .inner:hover i.diagram {
-	background: white;
-	z-index: 5;
-}
-
-/* Acordes seguidos (sem texto entre eles) ficam lado a lado horizontalmente */
-.chord + .chord {
-	margin-left: 16px;
-}
-
-/* Acordes seguidos não devem quebrar linha */
-.chord + .chord .inner {
+	display: block;
 	left: 0;
+	bottom: 1.5em;
+	color: var(--chord-color);
+	font-weight: var(--chord-font-weight);
+	white-space: nowrap;
+	font-style: normal;
+	z-index: 1;
+	font-size: 0.85em;
+	padding: 2px 6px;
+	background: var(--chord-bg);
+	border-radius: 6px;
+	border: 1px solid var(--chord-border);
+	box-shadow: var(--shadow-sm);
+	transition: all 0.15s ease;
+	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+.chord-container-inline p .chord .inner:hover {
+	background: var(--chord-color);
+	color: white;
+}
+
+/* ===============================
+   ESTILO PARA ACORDES ACIMA (ABOVE)
+   =============================== */
+
+.chord-container-above {
+	line-height: 1.6;
+	font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	color: var(--text-color);
+}
+
+.chord-container-above .chord-section {
+	margin-bottom: 1.5em;
+}
+
+.chord-container-above .chord-line {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 2px;
+	min-height: 1.5em;
+	align-items: flex-end;
+	flex-wrap: wrap;
+}
+
+.chord-container-above .text-line {
+	line-height: 1.5;
+	color: var(--text-color);
+}
+
+.chord-container-above .above-chord .inner {
+	color: var(--chord-color);
+	font-weight: var(--chord-font-weight);
+	font-size: 0.8em;
+	white-space: nowrap;
+	padding: 2px 6px;
+	background: var(--chord-bg);
+	border-radius: 6px;
+	border: 1px solid var(--chord-border);
+	box-shadow: var(--shadow-sm);
+	transition: all 0.15s ease;
+	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+.chord-container-above .above-chord .inner:hover {
+	background: var(--chord-color);
+	color: white;
+}
+
+/* ===============================
+   ESTILO PARA ACORDES DE INTRO/PONTE
+   =============================== */
+
+.chord-container-above .intro-section,
+.chord-container-inline .intro-section {
+	margin: 1.5em 0;
+	padding: 0;
+}
+
+.chord-container-above .intro-label,
+.chord-container-inline .intro-label {
+	font-weight: 600;
+	color: var(--chord-color);
+	margin-bottom: 0.5em;
+	font-size: 0.875em;
+}
+
+.chord-container-above .intro-line,
+.chord-container-inline .intro-line {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+	align-items: center;
+	margin-bottom: 1em;
+	line-height: normal;
+}
+
+.chord-container-above .intro-chord,
+.chord-container-inline .intro-chord {
+	display: inline-block;
+	position: static !important;
+	user-select: none;
+	margin-right: 0;
+	height: auto !important;
+	vertical-align: baseline;
+	font-size: 1em !important;
+}
+
+.chord-container-above .intro-chord .inner,
+.chord-container-inline .intro-chord .inner {
+	color: var(--chord-color);
+	font-weight: var(--chord-font-weight);
+	font-size: 0.9em;
+	white-space: nowrap;
+	padding: 4px 8px;
+	background: var(--chord-bg);
+	border-radius: 6px;
+	border: 1px solid var(--chord-border);
+	box-shadow: var(--shadow-sm);
+	transition: all 0.15s ease;
+	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+	position: static !important;
+	display: inline-block !important;
+	left: auto !important;
+	bottom: auto !important;
+	z-index: auto !important;
+}
+
+.chord-container-above .intro-chord .inner:hover,
+.chord-container-inline .intro-chord .inner:hover {
+	background: var(--chord-color);
+	color: white;
+}
+
+/* ===============================
+   ESTILOS GERAIS
+   =============================== */
+
+.chord-container-inline,
+.chord-container-above {
+	line-height: 1.6;
+	font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	background: transparent;
+	color: var(--text-color);
+}
+
+.chord-container-inline p,
+.chord-container-above p {
+	margin: 0.5em 0;
+	padding: 0;
+	color: var(--text-color);
+	background: transparent;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+	.chord-container-inline .chord {
+		font-size: 70%;
+	}
+	
+	.chord-container-above .above-chord .inner,
+	.chord-container-above .intro-chord .inner,
+	.chord-container-inline .intro-chord .inner {
+		font-size: 0.75em;
+		padding: 1px 4px;
+	}
 }
