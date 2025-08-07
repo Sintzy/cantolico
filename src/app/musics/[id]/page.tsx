@@ -541,6 +541,13 @@ export default function SongPage() {
           )}
         </div>
       </div>
+      
+      {/* ID da música no fundo da página */}
+      <div className="w-full text-center py-4">
+        <p className="text-xs text-gray-400">
+          ID: {song.id}
+        </p>
+      </div>
     </div>
   );
 }

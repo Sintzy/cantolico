@@ -78,7 +78,7 @@
 	position: absolute !important;
 	display: block !important;
 	left: 0 !important;
-	bottom: 1em !important; /* Reduzido de 1.5em para 1em */
+	bottom: 1.2em !important; /* Aumentado de 1em para 1.2em */
 	color: var(--chord-color) !important;
 	font-weight: var(--chord-font-weight) !important;
 	white-space: nowrap !important;
@@ -114,7 +114,7 @@
 	position: absolute !important;
 	display: block !important;
 	left: 0 !important;
-	bottom: 1em !important; /* Reduzido de 1.5em para 1em */
+	bottom: 1.2em !important; /* Aumentado de 1em para 1.2em */
 	color: var(--chord-color) !important;
 	font-weight: var(--chord-font-weight) !important;
 	white-space: nowrap !important;
