@@ -32,9 +32,10 @@ export default function TermsPage() {
 
         <AccordionItem value="3">
           <AccordionTrigger>3. Conteúdo Submetido</AccordionTrigger>
-          <AccordionContent>
+            <AccordionContent>
             Todo o conteúdo submetido (letras, acordes, PDFs, áudio, etc.) é da responsabilidade do utilizador. O site reserva-se o direito de moderar, editar ou remover submissões que infrinjam direitos ou contrariem a finalidade do projeto.
-          </AccordionContent>
+            O cantolico não se responsabiliza pela autoria de qualquer cântico que conste na plataforma; os cânticos enviados pelo utilizador "cantolico@cantolico.pt" (ID 0) são inseridos apenas para fins de demonstração, organização ou preservação, não implicando validação de autoria ou direitos.
+            </AccordionContent>
         </AccordionItem>
 
         <AccordionItem value="4">
@@ -71,12 +72,13 @@ export default function TermsPage() {
             Estes termos regem-se pela legislação portuguesa. Para qualquer litígio será competente o foro da comarca de [Localidade], com expressa renúncia a qualquer outro.
           </AccordionContent>
         </AccordionItem>
+
       </Accordion>
 
       <Separator />
 
       <p className="text-xs text-muted-foreground">
-        Versão atualizada em 25/07/2025. Estes termos podem ser alterados sem aviso prévio. É da responsabilidade do utilizador consultar regularmente esta página para se manter informado sobre quaisquer alterações.
+        Versão atualizada em 05/08/2025. Estes termos podem ser alterados sem aviso prévio. É da responsabilidade do utilizador consultar regularmente esta página para se manter informado sobre quaisquer alterações.
       </p>
     </div>
   );

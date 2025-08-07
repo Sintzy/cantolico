@@ -18,6 +18,8 @@ import {
 import { supabase } from '@/lib/supabase';
 import YouTube from 'react-youtube';
 import { ChevronDown, Guitar } from 'lucide-react';
+import StarButton from '@/components/StarButton';
+import AddToPlaylistButton from '@/components/AddToPlaylistButton';
 import "../../../../public/styles/chords.css";
 
 const mdParser = new MarkdownIt({ breaks: true }).use(chords);
@@ -111,7 +113,7 @@ export default function SongPage() {
           if (!audioError) setAudioUrl(signedAudioUrlData?.signedUrl || null);
         }
       } catch (err) {
-        console.error('Erro ao buscar música:', err);
+        console.error('erro ao procurar a música:', err);
       } finally {
         setLoading(false);
       }
@@ -356,9 +358,23 @@ export default function SongPage() {
         style={{ backgroundImage: "url('/banner.jpg')" }}
       >
         <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-          <h1 className="text-4xl md:text-5xl text-white font-bold uppercase tracking-wide text-center">
-            {title}
-          </h1>
+          <div className="text-center">
+            <h1 className="text-4xl md:text-5xl text-white font-bold uppercase tracking-wide mb-4">
+              {title}
+            </h1>
+            
+            {/* Botões de ação */}
+            <div className="flex items-center justify-center gap-3">
+              <StarButton 
+                songId={id as string} 
+                className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
+              />
+              <AddToPlaylistButton 
+                songId={id as string}
+                className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -540,6 +556,13 @@ export default function SongPage() {
             </section>
           )}
         </div>
+      </div>
+      
+      {/* ID da música no fundo da página */}
+      <div className="w-full text-center py-4">
+        <p className="text-xs text-gray-400">
+          ID: {song.id}
+        </p>
       </div>
     </div>
   );

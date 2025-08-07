@@ -32,15 +32,15 @@
 [class*="chord-container"] .above-chord .inner,
 [class*="chord-container"] .intro-chord .inner {
 	color: var(--chord-color) !important;
-	background: var(--chord-bg) !important;
-	border: 1px solid var(--chord-border) !important;
-	border-radius: 6px !important;
-	box-shadow: var(--shadow-sm) !important;
+	background: transparent !important;
+	border: none !important;
+	border-radius: 0 !important;
+	box-shadow: none !important;
 	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
-	font-weight: var(--chord-font-weight) !important;
-	transition: all 0.15s ease !important;
+	font-weight: 600 !important;
+	transition: none !important;
 	white-space: nowrap !important;
-	padding: 2px 6px !important;
+	padding: 0 !important;
 	display: inline-block !important;
 }
 
@@ -56,84 +56,15 @@
 [class*="chord-container"] .chord .inner:hover,
 [class*="chord-container"] .above-chord .inner:hover,
 [class*="chord-container"] .intro-chord .inner:hover {
-	background: var(--chord-color) !important;
-	color: white !important;
+	color: var(--chord-color) !important;
+	text-decoration: underline !important;
 }
 
 /* ===============================
-   ESTILO PARA MARKDOWN-IT-CHORDS (INLINE)
+   ESTILO PARA MARKDOWN-IT-CHORDS (INLINE) - DESATIVADO
    =============================== */
 
-.chord-container-inline .chord {
-	display: inline-block;
-	position: relative;
-	user-select: none;
-	height: 2.2em; /* Reduzido de 3em para 2.2em */
-	font-size: 75%;
-	vertical-align: baseline;
-	margin-right: 1px;
-}
-
-.chord-container-inline .chord .inner {
-	position: absolute !important;
-	display: block !important;
-	left: 0 !important;
-	bottom: 1em !important; /* Reduzido de 1.5em para 1em */
-	color: var(--chord-color) !important;
-	font-weight: var(--chord-font-weight) !important;
-	white-space: nowrap !important;
-	font-style: normal !important;
-	z-index: 1 !important;
-	font-size: 0.85em !important;
-	padding: 2px 6px !important;
-	background: var(--chord-bg) !important;
-	border-radius: 6px !important;
-	border: 1px solid var(--chord-border) !important;
-	box-shadow: var(--shadow-sm) !important;
-	transition: all 0.15s ease !important;
-	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
-}
-
-.chord-container-inline .chord .inner:hover {
-	background: var(--chord-color);
-	color: white;
-}
-
-/* Acordes inline específicos para texto (não intro) */
-.chord-container-inline p .chord {
-	display: inline-block;
-	position: relative;
-	user-select: none;
-	height: 2.2em; /* Reduzido de 3em para 2.2em */
-	font-size: 75%;
-	vertical-align: baseline;
-	margin-right: 1px;
-}
-
-.chord-container-inline p .chord .inner {
-	position: absolute !important;
-	display: block !important;
-	left: 0 !important;
-	bottom: 1em !important; /* Reduzido de 1.5em para 1em */
-	color: var(--chord-color) !important;
-	font-weight: var(--chord-font-weight) !important;
-	white-space: nowrap !important;
-	font-style: normal !important;
-	z-index: 1 !important;
-	font-size: 0.85em !important;
-	padding: 2px 6px !important;
-	background: var(--chord-bg) !important;
-	border-radius: 6px !important;
-	border: 1px solid var(--chord-border) !important;
-	box-shadow: var(--shadow-sm) !important;
-	transition: all 0.15s ease !important;
-	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
-}
-
-.chord-container-inline p .chord .inner:hover {
-	background: var(--chord-color);
-	color: white;
-}
+/* TODAS AS REGRAS ANTIGAS FORAM REMOVIDAS - USAR APENAS O SISTEMA #MIC# NO FINAL */
 
 /* ===============================
    ESTILO PARA ACORDES ACIMA (ABOVE)
@@ -166,15 +97,15 @@
 
 .chord-container-above .above-chord .inner {
 	color: var(--chord-color) !important;
-	font-weight: var(--chord-font-weight) !important;
+	font-weight: 600 !important;
 	font-size: 0.8em !important;
 	white-space: nowrap !important;
-	padding: 2px 6px !important;
-	background: var(--chord-bg) !important;
-	border-radius: 6px !important;
-	border: 1px solid var(--chord-border) !important;
-	box-shadow: var(--shadow-sm) !important;
-	transition: all 0.15s ease !important;
+	padding: 0 !important;
+	background: transparent !important;
+	border-radius: 0 !important;
+	border: none !important;
+	box-shadow: none !important;
+	transition: none !important;
 	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
 	display: inline-block !important;
 	position: static !important;
@@ -191,8 +122,7 @@
 }
 
 .chord-container-above .above-chord .inner:hover {
-	background: var(--chord-color);
-	color: white;
+	text-decoration: underline !important;
 }
 
 /* ===============================
@@ -237,15 +167,15 @@
 .chord-container-above .intro-chord .inner,
 .chord-container-inline .intro-chord .inner {
 	color: var(--chord-color) !important;
-	font-weight: var(--chord-font-weight) !important;
+	font-weight: 600 !important;
 	font-size: 0.9em !important;
 	white-space: nowrap !important;
-	padding: 4px 8px !important;
-	background: var(--chord-bg) !important;
-	border-radius: 6px !important;
-	border: 1px solid var(--chord-border) !important;
-	box-shadow: var(--shadow-sm) !important;
-	transition: all 0.15s ease !important;
+	padding: 0 !important;
+	background: transparent !important;
+	border-radius: 0 !important;
+	border: none !important;
+	box-shadow: none !important;
+	transition: none !important;
 	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
 	position: static !important;
 	display: inline-block !important;
@@ -256,8 +186,7 @@
 
 .chord-container-above .intro-chord .inner:hover,
 .chord-container-inline .intro-chord .inner:hover {
-	background: var(--chord-color);
-	color: white;
+	text-decoration: underline !important;
 }
 
 /* ===============================
@@ -266,10 +195,14 @@
 
 .chord-container-inline,
 .chord-container-above {
-	line-height: 1.6;
-	font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 	background: transparent;
 	color: var(--text-color);
+}
+
+/* Line-height específico para cada sistema */
+.chord-container-above {
+	line-height: 1.6; /* Mantém o sistema above intocado */
+	font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 .chord-container-inline p,
@@ -307,15 +240,15 @@
 .chord-container-above .above-chord .inner,
 .chord-container-inline .above-chord .inner {
 	color: var(--chord-color) !important;
-	font-weight: var(--chord-font-weight) !important;
+	font-weight: 600 !important;
 	font-size: 0.8em !important;
 	white-space: nowrap !important;
-	padding: 2px 6px !important;
-	background: var(--chord-bg) !important;
-	border-radius: 6px !important;
-	border: 1px solid var(--chord-border) !important;
-	box-shadow: var(--shadow-sm) !important;
-	transition: all 0.15s ease !important;
+	padding: 0 !important;
+	background: transparent !important;
+	border-radius: 0 !important;
+	border: none !important;
+	box-shadow: none !important;
+	transition: none !important;
 	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
 	display: inline-block !important;
 	position: static !important;
@@ -323,8 +256,7 @@
 
 .chord-container-above .above-chord .inner:hover,
 .chord-container-inline .above-chord .inner:hover {
-	background: var(--chord-color) !important;
-	color: white !important;
+	text-decoration: underline !important;
 }
 
 /* Reaplica estilos para .intro-chord após reset */
@@ -342,15 +274,15 @@
 .chord-container-above .intro-chord .inner,
 .chord-container-inline .intro-chord .inner {
 	color: var(--chord-color) !important;
-	font-weight: var(--chord-font-weight) !important;
+	font-weight: 600 !important;
 	font-size: 0.9em !important;
 	white-space: nowrap !important;
-	padding: 4px 8px !important;
-	background: var(--chord-bg) !important;
-	border-radius: 6px !important;
-	border: 1px solid var(--chord-border) !important;
-	box-shadow: var(--shadow-sm) !important;
-	transition: all 0.15s ease !important;
+	padding: 0 !important;
+	background: transparent !important;
+	border-radius: 0 !important;
+	border: none !important;
+	box-shadow: none !important;
+	transition: none !important;
 	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
 	position: static !important;
 	display: inline-block !important;
@@ -361,18 +293,7 @@
 
 .chord-container-above .intro-chord .inner:hover,
 .chord-container-inline .intro-chord .inner:hover {
-	background: var(--chord-color) !important;
-	color: white !important;
-}
-
-.chord-container-inline .chord {
-	display: inline-block !important;
-	position: relative !important;
-	user-select: none !important;
-	height: 2.2em !important;
-	font-size: 75% !important;
-	vertical-align: baseline !important;
-	margin-right: 1px !important;
+	text-decoration: underline !important;
 }
 
 /* Formatação Markdown */
@@ -402,14 +323,9 @@
 
 /* Responsividade */
 @media (max-width: 768px) {
-	.chord-container-inline .chord {
-		font-size: 70%;
-		height: 2em; /* Reduzido também para mobile */
-	}
-	
-	.chord-container-inline .chord .inner,
-	.chord-container-inline p .chord .inner {
-		bottom: 0.8em; /* Reduzido também para mobile */
+	/* Sistema above mantido intocado */
+	.chord-container-above {
+		line-height: 1.6;
 	}
 	
 	.chord-container-above .above-chord .inner,
@@ -420,18 +336,18 @@
 	}
 	
 	.chord-container-above .chord-line {
-		min-height: 0.9em; /* Reduzido de 1em para 0.9em no mobile */
-		margin-bottom: -4px; /* Ainda mais próximo no mobile */
-		gap: 4px; /* Gap menor no mobile */
+		min-height: 0.9em;
+		margin-bottom: -4px;
+		gap: 4px;
 	}
 	
 	.chord-container-above .text-line {
-		line-height: 1.25; /* Reduzido também no mobile */
-		padding-top: 0px; /* Sem padding no mobile */
+		line-height: 1.25;
+		padding-top: 0px;
 	}
 	
 	.chord-container-above .chord-section {
-		margin-bottom: 0.6em; /* Reduzido também no mobile */
+		margin-bottom: 0.6em;
 	}
 }
 
@@ -510,5 +426,76 @@
 	
 	.music-columns-container .music-column:last-child {
 		padding-left: 0;
+	}
+}
+
+/* ===============================
+   SISTEMA #MIC# REFORMULADO - PRIORIDADE MÁXIMA
+   =============================== */
+
+/* Sistema principal para acordes inline (#mic#) */
+.chord-container-inline {
+	line-height: 2.6 !important;
+	font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+	color: var(--text-color) !important;
+	background: transparent !important;
+}
+
+.chord-container-inline p {
+	margin: 0.3em 0 !important;
+	padding: 0 !important;
+	line-height: inherit !important;
+	color: inherit !important;
+}
+
+/* Spans diretos para acordes inline (#mic#) - BASEADO NO ESTILO OFICIAL */
+.chord-container-inline span.chord {
+	display: inline-block !important;
+	position: relative !important;
+	user-select: none !important;
+	height: 2.4em !important; /* Baseado no oficial 3.2em mas menor */
+	font-size: 70% !important; /* Igual ao oficial */
+	vertical-align: baseline !important;
+	margin-right: 1px !important;
+}
+
+.chord-container-inline span.chord .inner {
+	position: absolute !important;
+	display: block !important;
+	left: 0 !important;
+	bottom: 1.1em !important; /* Baseado no oficial 1.3em mas menor */
+	z-index: 2 !important;
+	font-size: 0.9em !important; /* Ligeiramente maior para legibilidade */
+	padding: 0 !important;
+	white-space: nowrap !important;
+	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
+	color: var(--chord-color) !important;
+	background: transparent !important;
+	border: none !important;
+	border-radius: 0 !important;
+	font-weight: 600 !important;
+	box-shadow: none !important;
+	transition: none !important;
+}
+
+.chord-container-inline span.chord .inner:hover {
+	text-decoration: underline !important;
+}
+
+/* Mobile para spans diretos - BASEADO NO ESTILO OFICIAL */
+@media (max-width: 768px) {
+	.chord-container-inline {
+		line-height: 2.8 !important;
+	}
+
+	.chord-container-inline span.chord {
+		height: 2.2em !important; /* Proporcionalmente menor no mobile */
+		font-size: 65% !important; /* Ligeiramente menor no mobile */
+	}
+
+	.chord-container-inline span.chord .inner {
+		bottom: 1.0em !important; /* Proporcionalmente menor */
+		font-size: 0.85em !important;
+		padding: 1px 3px !important;
 	}
 }

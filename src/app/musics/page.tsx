@@ -17,6 +17,8 @@ import removeAccents from 'remove-accents';
 import Link from 'next/link';
 import { Search, Filter, Tags, ArrowDownAZ, Music } from 'lucide-react';
 import BannerDisplay from '@/components/BannerDisplay';
+import StarButton from '@/components/StarButton';
+import AddToPlaylistButton from '@/components/AddToPlaylistButton';
 
 const allMoments = [
   'ENTRADA',
@@ -223,6 +225,12 @@ export default function MusicsPage() {
                         #{tag}
                       </Badge>
                     ))}
+                  </div>
+                  
+                  {/* Botões de ação */}
+                  <div className="flex items-center gap-2 pt-2">
+                    <StarButton songId={song.id} size="sm" />
+                    <AddToPlaylistButton songId={song.id} size="sm" />
                   </div>
                 </CardContent>
               </Card>
