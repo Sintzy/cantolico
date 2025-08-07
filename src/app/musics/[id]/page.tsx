@@ -113,7 +113,7 @@ export default function SongPage() {
           if (!audioError) setAudioUrl(signedAudioUrlData?.signedUrl || null);
         }
       } catch (err) {
-        console.error('Erro ao buscar música:', err);
+        console.error('erro ao procurar a música:', err);
       } finally {
         setLoading(false);
       }

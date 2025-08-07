@@ -20,16 +20,17 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 interface PlaylistPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function PlaylistPage({ params }: PlaylistPageProps) {
   const session = await getServerSession(authOptions);
+  const { id } = await params;
   
   const playlist = await prisma.playlist.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       user: {
         select: {
