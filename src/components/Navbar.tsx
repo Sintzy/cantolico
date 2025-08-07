@@ -51,6 +51,7 @@ export default function Navbar() {
                 {/* Desktop nav + Search */}
                 <div className="hidden md:flex items-center gap-8">
                     <Link href="/musics" className="text-gray-700 hover:text-blue-600">Músicas</Link>
+                    <Link href="/playlists" className="text-gray-700 hover:text-blue-600">Playlists</Link>
                     <Link href="/musics/create" className="text-gray-700 hover:text-blue-600">Nova Música</Link>
                     
                     {/* Admin/Reviewer Links */}
@@ -191,6 +192,7 @@ export default function Navbar() {
             {mobileMenuOpen && (
                 <div className="md:hidden border-t border-gray-200 px-4 py-3 space-y-3">
                     <Link href="/musics" className="block text-gray-700">Músicas</Link>
+                    <Link href="/playlists" className="block text-gray-700">Playlists</Link>
                     <Link href="/musics/create" className="block text-gray-700">Nova Música</Link>
                     
                     {/* Admin/Reviewer Links Mobile */}
