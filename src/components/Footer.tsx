@@ -35,6 +35,7 @@ export default function Footer() {
             <li><Link href="/musics" className="hover:underline">Músicas</Link></li>
             <li><Link href="/musics/createnew" className="hover:underline">Nova Música</Link></li>
             <li><Link href="/terms" className="hover:underline">Termos & Condições</Link></li>
+            <li><Link href="/privacy-policy" className="hover:underline">Política de Privacidade</Link></li>
           </ul>
         </div>
 
