@@ -19,6 +19,7 @@ import { Search, Filter, Tags, ArrowDownAZ, Music } from 'lucide-react';
 import BannerDisplay from '@/components/BannerDisplay';
 import StarButton from '@/components/StarButton';
 import AddToPlaylistButton from '@/components/AddToPlaylistButton';
+import { MusicListSkeleton } from '@/components/MusicListSkeleton';
 
 const allMoments = [
   'ENTRADA',
@@ -55,6 +56,7 @@ type Song = {
 
 export default function MusicsPage() {
   const [songs, setSongs] = useState<Song[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMoment, setSelectedMoment] = useState<string | null>(null);
   const [tagFilter, setTagFilter] = useState('');
@@ -67,9 +69,16 @@ export default function MusicsPage() {
 
   useEffect(() => {
     const fetchSongs = async () => {
-      const res = await fetch('/api/musics/getmusics');
-      const data = await res.json();
-      setSongs(data);
+      try {
+        setLoading(true);
+        const res = await fetch('/api/musics/getmusics');
+        const data = await res.json();
+        setSongs(data);
+      } catch (error) {
+        console.error('Erro ao carregar músicas:', error);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchSongs();
   }, []);
@@ -190,7 +199,9 @@ export default function MusicsPage() {
       </div>
 
       {/* Lista */}
-      {paginatedSongs.length === 0 ? (
+      {loading ? (
+        <MusicListSkeleton />
+      ) : paginatedSongs.length === 0 ? (
         <p className="text-muted-foreground text-sm">
           Nenhuma música encontrada.
         </p>
@@ -238,37 +249,39 @@ export default function MusicsPage() {
           </div>
 
           {/* Paginação */}
-          <div className="flex justify-center items-center gap-2 mt-8 flex-wrap">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-              disabled={currentPage === 1}
-            >
-              Anterior
-            </Button>
-            {[...Array(totalPages)].map((_, i) => {
-              const page = i + 1;
-              return (
-                <Button
-                  key={page}
-                  size="sm"
-                  variant={page === currentPage ? 'default' : 'outline'}
-                  onClick={() => setCurrentPage(page)}
-                >
-                  {page}
-                </Button>
-              );
-            })}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-              disabled={currentPage === totalPages}
-            >
-              Seguinte
-            </Button>
-          </div>
+          {!loading && (
+            <div className="flex justify-center items-center gap-2 mt-8 flex-wrap">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                Anterior
+              </Button>
+              {[...Array(totalPages)].map((_, i) => {
+                const page = i + 1;
+                return (
+                  <Button
+                    key={page}
+                    size="sm"
+                    variant={page === currentPage ? 'default' : 'outline'}
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </Button>
+                );
+              })}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                disabled={currentPage === totalPages}
+              >
+                Seguinte
+              </Button>
+            </div>
+          )}
         </>
       )}
       </div>

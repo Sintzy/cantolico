@@ -207,7 +207,7 @@
 
 .chord-container-inline p,
 .chord-container-above p {
-	margin: 0.3em 0 !important; /* !important para sobrescrever outros estilos */
+	margin: 0.3em 0 !important; /* !important para sobrescrever oIutros estilos */
 	padding: 0 !important;
 	color: var(--text-color) !important;
 	background: transparent !important;
@@ -465,7 +465,7 @@
 	left: 0 !important;
 	bottom: 1.1em !important; /* Baseado no oficial 1.3em mas menor */
 	z-index: 2 !important;
-	font-size: 0.9em !important; /* Ligeiramente maior para legibilidade */
+	font-size: 0.8em !important; /* Igual aos above-chord para uniformidade */
 	padding: 0 !important;
 	white-space: nowrap !important;
 	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
@@ -495,7 +495,7 @@
 
 	.chord-container-inline span.chord .inner {
 		bottom: 1.0em !important; /* Proporcionalmente menor */
-		font-size: 0.85em !important;
+		font-size: 0.75em !important; /* Igual ao mobile dos above-chord */
 		padding: 1px 3px !important;
 	}
 }
