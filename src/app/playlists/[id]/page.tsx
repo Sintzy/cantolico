@@ -1,11 +1,19 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { notFound } from 'next/navigation';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { 
   ListMusic, 
   Clock, 
@@ -13,11 +21,15 @@ import {
   Globe, 
   Lock,
   Play,
-  ExternalLink
+  ExternalLink,
+  MoreVertical,
+  Trash2,
+  Edit
 } from 'lucide-react';
 import StarButton from '@/components/StarButton';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { toast } from 'sonner';
 
 interface PlaylistPageProps {
   params: Promise<{
@@ -25,58 +37,95 @@ interface PlaylistPageProps {
   }>;
 }
 
-export default async function PlaylistPage({ params }: PlaylistPageProps) {
-  const session = await getServerSession(authOptions);
-  const { id } = await params;
-  
-  const playlist = await prisma.playlist.findUnique({
-    where: { id },
-    include: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          image: true
+export default function PlaylistPage({ params }: PlaylistPageProps) {
+  const { data: session } = useSession();
+  const router = useRouter();
+  const [playlist, setPlaylist] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      const { id } = await params;
+      await fetchPlaylist(id);
+    };
+    loadData();
+  }, [params]);
+
+  const fetchPlaylist = async (id: string) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/playlists/${id}`);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          notFound();
         }
-      },
-      items: {
-        include: {
-          song: {
-            include: {
-              currentVersion: true,
-              _count: {
-                select: {
-                  stars: true
-                }
-              }
-            }
-          },
-          addedBy: {
-            select: {
-              id: true,
-              name: true,
-              image: true
-            }
-          }
-        },
-        orderBy: {
-          order: 'asc'
+        if (response.status === 403) {
+          toast.error('Não tens permissão para ver esta playlist');
+          router.push('/playlists');
+          return;
         }
+        throw new Error('Erro ao carregar playlist');
       }
+      
+      const data = await response.json();
+      setPlaylist(data);
+    } catch (error) {
+      console.error('Error fetching playlist:', error);
+      toast.error('Erro ao carregar playlist');
+      router.push('/playlists');
+    } finally {
+      setLoading(false);
     }
-  });
+  };
+
+  const handleRemoveSong = async (songId: number) => {
+    if (!playlist) return;
+    
+    const confirmed = confirm('Tens a certeza que queres remover esta música da playlist?');
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`/api/playlists/${playlist.id}/songs/${songId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        toast.success('Música removida da playlist com sucesso');
+        setPlaylist({
+          ...playlist,
+          items: playlist.items.filter((item: any) => item.song.id !== songId)
+        });
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Erro ao remover música');
+      }
+    } catch (error) {
+      console.error('Error removing song:', error);
+      toast.error('Erro de conexão ao remover música');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="animate-pulse space-y-4">
+          <div className="h-32 bg-gray-200 rounded-lg"></div>
+          <div className="space-y-2">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-16 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!playlist) {
-    notFound();
+    return notFound();
   }
 
-  // Verificar permissões
   const isOwner = session?.user?.id === playlist.userId;
-  const isPublic = playlist.isPublic;
-
-  if (!isPublic && !isOwner) {
-    notFound();
-  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -149,7 +198,7 @@ export default async function PlaylistPage({ params }: PlaylistPageProps) {
           </Card>
         ) : (
           <div className="space-y-2">
-            {playlist.items.map((item, index) => (
+            {playlist.items.map((item: any, index: number) => (
               <Card key={item.id} className="hover:bg-accent/50 transition-colors">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-4">
@@ -217,6 +266,26 @@ export default async function PlaylistPage({ params }: PlaylistPageProps) {
                           <ExternalLink className="h-4 w-4" />
                         </Link>
                       </Button>
+
+                      {/* Dropdown de ações para o dono */}
+                      {isOwner && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            <DropdownMenuItem 
+                              className="text-red-600 focus:text-red-600"
+                              onClick={() => handleRemoveSong(item.song.id)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Remover da playlist
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </div>
                   </div>
                 </CardContent>
