@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, AlertCircle, Info, CheckCircle, AlertTriangle, Bell, FileText, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 interface Banner {
   id: string;
@@ -105,9 +106,16 @@ export default function BannerDisplay({ page }: BannerDisplayProps) {
       if (response.ok) {
         const data = await response.json();
         setBanners(data);
+      } else {
+        console.error('Erro ao carregar banners: resposta não OK');
       }
     } catch (error) {
       console.error('Erro ao carregar banners:', error);
+      // Silenciar erro de banners para não atrapalhar a experiência do usuário
+      // Toast apenas em desenvolvimento ou se necessário debug
+      if (process.env.NODE_ENV === 'development') {
+        toast.error('Erro ao carregar banners do sistema');
+      }
     }
   };
 

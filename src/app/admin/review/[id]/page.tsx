@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { ChordGuideButton } from "@/components/ChordGuidePopup";
 import "../../../../../public/styles/chords.css";
@@ -123,6 +124,27 @@ export default function ReviewSubmissionPage() {
   }, [submissionId]);
 
   const handleApprove = async () => {
+    // Validações
+    if (!title.trim()) {
+      toast.error("Título é obrigatório");
+      return;
+    }
+    
+    if (!markdown.trim()) {
+      toast.error("Letra da música é obrigatória");
+      return;
+    }
+    
+    if (!instrument) {
+      toast.error("Instrumento principal é obrigatório");
+      return;
+    }
+    
+    if (moments.length === 0) {
+      toast.error("Pelo menos um momento litúrgico deve ser selecionado");
+      return;
+    }
+    
     const formData = new FormData();
     formData.append("title", title);
     formData.append("markdown", markdown);
@@ -134,19 +156,31 @@ export default function ReviewSubmissionPage() {
     if (newPdf) formData.append("pdf", newPdf);
     if (newMp3) formData.append("mp3", newMp3);
 
-    const res = await fetch(`/api/admin/submission/${submissionId}/approve`, {
-      method: "POST",
-      body: formData,
-    });
+    try {
+      const res = await fetch(`/api/admin/submission/${submissionId}/approve`, {
+        method: "POST",
+        body: formData,
+      });
 
-    if (res.ok) {
-      router.push("/admin/review");
-    } else {
-      alert("Erro ao aprovar.");
+      if (res.ok) {
+        toast.success("Submissão aprovada com sucesso!");
+        router.push("/admin/review");
+      } else {
+        const errorData = await res.json();
+        toast.error(errorData.error || "Erro ao aprovar submissão");
+      }
+    } catch (error) {
+      console.error("Erro ao aprovar:", error);
+      toast.error("Erro de conexão ao aprovar submissão");
     }
   };
 
   const handleReject = async (rejectionReason: string) => {
+    if (!rejectionReason.trim()) {
+      toast.error("Motivo da rejeição é obrigatório");
+      return;
+    }
+    
     try {
       const response = await fetch(`/api/admin/submission/${submissionId}/reject`, {
         method: "POST",
@@ -159,10 +193,11 @@ export default function ReviewSubmissionPage() {
         throw new Error(errorData.error || 'Erro interno do servidor');
       }
 
+      toast.success("Submissão rejeitada com sucesso");
       router.push("/admin/review");
     } catch (error) {
       console.error("Erro ao rejeitar submissão:", error);
-      alert(`Erro ao rejeitar: ${error instanceof Error ? error.message : 'Erro de conexão'}`);
+      toast.error(`Erro ao rejeitar: ${error instanceof Error ? error.message : 'Erro de conexão'}`);
       throw error; // Para que o dialog possa lidar com o erro
     }
   };

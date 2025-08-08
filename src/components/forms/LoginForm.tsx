@@ -19,19 +19,45 @@ export function LoginForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
-    const res = await signIn("credentials", {
-      redirect: false,
-      email,
-      password,
-    });
-    setLoading(false);
-
-    if (res?.ok) {
-      toast.success("Login efetuado com sucesso! Bem-vindo de volta!");
-      router.push("/");
+    
+    // Validação básica
+    if (!email.trim()) {
+      toast.error("Por favor, insere o teu email");
+      return;
     }
-    else alert("Login falhou. Verifica as credenciais.");
+    
+    if (!password.trim()) {
+      toast.error("Por favor, insere a tua palavra-passe");
+      return;
+    }
+    
+    setLoading(true);
+    
+    try {
+      const res = await signIn("credentials", {
+        redirect: false,
+        email,
+        password,
+      });
+      
+      if (res?.ok) {
+        toast.success("Login efetuado com sucesso! Bem-vindo de volta!");
+        router.push("/");
+      } else if (res?.error) {
+        if (res.error === "CredentialsSignin") {
+          toast.error("Email ou palavra-passe incorretos");
+        } else {
+          toast.error("Erro no login: " + res.error);
+        }
+      } else {
+        toast.error("Erro desconhecido no login");
+      }
+    } catch (error) {
+      console.error("Erro no login:", error);
+      toast.error("Erro de conexão. Tenta novamente.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

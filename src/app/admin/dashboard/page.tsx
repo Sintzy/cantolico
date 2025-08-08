@@ -11,6 +11,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { Users, Music, Clock, TrendingUp, Activity, AlertCircle } from 'lucide-react';
 import BannerDisplay from '@/components/BannerDisplay';
+import { toast } from 'sonner';
 
 interface DashboardStats {
   totalUsers: number;
@@ -86,6 +87,7 @@ export default function AdminDashboard() {
   const fetchStats = async () => {
     try {
       setLoading(true);
+      setError(null);
       const response = await fetch('/api/admin/dashboard/stats');
       
       if (!response.ok) {
@@ -94,9 +96,12 @@ export default function AdminDashboard() {
       
       const data = await response.json();
       setStats(data);
+      toast.success('Estatísticas atualizadas com sucesso!');
     } catch (error) {
       console.error('Erro ao carregar estatísticas:', error);
-      setError(error instanceof Error ? error.message : 'Erro desconhecido');
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      setError(errorMessage);
+      toast.error(`Erro ao carregar estatísticas: ${errorMessage}`);
     } finally {
       setLoading(false);
     }

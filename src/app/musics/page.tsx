@@ -20,6 +20,7 @@ import BannerDisplay from '@/components/BannerDisplay';
 import StarButton from '@/components/StarButton';
 import AddToPlaylistButton from '@/components/AddToPlaylistButton';
 import { MusicListSkeleton } from '@/components/MusicListSkeleton';
+import { toast } from 'sonner';
 
 const allMoments = [
   'ENTRADA',
@@ -72,10 +73,16 @@ export default function MusicsPage() {
       try {
         setLoading(true);
         const res = await fetch('/api/musics/getmusics');
+        
+        if (!res.ok) {
+          throw new Error('Erro ao carregar músicas do servidor');
+        }
+        
         const data = await res.json();
         setSongs(data);
       } catch (error) {
         console.error('Erro ao carregar músicas:', error);
+        toast.error('Erro ao carregar as músicas. Tenta recarregar a página.');
       } finally {
         setLoading(false);
       }
