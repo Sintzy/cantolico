@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import imageCompression from "browser-image-compression";
 import { supabase } from "@/lib/supabase";
 import Image from "next/image";
+import { toast } from "sonner";
 
 type Props = {
   userId: number;
@@ -22,6 +23,17 @@ export default function ProfileImageUploader({ userId, currentImage, onUpload }:
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Validação do arquivo
+    if (!file.type.startsWith('image/')) {
+      toast.error("Por favor, seleciona apenas ficheiros de imagem");
+      return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("O ficheiro é muito grande. Máximo 5MB");
+      return;
+    }
 
     setUploading(true);
     try {
@@ -43,9 +55,11 @@ export default function ProfileImageUploader({ userId, currentImage, onUpload }:
       const { data } = supabase.storage.from("avatars").getPublicUrl(filePath);
       if (data?.publicUrl) {
         onUpload(data.publicUrl);
+        toast.success("Imagem carregada com sucesso!");
       }
     } catch (err) {
       console.error("Erro ao enviar imagem:", err);
+      toast.error("Erro ao carregar a imagem. Tenta novamente.");
     } finally {
       setUploading(false);
     }

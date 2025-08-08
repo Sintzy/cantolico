@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import * as Icons from "@/lib/site-images";
 import UserAvatar from "./ui/user-avatar";
+import { toast } from "sonner";
 type Music = {
   id: string;
   title: string;
@@ -24,10 +25,17 @@ export default function Navbar() {
         const fetchMusics = async () => {
             try {
                 const res = await fetch(`/api/musics/getmusics`);
+                
+                if (!res.ok) {
+                    throw new Error('Erro ao carregar músicas para pesquisa');
+                }
+                
                 const data: Music[] = await res.json();
                 setSearchResults(data); 
             } catch (error) {
                 console.error("Erro ao buscar músicas:", error);
+                // Falha silenciosa na navbar para não atrapalhar navegação
+                // mas ainda reporta no console para debug
             }
         };
 

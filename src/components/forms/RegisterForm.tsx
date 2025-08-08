@@ -17,20 +17,51 @@ export function RegisterForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    
+    // Validação básica
+    if (!name.trim()) {
+      toast.error("Por favor, insere o teu nome completo");
+      return;
+    }
+    
+    if (!email.trim()) {
+      toast.error("Por favor, insere o teu email");
+      return;
+    }
+    
+    if (!password.trim()) {
+      toast.error("Por favor, insere uma palavra-passe");
+      return;
+    }
+    
+    if (password.length < 6) {
+      toast.error("A palavra-passe deve ter pelo menos 6 caracteres");
+      return;
+    }
+    
     setLoading(true);
-    const res = await fetch("/api/register", {
-      method: "POST",
-      body: JSON.stringify({ email, password, name }),
-      headers: { "Content-Type": "application/json" },
-    });
-    setLoading(false);
-
-    if (res.ok) {
-      window.location.href = "/login";
-    } else if (res.status === 400) {
-      toast.error("Email já está em uso");
-    } else {
-      toast.error("Erro ao registar. Verifica os dados.");
+    
+    try {
+      const res = await fetch("/api/register", {
+        method: "POST",
+        body: JSON.stringify({ email, password, name }),
+        headers: { "Content-Type": "application/json" },
+      });
+      
+      if (res.ok) {
+        toast.success("Conta criada com sucesso! Faz login para continuar.");
+        window.location.href = "/login";
+      } else if (res.status === 400) {
+        const data = await res.json();
+        toast.error(data.error || "Email já está em uso");
+      } else {
+        toast.error("Erro ao registar. Verifica os dados e tenta novamente.");
+      }
+    } catch (error) {
+      console.error("Erro no registo:", error);
+      toast.error("Erro de conexão. Tenta novamente.");
+    } finally {
+      setLoading(false);
     }
   }
 

@@ -133,8 +133,34 @@ export default function CreateNewMusicPage() {
   };
 
   const handleSubmit = async () => {
+    // Validações
+    if (!form.title.trim()) {
+      toast.error("Por favor, insere o título da música");
+      return;
+    }
+    
+    if (!form.type) {
+      toast.error("Por favor, seleciona o tipo de música");
+      return;
+    }
+    
+    if (!form.instrument) {
+      toast.error("Por favor, seleciona o instrumento principal");
+      return;
+    }
+    
+    if (form.moments.length === 0) {
+      toast.error("Por favor, seleciona pelo menos um momento litúrgico");
+      return;
+    }
+    
+    if (!form.markdown.trim()) {
+      toast.error("Por favor, insere a letra da música em Markdown");
+      return;
+    }
+    
     if (!captchaToken) {
-      toast.error("Por favor, complete o captcha antes de submeter.");
+      toast.error("Por favor, complete o captcha antes de submeter");
       return;
     }
 
@@ -162,14 +188,15 @@ export default function CreateNewMusicPage() {
 
       const data = await res.json();
       if (data.success) {
+        toast.success("A tua música foi enviada para revisão com sucesso!");
         router.push(`/musics`);
-        toast.success("A tua musica foi enviada para revisão com sucesso!");
       } else {
         toast.error(data.error || "Erro ao submeter a música");
         setCaptchaToken(null); // Reset captcha on error
       }
     } catch (error) {
-      toast.error("Erro ao submeter a música");
+      console.error("Erro na submissão:", error);
+      toast.error("Erro de conexão ao submeter a música");
       setCaptchaToken(null); // Reset captcha on error
     } finally {
       setIsSubmitting(false);

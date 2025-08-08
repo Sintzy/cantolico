@@ -123,24 +123,53 @@ export default function ProfileView({ user, isOwner }: ProfileViewProps) {
   }, [user.id]);
 
   const handleSave = async () => {
+    // Validação básica
+    if (!form.name.trim()) {
+      toast.error("Nome é obrigatório");
+      return;
+    }
+    
     setLoading(true);
-    const res = await fetch("/api/profile/update", {
-      method: "POST",
-      body: JSON.stringify(form),
-      headers: { "Content-Type": "application/json" },
-    });
-    setLoading(false);
-    if (res.ok) {
-      toast.success("Perfil atualizado com sucesso!");
-      window.location.reload();
-      await getSession();
-      setEditMode(false);
+    
+    try {
+      const res = await fetch("/api/profile/update", {
+        method: "POST",
+        body: JSON.stringify(form),
+        headers: { "Content-Type": "application/json" },
+      });
+      
+      if (res.ok) {
+        toast.success("Perfil atualizado com sucesso!");
+        window.location.reload();
+        await getSession();
+        setEditMode(false);
+      } else {
+        const errorData = await res.json();
+        toast.error(errorData.error || "Erro ao atualizar perfil");
+      }
+    } catch (error) {
+      console.error("Erro ao salvar perfil:", error);
+      toast.error("Erro de conexão ao atualizar perfil");
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    
+    // Validação do arquivo
+    if (!file.type.startsWith('image/')) {
+      toast.error("Por favor, seleciona apenas ficheiros de imagem");
+      return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("O ficheiro é muito grande. Máximo 5MB");
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -162,9 +191,11 @@ export default function ProfileView({ user, isOwner }: ProfileViewProps) {
       const { data } = supabase.storage.from("avatars").getPublicUrl(filePath);
       if (data?.publicUrl) {
         setForm({ ...form, image: data.publicUrl });
+        toast.success("Imagem carregada com sucesso!");
       }
     } catch (err) {
       console.error("Erro ao enviar imagem:", err);
+      toast.error("Erro ao carregar a imagem. Tenta novamente.");
     } finally {
       setLoading(false);
     }
