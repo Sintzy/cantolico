@@ -1,44 +1,128 @@
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { redirect } from 'next/navigation';
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { 
   ListMusic, 
   Plus, 
   Clock, 
   Globe, 
   Lock,
-  Music
+  Music,
+  Edit,
+  Trash2,
+  MoreHorizontal,
+  Eye
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { toast } from 'sonner';
 
-export default async function MyPlaylistsPage() {
-  const session = await getServerSession(authOptions);
-  
-  if (!session?.user?.id) {
-    redirect('/login');
+interface Playlist {
+  id: string;
+  name: string;
+  description?: string;
+  isPublic: boolean;
+  userId: number;
+  createdAt: string;
+  updatedAt: string;
+  user: {
+    id: number;
+    name: string;
+  };
+  _count: {
+    items: number;
+  };
+}
+
+export default function MyPlaylistsPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (status === 'loading') return;
+    
+    if (!session?.user?.id) {
+      router.push('/login');
+      return;
+    }
+
+    fetchPlaylists();
+  }, [session, status, router]);
+
+  const fetchPlaylists = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/user/playlists');
+      
+      if (response.ok) {
+        const data = await response.json();
+        setPlaylists(data);
+      } else {
+        toast.error('Erro ao carregar playlists');
+      }
+    } catch (error) {
+      console.error('Error fetching playlists:', error);
+      toast.error('Erro de conexão');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeletePlaylist = async (playlistId: string, playlistName: string) => {
+    const confirmed = confirm(`Tens a certeza que queres eliminar a playlist "${playlistName}"? Esta ação não pode ser desfeita.`);
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`/api/playlists/${playlistId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        toast.success('Playlist eliminada com sucesso');
+        // Atualizar a lista removendo a playlist eliminada
+        setPlaylists(playlists.filter(p => p.id !== playlistId));
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Erro ao eliminar playlist');
+      }
+    } catch (error) {
+      console.error('Error deleting playlist:', error);
+      toast.error('Erro de conexão ao eliminar playlist');
+    }
+  };
+
+  if (status === 'loading' || loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-48 bg-gray-200 rounded-lg"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   }
 
-  const playlists = await prisma.playlist.findMany({
-    where: {
-      userId: session.user.id
-    },
-    include: {
-      _count: {
-        select: {
-          items: true
-        }
-      }
-    },
-    orderBy: {
-      updatedAt: 'desc'
-    }
-  });
+  if (!session?.user?.id) {
+    return null;
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -135,18 +219,36 @@ export default async function MyPlaylistsPage() {
                   </div>
                 </div>
                 
-                <div className="flex gap-2 mt-4">
-                  <Button size="sm" variant="outline" className="flex-1" asChild>
+                <div className="flex justify-between items-start mt-4">
+                  <Button size="sm" variant="outline" asChild>
                     <Link href={`/playlists/${playlist.id}`}>
+                      <Eye className="h-4 w-4 mr-2" />
                       Ver Playlist
                     </Link>
                   </Button>
                   
-                  <Button size="sm" variant="ghost" asChild>
-                    <Link href={`/playlists/${playlist.id}/edit`}>
-                      Editar
-                    </Link>
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem asChild>
+                        <Link href={`/playlists/${playlist.id}/edit`}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Editar
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        className="text-red-600 focus:text-red-600"
+                        onClick={() => handleDeletePlaylist(playlist.id, playlist.name)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Eliminar
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </CardContent>
             </Card>
