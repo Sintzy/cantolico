@@ -41,6 +41,19 @@ export async function GET(request: Request) {
       where.role = role;
     }
 
+    if (status && status !== 'all') {
+      if (status === 'ACTIVE') {
+        where.OR = [
+          { moderation: null },
+          { moderation: { status: 'ACTIVE' } }
+        ];
+      } else {
+        where.moderation = {
+          status: status
+        };
+      }
+    }
+
     // Get users with pagination
     const [users, totalUsers] = await Promise.all([
       prisma.user.findMany({
@@ -51,10 +64,19 @@ export async function GET(request: Request) {
           [sortBy]: sortOrder as 'asc' | 'desc'
         },
         include: {
+          moderation: {
+            include: {
+              moderatedBy: {
+                select: { name: true }
+              }
+            }
+          },
           _count: {
             select: {
               songVersions: true,
-              submissions: true
+              submissions: true,
+              playlists: true,
+              favorites: true
             }
           }
         }
@@ -73,25 +95,30 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       users: users.map(user => ({
-        id: user.id,
+        id: user.id.toString(),
         name: user.name,
         email: user.email,
         role: user.role,
         image: user.image,
         bio: user.bio,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
+        createdAt: user.createdAt.toISOString(),
+        updatedAt: user.updatedAt.toISOString(),
         totalSongs: user._count.songVersions,
-        totalSubmissions: user._count.submissions
+        totalSubmissions: user._count.submissions,
+        moderation: user.moderation ? {
+          id: user.moderation.id,
+          status: user.moderation.status,
+          type: user.moderation.type,
+          reason: user.moderation.reason,
+          moderatorNote: user.moderation.moderatorNote,
+          moderatedAt: user.moderation.moderatedAt?.toISOString() || null,
+          expiresAt: user.moderation.expiresAt?.toISOString() || null,
+          moderatedBy: user.moderation.moderatedBy
+        } : null
       })),
-      pagination: {
-        page,
-        limit,
-        totalUsers,
-        totalPages,
-        hasNext: page < totalPages,
-        hasPrev: page > 1
-      }
+      totalCount: totalUsers,
+      totalPages,
+      currentPage: page
     });
   } catch (error) {
     await logErrors('ERROR', 'Erro na gestão de utilizadores', 'Falha na consulta de utilizadores', {

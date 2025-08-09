@@ -81,8 +81,11 @@ export default function AdminDashboard() {
       return;
     }
 
-    fetchStats();
-  }, [session, status]); // Removido router das dependências
+    // Só carregar stats na primeira vez
+    if (!stats) {
+      fetchStats();
+    }
+  }, [session, status]); // Removido router e stats das dependências para evitar reloads
 
   const fetchStats = async () => {
     try {
@@ -157,6 +160,9 @@ export default function AdminDashboard() {
           </Button>
           <Button asChild variant="outline" className="w-full sm:w-auto">
             <Link href="/admin/dashboard/musics">Gestão Músicas</Link>
+          </Button>
+          <Button asChild variant="outline" className="w-full sm:w-auto">
+            <Link href="/admin/dashboard/playlists">Gestão Playlists</Link>
           </Button>
           <Button asChild variant="outline" className="w-full sm:w-auto">
             <Link href="/admin/dashboard/banners">Gestão Banners</Link>
@@ -372,7 +378,7 @@ export default function AdminDashboard() {
           <CardDescription>Acesso rápido às funções mais utilizadas</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <Button asChild className="h-16 flex-col text-center p-4">
               <Link href="/admin/review">
                 <svg className="h-5 w-5 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -395,6 +401,14 @@ export default function AdminDashboard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-2v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-2" />
                 </svg>
                 <span className="text-sm">Gestão Músicas</span>
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="h-16 flex-col text-center p-4">
+              <Link href="/admin/dashboard/playlists">
+                <svg className="h-5 w-5 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-2v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-2" />
+                </svg>
+                <span className="text-sm">Gestão Playlists</span>
               </Link>
             </Button>
             <Button asChild variant="outline" className="h-16 flex-col text-center p-4">

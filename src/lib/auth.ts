@@ -25,6 +25,9 @@ export const authOptions: AuthOptions = {
         try {
           const user = await prisma.user.findUnique({
             where: { email: credentials.email },
+            include: {
+              moderation: true
+            }
           });
 
           if (!user) {
@@ -33,6 +36,27 @@ export const authOptions: AuthOptions = {
               action: 'login_email_not_found'
             });
             return null;
+          }
+
+          // Verificar se o utilizador está banido ou suspenso
+          if (user.moderation && (user.moderation.status === 'BANNED' || user.moderation.status === 'SUSPENDED')) {
+            // Verificar se a suspensão expirou
+            if (user.moderation.status === 'SUSPENDED' && user.moderation.expiresAt && user.moderation.expiresAt < new Date()) {
+              // Suspensão expirou, reativar utilizador
+              await prisma.userModeration.update({
+                where: { userId: user.id },
+                data: { status: 'ACTIVE' }
+              });
+            } else {
+              await logGeneral('WARN', 'Tentativa de login de utilizador moderado', `Utilizador ${user.moderation.status.toLowerCase()} a tentar login`, {
+                userId: user.id,
+                email: credentials.email,
+                moderationStatus: user.moderation.status,
+                moderationReason: user.moderation.reason,
+                action: 'login_moderated_user'
+              });
+              throw new Error(`Conta ${user.moderation.status === 'BANNED' ? 'banida' : 'suspensa'}. Motivo: ${user.moderation.reason || 'Não especificado'}. Consulte o seu email para mais informações.`);
+            }
           }
 
           if (!bcrypt.compareSync(credentials.password, user.passwordHash)) {

@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import UserHoverCard from "@/components/UserHoverCard";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
@@ -24,7 +25,12 @@ import {
   Calendar,
   Eye,
   Zap,
-  Loader2
+  Loader2,
+  AlertTriangle,
+  Ban,
+  Shield,
+  History,
+  Info
 } from "lucide-react";
 
 type Submission = {
@@ -45,6 +51,30 @@ type Submission = {
     createdAt: string;
     image: string | null;
     bio?: string;
+    moderationHistory?: {
+      id: number;
+      status: "ACTIVE" | "WARNING" | "SUSPENDED" | "BANNED";
+      type: "WARNING" | "SUSPENSION" | "BAN" | null;
+      reason: string | null;
+      moderatorNote: string | null;
+      moderatedAt: string;
+      expiresAt: string | null;
+      moderatedBy?: {
+        name: string | null;
+      };
+    }[];
+    currentModeration?: {
+      id: number;
+      status: "ACTIVE" | "WARNING" | "SUSPENDED" | "BANNED";
+      type: "WARNING" | "SUSPENSION" | "BAN" | null;
+      reason: string | null;
+      moderatorNote: string | null;
+      moderatedAt: string;
+      expiresAt: string | null;
+      moderatedBy?: {
+        name: string | null;
+      };
+    };
   };
 };
 
@@ -181,6 +211,250 @@ export default function AdminReviewPage() {
     );
   };
 
+  const getModerationBadge = (status: string) => {
+    const colors = {
+      ACTIVE: "bg-green-100 text-green-800",
+      WARNING: "bg-yellow-100 text-yellow-800",
+      SUSPENDED: "bg-orange-100 text-orange-800",
+      BANNED: "bg-red-100 text-red-800",
+    };
+    
+    const icons = {
+      ACTIVE: <Shield className="w-3 h-3 mr-1" />,
+      WARNING: <AlertTriangle className="w-3 h-3 mr-1" />,
+      SUSPENDED: <XCircle className="w-3 h-3 mr-1" />,
+      BANNED: <Ban className="w-3 h-3 mr-1" />,
+    };
+
+    return (
+      <Badge className={colors[status as keyof typeof colors] || colors.ACTIVE}>
+        {icons[status as keyof typeof icons]}
+        {status}
+      </Badge>
+    );
+  };
+
+  const UserModerationDialog = ({ submission }: { submission: Submission }) => {
+    const { submitter } = submission;
+    
+    return (
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm" className="ml-2">
+            <History className="w-4 h-4 mr-1" />
+            Histórico
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <User className="w-5 h-5" />
+              Histórico de Moderação - {submitter.name}
+            </DialogTitle>
+            <DialogDescription>
+              ID do Utilizador: #{submitter.id} | Email: {submitter.email}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* Status Atual */}
+            <div>
+              <h3 className="text-lg font-semibold mb-3 border-b pb-2">Status Atual</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Role</label>
+                  <div className="mt-1">{getRoleBadge(submitter.role)}</div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Status de Moderação</label>
+                  <div className="mt-1">
+                    {submitter.currentModeration 
+                      ? getModerationBadge(submitter.currentModeration.status)
+                      : getModerationBadge("ACTIVE")
+                    }
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Membro desde</label>
+                  <p className="text-sm mt-1">{new Date(submitter.createdAt).toLocaleDateString('pt-PT')}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">ID do Utilizador</label>
+                  <p className="text-sm mt-1 font-mono">#{submitter.id}</p>
+                </div>
+              </div>
+
+              {/* Moderação Atual */}
+              {submitter.currentModeration && submitter.currentModeration.status !== 'ACTIVE' && (
+                <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5" />
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-red-800">Moderação Ativa</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                        <div>
+                          <label className="text-xs font-medium text-red-600">Tipo</label>
+                          <p className="text-sm text-red-800">{submitter.currentModeration.type}</p>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-red-600">Aplicada em</label>
+                          <p className="text-sm text-red-800">
+                            {new Date(submitter.currentModeration.moderatedAt).toLocaleDateString('pt-PT')}
+                          </p>
+                        </div>
+                        {submitter.currentModeration.expiresAt && (
+                          <div>
+                            <label className="text-xs font-medium text-red-600">Expira em</label>
+                            <p className="text-sm text-red-800">
+                              {new Date(submitter.currentModeration.expiresAt).toLocaleDateString('pt-PT')}
+                            </p>
+                          </div>
+                        )}
+                        {submitter.currentModeration.moderatedBy && (
+                          <div>
+                            <label className="text-xs font-medium text-red-600">Moderado por</label>
+                            <p className="text-sm text-red-800">{submitter.currentModeration.moderatedBy.name}</p>
+                          </div>
+                        )}
+                      </div>
+                      {submitter.currentModeration.reason && (
+                        <div className="mt-2">
+                          <label className="text-xs font-medium text-red-600">Motivo</label>
+                          <p className="text-sm text-red-800 bg-red-100 p-2 rounded mt-1">
+                            {submitter.currentModeration.reason}
+                          </p>
+                        </div>
+                      )}
+                      {submitter.currentModeration.moderatorNote && (
+                        <div className="mt-2">
+                          <label className="text-xs font-medium text-red-600">Nota do Moderador</label>
+                          <p className="text-sm text-red-700 bg-red-100 p-2 rounded mt-1 font-mono">
+                            {submitter.currentModeration.moderatorNote}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Histórico de Moderações */}
+            <div>
+              <h3 className="text-lg font-semibold mb-3 border-b pb-2">Histórico de Moderações</h3>
+              {submitter.moderationHistory && submitter.moderationHistory.length > 0 ? (
+                <div className="space-y-3">
+                  {submitter.moderationHistory.map((moderation, index) => (
+                    <div 
+                      key={moderation.id} 
+                      className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
+                            {getModerationBadge(moderation.status)}
+                            <span className="text-sm text-gray-500">
+                              #{moderation.id}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {new Date(moderation.moderatedAt).toLocaleDateString('pt-PT', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+                        <div>
+                          <label className="text-xs font-medium text-gray-500">Tipo</label>
+                          <p className="text-sm">{moderation.type || 'N/A'}</p>
+                        </div>
+                        {moderation.expiresAt && (
+                          <div>
+                            <label className="text-xs font-medium text-gray-500">Expiração</label>
+                            <p className="text-sm">
+                              {new Date(moderation.expiresAt).toLocaleDateString('pt-PT')}
+                            </p>
+                          </div>
+                        )}
+                        {moderation.moderatedBy && (
+                          <div>
+                            <label className="text-xs font-medium text-gray-500">Moderado por</label>
+                            <p className="text-sm">{moderation.moderatedBy.name || 'Sistema'}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {moderation.reason && (
+                        <div className="mt-3">
+                          <label className="text-xs font-medium text-gray-500">Motivo</label>
+                          <p className="text-sm bg-gray-100 p-2 rounded mt-1">
+                            {moderation.reason}
+                          </p>
+                        </div>
+                      )}
+
+                      {moderation.moderatorNote && (
+                        <div className="mt-2">
+                          <label className="text-xs font-medium text-gray-500">Nota do Moderador</label>
+                          <p className="text-sm bg-blue-50 p-2 rounded mt-1 font-mono text-blue-800">
+                            {moderation.moderatorNote}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Shield className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                  <p>Nenhum histórico de moderação encontrado</p>
+                  <p className="text-sm">Este utilizador nunca foi moderado</p>
+                </div>
+              )}
+            </div>
+
+            {/* Estatísticas */}
+            <div>
+              <h3 className="text-lg font-semibold mb-3 border-b pb-2">Estatísticas</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center p-3 bg-blue-50 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {submitter.moderationHistory?.length || 0}
+                  </div>
+                  <div className="text-sm text-blue-600">Total Moderações</div>
+                </div>
+                <div className="text-center p-3 bg-yellow-50 rounded-lg">
+                  <div className="text-2xl font-bold text-yellow-600">
+                    {submitter.moderationHistory?.filter(m => m.type === 'WARNING').length || 0}
+                  </div>
+                  <div className="text-sm text-yellow-600">Advertências</div>
+                </div>
+                <div className="text-center p-3 bg-orange-50 rounded-lg">
+                  <div className="text-2xl font-bold text-orange-600">
+                    {submitter.moderationHistory?.filter(m => m.type === 'SUSPENSION').length || 0}
+                  </div>
+                  <div className="text-sm text-orange-600">Suspensões</div>
+                </div>
+                <div className="text-center p-3 bg-red-50 rounded-lg">
+                  <div className="text-2xl font-bold text-red-600">
+                    {submitter.moderationHistory?.filter(m => m.type === 'BAN').length || 0}
+                  </div>
+                  <div className="text-sm text-red-600">Banimentos</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto p-6">
@@ -302,6 +576,13 @@ export default function AdminReviewPage() {
                     image: submission.submitter.image || ""
                   }} />
                   {getRoleBadge(submission.submitter.role)}
+                  {submission.submitter.currentModeration && submission.submitter.currentModeration.status !== 'ACTIVE' && (
+                    <Badge variant="outline" className="text-red-600 border-red-300">
+                      <AlertTriangle className="w-3 h-3 mr-1" />
+                      {submission.submitter.currentModeration.status}
+                    </Badge>
+                  )}
+                  <UserModerationDialog submission={submission} />
                 </div>
 
                 <div className="flex flex-wrap gap-2">

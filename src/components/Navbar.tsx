@@ -418,13 +418,6 @@ export default function Navbar() {
                                 <User className="h-4 w-4" />
                                 Login
                             </Link>
-                            <Link
-                                href="/register"
-                                className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200"
-                            >
-                                <UserPlus className="h-4 w-4" />
-                                Registar
-                            </Link>
                         </div>
                     )}
 
