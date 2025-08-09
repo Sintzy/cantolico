@@ -73,7 +73,7 @@ export async function GET(request: Request) {
           },
           _count: {
             select: {
-              songVersions: true,
+              versions: true,
               submissions: true,
               playlists: true,
               favorites: true
@@ -103,7 +103,7 @@ export async function GET(request: Request) {
         bio: user.bio,
         createdAt: user.createdAt.toISOString(),
         updatedAt: user.updatedAt.toISOString(),
-        totalSongs: user._count.songVersions,
+        totalSongs: user._count.versions,
         totalSubmissions: user._count.submissions,
         moderation: user.moderation ? {
           id: user.moderation.id,
@@ -172,18 +172,17 @@ export async function PATCH(request: Request) {
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: { role: role as any },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        image: true,
-        bio: true,
-        createdAt: true,
-        updatedAt: true,
+      include: {
+        moderation: {
+          include: {
+            moderatedBy: {
+              select: { name: true }
+            }
+          }
+        },
         _count: {
           select: {
-            songVersions: true,
+            versions: true,
             submissions: true
           }
         }
@@ -210,7 +209,7 @@ export async function PATCH(request: Request) {
         bio: updatedUser.bio,
         createdAt: updatedUser.createdAt,
         updatedAt: updatedUser.updatedAt,
-        totalSongs: updatedUser._count.songVersions,
+        totalSongs: updatedUser._count.versions,
         totalSubmissions: updatedUser._count.submissions
       }
     });
