@@ -10,13 +10,13 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 items-center">
+    <div className="min-h-screen bg-white flex items-center justify-center p-4">
+      <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-12 items-center">
         
         {/* Left Side - Welcome Content */}
         <div className="hidden lg:block space-y-8">
           <div className="space-y-4">
-            <h1 className="text-4xl font-bold text-gray-900">
+            <h1 className="text-4xl font-bold tracking-tight text-gray-900">
               Bem-vindo de volta ao <span className="text-blue-600">Cantólico</span>
             </h1>
             <p className="text-xl text-gray-600 leading-relaxed">
@@ -27,8 +27,8 @@ export default function LoginPage() {
           {/* Feature highlights */}
           <div className="space-y-6">
             <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                <Music className="w-6 h-6 text-blue-600" />
+              <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                <Music className="w-6 h-6 text-gray-700" />
               </div>
               <div>
                 <h3 className="font-semibold text-gray-900">Biblioteca Completa</h3>
@@ -37,8 +37,8 @@ export default function LoginPage() {
             </div>
             
             <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                <Heart className="w-6 h-6 text-purple-600" />
+              <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                <Heart className="w-6 h-6 text-gray-700" />
               </div>
               <div>
                 <h3 className="font-semibold text-gray-900">Favoritos Pessoais</h3>
@@ -47,8 +47,8 @@ export default function LoginPage() {
             </div>
             
             <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                <Users className="w-6 h-6 text-green-600" />
+              <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                <Users className="w-6 h-6 text-gray-700" />
               </div>
               <div>
                 <h3 className="font-semibold text-gray-900">Comunidade Ativa</h3>
@@ -58,7 +58,7 @@ export default function LoginPage() {
           </div>
 
           {/* Trust indicators */}
-          <div className="border-t pt-6">
+          <div className="border-t border-gray-200 pt-6">
             <div className="flex items-center space-x-6 text-sm text-gray-500">
               <div className="flex items-center space-x-2">
                 <Star className="w-4 h-4 text-yellow-500" />
@@ -74,10 +74,10 @@ export default function LoginPage() {
 
         {/* Right Side - Login Form */}
         <div className="w-full max-w-md mx-auto lg:mx-0">
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+          <div className="bg-white rounded-lg border border-gray-200 p-8">
             {/* Header */}
             <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-gray-900 rounded-lg flex items-center justify-center mx-auto mb-4">
                 <Music className="w-8 h-8 text-white" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Entrar na conta</h2>

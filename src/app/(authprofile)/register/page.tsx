@@ -10,15 +10,15 @@ export const metadata: Metadata = {
 
 export default function RegisterPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 items-center">
+    <div className="min-h-screen bg-white flex items-center justify-center p-4">
+      <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-12 items-center">
         
         {/* Left Side - Registration Form */}
         <div className="w-full max-w-md mx-auto lg:mx-0 order-2 lg:order-1">
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+          <div className="bg-white rounded-lg border border-gray-200 p-8">
             {/* Header */}
             <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-gray-900 rounded-lg flex items-center justify-center mx-auto mb-4">
                 <Music className="w-8 h-8 text-white" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Juntar-se ao Cantólico</h2>
@@ -52,17 +52,17 @@ export default function RegisterPage() {
           {/* Footer Links */}
           <div className="mt-6 text-center text-sm text-gray-500">
             Ao criar conta, aceita os nossos{" "}
-            <Link href="/terms" className="text-purple-600 hover:text-purple-700">Termos de Serviço</Link>
+            <Link href="/terms" className="text-blue-600 hover:underline">Termos de Serviço</Link>
             {" "}e{" "}
-            <Link href="/privacy-policy" className="text-purple-600 hover:text-purple-700">Política de Privacidade</Link>
+            <Link href="/privacy-policy" className="text-blue-600 hover:underline">Política de Privacidade</Link>
           </div>
         </div>
 
         {/* Right Side - Benefits Content */}
         <div className="space-y-8 order-1 lg:order-2">
           <div className="space-y-4">
-            <h1 className="text-4xl font-bold text-gray-900">
-              Comece a sua jornada no <span className="text-purple-600">Cantólico</span>
+            <h1 className="text-4xl font-bold tracking-tight text-gray-900">
+              Comece a sua jornada no <span className="text-blue-600">Cantólico</span>
             </h1>
             <p className="text-xl text-gray-600 leading-relaxed">
               Junta-te à maior comunidade de música católica e partilha a tua paixão pelos cânticos sagrados.
@@ -72,8 +72,8 @@ export default function RegisterPage() {
           {/* Benefits */}
           <div className="space-y-6">
             <div className="flex items-start space-x-4">
-              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <Upload className="w-6 h-6 text-purple-600" />
+              <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Upload className="w-6 h-6 text-gray-700" />
               </div>
               <div>
                 <h3 className="font-semibold text-gray-900">Submeta Cânticos</h3>
@@ -82,8 +82,8 @@ export default function RegisterPage() {
             </div>
             
             <div className="flex items-start space-x-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <BookOpen className="w-6 h-6 text-blue-600" />
+              <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <BookOpen className="w-6 h-6 text-gray-700" />
               </div>
               <div>
                 <h3 className="font-semibold text-gray-900">Biblioteca Pessoal</h3>
@@ -92,8 +92,8 @@ export default function RegisterPage() {
             </div>
             
             <div className="flex items-start space-x-4">
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <CheckCircle className="w-6 h-6 text-green-600" />
+              <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <CheckCircle className="w-6 h-6 text-gray-700" />
               </div>
               <div>
                 <h3 className="font-semibold text-gray-900">Qualidade Aprovada</h3>
@@ -103,26 +103,26 @@ export default function RegisterPage() {
           </div>
 
           {/* User progression */}
-          <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-6 border border-purple-100">
+          <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
             <h3 className="font-semibold text-gray-900 mb-4">Sistema de Progressão</h3>
             <div className="space-y-3">
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                  <Music className="w-4 h-4 text-gray-600" />
+                <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                  <Music className="w-4 h-4 text-gray-700" />
                 </div>
-                <span className="text-gray-700">Utilizador → Contribua para a comunidade</span>
+                <span className="text-gray-600">Utilizador → Contribua para a comunidade</span>
               </div>
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                  <Shield className="w-4 h-4 text-orange-600" />
+                <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                  <Shield className="w-4 h-4 text-gray-700" />
                 </div>
-                <span className="text-gray-700">Revisor → Ajude a moderar conteúdo</span>
+                <span className="text-gray-600">Revisor → Ajude a moderar conteúdo</span>
               </div>
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                  <Crown className="w-4 h-4 text-purple-600" />
+                <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                  <Crown className="w-4 h-4 text-gray-700" />
                 </div>
-                <span className="text-gray-700">Admin → Gerir toda a plataforma</span>
+                <span className="text-gray-600">Admin → Gerir toda a plataforma</span>
               </div>
             </div>
           </div>
