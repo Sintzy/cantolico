@@ -6,7 +6,7 @@ import { logAdmin, logErrors } from '@/lib/logs';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { playlistId: string } }
+  { params }: { params: Promise<{ playlistId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -16,7 +16,7 @@ export async function PATCH(
     }
 
     const { isPublic } = await request.json();
-    const playlistId = params.playlistId;
+    const { playlistId } = await params;
 
     const playlist = await prisma.playlist.findUnique({
       where: { id: playlistId },
@@ -58,7 +58,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { playlistId: string } }
+  { params }: { params: Promise<{ playlistId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -67,7 +67,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
-    const playlistId = params.playlistId;
+    const { playlistId } = await params;
 
     const playlist = await prisma.playlist.findUnique({
       where: { id: playlistId },

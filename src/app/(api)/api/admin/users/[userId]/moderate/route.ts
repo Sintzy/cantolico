@@ -7,7 +7,7 @@ import { sendEmail } from '@/lib/email';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -17,7 +17,8 @@ export async function POST(
     }
 
     const { type, reason, moderatorNote, duration } = await request.json();
-    const userId = parseInt(params.userId);
+    const { userId: userIdStr } = await params;
+    const userId = parseInt(userIdStr);
 
     if (!type || !reason) {
       return NextResponse.json({ error: 'Tipo e motivo são obrigatórios' }, { status: 400 });
@@ -161,7 +162,7 @@ export async function POST(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -170,7 +171,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
-    const userId = parseInt(params.userId);
+    const { userId: userIdStr } = await params;
+    const userId = parseInt(userIdStr);
 
     const userToUnmoderate = await prisma.user.findUnique({
       where: { id: userId },
