@@ -38,20 +38,58 @@ export async function GET() {
     });
 
     const submissions = await prisma.songSubmission.findMany({
-      where: { status: "PENDING" },
       include: {
         submitter: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-            createdAt: true,
-            image: true,
-          },
+          include: {
+            moderation: {
+              include: {
+                moderatedBy: {
+                  select: { name: true }
+                }
+              }
+            }
+          }
         },
       },
       orderBy: { createdAt: "desc" },
+    });
+
+    // Formatear os dados para incluir histórico de moderação
+    const formattedSubmissions = submissions.map(submission => {
+      const currentModeration = submission.submitter.moderation;
+      
+      return {
+        ...submission,
+        submitter: {
+          id: submission.submitter.id.toString(),
+          name: submission.submitter.name,
+          email: submission.submitter.email,
+          role: submission.submitter.role,
+          createdAt: submission.submitter.createdAt.toISOString(),
+          image: submission.submitter.image,
+          bio: submission.submitter.bio,
+          currentModeration: currentModeration ? {
+            id: currentModeration.id,
+            status: currentModeration.status,
+            type: currentModeration.type,
+            reason: currentModeration.reason,
+            moderatorNote: currentModeration.moderatorNote,
+            moderatedAt: currentModeration.moderatedAt?.toISOString() || null,
+            expiresAt: currentModeration.expiresAt?.toISOString() || null,
+            moderatedBy: currentModeration.moderatedBy
+          } : null,
+          moderationHistory: currentModeration ? [{
+            id: currentModeration.id,
+            status: currentModeration.status,
+            type: currentModeration.type,
+            reason: currentModeration.reason,
+            moderatorNote: currentModeration.moderatorNote,
+            moderatedAt: currentModeration.moderatedAt?.toISOString() || null,
+            expiresAt: currentModeration.expiresAt?.toISOString() || null,
+            moderatedBy: currentModeration.moderatedBy
+          }] : []
+        }
+      };
     });
 
     await logAdmin('SUCCESS', 'Submissões carregadas com sucesso', `${submissions.length} submissões pendentes encontradas`, {
@@ -61,7 +99,7 @@ export async function GET() {
       action: 'admin_submissions_loaded'
     });
 
-    return NextResponse.json(submissions);
+    return NextResponse.json(formattedSubmissions);
   } catch (error) {
     await logErrors('ERROR', 'Erro ao carregar submissões', 'Falha na consulta de submissões pendentes', {
       error: error instanceof Error ? error.message : 'Erro desconhecido',

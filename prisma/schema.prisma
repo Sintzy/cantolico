@@ -8,24 +8,69 @@ datasource db {
 }
 
 model User {
-  id           Int              @id @default(autoincrement())
-  name         String?
-  email        String           @unique
-  passwordHash String
-  role         Role             @default(USER)
-  image        String?
-  bio          String?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  auditLogs    AuditLog[]
-  banners      Banner[]         @relation("BannerCreator")
-  favorites    Favorite[]
-  reviews      SongSubmission[] @relation("SubmissionReviewer")
-  submissions  SongSubmission[] @relation("SubmissionSubmitter")
-  songVersions SongVersion[]    @relation("VersionAuthor")
-  stars        Star[]
-  playlists    Playlist[]
-  playlistItems PlaylistItem[]
+  id             Int            @id @default(autoincrement())
+  name           String?
+  email          String         @unique
+  image          String?
+  role           Role           @default(USER)
+  bio            String?
+  profileImage   String?
+  emailVerified  DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  submissions    SongSubmission[] @relation("SubmissionSubmitter")
+  reviews        SongSubmission[] @relation("SubmissionReviewer")
+  favorites      Favorite[]
+  stars          Star[]
+  playlists      Playlist[]
+  playlistItems  PlaylistItem[]
+  auditLogs      AuditLog[]
+  banners        Banner[]       @relation("BannerCreator")
+  versions       SongVersion[]  @relation("VersionAuthor")
+  moderation     UserModeration?
+  moderationHistory ModerationHistory[] @relation("UserHistory")
+  moderatedUsers UserModeration[] @relation("ModerationModerator")
+  moderationActions ModerationHistory[] @relation("ModeratorHistory")
+}
+
+model UserModeration {
+  id           Int            @id @default(autoincrement())
+  userId       Int            @unique
+  status       ModerationStatus @default(ACTIVE)
+  type         ModerationType?
+  reason       String?
+  moderatorNote String?
+  ipAddress    String?
+  moderatedById Int?
+  moderatedAt  DateTime?
+  expiresAt    DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  moderatedBy  User?          @relation("ModerationModerator", fields: [moderatedById], references: [id])
+  
+  @@index([ipAddress])
+  @@index([status])
+}
+
+model ModerationHistory {
+  id           Int            @id @default(autoincrement())
+  userId       Int
+  status       ModerationStatus
+  type         ModerationType?
+  reason       String?
+  moderatorNote String?
+  ipAddress    String?
+  moderatedById Int?
+  moderatedAt  DateTime       @default(now())
+  expiresAt    DateTime?
+  createdAt    DateTime       @default(now())
+  user         User           @relation("UserHistory", fields: [userId], references: [id], onDelete: Cascade)
+  moderatedBy  User?          @relation("ModeratorHistory", fields: [moderatedById], references: [id])
+  
+  @@index([userId])
+  @@index([moderatedAt])
+  @@index([status])
 }
 
 model Song {
@@ -176,6 +221,19 @@ enum Role {
   TRUSTED
   REVIEWER
   ADMIN
+}
+
+enum ModerationStatus {
+  ACTIVE
+  WARNING
+  SUSPENDED
+  BANNED
+}
+
+enum ModerationType {
+  WARNING
+  SUSPENSION
+  BAN
 }
 
 enum SubmissionStatus {

@@ -56,6 +56,18 @@ interface ProfileViewProps {
     bio: string | null;
     role: string;
     createdAt: string;
+    moderation?: {
+      id: number;
+      status: string;
+      type: string | null;
+      reason: string | null;
+      moderatorNote: string | null;
+      moderatedAt: string | null;
+      expiresAt: string | null;
+      moderatedBy?: {
+        name: string | null;
+      };
+    } | null;
     submissions: {
       id: string;
       title: string;
@@ -252,14 +264,36 @@ export default function ProfileView({ user, isOwner }: ProfileViewProps) {
             ) : (
               <h1 className="text-3xl font-bold">{user.name || "Sem nome"}</h1>
             )}
-            <Image
-              src={badgeUrl}
-              alt={getRoleLabel(user.role)}
-              width={32}
-              height={32}
-              className="h-7 w-7"
-              title={getRoleLabel(user.role)}
-            />
+            <div className="flex items-center gap-2">
+              <Image
+                src={badgeUrl}
+                alt={getRoleLabel(user.role)}
+                width={32}
+                height={32}
+                className="h-7 w-7"
+                title={getRoleLabel(user.role)}
+              />
+              {user.moderation && user.moderation.status !== 'ACTIVE' && (
+                <div className="flex flex-col items-center gap-1">
+                  <div className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                    user.moderation.status === 'BANNED' 
+                      ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                      : user.moderation.status === 'SUSPENDED'
+                      ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
+                      : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                  }`}>
+                    {user.moderation.status === 'BANNED' ? 'Banido' 
+                     : user.moderation.status === 'SUSPENDED' ? 'Suspenso'
+                     : 'Advertido'}
+                  </div>
+                  {user.moderation.reason && (
+                    <div className="text-xs text-muted-foreground text-center max-w-32">
+                      {user.moderation.reason}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
           <p className="text-sm text-muted-foreground flex items-center gap-1">
             <Mail className="w-4 h-4" /> {user.email}

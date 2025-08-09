@@ -47,6 +47,13 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: {
+      moderation: {
+        include: {
+          moderatedBy: {
+            select: { name: true }
+          }
+        }
+      },
       submissions: {
         select: {
           id: true,
@@ -71,7 +78,17 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       ...submission,
       createdAt: submission.createdAt.toISOString(),
     })),
-    createdAt: user.createdAt.toISOString(), 
+    createdAt: user.createdAt.toISOString(),
+    moderation: user.moderation ? {
+      id: user.moderation.id,
+      status: user.moderation.status as string,
+      type: user.moderation.type as string | null,
+      reason: user.moderation.reason,
+      moderatorNote: user.moderation.moderatorNote,
+      moderatedAt: user.moderation.moderatedAt?.toISOString() || null,
+      expiresAt: user.moderation.expiresAt?.toISOString() || null,
+      moderatedBy: user.moderation.moderatedBy || undefined,
+    } : undefined,
   };
 
   const isOwner = session?.user?.id === user.id;
