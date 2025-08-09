@@ -59,7 +59,7 @@ export const authOptions: AuthOptions = {
             }
           }
 
-          if (!bcrypt.compareSync(credentials.password, user.passwordHash)) {
+          if (!user.passwordHash || !bcrypt.compareSync(credentials.password, user.passwordHash)) {
             await logGeneral('WARN', 'Tentativa de login com password incorreta', 'Password não confere', {
               userId: user.id,
               email: credentials.email,
