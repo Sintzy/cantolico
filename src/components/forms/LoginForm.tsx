@@ -65,13 +65,8 @@ export function LoginForm() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
-      className="max-w-md mx-auto bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl shadow-lg p-8 space-y-6"
+      className="space-y-6"
     >
-      <div className="text-center space-y-1">
-        <h1 className="text-2xl font-bold">Bem-vindo de volta</h1>
-        <p className="text-sm text-muted-foreground">Acede à tua conta para continuar</p>
-      </div>
-
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
@@ -109,7 +104,7 @@ export function LoginForm() {
           Ao entrar, aceitas os nossos {" "}
           <Link
             href="/terms"
-            className="text-blue-600 hover:underline dark:text-blue-400"
+            className="text-primary hover:underline"
           >
             termos e condições
           </Link>
@@ -119,16 +114,6 @@ export function LoginForm() {
           {loading ? "A entrar..." : "Entrar"}
         </Button>
       </form>
-
-      <div className="text-center text-sm text-muted-foreground pt-4">
-        Não tens conta? {" "}
-        <Link
-          href="/register"
-          className="text-blue-600 hover:underline dark:text-blue-400"
-        >
-          Criar conta
-        </Link>
-      </div>
     </motion.div>
   );
 }

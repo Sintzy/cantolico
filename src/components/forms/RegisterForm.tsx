@@ -70,13 +70,8 @@ export function RegisterForm() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
-      className="max-w-md mx-auto bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl shadow-lg p-8 space-y-6"
+      className="space-y-6"
     >
-      <div className="text-center space-y-1">
-        <h1 className="text-2xl font-bold">Criar Conta</h1>
-        <p className="text-sm text-muted-foreground">Preenche os dados para te registares</p>
-      </div>
-
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="space-y-2">
           <Label htmlFor="name">Nome completo</Label>
@@ -129,16 +124,6 @@ export function RegisterForm() {
           {loading ? "A registar..." : "Registar"}
         </Button>
       </form>
-
-      <div className="text-center text-sm text-muted-foreground pt-4">
-        Já tens conta?{" "}
-        <Link
-          href="/login"
-          className="text-blue-600 hover:underline dark:text-blue-400"
-        >
-          Entrar
-        </Link>
-      </div>
     </motion.div>
   );
 }
