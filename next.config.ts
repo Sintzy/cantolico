@@ -2,7 +2,18 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
-    remotePatterns: [new URL('https://truenas-scale.tail16dc5.ts.net/**')], // <-- coloca o domínio do teu Supabase aqui
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'truenas-scale.fold-pence.ts.net',
+        pathname: '**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.googleusercontent.com',
+        pathname: '**',
+      },
+    ],
   },
   env: {
     // Expose Vercel git environment variables to the client
