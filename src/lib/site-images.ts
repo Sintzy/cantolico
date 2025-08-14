@@ -3,7 +3,7 @@
  * URLs do Supabase Storage para assets do Cantólico
  */
 
-const BASE_URL = "https://truenas-scale.tail16dc5.ts.net/storage/v1/object/public/assets";
+const BASE_URL = "https://truenas-scale.fold-pence.ts.net/storage/v1/object/public/assets";
 
 export const SITE_IMAGES = {
   // Favicons e ícones do site - versões transparentes
