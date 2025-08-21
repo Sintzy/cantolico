@@ -304,7 +304,7 @@ export default function ProfileView({ user, isOwner }: ProfileViewProps) {
                     </Badge>
                     
                     {user.moderation && user.moderation.status !== 'ACTIVE' && (
-                      <Badge variant="destructive">
+                      <Badge className="text-black" variant="destructive">
                         {user.moderation.status === 'BANNED' ? 'Banido' 
                          : user.moderation.status === 'SUSPENDED' ? 'Suspenso'
                          : 'Advertido'}
