@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { LiturgicalMoment, SourceType, Instrument } from "@prisma/client";
+import { LiturgicalMoment, SourceType, Instrument } from "@/lib/constants";
 import { logAdmin, logErrors } from "@/lib/logs";
 import { titleToSlug, generateUniqueSlug } from "@/lib/slugs";
 

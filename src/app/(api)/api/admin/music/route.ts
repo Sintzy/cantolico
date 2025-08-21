@@ -91,7 +91,7 @@ export async function GET(request: Request) {
     });
 
     return NextResponse.json({
-      songs: songs.map(song => ({
+      songs: songs.map((song: any) => ({
         id: song.id,
         title: song.title,
         artist: song.currentVersion?.createdBy?.name || 'Desconhecido',
@@ -159,7 +159,7 @@ export async function DELETE(request: Request) {
 
     // Delete in the correct order to avoid foreign key constraint violations
     // Use a transaction to ensure atomicity
-    const deletionResult = await prisma.$transaction(async (tx) => {
+    const deletionResult = await prisma.$transaction(async (tx: any) => {
       // 1. Delete favorites first
       const favoritesDeleted = await tx.favorite.deleteMany({
         where: { songId: songId }

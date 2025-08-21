@@ -8,9 +8,13 @@ import { createClient } from "@supabase/supabase-js";
 import { getSession } from "next-auth/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Pencil, Music2, Mail, CalendarDays, Star, User } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Pencil, Music2, Mail, CalendarDays, Star, User, Camera, Clock, Upload } from "lucide-react";
 import { toast } from "sonner";
-import UserAvatar from "@/components/ui/user-avatar";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -47,7 +51,7 @@ interface Music {
   versions: MusicVersion[];
 }
 
-interface ProfileViewProps {
+export interface ProfileViewProps {
   user: {
     id: number;
     name: string | null;
@@ -84,7 +88,7 @@ interface ProfileViewProps {
 function getRoleLabel(role: string): string {
   switch (role) {
     case "USER":
-      return "Usuário";
+      return "Utilizador";
     case "TRUSTED":
       return "Contribuidor";
     case "REVIEWER":
@@ -93,6 +97,19 @@ function getRoleLabel(role: string): string {
       return "Administrador";
     default:
       return "Desconhecido";
+  }
+}
+
+function getRoleBadgeVariant(role: string): "default" | "secondary" | "destructive" | "outline" {
+  switch (role) {
+    case "ADMIN":
+      return "destructive";
+    case "REVIEWER":
+      return "default";
+    case "TRUSTED":
+      return "secondary";
+    default:
+      return "outline";
   }
 }
 
@@ -135,7 +152,6 @@ export default function ProfileView({ user, isOwner }: ProfileViewProps) {
   }, [user.id]);
 
   const handleSave = async () => {
-    // Validação básica
     if (!form.name.trim()) {
       toast.error("Nome é obrigatório");
       return;
@@ -171,7 +187,6 @@ export default function ProfileView({ user, isOwner }: ProfileViewProps) {
     const file = e.target.files?.[0];
     if (!file) return;
     
-    // Validação do arquivo
     if (!file.type.startsWith('image/')) {
       toast.error("Por favor, seleciona apenas ficheiros de imagem");
       return;
@@ -216,177 +231,276 @@ export default function ProfileView({ user, isOwner }: ProfileViewProps) {
   const badgeUrl = `/badges/${user.role.toLowerCase()}.png`;
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-12 space-y-10">
-      {/* Avatar and Profile Info */}
-      <div className="flex flex-col md:flex-row items-start gap-8">
-        <div className="relative w-32 h-32 rounded-full overflow-hidden border border-gray-300 dark:border-neutral-700 group cursor-pointer">
-          {editMode ? (
-            <Image
-              src={form.image || "/default-profile.png"}
-              alt="Avatar"
-              fill
-              className="object-cover"
-              onClick={() => {
-                if (editMode) inputRef.current?.click();
-              }}
-            />
-          ) : (
-            <UserAvatar 
-              user={{
-                name: user.name || "Utilizador",
-                image: user.image
-              }} 
-              size={128} 
-            />
-          )}
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleImageChange}
-          />
-          {editMode && (
-            <div className="absolute bottom-0 w-full text-center bg-black/50 text-white text-xs py-1">
-              Alterar foto
+    <main className="min-h-screen bg-gray-50">
+      {/* Header Section */}
+      <section className="bg-white border-b">
+        <div className="max-w-6xl mx-auto px-6 py-8">
+          <div className="flex flex-col lg:flex-row gap-8">
+            {/* Avatar */}
+            <div className="flex-shrink-0">
+              <div className="relative">
+                <Avatar className="h-32 w-32">
+                  <AvatarImage 
+                    src={editMode ? form.image || "/default-profile.png" : user.image || "/default-profile.png"} 
+                    alt={user.name || "Utilizador"} 
+                  />
+                  <AvatarFallback className="text-2xl">
+                    {(user.name || "U").charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                {editMode && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0"
+                    onClick={() => inputRef.current?.click()}
+                  >
+                    <Camera className="h-4 w-4" />
+                  </Button>
+                )}
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageChange}
+                />
+              </div>
             </div>
-          )}
-        </div>
 
-        <div className="flex-1 space-y-2">
-          <div className="flex items-center gap-3">
-            {editMode ? (
-              <input
-                className="text-3xl font-bold bg-transparent border-b border-gray-300 dark:border-neutral-600 focus:outline-none w-full"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-              />
-            ) : (
-              <h1 className="text-3xl font-bold">{user.name || "Sem nome"}</h1>
-            )}
-            <div className="flex items-center gap-2">
-              <Image
-                src={badgeUrl}
-                alt={getRoleLabel(user.role)}
-                width={32}
-                height={32}
-                className="h-7 w-7"
-                title={getRoleLabel(user.role)}
-              />
-              {user.moderation && user.moderation.status !== 'ACTIVE' && (
-                <div className="flex flex-col items-center gap-1">
-                  <div className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                    user.moderation.status === 'BANNED' 
-                      ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                      : user.moderation.status === 'SUSPENDED'
-                      ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
-                      : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                  }`}>
-                    {user.moderation.status === 'BANNED' ? 'Banido' 
-                     : user.moderation.status === 'SUSPENDED' ? 'Suspenso'
-                     : 'Advertido'}
-                  </div>
-                  {user.moderation.reason && (
-                    <div className="text-xs text-muted-foreground text-center max-w-32">
-                      {user.moderation.reason}
+            {/* User Info */}
+            <div className="flex-1 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="space-y-2">
+                  {editMode ? (
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Nome</Label>
+                      <Input
+                        id="name"
+                        value={form.name}
+                        onChange={(e) => setForm({ ...form, name: e.target.value })}
+                        className="text-2xl font-bold border-0 p-0 h-auto bg-transparent focus-visible:ring-0"
+                      />
                     </div>
+                  ) : (
+                    <h1 className="text-3xl font-bold text-gray-900">
+                      {user.name || "Sem nome"}
+                    </h1>
                   )}
+                  
+                  <div className="flex items-center gap-3 text-black">
+                    <Badge
+                      variant={getRoleBadgeVariant(user.role)}
+                      className="text-black"
+                    >
+                      <Image
+                        src={badgeUrl}
+                        alt={getRoleLabel(user.role)}
+                        width={16}
+                        height={16}
+                        className="mr-1"
+                      />
+                      {getRoleLabel(user.role)}
+                    </Badge>
+                    
+                    {user.moderation && user.moderation.status !== 'ACTIVE' && (
+                      <Badge variant="destructive">
+                        {user.moderation.status === 'BANNED' ? 'Banido' 
+                         : user.moderation.status === 'SUSPENDED' ? 'Suspenso'
+                         : 'Advertido'}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
-              )}
+
+                {isOwner && (
+                  <div className="flex gap-2">
+                    {editMode ? (
+                      <>
+                        <Button variant="outline" onClick={() => setEditMode(false)}>
+                          Cancelar
+                        </Button>
+                        <Button onClick={handleSave} disabled={loading}>
+                          {loading ? "A guardar..." : "Guardar"}
+                        </Button>
+                      </>
+                    ) : (
+                      <Button onClick={() => setEditMode(true)} variant="outline">
+                        <Pencil className="w-4 h-4 mr-2" />
+                        Editar perfil
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* User Stats */}
+              <div className="flex flex-wrap gap-6 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <Mail className="w-4 h-4" />
+                  <span>{user.email}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="w-4 h-4" />
+                  <span>Membro desde {new Date(user.createdAt).toLocaleDateString()}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Star className="w-4 h-4" />
+                  <span>{user._count.submissions} submissões</span>
+                </div>
+              </div>
             </div>
           </div>
-          <p className="text-sm text-muted-foreground flex items-center gap-1">
-            <Mail className="w-4 h-4" /> {user.email}
-          </p>
-          <p className="text-sm text-muted-foreground flex items-center gap-1">
-            <CalendarDays className="w-4 h-4" /> Membro desde:{" "}
-            {new Date(user.createdAt).toLocaleDateString()}
-          </p>
-          <p className="text-sm text-muted-foreground flex items-center gap-1">
-            <Star className="w-4 h-4" /> Submissões: {user._count.submissions}
-          </p>
-          <p className="text-sm text-muted-foreground flex items-center gap-1">
-            <User className="w-4 h-4"/>Cargo: {getRoleLabel(user.role)}
-          </p>
         </div>
-      </div>
+      </section>
 
-      {/* Biography Section */}
-      <div>
-        <h3 className="text-xl font-semibold border-b border-sky-500 pb-1">
-          Biografia
-        </h3>
-        {editMode ? (
-          <textarea
-            className="mt-2 w-full p-3 rounded-md border border-gray-300 dark:border-neutral-600 bg-transparent"
-            value={form.bio}
-            rows={3}
-            onChange={(e) => setForm({ ...form, bio: e.target.value })}
-          />
-        ) : (
-          <p className="text-gray-800 dark:text-gray-300 mt-2 whitespace-pre-line">
-            {user.bio || "Sem descrição"}
-          </p>
-        )}
-      </div>
+      {/* Content */}
+      <section className="py-8">
+        <div className="max-w-6xl mx-auto px-6 space-y-8">
+          {/* Biography */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Biografia
+              </CardTitle>
+              <CardDescription>
+                Informações pessoais do utilizador
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {editMode ? (
+                <div className="space-y-2">
+                  <Label htmlFor="bio">Sobre mim</Label>
+                  <Textarea
+                    id="bio"
+                    value={form.bio}
+                    onChange={(e) => setForm({ ...form, bio: e.target.value })}
+                    rows={4}
+                    placeholder="Conta-nos um pouco sobre ti..."
+                  />
+                </div>
+              ) : (
+                <p className="text-muted-foreground whitespace-pre-line">
+                  {user.bio || "Este utilizador ainda não adicionou uma biografia."}
+                </p>
+              )}
+            </CardContent>
+          </Card>
 
-      {/* Musics Section */}
-      <div>
-        <h3 className="text-xl font-semibold border-b border-sky-500 pb-1">
-          Músicas Criadas
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-            {musics.length > 0 ? (
-            musics.map((music) => (
-              <Link
-              key={music.id}
-              href={`/musics/${music.id}`}
-              className="p-4 border rounded-lg shadow-md bg-white dark:bg-neutral-900 space-y-2 hover:shadow-lg transition-shadow"
-              >
-              <div className="flex items-center gap-2">
-                <Music2 className="w-5 h-5 text-black" />
-                <h4 className="text-lg font-semibold truncate">
-                {music.title}
-                </h4>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Criada em: {new Date(music.createdAt).toLocaleDateString()}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Instrumento principal: {music.mainInstrument}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Tags: {music.tags.join(", ")}
-              </p>
-              </Link>
-            ))
-            ) : (
-            <p className="text-gray-500 dark:text-gray-400">
-              Sem músicas criadas.
-            </p>
-            )}
+          {/* Music Statistics */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Total de Submissões
+                </CardTitle>
+                <Upload className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{user._count.submissions}</div>
+                <p className="text-xs text-muted-foreground">
+                  Músicas enviadas para o sistema
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Músicas Aprovadas
+                </CardTitle>
+                <Music2 className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{musics.length}</div>
+                <p className="text-xs text-muted-foreground">
+                  Músicas disponíveis publicamente
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Membro há
+                </CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {Math.floor((Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Dias na plataforma
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* User's Music */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Music2 className="h-5 w-5" />
+                Músicas Criadas ({musics.length})
+              </CardTitle>
+              <CardDescription>
+                Cânticos submetidos e aprovados por este utilizador
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {musics.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {musics.map((music) => (
+                    <Link key={music.id} href={`/musics/${music.id}`}>
+                      <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-base line-clamp-1">
+                            {music.title}
+                          </CardTitle>
+                          <CardDescription className="text-sm">
+                            {music.mainInstrument} • {music.type}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>
+                              {new Date(music.createdAt).toLocaleDateString()}
+                            </span>
+                            <div className="flex gap-1">
+                              {music.tags.slice(0, 2).map((tag, idx) => (
+                                <Badge key={idx} variant="outline" className="text-xs">
+                                  {tag}
+                                </Badge>
+                              ))}
+                              {music.tags.length > 2 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{music.tags.length - 2}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Music2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-muted-foreground mb-2">
+                    Nenhuma música encontrada
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Este utilizador ainda não tem músicas aprovadas.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
-      </div>
-
-      {/* Edit Profile Buttons */}
-      {isOwner && (
-        <div className="pt-6 flex justify-end gap-2">
-          {editMode ? (
-            <>
-              <Button variant="outline" onClick={() => setEditMode(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleSave} disabled={loading}>
-                {loading ? "Salvando..." : "Salvar perfil"}
-              </Button>
-            </>
-          ) : (
-            <Button onClick={() => setEditMode(true)}>
-              <Pencil className="w-4 h-4 mr-1" /> Editar perfil
-            </Button>
-          )}
-        </div>
-      )}
-    </div>
+      </section>
+    </main>
   );
 }

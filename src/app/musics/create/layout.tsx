@@ -1,9 +1,6 @@
-import { Metadata } from "next";
+import { PAGE_METADATA } from "@/lib/metadata";
 
-export const metadata: Metadata = {
-  title: "Submeter Nova Música",
-  description: "Submete o teu cântico católico para a comunidade do Cantólico!",
-};
+export const metadata = PAGE_METADATA.createMusic();
 
 export default function CreateMusicLayout({
   children,

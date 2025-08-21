@@ -21,14 +21,16 @@ import {
 } from "@/lib/chord-processor";
 import { ChordGuideButton } from "@/components/ChordGuidePopup";
 
-import { Instrument, LiturgicalMoment, SongType } from "@prisma/client";
+import { Instrument, LiturgicalMoment, SongType } from "@/lib/constants";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Plus, Music, FileText, Upload, Youtube } from "lucide-react";
+import { Plus, Music, FileText, Upload, Youtube, ChevronRight, ChevronLeft, Info, Clock, User, Upload as UploadIcon } from "lucide-react";
 import { FaSpotify } from "react-icons/fa";
 
 const SimpleMDE = dynamic(() => import("react-simplemde-editor"), { ssr: false });
@@ -38,6 +40,7 @@ export default function CreateNewMusicPage() {
   const { data: session } = useSession();
   const router = useRouter();
   const editorRef = useRef<any>(null);
+  const [currentStep, setCurrentStep] = useState(1);
 
   const [form, setForm] = useState({
     id: randomUUID(),
@@ -65,36 +68,19 @@ export default function CreateNewMusicPage() {
       return;
     }
     
-    // Detecta o formato original
     const originalFormat = detectChordFormat(form.markdown);
-    
-    // Debug temporário
-    console.log('🔍 Debug formato:', {
-      text: form.markdown,
-      format: originalFormat,
-      hasIntro: /^(Intro|Ponte|Solo|Bridge|Instrumental|Interlude):?\s*$/im.test(form.markdown),
-      hasMic: form.markdown.includes('#mic#')
-    });
-    
     let processedHtml: string;
     let wrapperClass: string;
     
     if (originalFormat === 'inline') {
-      // Verifica se tem seções de intro/ponte junto com inline (formato misto)
       if (/^(Intro|Ponte|Solo|Bridge|Instrumental|Interlude):?\s*$/im.test(form.markdown)) {
-        // Formato misto: processa tudo usando processMixedChords
-        console.log('📝 Processando formato misto');
         processedHtml = processMixedChords(form.markdown);
         wrapperClass = 'chord-container-inline';
       } else {
-        // Formato inline puro - usa processamento simples
-        console.log('📝 Processando formato inline puro');
         processedHtml = processSimpleInline(form.markdown);
         wrapperClass = 'chord-container-inline';
       }
     } else {
-      // Formato above (acordes acima da letra)
-      console.log('📝 Processando formato above');
       processedHtml = processChords(form.markdown, 'above');
       wrapperClass = 'chord-container-above';
     }
@@ -132,8 +118,35 @@ export default function CreateNewMusicPage() {
     }));
   };
 
+  // Validação de cada passo
+  const isStepComplete = (step: number) => {
+    switch (step) {
+      case 1:
+        return form.title.trim() && form.type && form.instrument;
+      case 2:
+        return form.moments.length > 0;
+      case 3:
+        return form.markdown.trim();
+      case 4:
+        return captchaToken;
+      default:
+        return false;
+    }
+  };
+
+  const handleNext = () => {
+    if (currentStep < 4 && isStepComplete(currentStep)) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
   const handleSubmit = async () => {
-    // Validações
     if (!form.title.trim()) {
       toast.error("Por favor, insere o título da música");
       return;
@@ -192,12 +205,12 @@ export default function CreateNewMusicPage() {
         router.push(`/musics`);
       } else {
         toast.error(data.error || "Erro ao submeter a música");
-        setCaptchaToken(null); // Reset captcha on error
+        setCaptchaToken(null);
       }
     } catch (error) {
       console.error("Erro na submissão:", error);
       toast.error("Erro de conexão ao submeter a música");
-      setCaptchaToken(null); // Reset captcha on error
+      setCaptchaToken(null);
     } finally {
       setIsSubmitting(false);
     }
@@ -205,164 +218,567 @@ export default function CreateNewMusicPage() {
 
   if (!session) {
     return (
-      <div className="text-center mt-10">
-        <p>Precisas de estar autenticado para criar uma música!</p>
-        <br></br>
-        <Button onClick={() => router.push("/login")}>Ir para Login</Button>
-      </div>
+      <main className="min-h-screen">
+        <section className="py-20 bg-white">
+          <div className="max-w-2xl mx-auto px-4">
+            <Card className="max-w-md mx-auto">
+              <CardHeader className="text-center">
+                <CardTitle className="text-2xl">Acesso Necessário</CardTitle>
+                <CardDescription>
+                  Precisas de estar autenticado para criar uma música
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button onClick={() => router.push("/login")} size="lg" className="w-full">
+                  Ir para Login
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+      </main>
     );
   }
 
+  const steps = [
+    { number: 1, title: "Informações Básicas", icon: Info },
+    { number: 2, title: "Momentos e Tags", icon: Clock },
+    { number: 3, title: "Letra e Acordes", icon: FileText },
+    { number: 4, title: "Finalização", icon: UploadIcon }
+  ];
+
   return (
-    <div className="max-w-5xl mx-auto py-12 px-6 space-y-12">
-      <h1 className="text-3xl font-bold border-b-2 border-sky-500 pb-1">Submeter Nova Música</h1>
+    <main className="min-h-screen">
 
-      <div className="space-y-8">
-        <div>
-          <Label>Título</Label>
-          <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-        </div>
-
-        <div>
-          <Label>Momentos Litúrgicos</Label>
-          <div className="flex flex-wrap gap-2 mt-2">
-            {Object.values(LiturgicalMoment).map((m) => (
-              <Button
-                key={m}
-                type="button"
-                variant={form.moments.includes(m) ? "default" : "outline"}
-                onClick={() => toggleMoment(m)}
-              >
-                {m.replaceAll("_", " ")}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <Label>Tags</Label>
-          <div className="flex gap-2 mt-1">
-            <Input
-              placeholder="Nova tag"
-              value={form.tagsInput}
-              onChange={(e) => setForm({ ...form, tagsInput: e.target.value })}
-              onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddTag())}
-            />
-            <Button type="button" onClick={handleAddTag}><Plus className="w-4 h-4 mr-1" /> Adicionar</Button>
-          </div>
-          <div className="flex gap-2 mt-3 flex-wrap">
-            {form.tags.map((tag, tagIndex) => (
-              <Badge key={`create-tag-${tagIndex}`} onClick={() => handleRemoveTag(tag)} className="cursor-pointer">
-                {tag} ✕
-              </Badge>
-            ))}
-          </div>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-6">
-          <div>
-            <Label>Tipo</Label>
-            <select
-              className="w-full border rounded px-3 py-2"
-              value={form.type}
-              onChange={(e) => setForm({ ...form, type: e.target.value as SongType })}
-            >
-              <option value="">Selecionar...</option>
-              {Object.values(SongType).map((t) => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <Label>Instrumento principal</Label>
-            <select
-              className="w-full border rounded px-3 py-2"
-              value={form.instrument}
-              onChange={(e) => setForm({ ...form, instrument: e.target.value as Instrument })}
-            >
-              <option value="">Selecionar...</option>
-              {Object.values(Instrument).map((i) => (
-                <option key={i} value={i}>{i}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-6">
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <Label>Editor Markdown</Label>
-              <ChordGuideButton />
-            </div>
-            <p className="text-sm text-gray-500 mb-2">
-              <a href="/guide" className="hover:underline">Aprende a usar o sistema Markdown</a>
+      {/* Header */}
+      <section className="py-12 md:py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="text-center space-y-4">
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
+              Submeter Nova Música
+            </h1>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Partilha um novo cântico com a comunidade através de 4 passos simples
             </p>
-            <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
-              <h4 className="font-semibold text-sm mb-2">Formatos de acordes suportados:</h4>
-              <ul className="text-xs space-y-1">
-                <li><strong>Inline:</strong> <code>#mic#</code> seguido de <code>[C]Deus est[Am]á aqui</code></li>
-                <li><strong>Acima da letra:</strong> <code>[C] [Am] [F]</code> numa linha e <code>Deus está aqui</code> na seguinte</li>
-                <li><strong>Intro/Ponte:</strong> <code>Intro:</code> seguido de <code>[A] [G] [C]</code> na linha seguinte</li>
-                <li><strong>Formato misto:</strong> Podes combinar inline com intro/ponte na mesma música!</li>
-              </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* Progress Indicator */}
+      <section className="py-8 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-center space-x-8">
+            {steps.map((step, index) => {
+              const Icon = step.icon;
+              const isActive = currentStep === step.number;
+              const isCompleted = currentStep > step.number;
+              
+              return (
+                <div key={step.number} className="flex items-center">
+                  <div className="flex flex-col items-center space-y-2">
+                    <div
+                      className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-colors ${
+                        isCompleted
+                          ? "bg-gray-900 border-gray-900 text-white"
+                          : isActive
+                          ? "bg-white border-gray-900 text-gray-900"
+                          : "bg-white border-gray-300 text-gray-400"
+                      }`}
+                    >
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <div className="text-center">
+                      <div className={`text-sm font-medium ${isActive || isCompleted ? "text-gray-900" : "text-gray-400"}`}>
+                        Passo {step.number}
+                      </div>
+                      <div className={`text-xs ${isActive || isCompleted ? "text-gray-600" : "text-gray-400"}`}>
+                        {step.title}
+                      </div>
+                    </div>
+                  </div>
+                  {index < steps.length - 1 && (
+                    <div className={`w-16 h-0.5 mx-4 ${isCompleted ? "bg-gray-900" : "bg-gray-300"}`} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Passo 1: Informações Básicas */}
+      {currentStep === 1 && (
+        <section className="py-12 bg-white">
+          <div className="max-w-3xl mx-auto px-4">
+            <div className="text-center space-y-2 mb-8">
+              <h2 className="text-2xl font-bold text-gray-900">Informações Básicas</h2>
+              <p className="text-gray-600">Título, tipo e instrumento principal da música</p>
             </div>
-            <SimpleMDE
-              value={form.markdown}
-              onChange={(val) => setForm({ ...form, markdown: val })}
-              getMdeInstance={(instance) => (editorRef.current = instance)}
-            />
-          </div>
-          <div>
-            <Label>Preview</Label>
-            
-            <div
-              className="prose border rounded-md p-4 bg-white dark:bg-neutral-900 overflow-auto max-h-[500px] font-mono text-sm mt-2"
-              style={{ lineHeight: '1.8' }}
-              dangerouslySetInnerHTML={{ __html: preview }}
-            />
-          </div>
-        </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          <div>
-            <Label><FileText className="w-4 h-4 inline mr-1" /> PDF (opcional)</Label>
-            <Input type="file" accept="application/pdf" onChange={(e) => setForm({ ...form, pdfFile: e.target.files?.[0] || null })} />
-          </div>
-          <div>
-            <Label><Music className="w-4 h-4 inline mr-1" /> MP3 (opcional)</Label>
-            <Input type="file" accept="audio/mpeg" onChange={(e) => setForm({ ...form, mp3File: e.target.files?.[0] || null })} />
-          </div>
-        </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Info className="h-5 w-5" />
+                  Dados da Música
+                </CardTitle>
+                <CardDescription>
+                  Preenche as informações essenciais sobre a música
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="title" className="text-base font-medium">
+                    Título *
+                  </Label>
+                  <Input
+                    id="title"
+                    value={form.title}
+                    onChange={(e) => setForm({ ...form, title: e.target.value })}
+                    placeholder="Nome da música"
+                    className="h-12"
+                  />
+                </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          <div>
-            <Label><Youtube className="w-4 h-4 inline mr-1" /> Link do YouTube (opcional) </Label>
-            <Input type="url" value={form.youtubeLink} onChange={(e) => setForm({ ...form, youtubeLink: e.target.value })} />
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="type" className="text-base font-medium">
+                      Tipo *
+                    </Label>
+                    <select
+                      id="type"
+                      className="w-full h-12 px-3 py-2 border border-input rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+                      value={form.type}
+                      onChange={(e) => setForm({ ...form, type: e.target.value as SongType })}
+                    >
+                      <option value="">Selecionar...</option>
+                      {Object.values(SongType).map((t) => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="instrument" className="text-base font-medium">
+                      Instrumento Principal *
+                    </Label>
+                    <select
+                      id="instrument"
+                      className="w-full h-12 px-3 py-2 border border-input rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+                      value={form.instrument}
+                      onChange={(e) => setForm({ ...form, instrument: e.target.value as Instrument })}
+                    >
+                      <option value="">Selecionar...</option>
+                      {Object.values(Instrument).map((i) => (
+                        <option key={i} value={i}>{i}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-4">
+                  <Button
+                    onClick={handleNext}
+                    disabled={!isStepComplete(1)}
+                    className="flex items-center gap-2 px-8"
+                  >
+                    Próximo
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-          {/* <div>
-            <Label><FaSpotify className="w-4 h-4 inline mr-1" /> Link do Spotify</Label>
-            <Input type="url" value={form.spotifyLink} onChange={(e) => setForm({ ...form, spotifyLink: e.target.value })} />
-          </div> */}
-        </div>
+        </section>
+      )}
 
-        {/* Cloudflare Turnstile Captcha */}
-        <TurnstileCaptcha
-          onSuccess={(token: string) => setCaptchaToken(token)}
-          onError={() => setCaptchaToken(null)}
-          onExpire={() => setCaptchaToken(null)}
-        />
+      {/* Passo 2: Momentos e Tags */}
+      {currentStep === 2 && (
+        <section className="py-12 bg-gray-50">
+          <div className="max-w-4xl mx-auto px-4">
+            <div className="text-center space-y-2 mb-8">
+              <h2 className="text-2xl font-bold text-gray-900">Momentos Litúrgicos e Tags</h2>
+              <p className="text-gray-600">Escolhe os momentos da celebração onde a música é adequada</p>
+            </div>
 
-        <div className="pt-6">
-          <Button 
-            onClick={handleSubmit} 
-            className="w-full md:w-auto" 
-            disabled={!captchaToken || isSubmitting}
-          >
-            <Upload className="w-4 h-4 mr-2" /> 
-            {isSubmitting ? "A submeter..." : "Submeter Música"}
-          </Button>
-        </div>
-      </div>
-    </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  Categorização da Música
+                </CardTitle>
+                <CardDescription>
+                  Seleciona os momentos litúrgicos apropriados e adiciona tags opcionais
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-8">
+                <div className="space-y-4">
+                  <Label className="text-base font-medium">
+                    Momentos Litúrgicos *
+                  </Label>
+                  <div className="flex flex-wrap gap-3">
+                    {Object.values(LiturgicalMoment).map((m) => (
+                      <Button
+                        key={m}
+                        type="button"
+                        variant={form.moments.includes(m) ? "default" : "outline"}
+                        onClick={() => toggleMoment(m)}
+                        size="sm"
+                        className={`h-10 ${
+                          form.moments.includes(m) 
+                            ? "bg-gray-900 hover:bg-gray-800 text-white border-gray-900" 
+                            : "hover:bg-gray-100"
+                        }`}
+                      >
+                        {m.replaceAll("_", " ")}
+                      </Button>
+                    ))}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {form.moments.length > 0 
+                      ? `${form.moments.length} momento(s) selecionado(s)`
+                      : "Seleciona pelo menos um momento litúrgico"
+                    }
+                  </p>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-4">
+                  <Label htmlFor="tags" className="text-base font-medium">
+                    Tags (opcional)
+                  </Label>
+                  <div className="flex gap-3">
+                    <Input
+                      id="tags"
+                      placeholder="Nova tag"
+                      value={form.tagsInput}
+                      onChange={(e) => setForm({ ...form, tagsInput: e.target.value })}
+                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddTag())}
+                      className="h-12"
+                    />
+                    <Button type="button" onClick={handleAddTag} variant="outline" className="h-12 px-6">
+                      <Plus className="w-4 h-4 mr-2" /> 
+                      Adicionar
+                    </Button>
+                  </div>
+                  {form.tags.length > 0 && (
+                    <div className="flex gap-2 flex-wrap">
+                      {form.tags.map((tag, tagIndex) => (
+                        <Badge 
+                          key={`create-tag-${tagIndex}`} 
+                          onClick={() => handleRemoveTag(tag)} 
+                          className="cursor-pointer px-3 py-1 hover:bg-destructive hover:text-destructive-foreground"
+                          variant="secondary"
+                        >
+                          {tag} ✕
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-between pt-4">
+                  <Button
+                    onClick={handlePrevious}
+                    variant="outline"
+                    className="flex items-center gap-2 px-8"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Anterior
+                  </Button>
+                  <Button
+                    onClick={handleNext}
+                    disabled={!isStepComplete(2)}
+                    className="flex items-center gap-2 px-8"
+                  >
+                    Próximo
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+      )}
+
+      {/* Passo 3: Letra e Acordes */}
+      {currentStep === 3 && (
+        <section className="py-12 bg-white">
+          <div className="max-w-6xl mx-auto px-4">
+            <div className="text-center space-y-2 mb-8">
+              <h2 className="text-2xl font-bold text-gray-900">Letra e Acordes</h2>
+              <p className="text-gray-600">Escreve a letra da música com os acordes em formato Markdown</p>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Conteúdo Musical
+                </CardTitle>
+                <CardDescription>
+                  Usa o editor Markdown para escrever a letra com acordes
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid lg:grid-cols-2 gap-8">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="markdown" className="text-base font-medium">
+                        Editor Markdown *
+                      </Label>
+                      <ChordGuideButton />
+                    </div>
+                    
+                    <div className="text-sm text-muted-foreground space-y-2">
+                      <p>
+                        <a href="/guide" className="hover:underline text-primary">
+                          Aprende a usar o sistema Markdown
+                        </a>
+                      </p>
+                      <Card className="p-4">
+                        <h4 className="font-medium mb-2">Formatos suportados:</h4>
+                        <ul className="text-xs space-y-1">
+                          <li><strong>Inline:</strong> <code className="bg-muted px-1 rounded">#mic#</code> seguido de <code className="bg-muted px-1 rounded">[C]Deus est[Am]á aqui</code></li>
+                          <li><strong>Acima:</strong> <code className="bg-muted px-1 rounded">[C] [Am] [F]</code> numa linha e <code className="bg-muted px-1 rounded">Deus está aqui</code> na seguinte</li>
+                          <li><strong>Intro/Ponte:</strong> <code className="bg-muted px-1 rounded">Intro:</code> seguido de <code className="bg-muted px-1 rounded">[A] [G] [C]</code></li>
+                        </ul>
+                      </Card>
+                    </div>
+
+                    <SimpleMDE
+                      value={form.markdown}
+                      onChange={(val) => setForm({ ...form, markdown: val })}
+                      getMdeInstance={(instance) => (editorRef.current = instance)}
+                    />
+                  </div>
+
+                  <div className="space-y-4">
+                    <Label className="text-base font-medium">Preview</Label>
+                    <Card className="p-4 overflow-auto max-h-[500px]">
+                      <div
+                        className="font-mono text-sm"
+                        style={{ lineHeight: '1.8' }}
+                        dangerouslySetInnerHTML={{ __html: preview }}
+                      />
+                    </Card>
+                  </div>
+                </div>
+
+                <div className="flex justify-between pt-8">
+                  <Button
+                    onClick={handlePrevious}
+                    variant="outline"
+                    className="flex items-center gap-2 px-8"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Anterior
+                  </Button>
+                  <Button
+                    onClick={handleNext}
+                    disabled={!isStepComplete(3)}
+                    className="flex items-center gap-2 px-8"
+                  >
+                    Próximo
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+      )}
+
+      {/* Passo 4: Finalização */}
+      {currentStep === 4 && (
+        <section className="py-12 bg-gray-50">
+          <div className="max-w-4xl mx-auto px-4">
+            <div className="text-center space-y-2 mb-8">
+              <h2 className="text-2xl font-bold text-gray-900">Anexos e Finalização</h2>
+              <p className="text-gray-600">Adiciona ficheiros opcionais e submete a música</p>
+            </div>
+
+            <div className="space-y-6">
+              {/* Anexos */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <UploadIcon className="h-5 w-5" />
+                    Anexos Opcionais
+                  </CardTitle>
+                  <CardDescription>
+                    Adiciona ficheiros PDF, MP3 e links externos
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="pdf" className="text-base font-medium flex items-center gap-2">
+                        <FileText className="w-4 h-4" />
+                        PDF (opcional)
+                      </Label>
+                      <Input 
+                        id="pdf"
+                        type="file" 
+                        accept="application/pdf" 
+                        onChange={(e) => setForm({ ...form, pdfFile: e.target.files?.[0] || null })}
+                        className="h-12"
+                      />
+                      {form.pdfFile && (
+                        <p className="text-sm text-muted-foreground">
+                          Ficheiro: {form.pdfFile.name}
+                        </p>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="mp3" className="text-base font-medium flex items-center gap-2">
+                        <Music className="w-4 h-4" />
+                        MP3 (opcional)
+                      </Label>
+                      <Input 
+                        id="mp3"
+                        type="file" 
+                        accept="audio/mpeg" 
+                        onChange={(e) => setForm({ ...form, mp3File: e.target.files?.[0] || null })}
+                        className="h-12"
+                      />
+                      {form.mp3File && (
+                        <p className="text-sm text-muted-foreground">
+                          Ficheiro: {form.mp3File.name}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="youtube" className="text-base font-medium flex items-center gap-2">
+                        <Youtube className="w-4 h-4" />
+                        Link do YouTube (opcional)
+                      </Label>
+                      <Input 
+                        id="youtube"
+                        type="url" 
+                        value={form.youtubeLink} 
+                        onChange={(e) => setForm({ ...form, youtubeLink: e.target.value })}
+                        placeholder="https://youtube.com/watch?v=..."
+                        className="h-12"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="spotify" className="text-base font-medium flex items-center gap-2">
+                        <FaSpotify className="w-4 h-4" />
+                        Link do Spotify (opcional)
+                      </Label>
+                      <Input 
+                        id="spotify"
+                        type="url" 
+                        value={form.spotifyLink} 
+                        onChange={(e) => setForm({ ...form, spotifyLink: e.target.value })}
+                        placeholder="https://open.spotify.com/track/..."
+                        className="h-12"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Resumo */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Resumo da Música</CardTitle>
+                  <CardDescription>
+                    Revê os dados antes de submeter
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid md:grid-cols-2 gap-6 text-sm">
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="font-medium">Título:</span>
+                        <span className="text-muted-foreground">{form.title || "Não definido"}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium">Tipo:</span>
+                        <span className="text-muted-foreground">{form.type || "Não definido"}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium">Instrumento:</span>
+                        <span className="text-muted-foreground">{form.instrument || "Não definido"}</span>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="font-medium">Momentos:</span>
+                        <span className="text-muted-foreground">{form.moments.length}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium">Tags:</span>
+                        <span className="text-muted-foreground">{form.tags.length}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium">Letra:</span>
+                        <span className="text-muted-foreground">{form.markdown.trim() ? "Definida" : "Não definida"}</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Captcha */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Verificação de Segurança</CardTitle>
+                  <CardDescription>
+                    Complete a verificação antes de submeter
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <TurnstileCaptcha
+                    onSuccess={(token: string) => setCaptchaToken(token)}
+                    onError={() => setCaptchaToken(null)}
+                    onExpire={() => setCaptchaToken(null)}
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Botões de navegação */}
+              <div className="flex justify-between">
+                <Button
+                  onClick={handlePrevious}
+                  variant="outline"
+                  className="flex items-center gap-2 px-8"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Anterior
+                </Button>
+                <Button 
+                  onClick={handleSubmit} 
+                  disabled={!isStepComplete(4) || isSubmitting}
+                  className="flex items-center gap-2 px-8"
+                  size="lg"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                      A submeter...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4" /> 
+                      Submeter Música
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+    </main>
   );
 }

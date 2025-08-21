@@ -39,12 +39,14 @@ export const SITE_CONFIG = {
   name: "Cantólico!",
   shortName: "Cantólico",
   description: "Encontra, submete e partilha cânticos católicos. Um projeto aberto para servir a liturgia com música de qualidade.",
+  slogan: "Encontra, submete e partilha cânticos católicos. Um projeto aberto para servir a liturgia com música de qualidade.",
   themeColor: "#000000",
   backgroundColor: "#ffffff",
   display: "standalone",
   orientation: "portrait",
   scope: "/",
   startUrl: "/",
+  url: "https://cantolico.pt",
 } as const;
 
 /**

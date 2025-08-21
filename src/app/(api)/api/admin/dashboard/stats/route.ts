@@ -4,6 +4,27 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAdmin, logErrors } from "@/lib/logs";
 
+type SubmissionWithSubmitter = {
+  id: string;
+  title: string;
+  status: string;
+  createdAt: Date;
+  submitter: {
+    name: string | null;
+  };
+};
+
+type SongWithVersions = {
+  id: string;
+  title: string;
+  createdAt: Date;
+  versions: Array<{
+    createdBy: {
+      name: string | null;
+    };
+  }>;
+};
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -73,10 +94,10 @@ export async function GET() {
       date.setMonth(date.getMonth() - i);
       const monthName = date.toLocaleDateString('pt-PT', { month: 'short' });
       
-      const count = submissionsByMonth.filter(s => {
+      const count = submissionsByMonth.filter((s: { createdAt: Date; _count: { id: number } }) => {
         const submissionMonth = new Date(s.createdAt).getMonth();
         return submissionMonth === date.getMonth();
-      }).reduce((sum, s) => sum + s._count.id, 0);
+      }).reduce((sum: number, s: { createdAt: Date; _count: { id: number } }) => sum + s._count.id, 0);
 
       return { month: monthName, count };
     }).reverse();
@@ -110,7 +131,7 @@ export async function GET() {
 
     // Combine recent activities
     const recentActivities = [
-      ...recentSubmissions.map(s => ({
+      ...recentSubmissions.map((s: SubmissionWithSubmitter) => ({
         id: `submission-${s.id}`,
         type: s.status === 'APPROVED' ? 'submission_approved' : 
               s.status === 'REJECTED' ? 'submission_rejected' : 'submission_created',
@@ -121,7 +142,7 @@ export async function GET() {
         timestamp: s.createdAt.toISOString(),
         user: s.submitter.name || 'Utilizador'
       })),
-      ...recentSongs.map(s => ({
+      ...recentSongs.map((s: SongWithVersions) => ({
         id: `song-${s.id}`,
         type: 'song_created',
         description: `Nova música "${s.title}" foi publicada`,
@@ -135,11 +156,11 @@ export async function GET() {
       totalSongs,
       pendingSubmissions,
       totalSubmissions,
-      usersByRole: usersByRole.map(ur => ({ 
+      usersByRole: usersByRole.map((ur: any) => ({ 
         role: ur.role, 
         count: ur._count.role 
       })),
-      songsByType: songsByType.map(st => ({ 
+      songsByType: songsByType.map((st: any) => ({ 
         type: st.type, 
         count: st._count.type 
       })),

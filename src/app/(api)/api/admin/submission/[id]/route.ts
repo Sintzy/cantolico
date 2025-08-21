@@ -15,6 +15,17 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
 
     const submission = await prisma.songSubmission.findUnique({
       where: { id },
+      include: {
+        submitter: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            createdAt: true,
+          }
+        }
+      }
     });
 
     if (!submission) {

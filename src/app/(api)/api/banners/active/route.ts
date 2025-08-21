@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     
     // Validar se o parâmetro é um valor válido do enum
     const validPages: BannerPage[] = ['HOME', 'MUSICS', 'ADMIN', 'ALL'];
-    const page = validPages.includes(pageParam as BannerPage) ? pageParam as BannerPage : 'ALL';
+    const page = validPages.includes(pageParam as BannerPage) ? pageParam as BannerPage : BannerPage.ALL;
     
     const now = new Date();
     
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
         isActive: true,
         OR: [
           { pages: { has: page } },
-          { pages: { has: 'ALL' } }
+          { pages: { has: BannerPage.ALL } }
         ],
         AND: [
           {

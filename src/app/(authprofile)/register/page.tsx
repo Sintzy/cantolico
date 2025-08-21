@@ -1,12 +1,9 @@
 import { RegisterForm } from "@/components/forms/RegisterForm";
-import { Metadata } from "next";
+import { PAGE_METADATA } from "@/lib/metadata";
 import Link from "next/link";
 import { Music } from "lucide-react";
 
-export const metadata: Metadata = {
-  title: "Criar Conta - Cantólico",
-  description: "Cria uma conta para submeter os teus cânticos católicos e contribuir para a comunidade.",
-};
+export const metadata = PAGE_METADATA.register();
 
 export default function RegisterPage() {
   return (

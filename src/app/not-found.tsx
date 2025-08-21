@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
-
 export default function NotFound() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 text-center space-y-6">

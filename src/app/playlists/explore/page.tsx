@@ -68,7 +68,7 @@ export default async function ExplorePlaylistsPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {publicPlaylists.map((playlist) => (
+          {publicPlaylists.map((playlist: any) => (
             <Card key={playlist.id} className="hover:shadow-md transition-shadow">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
