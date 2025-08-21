@@ -119,7 +119,7 @@ export default function PrivacyPolicyPage() {
             <div className="space-y-4 text-gray-700">
               <p>Para questões sobre privacidade, proteção de dados ou exercício dos seus direitos:</p>
               <ul className="space-y-1 ml-4">
-                <li>Email: <a href="mailto:cantolico@cantolico.pt" className="text-gray-900 underline">cantolico@cantolico.pt</a></li>
+                <li>Email: <a href="mailto:miguel@cantolico.pt" className="text-gray-900 underline">miguel@cantolico.pt</a></li>
                 <li>Responsável: Equipa Cantólico</li>
                 <li>Tempo de resposta: Máximo 30 dias úteis</li>
               </ul>
