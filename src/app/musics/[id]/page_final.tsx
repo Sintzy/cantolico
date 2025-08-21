@@ -57,6 +57,7 @@ type SongData = {
     createdBy: { name: string | null } | null;
   };
 };
+
 function transposeChord(chord: string, interval: number): string {
   // Array completo de semitons (usando sustenidos como padrão)
   const semitones = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -347,16 +348,6 @@ export default function SongPage() {
   const { leftColumn, rightColumn } = useMemo(() => {
     return splitContentIntoColumns(renderedHtml);
   }, [renderedHtml]);
-  
-
-  if (loading) return <div className="p-6 text-center"><Spinner size="medium"/>A carregar música...</div>;
-
-  if (!song) {
-    return <div className="p-6 text-muted-foreground text-center"><Spinner size="medium" />A carregar música...</div>;
-  }
-
-  const { title, mainInstrument, tags, moments, currentVersion } = song;
-
 
   const getYoutubeId = (url: string) => {
     try {
@@ -368,238 +359,346 @@ export default function SongPage() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center h-64">
+            <div className="flex flex-col items-center gap-4">
+              <Spinner size="large" />
+              <p className="text-muted-foreground">A carregar música...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!song) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center h-64">
+            <div className="flex flex-col items-center gap-4">
+              <Music className="h-12 w-12 text-muted-foreground" />
+              <p className="text-muted-foreground">Música não encontrada</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const { title, mainInstrument, tags, moments, currentVersion } = song;
+
   return (
-    <div className="w-full">
-      {/* Banner */}
-      <div
-        className="relative h-72 bg-cover bg-center"
-        style={{ backgroundImage: "url('/banner.jpg')" }}
-      >
-        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-5xl text-white font-bold uppercase tracking-wide mb-4">
-              {title}
-            </h1>
+    <div className="min-h-screen bg-background">
+      {/* Header moderno */}
+      <div className="border-b bg-card">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="space-y-2">
+              <h1 className="text-3xl lg:text-4xl font-bold text-foreground">
+                {title}
+              </h1>
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <User className="h-4 w-4" />
+                  {currentVersion?.createdBy?.name || 'Desconhecido'}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Guitar className="h-4 w-4" />
+                  {mainInstrument}
+                </div>
+              </div>
+            </div>
             
-            {/* Botões de ação */}
-            <div className="flex items-center justify-center gap-3">
+            <div className="flex items-center gap-3">
               <StarButton 
                 songId={id as string} 
-                className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
+                className="h-10"
               />
               <AddToPlaylistButton 
                 songId={id as string}
-                className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
+                className="h-10"
               />
+              {pdfUrl && (
+                <Button variant="outline" className="h-10" asChild>
+                  <a href={`/musics/${id}/pdf`} target="_blank" rel="noopener noreferrer">
+                    <Download className="h-4 w-4 mr-2" />
+                    PDF
+                  </a>
+                </Button>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Conteúdo */}
-      <div className="max-w-7xl mx-auto px-6 md:px-10 py-10 md:py-16 flex flex-col md:flex-row gap-12">
-        {/* Coluna esquerda (controlos) */}
-        <aside className="w-full md:w-72 space-y-10">
-          {/* Controlos de transposição */}
-          <div className="space-y-3">
-            <SidebarTitle>Controlos de transposição</SidebarTitle>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-8"
-                onClick={() => setTransposition(transposition - 1)}
-              >
-                -
-              </Button>
-              <span className="text-sm font-medium flex-1 text-center">
-                {transposition >= 0 ? `+${transposition}` : transposition}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-8"
-                onClick={() => setTransposition(transposition + 1)}
-              >
-                +
-              </Button>
-            </div>
-          </div>
-
-          {/* Momentos */}
-          <div className="space-y-3">
-            <SidebarTitle>Momentos</SidebarTitle>
-            <div className="space-y-2">
-              {moments.map((m, momentIndex) => (
-                <div
-                  key={`music-${id}-moment-${momentIndex}`}
-                  className="border rounded px-3 py-2 text-sm flex justify-between items-center"
-                >
-                  <span>{m.replaceAll('_', ' ')}</span>
-                  <span className="text-muted-foreground">›</span>
+      {/* Conteúdo principal */}
+      <div className="container mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+          {/* Sidebar esquerda - Informações e controlos */}
+          <div className="xl:col-span-1 space-y-6">
+            {/* Controlos de transposição */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Transposição
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    onClick={() => setTransposition(transposition - 1)}
+                  >
+                    -
+                  </Button>
+                  <div className="flex-1 text-center">
+                    <span className="text-sm font-medium">
+                      {transposition >= 0 ? `+${transposition}` : transposition}
+                    </span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    onClick={() => setTransposition(transposition + 1)}
+                  >
+                    +
+                  </Button>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Informações */}
-          <section className="space-y-3">
-            <SidebarTitle>Informações da música</SidebarTitle>
-
-            <p className="text-sm">
-              <strong>Autor(a):</strong> {currentVersion?.createdBy?.name || 'Desconhecido'}
-            </p>
-            <p className="text-sm">
-              <strong>Instrumento principal:</strong> {mainInstrument}
-            </p>
-          </section>
-
-          {/* Tags */}
-          {tags?.length > 0 && (
-            <section className="space-y-2">
-              <SidebarTitle>Tags</SidebarTitle>
-              <div className="flex flex-wrap gap-1">
-                {tags.map((t, tagIndex) => (
-                  <Badge key={`music-${id}-tag-${tagIndex}`} className="bg-blue-100 text-blue-800">
-                    {t}
-                  </Badge>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Download rápido */}
-          {pdfUrl && (
-            <div className="space-y-3">
-              <SidebarTitle>Download</SidebarTitle>
-              <Button className="w-full" asChild>
-                <a href={`/musics/${id}/pdf`} target="_blank" rel="noopener noreferrer">
-                  <Guitar className="h-4 w-4 mr-2" /> Download PDF com Acordes
-                </a>
-              </Button>
-            </div>
-          )}
-        </aside>
-
-        {/* Coluna direita (letra e conteúdo principal) */}
-        <div className="flex-1 space-y-10 leading-relaxed">
-          {/* Letra */}
-          {currentVersion?.sourceText && (
-            <section className="space-y-4">
-              <div className="flex items-center justify-between">
-                <SectionTitle>Letra</SectionTitle>
-
-                {/* Opções (Com / Sem acordes) */}
+                
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="gap-2 h-8">
-                      <Guitar className="h-4 w-4" />
-                      {showChords ? 'Com acordes' : 'Sem acordes'}
+                    <Button variant="outline" className="w-full justify-between h-8">
+                      <span className="flex items-center gap-2">
+                        <Eye className="h-4 w-4" />
+                        {showChords ? 'Com acordes' : 'Sem acordes'}
+                      </span>
                       <ChevronDown className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-40">
-                    <DropdownMenuLabel>Opções</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => setShowChords(false)}>
-                      Sem acordes
-                    </DropdownMenuItem>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuLabel>Visualização</DropdownMenuLabel>
                     <DropdownMenuItem onClick={() => setShowChords(true)}>
+                      <Guitar className="h-4 w-4 mr-2" />
                       Com acordes
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowChords(false)}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Sem acordes
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              </div>
+              </CardContent>
+            </Card>
 
-              {/* Conteúdo da música - Sistema de duas colunas para telas grandes */}
-              {rightColumn ? (
-                // Duas colunas dentro da mesma caixa (apenas em telas grandes)
-                <div className="music-content-container">
-                  <div className="music-columns-container">
-                    <div className="music-column">
-                      <div dangerouslySetInnerHTML={{ __html: leftColumn }} />
-                    </div>
-                    <div className="music-column">
-                      <div dangerouslySetInnerHTML={{ __html: rightColumn }} />
-                    </div>
+            {/* Momentos litúrgicos */}
+            {moments.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Clock className="h-5 w-5" />
+                    Momentos Litúrgicos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {moments.map((moment, index) => (
+                      <div
+                        key={`moment-${index}`}
+                        className="px-3 py-2 bg-muted rounded-md text-sm"
+                      >
+                        {moment.replaceAll('_', ' ')}
+                      </div>
+                    ))}
                   </div>
-                </div>
-              ) : (
-                // Uma coluna (conteúdo curto ou telas pequenas)
-                <div className="music-content-container">
-                  <div dangerouslySetInnerHTML={{ __html: leftColumn || renderedHtml }} />
-                </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Tags */}
+            {tags?.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Tag className="h-5 w-5" />
+                    Tags
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {tags.map((tag, index) => (
+                      <Badge key={`tag-${index}`} variant="secondary">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Conteúdo principal - Tabs */}
+          <div className="xl:col-span-3">
+            <Tabs defaultValue="lyrics" className="space-y-6">
+              <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
+                <TabsTrigger value="lyrics" className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  <span className="hidden sm:inline">Letra</span>
+                </TabsTrigger>
+                {currentVersion?.youtubeLink && (
+                  <TabsTrigger value="youtube" className="flex items-center gap-2">
+                    <Youtube className="h-4 w-4" />
+                    <span className="hidden sm:inline">YouTube</span>
+                  </TabsTrigger>
+                )}
+                {audioUrl && (
+                  <TabsTrigger value="audio" className="flex items-center gap-2">
+                    <Volume2 className="h-4 w-4" />
+                    <span className="hidden sm:inline">Áudio</span>
+                  </TabsTrigger>
+                )}
+                {pdfUrl && (
+                  <TabsTrigger value="pdf" className="flex items-center gap-2">
+                    <Download className="h-4 w-4" />
+                    <span className="hidden sm:inline">PDF</span>
+                  </TabsTrigger>
+                )}
+              </TabsList>
+
+              {/* Tab de Letra */}
+              <TabsContent value="lyrics" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Music className="h-5 w-5" />
+                      Letra da Música
+                    </CardTitle>
+                    <CardDescription>
+                      {showChords ? 'Visualizando com acordes' : 'Visualizando apenas letra'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {currentVersion?.sourceText ? (
+                      // Sistema de duas colunas para telas grandes
+                      rightColumn ? (
+                        <div className="music-content-container">
+                          <div className="music-columns-container">
+                            <div className="music-column">
+                              <div dangerouslySetInnerHTML={{ __html: leftColumn }} />
+                            </div>
+                            <div className="music-column">
+                              <div dangerouslySetInnerHTML={{ __html: rightColumn }} />
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="music-content-container">
+                          <div dangerouslySetInnerHTML={{ __html: leftColumn || renderedHtml }} />
+                        </div>
+                      )
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                        <p>Letra não disponível</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Tab de YouTube */}
+              {currentVersion?.youtubeLink && (
+                <TabsContent value="youtube" className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Youtube className="h-5 w-5" />
+                        Vídeo YouTube
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="aspect-video">
+                        <YouTube 
+                          videoId={getYoutubeId(currentVersion.youtubeLink)} 
+                          className="w-full h-full"
+                          iframeClassName="w-full h-full rounded-md"
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
               )}
-            </section>
-          )}
 
-          {/* YouTube */}
-          {currentVersion?.youtubeLink && (
-            <section className="space-y-4">
-              <SectionTitle>YouTube</SectionTitle>
-              <YouTube videoId={getYoutubeId(currentVersion.youtubeLink)} />
-            </section>
-          )}
+              {/* Tab de Áudio */}
+              {audioUrl && (
+                <TabsContent value="audio" className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Volume2 className="h-5 w-5" />
+                        Áudio
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <audio controls className="w-full">
+                        <source src={audioUrl} type="audio/mpeg" />
+                        O seu navegador não suporta o elemento de áudio.
+                      </audio>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              )}
 
-          {/* Áudio */}
-          {audioUrl && (
-          <section className="space-y-4">
-              <SectionTitle>Áudio</SectionTitle>
-              <audio controls className="w-full">
-                <source src={audioUrl} type="audio/mpeg" />
-                O seu navegador não suporta o elemento de áudio.
-              </audio>
-            </section>
-          )}
-
-          {/* PDF */}
-          {pdfUrl && (
-            <section className="space-y-4">
-              <SectionTitle>PDF Correspondente</SectionTitle>
-                <p>
-                <a 
-                  href={pdfUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="text-sm text-gray-500 hover:underline"
-                >
-                  Fazer download do PDF
-                </a>
-                </p>
-
-              <iframe
-                src={pdfUrl}
-                className="w-full h-[500px] border rounded"
-                title="Pré-visualização do PDF"
-              />
-            </section>
-          )}
+              {/* Tab de PDF */}
+              {pdfUrl && (
+                <TabsContent value="pdf" className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Download className="h-5 w-5" />
+                        PDF Correspondente
+                      </CardTitle>
+                      <CardDescription>
+                        <a 
+                          href={pdfUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="text-primary hover:underline inline-flex items-center gap-1"
+                        >
+                          <Download className="h-4 w-4" />
+                          Fazer download do PDF
+                        </a>
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <iframe
+                        src={pdfUrl}
+                        className="w-full h-[600px] border rounded-md"
+                        title="Pré-visualização do PDF"
+                      />
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              )}
+            </Tabs>
+          </div>
+        </div>
+        
+        {/* Footer com ID */}
+        <Separator className="my-8" />
+        <div className="text-center">
+          <p className="text-xs text-muted-foreground">
+            ID da música: {song.id}
+          </p>
         </div>
       </div>
-      
-      {/* ID da música no fundo da página */}
-      <div className="w-full text-center py-4">
-        <p className="text-xs text-gray-400">
-          ID: {song.id}
-        </p>
-      </div>
     </div>
-  );
-}
-
-/* ----------------- Pequenos componentes para títulos com “linha azul” ----------------- */
-
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 className="text-lg font-semibold tracking-wide">
-      <span className="border-b-2 border-sky-500 pb-1">{children}</span>
-    </h2>
-  );
-}
-
-function SidebarTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <h3 className="uppercase text-sm tracking-widest text-muted-foreground font-semibold">
-      <span className="border-b-2 border-sky-500 pb-1">{children}</span>
-    </h3>
   );
 }

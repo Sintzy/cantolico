@@ -2,8 +2,44 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import ProfileView from "./ProfileView";
 import { Metadata } from "next";
+import { PAGE_METADATA } from "@/lib/metadata";
+import ProfileView from "./ProfileView";
+
+// Inline the ProfileViewProps type definition
+interface ProfileViewProps {
+  user: {
+    id: number;
+    name: string | null;
+    email: string;
+    image: string | null;
+    bio: string | null;
+    role: string;
+    createdAt: string;
+    moderation?: {
+      id: number;
+      status: string;
+      type: string | null;
+      reason: string | null;
+      moderatorNote: string | null;
+      moderatedAt: string | null;
+      expiresAt: string | null;
+      moderatedBy?: {
+        name: string | null;
+      };
+    } | null;
+    submissions: {
+      id: string;
+      title: string;
+      createdAt: string;
+      status: string;
+    }[];
+    _count: {
+      submissions: number;
+    };
+  };
+  isOwner: boolean;
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
@@ -22,16 +58,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   });
 
   if (!user) {
-    return {
-      title: "Utilizador não encontrado",
-      description: "Este perfil de utilizador não existe.",
-    };
+    return PAGE_METADATA.userProfile();
   }
 
-  return {
-    title: `${user.name || "Utilizador"}`,
-    description: user.bio || `Perfil de ${user.name || "utilizador"} no Cantólico! - Cancioneiro católico colaborativo.`,
-  };
+  return PAGE_METADATA.userProfile(user.name || undefined, user.bio || undefined);
 }
 
 export type ProfilePageProps = {
@@ -72,23 +102,25 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
   if (!user) return notFound();
 
-  const formattedUser = {
+  const formattedUser: ProfileViewProps['user'] = {
     ...user,
-    submissions: user.submissions.map((submission) => ({
+    submissions: user.submissions.map((submission: any) => ({
       ...submission,
       createdAt: submission.createdAt.toISOString(),
     })),
     createdAt: user.createdAt.toISOString(),
-    moderation: user.moderation ? {
-      id: user.moderation.id,
-      status: user.moderation.status as string,
-      type: user.moderation.type as string | null,
-      reason: user.moderation.reason,
-      moderatorNote: user.moderation.moderatorNote,
-      moderatedAt: user.moderation.moderatedAt?.toISOString() || null,
-      expiresAt: user.moderation.expiresAt?.toISOString() || null,
-      moderatedBy: user.moderation.moderatedBy || undefined,
-    } : undefined,
+    moderation: user.moderation
+      ? {
+          id: user.moderation.id,
+          status: user.moderation.status as string,
+          type: user.moderation.type as string | null,
+          reason: user.moderation.reason,
+          moderatorNote: user.moderation.moderatorNote,
+          moderatedAt: user.moderation.moderatedAt?.toISOString() || null,
+          expiresAt: user.moderation.expiresAt?.toISOString() || null,
+          moderatedBy: user.moderation.moderatedBy || undefined,
+        }
+      : undefined,
   };
 
   const isOwner = session?.user?.id === user.id;

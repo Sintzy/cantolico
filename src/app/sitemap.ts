@@ -73,7 +73,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     // Dynamic music pages
     // Prioridade baseada em recência e popularidade potencial
-    const musicPages = songs.map((song, index) => {
+    const musicPages = songs.map((song: any, index: number) => {
       const url = `${baseUrl}/musics/${song.slug || song.id}`;
       const isRecent = (Date.now() - song.createdAt.getTime()) < (30 * 24 * 60 * 60 * 1000); // 30 dias
       const isVeryRecent = (Date.now() - song.createdAt.getTime()) < (7 * 24 * 60 * 60 * 1000); // 7 dias

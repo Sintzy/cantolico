@@ -1,12 +1,9 @@
 import { LoginForm } from "@/components/forms/LoginForm";
-import { Metadata } from "next";
+import { PAGE_METADATA } from "@/lib/metadata";
 import Link from "next/link";
 import { Music } from "lucide-react";
 
-export const metadata: Metadata = {
-  title: "Entrar - Cantólico",
-  description: "Entra na tua conta para submeter e gerir os teus cânticos católicos.",
-};
+export const metadata = PAGE_METADATA.login();
 
 export default function LoginPage() {
   return (

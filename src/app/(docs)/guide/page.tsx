@@ -1,12 +1,9 @@
 import Link from "next/link";
 import { ChordExamples } from "@/components/ChordExamples";
-import { Metadata } from "next";
+import { PAGE_METADATA } from "@/lib/metadata";
 import "../../../../public/styles/chords.css";
 
-export const metadata: Metadata = {
-  title: "Guia de Utilização - Sistema de Acordes",
-  description: "Aprende a usar o sistema completo de acordes em markdown para submeter cânticos católicos no Cantólico! Suporte a múltiplos formatos e transposição automática.",
-};
+export const metadata = PAGE_METADATA.guide();
 
 export default function ChordsSystemPage() {
   return (

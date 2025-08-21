@@ -1,8 +1,8 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Autenticação",
-  description: "Entra ou cria conta no Cantólico! para partilhar cânticos católicos.",
+  title: "Conta",
+  description: "Gerir a tua conta no Cantólico! - Cancioneiro católico colaborativo.",
 };
 
 export default function AuthLayout({

@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { createClient } from "@supabase/supabase-js";
-import { LiturgicalMoment, SourceType, Instrument } from "@prisma/client";
+import { LiturgicalMoment, SourceType, Instrument } from "@/lib/constants";
 import { sendEmail, createApprovalEmailTemplate } from "@/lib/email";
 import { logAdmin, logEmails, logErrors } from "@/lib/logs";
 import { titleToSlug, generateUniqueSlug } from "@/lib/slugs";

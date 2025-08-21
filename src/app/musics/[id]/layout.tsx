@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { findSongBySlug } from "@/lib/slugs";
+import { createMusicMetadata } from "@/lib/metadata";
 
 interface MusicLayoutProps {
   children: React.ReactNode;
@@ -60,33 +61,15 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       };
     }
 
-    const momentos = song.moments.join(", ");
-    const tags = song.tags.slice(0, 5).join(", ");
-    const autor = song.currentVersion?.createdBy?.name || "Autor desconhecido";
+    const autor = song.currentVersion?.createdBy?.name;
     
-    // Usar slug se disponível, senão usar ID
-    const urlPath = song.slug || song.id;
-
-    return {
+    return createMusicMetadata({
       title: song.title,
-      description: `${song.title} - Cântico católico para ${momentos}. ${tags ? `Tags: ${tags}.` : ""} Partilhado por ${autor} no Can♱ólico!`,
-      keywords: [song.title, ...song.tags, ...song.moments, "cântico", "católico", "liturgia", song.mainInstrument],
-      openGraph: {
-        title: `${song.title} | Cantólico!`,
-        description: `${song.title} - Cântico católico para ${momentos}. Descobre este e outros cânticos no Can♱ólico!`,
-        type: "article",
-        locale: "pt_PT",
-        url: `https://cantolico.pt/musics/${urlPath}`,
-      },
-      twitter: {
-        card: "summary",
-        title: `${song.title} | Can♱ólico!`,
-        description: `${song.title} - Cântico católico para ${momentos}`,
-      },
-      alternates: {
-        canonical: `https://cantolico.pt/musics/${urlPath}`,
-      },
-    };
+      moments: song.moments,
+      tags: song.tags,
+      slug: song.slug,
+      author: autor || undefined,
+    });
   } catch (error) {
     return {
       title: "Erro ao carregar música",

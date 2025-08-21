@@ -1,9 +1,6 @@
-import { Metadata } from "next";
+import { PAGE_METADATA } from "@/lib/metadata";
 
-export const metadata: Metadata = {
-  title: "Administração",
-  description: "Painel de administração do Cantólico! - Gerir utilizadores, músicas e submissões.",
-};
+export const metadata = PAGE_METADATA.admin();
 
 export default function AdminLayout({
   children,

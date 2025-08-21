@@ -55,7 +55,7 @@ export async function GET() {
     });
 
     // Formatear os dados para incluir histórico de moderação
-    const formattedSubmissions = submissions.map(submission => {
+    const formattedSubmissions = submissions.map((submission: any) => {
       const currentModeration = submission.submitter.moderation;
       
       return {

@@ -9,7 +9,7 @@ import {
   LiturgicalMoment,
   SongType,
   SourceType,
-} from "@prisma/client";
+} from "@/lib/constants";
 import { logSubmissions, logErrors } from "@/lib/logs";
 
 const supabase = createClient(
