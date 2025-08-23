@@ -107,16 +107,16 @@ export default function HomePage() {
                       data-aos="zoom-y-out"
                       data-aos-delay={450}
                     >
-                      <Button asChild size="lg" className="mb-3 sm:mb-0 w-full bg-gradient-to-t from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600 sm:w-auto text-base md:text-lg px-6 md:px-8 py-4 md:py-6">
-                        <Link href="/musics">
+                      <Link href="/musics" passHref legacyBehavior>
+                        <Button size="lg" className="mb-3 sm:mb-0 w-full bg-gradient-to-t from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600 sm:w-auto text-base md:text-lg px-6 md:px-8 py-4 md:py-6">
                           Explorar Cânticos →
-                        </Link>
-                      </Button>
-                      <Button asChild variant="outline" size="lg" className="w-full bg-white text-gray-800 hover:bg-gray-50 sm:w-auto text-base md:text-lg px-6 md:px-8 py-4 md:py-6 border-2">
-                        <Link href="/register">
+                        </Button>
+                      </Link>
+                      <Link href="/register" passHref legacyBehavior>
+                        <Button variant="outline" size="lg" className="w-full bg-white text-gray-800 hover:bg-gray-50 sm:w-auto text-base md:text-lg px-6 md:px-8 py-4 md:py-6 border-2">
                           Registar Grátis
-                        </Link>
-                      </Button>
+                        </Button>
+                      </Link>
                     </div>
                   </div>
                 </div>
