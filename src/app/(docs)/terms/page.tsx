@@ -1,26 +1,33 @@
 import { PAGE_METADATA } from "@/lib/metadata";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const metadata = PAGE_METADATA.terms();
 
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       <div className="max-w-4xl mx-auto px-6 py-16">
         {/* Header */}
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">
-          Termos de Utilização
-        </h1>
-        <p className="text-gray-600 mb-12">
-          Ao utilizar o Cantólico, está a concordar com os presentes termos de utilização. 
-          Leia com atenção para compreender os seus direitos e responsabilidades.
-        </p>
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="text-3xl font-bold">
+              Termos de Utilização
+            </CardTitle>
+            <p className="text-muted-foreground">
+              Ao utilizar o Cantólico, está a concordar com os presentes termos de utilização. 
+              Leia com atenção para compreender os seus direitos e responsabilidades.
+            </p>
+          </CardHeader>
+        </Card>
 
         {/* Content */}
-        <div className="space-y-12">
+        <div className="space-y-6">
           {/* 1. Objeto e Titularidade */}
-          <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">1. Objeto e Titularidade</h2>
-            <div className="space-y-4 text-gray-700">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">1. Objeto e Titularidade</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <p>
                 O Cantólico é uma plataforma digital católica dedicada à preservação, partilha e descoberta de cânticos litúrgicos. 
                 O nosso objetivo é servir a comunidade católica global com um cancioneiro digital acessível e abrangente.
@@ -30,19 +37,21 @@ export default function TermsPage() {
                 <li className="list-disc">Natureza do Serviço: Cancioneiro digital católico gratuito</li>
                 <li className="list-disc">Público-Alvo: Comunidade católica, músicos, liturgistas e fiéis</li>
               </ul>
-              <p className="text-sm text-gray-500 italic">
+              <p className="text-sm text-muted-foreground italic">
                 A utilização do site implica a aceitação plena e sem reservas dos presentes termos de utilização.
               </p>
-            </div>
-          </section>
+            </CardContent>
+          </Card>
 
           {/* 2. Acesso e Registo */}
-          <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">2. Acesso e Registo de Utilizadores</h2>
-            <div className="space-y-4 text-gray-700">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">2. Acesso e Registo de Utilizadores</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <h3 className="font-medium text-gray-900 mb-2">Acesso Livre:</h3>
+                  <h3 className="font-medium mb-2">Acesso Livre:</h3>
                   <ul className="space-y-1 ml-4">
                     <li className="list-disc">Consulta do cancioneiro</li>
                     <li className="list-disc">Pesquisa de músicas</li>
@@ -51,7 +60,7 @@ export default function TermsPage() {
                   </ul>
                 </div>
                 <div>
-                  <h3 className="font-medium text-gray-900 mb-2">Requer Registo:</h3>
+                  <h3 className="font-medium mb-2">Requer Registo:</h3>
                   <ul className="space-y-1 ml-4">
                     <li className="list-disc">Submissão de músicas</li>
                     <li className="list-disc">Sistema de estrelas (likes)</li>
@@ -61,7 +70,7 @@ export default function TermsPage() {
                 </div>
               </div>
               <div>
-                <h3 className="font-medium text-gray-900 mb-2">Compromissos do Utilizador:</h3>
+                <h3 className="font-medium mb-2">Compromissos do Utilizador:</h3>
                 <ul className="space-y-1 ml-4">
                   <li className="list-disc">Fornecer informação verdadeira e atualizada no registo</li>
                   <li className="list-disc">Manter a confidencialidade da palavra-passe</li>
@@ -70,19 +79,21 @@ export default function TermsPage() {
                   <li className="list-disc">Utilizar o serviço de forma responsável e ética</li>
                 </ul>
               </div>
-            </div>
-          </section>
+            </CardContent>
+          </Card>
 
           {/* 3. Conteúdo Submetido */}
-          <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">3. Conteúdo Submetido pelos Utilizadores</h2>
-            <div className="space-y-4 text-gray-700">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">3. Conteúdo Submetido pelos Utilizadores</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <p>
                 Todo o conteúdo submetido (letras, acordes, PDFs, áudio, etc.) é da exclusiva responsabilidade do utilizador. 
                 Deve garantir que possui os direitos necessários para partilhar o conteúdo.
               </p>
               <div>
-                <h3 className="font-medium text-gray-900 mb-2">Tipos de Conteúdo Aceite:</h3>
+                <h3 className="font-medium mb-2">Tipos de Conteúdo Aceite:</h3>
                 <ul className="space-y-1 ml-4">
                   <li className="list-disc">Cânticos católicos tradicionais e contemporâneos</li>
                   <li className="list-disc">Letras com cifras e acordes</li>
@@ -90,15 +101,17 @@ export default function TermsPage() {
                   <li className="list-disc">Gravações áudio (quando autorizado)</li>
                 </ul>
               </div>
-            </div>
-          </section>
+            </CardContent>
+          </Card>
 
           {/* 4. Conteúdo Proibido */}
-          <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">4. Conteúdo Proibido e Sanções</h2>
-            <div className="space-y-4 text-gray-700">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">4. Conteúdo Proibido e Sanções</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div>
-                <h3 className="font-medium text-gray-900 mb-2">Conteúdo Estritamente Proibido:</h3>
+                <h3 className="font-medium mb-2">Conteúdo Estritamente Proibido:</h3>
                 <div className="grid md:grid-cols-2 gap-4">
                   <ul className="space-y-1 ml-4">
                     <li className="list-disc">Conteúdo não católico ou anticristão</li>
@@ -114,15 +127,17 @@ export default function TermsPage() {
                   </ul>
                 </div>
               </div>
-            </div>
-          </section>
+            </CardContent>
+          </Card>
 
           {/* 5. Limitações */}
-          <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">5. Limitações de Responsabilidade</h2>
-            <div className="space-y-4 text-gray-700">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">5. Limitações de Responsabilidade</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div>
-                <h3 className="font-medium text-gray-900 mb-2">O Cantólico NÃO se responsabiliza por:</h3>
+                <h3 className="font-medium mb-2">O Cantólico NÃO se responsabiliza por:</h3>
                 <div className="grid md:grid-cols-2 gap-4">
                   <ul className="space-y-1 ml-4">
                     <li className="list-disc">Falhas técnicas ou indisponibilidade do serviço</li>
@@ -138,33 +153,37 @@ export default function TermsPage() {
                   </ul>
                 </div>
               </div>
-            </div>
-          </section>
+            </CardContent>
+          </Card>
 
           {/* 6. Contacto */}
-          <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">6. Contacto e Suporte</h2>
-            <div className="space-y-4 text-gray-700">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">6. Contacto e Suporte</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <p>Para questões sobre estes termos ou o serviço:</p>
               <ul className="space-y-1 ml-4">
-                <li>Email Principal: <a href="mailto:cantolico@cantolico.pt" className="text-gray-900 underline">cantolico@cantolico.pt</a></li>
-                <li>Suporte Técnico: <a href="mailto:miguel@cantolico.pt" className="text-gray-900 underline">miguel@cantolico.pt</a></li>
+                <li>Email Principal: <a href="mailto:cantolico@cantolico.pt" className="text-primary underline">cantolico@cantolico.pt</a></li>
+                <li>Suporte Técnico: <a href="mailto:miguel@cantolico.pt" className="text-primary underline">miguel@cantolico.pt</a></li>
                 <li>Tempo de Resposta: Até 48 horas úteis</li>
               </ul>
-            </div>
-          </section>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Footer info */}
-        <div className="mt-16 pt-8 border-t border-gray-200 text-center">
-          <p className="text-xs text-gray-500 mb-1">
-            <strong>Termos e Condições de Utilização do Cantólico</strong>
-          </p>
-          <p className="text-xs text-gray-400">
-            Versão 2.0 - Atualizada em 07/08/2025<br />
-            Este documento substitui todas as versões anteriores e é efetivo a partir da data indicada.
-          </p>
-        </div>
+        <Card className="mt-8">
+          <CardContent className="pt-6 text-center">
+            <p className="text-xs text-muted-foreground mb-1">
+              <strong>Termos e Condições de Utilização do Cantólico</strong>
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Versão 2.0 - Atualizada em 07/08/2025<br />
+              Este documento substitui todas as versões anteriores e é efetivo a partir da data indicada.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

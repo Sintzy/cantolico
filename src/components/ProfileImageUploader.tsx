@@ -66,7 +66,7 @@ export default function ProfileImageUploader({ userId, currentImage, onUpload }:
   };
 
   return (
-    <div className="relative w-32 h-32 rounded-full overflow-hidden border-2 border-gray-300 cursor-pointer group">
+    <div className="relative w-32 h-32 rounded-full overflow-hidden border-2 border-border cursor-pointer group">
       <Image
         src={currentImage || "/default-profile.png"}
         alt="Imagem de perfil"
@@ -75,7 +75,7 @@ export default function ProfileImageUploader({ userId, currentImage, onUpload }:
         onClick={handleImageClick}
       />
       {uploading && (
-        <div className="absolute inset-0 bg-white/60 flex items-center justify-center text-sm text-gray-600">
+        <div className="absolute inset-0 bg-background/60 flex items-center justify-center text-sm text-muted-foreground">
           Enviando...
         </div>
       )}

@@ -2,6 +2,7 @@
 import React from 'react';
 import { format } from 'date-fns';
 import UserAvatar from './ui/user-avatar';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface User {
   name: string;
@@ -26,7 +27,7 @@ const UserHoverCard: React.FC<UserHoverCardProps> = ({ user }) => {
       {/* Avatar e nome principais */}
       <div className="flex items-center cursor-pointer">
         <UserAvatar user={user} size={32} />
-        <span className="ml-2 text-sm font-medium text-gray-800">
+        <span className="ml-2 text-sm font-medium">
           {user.name}
         </span>
       </div>
@@ -34,24 +35,28 @@ const UserHoverCard: React.FC<UserHoverCardProps> = ({ user }) => {
       {/* Card visível no hover */}
       <div
         className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 ease-in-out
-                    absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-64 p-4
-                    bg-white rounded-2xl shadow-lg pointer-events-none z-20"
+                    absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-64
+                    pointer-events-none z-20"
       >
-        <div className="flex flex-col items-center">
-          <UserAvatar user={user} size={64} className="mb-2" />
-          <h3 className="text-lg font-semibold text-gray-900">
-            {user.name}
-          </h3>
-          <p className="text-sm text-gray-500 mb-1">{user.email}</p>
-          <p className="text-xs text-gray-400 mb-2">
-            Conta criada: {createdInfo}
-          </p>
-          {user.description && (
-            <p className="text-sm text-gray-700 text-center">
-              {user.description}
-            </p>
-          )}
-        </div>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex flex-col items-center">
+              <UserAvatar user={user} size={64} className="mb-2" />
+              <h3 className="text-lg font-semibold">
+                {user.name}
+              </h3>
+              <p className="text-sm text-muted-foreground mb-1">{user.email}</p>
+              <p className="text-xs text-muted-foreground mb-2">
+                Conta criada: {createdInfo}
+              </p>
+              {user.description && (
+                <p className="text-sm text-center">
+                  {user.description}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
