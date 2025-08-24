@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
+import { withApiProtection, withAuthApiProtection } from '@/lib/api-middleware';
 
-export async function GET(request: NextRequest) {
+export const GET = withApiProtection(async (request: NextRequest) => {
   try {
     const session = await getServerSession(authOptions);
     const { searchParams } = new URL(request.url);
@@ -74,9 +75,9 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = withAuthApiProtection(async (request: NextRequest) => {
   try {
     const session = await getServerSession(authOptions);
     
@@ -129,4 +130,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

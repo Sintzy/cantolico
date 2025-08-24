@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -77,35 +76,28 @@ export function RegisterForm() {
   }
 
   return (
-    <Card className="shadow-lg">
-      <CardHeader className="space-y-1 text-center">
-        <CardTitle className="text-2xl font-bold">Criar conta</CardTitle>
-        <CardDescription>
-          Cria a tua conta para acederes ao Cancioneiro
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+    <div className="space-y-6">
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
-        {/* Google Sign In */}
-        <GoogleSignInButton callbackUrl="/" />
-        
-        {/* Divider */}
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <Separator className="w-full" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">
-              Ou crie conta com email
-            </span>
-          </div>
+      {/* Google Sign In */}
+      <GoogleSignInButton callbackUrl="/" />
+      
+      {/* Divider */}
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <Separator className="w-full" />
         </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-background px-2 text-muted-foreground">
+            Ou crie conta com email
+          </span>
+        </div>
+      </div>
 
         {/* Registration Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -217,7 +209,6 @@ export function RegisterForm() {
             Faz login
           </Link>
         </div>
-      </CardContent>
-    </Card>
+    </div>
   );
 }

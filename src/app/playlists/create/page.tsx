@@ -95,38 +95,56 @@ export default function CreatePlaylistPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-4 mb-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/playlists">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Voltar às Playlists
-            </Link>
-          </Button>
+    <div className="min-h-screen bg-white">
+      {/* Hero Section com estilo da landing page */}
+      <section className="relative bg-gradient-to-br from-blue-50 via-white to-purple-50">
+        {/* Background decoration */}
+        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+          <div className="absolute left-1/2 top-0 -translate-x-1/2">
+            <div className="h-60 w-60 rounded-full bg-gradient-to-tr from-blue-500/20 to-purple-500/20 blur-[80px]" />
+          </div>
         </div>
         
-        <div className="flex items-center gap-3">
-          <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg p-3 text-white">
-            <ListMusic className="h-8 w-8" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold">Nova Playlist</h1>
-            <p className="text-muted-foreground">
-              Cria uma coleção personalizada das tuas músicas favoritas
-            </p>
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="pb-8 pt-12 md:pb-12 md:pt-16 relative z-10">
+            {/* Header */}
+            <div className="mb-8">
+              <div className="flex items-center gap-4 mb-4">
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/playlists">
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Voltar às Playlists
+                  </Link>
+                </Button>
+              </div>
+              
+              <div className="text-center lg:text-left">
+                <div className="mb-4 border-y [border-image:linear-gradient(to_right,transparent,theme(colors.slate.300/.8),transparent)1]">
+                  <div className="-mx-0.5 flex justify-center lg:justify-start -space-x-2 py-2">
+                    <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                      <ListMusic className="text-white text-xs w-3 h-3" />
+                    </div>
+                  </div>
+                </div>
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 border-y [border-image:linear-gradient(to_right,transparent,theme(colors.slate.300/.8),transparent)1] leading-tight">
+                  Nova Playlist
+                </h1>
+                <p className="text-lg text-gray-700 max-w-2xl">
+                  Cria uma coleção personalizada das tuas músicas favoritas
+                </p>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* Form */}
-      <Card className="max-w-2xl mx-auto">
-        <CardHeader>
-          <CardTitle>Detalhes da Playlist</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+      </section>
+      
+      {/* Main Content */}
+      <section className="bg-gray-50 py-8">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          {/* Form */}
+          <Card className="max-w-2xl mx-auto border-0 shadow-lg backdrop-blur-sm bg-white/95">
+            <CardContent className="p-8">
+              <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="name">Nome da Playlist *</Label>
               <Input
@@ -197,17 +215,19 @@ export default function CreatePlaylistPage() {
               >
                 Cancelar
               </Button>
-              <Button
-                type="submit"
-                disabled={!form.name.trim() || isLoading}
-                className="flex-1"
-              >
-                {isLoading ? 'Criando...' : 'Criar Playlist'}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+                  <Button
+                    type="submit"
+                    disabled={!form.name.trim() || isLoading}
+                    className="flex-1"
+                  >
+                    {isLoading ? 'Criando...' : 'Criar Playlist'}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
     </div>
   );
 }

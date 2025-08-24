@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
+import { withAuthApiProtection, withApiProtection } from '@/lib/api-middleware';
 
-export async function POST(
+export const POST = withAuthApiProtection(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   try {
     const session = await getServerSession(authOptions);
     
@@ -83,12 +84,12 @@ export async function POST(
       { status: 500 }
     );
   }
-}
+});
 
-export async function DELETE(
+export const DELETE = withAuthApiProtection(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   try {
     const session = await getServerSession(authOptions);
     
@@ -148,12 +149,12 @@ export async function DELETE(
       { status: 500 }
     );
   }
-}
+});
 
-export async function GET(
+export const GET = withApiProtection(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   try {
     const session = await getServerSession(authOptions);
     const { id } = await params;
@@ -210,4 +211,4 @@ export async function GET(
       { status: 500 }
     );
   }
-}
+});

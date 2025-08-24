@@ -248,25 +248,46 @@ export default function CreateNewMusicPage() {
   ];
 
   return (
-    <main className="min-h-screen">
-
-      {/* Header */}
-      <section className="py-12 md:py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="text-center space-y-4">
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
-              Submeter Nova Música
-            </h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Partilha um novo cântico com a comunidade através de 4 passos simples
-            </p>
+    <main className="min-h-screen bg-white">
+      {/* Hero Section com estilo da landing page */}
+      <section className="relative bg-gradient-to-br from-blue-50 via-white to-purple-50">
+        {/* Background decoration */}
+        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+          <div className="absolute left-1/2 top-0 -translate-x-1/2">
+            <div className="h-60 w-60 rounded-full bg-gradient-to-tr from-blue-500/20 to-purple-500/20 blur-[80px]" />
+          </div>
+        </div>
+        
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="pb-8 pt-12 md:pb-12 md:pt-16 relative z-10">
+            <div className="text-center space-y-4">
+              <div className="mb-4 border-y [border-image:linear-gradient(to_right,transparent,theme(colors.slate.300/.8),transparent)1]">
+                <div className="-mx-0.5 flex justify-center -space-x-2 py-2">
+                  <div className="w-6 h-6 bg-gradient-to-r from-green-500 to-blue-600 rounded-full flex items-center justify-center">
+                    <Music className="text-white text-xs w-3 h-3" />
+                  </div>
+                  <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                    <FileText className="text-white text-xs w-3 h-3" />
+                  </div>
+                  <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                    <Plus className="text-white text-xs w-3 h-3" />
+                  </div>
+                </div>
+              </div>
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 border-y [border-image:linear-gradient(to_right,transparent,theme(colors.slate.300/.8),transparent)1] leading-tight">
+                Submeter Nova Música
+              </h1>
+              <p className="text-lg text-gray-700 max-w-2xl mx-auto">
+                Partilha um novo cântico com a comunidade através de 4 passos simples
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Progress Indicator */}
-      <section className="py-8 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4">
+      <section className="bg-gray-50 py-8">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="flex items-center justify-center space-x-8">
             {steps.map((step, index) => {
               const Icon = step.icon;
@@ -308,14 +329,14 @@ export default function CreateNewMusicPage() {
 
       {/* Passo 1: Informações Básicas */}
       {currentStep === 1 && (
-        <section className="py-12 bg-white">
-          <div className="max-w-3xl mx-auto px-4">
+        <section className="bg-white py-12">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <div className="text-center space-y-2 mb-8">
               <h2 className="text-2xl font-bold text-gray-900">Informações Básicas</h2>
               <p className="text-gray-600">Título, tipo e instrumento principal da música</p>
             </div>
 
-            <Card>
+            <Card className="max-w-3xl mx-auto border-0 shadow-lg backdrop-blur-sm bg-white/95">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Info className="h-5 w-5" />
@@ -392,14 +413,14 @@ export default function CreateNewMusicPage() {
 
       {/* Passo 2: Momentos e Tags */}
       {currentStep === 2 && (
-        <section className="py-12 bg-gray-50">
-          <div className="max-w-4xl mx-auto px-4">
+        <section className="bg-gray-50 py-12">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <div className="text-center space-y-2 mb-8">
               <h2 className="text-2xl font-bold text-gray-900">Momentos Litúrgicos e Tags</h2>
               <p className="text-gray-600">Escolhe os momentos da celebração onde a música é adequada</p>
             </div>
 
-            <Card>
+            <Card className="max-w-4xl mx-auto border-0 shadow-lg backdrop-blur-sm bg-white/95">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Clock className="h-5 w-5" />
@@ -502,14 +523,14 @@ export default function CreateNewMusicPage() {
 
       {/* Passo 3: Letra e Acordes */}
       {currentStep === 3 && (
-        <section className="py-12 bg-white">
-          <div className="max-w-6xl mx-auto px-4">
+        <section className="bg-white py-12">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <div className="text-center space-y-2 mb-8">
               <h2 className="text-2xl font-bold text-gray-900">Letra e Acordes</h2>
               <p className="text-gray-600">Escreve a letra da música com os acordes em formato Markdown</p>
             </div>
 
-            <Card>
+            <Card className="border-0 shadow-lg backdrop-blur-sm bg-white/95">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5" />
@@ -590,8 +611,8 @@ export default function CreateNewMusicPage() {
 
       {/* Passo 4: Finalização */}
       {currentStep === 4 && (
-        <section className="py-12 bg-gray-50">
-          <div className="max-w-4xl mx-auto px-4">
+        <section className="bg-gray-50 py-12">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <div className="text-center space-y-2 mb-8">
               <h2 className="text-2xl font-bold text-gray-900">Anexos e Finalização</h2>
               <p className="text-gray-600">Adiciona ficheiros opcionais e submete a música</p>
@@ -599,7 +620,7 @@ export default function CreateNewMusicPage() {
 
             <div className="space-y-6">
               {/* Anexos */}
-              <Card>
+              <Card className="border-0 shadow-lg backdrop-blur-sm bg-white/95">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <UploadIcon className="h-5 w-5" />
@@ -687,7 +708,7 @@ export default function CreateNewMusicPage() {
               </Card>
 
               {/* Resumo */}
-              <Card>
+              <Card className="border-0 shadow-lg backdrop-blur-sm bg-white/95">
                 <CardHeader>
                   <CardTitle>Resumo da Música</CardTitle>
                   <CardDescription>
@@ -729,7 +750,7 @@ export default function CreateNewMusicPage() {
               </Card>
 
               {/* Captcha */}
-              <Card>
+              <Card className="border-0 shadow-lg backdrop-blur-sm bg-white/95">
                 <CardHeader>
                   <CardTitle>Verificação de Segurança</CardTitle>
                   <CardDescription>
