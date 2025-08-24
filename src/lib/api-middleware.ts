@@ -20,7 +20,7 @@ export function withApiProtection<T extends any[]>(
       const response = await handler(request, ...args);
       
       // Aplicar headers de segurança à resposta
-      return applySecurityHeaders(response);
+      return applySecurityHeaders(response, request);
     } catch (error) {
       console.error('[API_PROTECTION_ERROR]', error);
       
@@ -33,7 +33,7 @@ export function withApiProtection<T extends any[]>(
         { status: 500 }
       );
       
-      return applySecurityHeaders(errorResponse);
+      return applySecurityHeaders(errorResponse, request);
     }
   };
 }

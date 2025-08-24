@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
     });
 
     const response = NextResponse.json(songs);
-    return applySecurityHeaders(response);
+    return applySecurityHeaders(response, request);
   } catch (error) {
     await logErrors('ERROR', 'Erro ao buscar músicas', 'Falha na consulta de músicas', {
       error: error instanceof Error ? error.message : 'Erro desconhecido',
@@ -72,6 +72,6 @@ export async function GET(request: NextRequest) {
     });
     console.error("[GET_MUSICS]", error);
     const response = NextResponse.json({ error: "Erro ao buscar músicas." }, { status: 500 });
-    return applySecurityHeaders(response);
+    return applySecurityHeaders(response, request);
   }
 }
