@@ -104,16 +104,16 @@ export default function HomePage() {
                   </p>
                   <div className="relative before:absolute before:inset-0 before:border-y before:[border-image:linear-gradient(to_right,transparent,theme(colors.slate.300/.8),transparent)1]">
                     <div
-                      className="mx-auto max-w-xs sm:flex sm:max-w-none sm:justify-center gap-3 md:gap-4 px-4 sm:px-0 relative z-50"
+                      className="mx-auto max-w-xs sm:flex sm:max-w-none sm:justify-center gap-3 md:gap-4 px-4 sm:px-0 relative z-10"
                       data-aos="zoom-y-out"
                       data-aos-delay={450}
                     >
                       <Button 
                         asChild 
                         size="lg" 
-                        className="mb-3 sm:mb-0 w-full bg-gradient-to-t from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600 sm:w-auto text-base md:text-lg px-6 md:px-8 py-4 md:py-6 relative z-50 pointer-events-auto"
+                        className="mb-3 sm:mb-0 w-full bg-gradient-to-t from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600 sm:w-auto text-base md:text-lg px-6 md:px-8 py-4 md:py-6 relative z-10 pointer-events-auto"
                       >
-                        <Link href="/musics" className="relative z-50">
+                        <Link href="/musics" className="relative z-10">
                           Explorar Cânticos →
                         </Link>
                       </Button>
@@ -121,9 +121,9 @@ export default function HomePage() {
                         asChild 
                         variant="outline" 
                         size="lg" 
-                        className="w-full bg-white text-gray-800 hover:bg-gray-50 sm:w-auto text-base md:text-lg px-6 md:px-8 py-4 md:py-6 border-2 relative z-50 pointer-events-auto"
+                        className="w-full bg-white text-gray-800 hover:bg-gray-50 sm:w-auto text-base md:text-lg px-6 md:px-8 py-4 md:py-6 border-2 relative z-10 pointer-events-auto"
                       >
-                        <Link href="/register" className="relative z-50">
+                        <Link href="/register" className="relative z-10">
                           Criar Conta!
                         </Link>
                       </Button>
@@ -374,13 +374,13 @@ export default function HomePage() {
                   utilizam o Cantólico para organizar e partilhar música litúrgica.
                 </p>
                 
-                <div className="mx-auto max-w-xs sm:flex sm:max-w-none sm:justify-center gap-3 md:gap-4 px-4 sm:px-0 relative z-50">
+                <div className="mx-auto max-w-xs sm:flex sm:max-w-none sm:justify-center gap-3 md:gap-4 px-4 sm:px-0 relative z-10">
                   <Button 
                     asChild 
                     size="lg" 
-                    className="mb-3 sm:mb-0 w-full bg-gradient-to-t from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600 sm:w-auto text-base md:text-lg px-6 md:px-8 py-4 md:py-6 relative z-50 pointer-events-auto"
+                    className="mb-3 sm:mb-0 w-full bg-gradient-to-t from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600 sm:w-auto text-base md:text-lg px-6 md:px-8 py-4 md:py-6 relative z-10 pointer-events-auto"
                   >
-                    <Link href="/musics" className="relative z-50">
+                    <Link href="/musics" className="relative z-10">
                       Explorar Cânticos →
                     </Link>
                   </Button>
@@ -388,9 +388,9 @@ export default function HomePage() {
                     asChild 
                     variant="outline" 
                     size="lg" 
-                    className="w-full bg-white text-gray-800 hover:bg-gray-50 sm:w-auto text-base md:text-lg px-6 md:px-8 py-4 md:py-6 border-2 relative z-50 pointer-events-auto"
+                    className="w-full bg-white text-gray-800 hover:bg-gray-50 sm:w-auto text-base md:text-lg px-6 md:px-8 py-4 md:py-6 border-2 relative z-10 pointer-events-auto"
                   >
-                    <Link href="/register" className="relative z-50">
+                    <Link href="/register" className="relative z-10">
                       Criar Conta Gratuita
                     </Link>
                   </Button>
