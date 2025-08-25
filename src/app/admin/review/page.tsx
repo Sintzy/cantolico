@@ -128,6 +128,9 @@ export default function AdminReviewPage() {
       filtered = filtered.filter((submission) => submission.status === statusFilter);
     }
 
+    // Ordenar alfabeticamente por título
+    filtered = filtered.slice().sort((a, b) => a.title.localeCompare(b.title, 'pt'));
+
     setFilteredSubmissions(filtered);
   }, [searchTerm, statusFilter, submissions]);
 
