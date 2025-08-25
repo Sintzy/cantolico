@@ -621,50 +621,82 @@ export default function ReviewSubmissionPage() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Editor de Letra e Acordes</CardTitle>
-                  <ChordGuideButton />
-                </div>
-                <CardDescription>
-                  Edite a letra da música com acordes usando markdown
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <h4 className="font-semibold text-sm mb-2 text-blue-900">Formatos de acordes suportados:</h4>
-                  <ul className="text-xs space-y-1 text-blue-800">
-                    <li><strong>Inline:</strong> <code>#mic#</code> seguido de <code>[C]Deus est[Am]á aqui</code></li>
-                    <li><strong>Acima da letra:</strong> <code>[C] [Am] [F]</code> numa linha e <code>Deus está aqui</code> na seguinte</li>
-                    <li><strong>Intro/Ponte:</strong> <code>Intro:</code> seguido de <code>[A] [G] [C]</code> na linha seguinte</li>
-                    <li><strong>Formato misto:</strong> Podes combinar inline com intro/ponte na mesma música!</li>
-                  </ul>
-                </div>
-                
-                <div className="mb-2 p-2 bg-gray-50 border rounded-md text-xs">
-                  <strong>Formato detectado:</strong> {detectChordFormat(markdown)}
-                  {detectChordFormat(markdown) === 'inline' && markdown.includes('#mic#') && (
-                    <span className="ml-2 text-green-600">✓ Tag #mic# encontrada</span>
-                  )}
-                  {/^(Intro|Ponte|Solo|Bridge|Instrumental|Interlude):?\s*$/im.test(markdown) && (
-                    <span className="ml-2 text-blue-600">✓ Seções de intro/ponte detectadas</span>
-                  )}
-                </div>
-
-                <div className="border rounded-lg overflow-hidden bg-white">
-                  <SimpleMDE 
-                    value={markdown} 
-                    onChange={setMarkdown}
-                    options={{
-                      spellChecker: false,
-                      placeholder: "Escreva a letra da música com acordes...",
-                      toolbar: ["bold", "italic", "|", "unordered-list", "ordered-list", "|", "preview", "guide"],
-                    }}
-                  />
-                </div>
-              </CardContent>
-            </Card>
+            {/* Editor e Preview lado a lado */}
+            <div className="grid md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Editor de Letra e Acordes</CardTitle>
+                    <ChordGuideButton />
+                  </div>
+                  <CardDescription>
+                    Edite a letra da música com acordes usando markdown
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2 text-blue-900">Formatos de acordes suportados:</h4>
+                    <ul className="text-xs space-y-1 text-blue-800">
+                      <li><strong>Inline:</strong> <code>#mic#</code> seguido de <code>[C]Deus est[Am]á aqui</code></li>
+                      <li><strong>Acima da letra:</strong> <code>[C] [Am] [F]</code> numa linha e <code>Deus está aqui</code> na seguinte</li>
+                      <li><strong>Intro/Ponte:</strong> <code>Intro:</code> seguido de <code>[A] [G] [C]</code> na linha seguinte</li>
+                      <li><strong>Formato misto:</strong> Podes combinar inline com intro/ponte na mesma música!</li>
+                    </ul>
+                  </div>
+                  <div className="mb-2 p-2 bg-gray-50 border rounded-md text-xs">
+                    <strong>Formato detectado:</strong> {detectChordFormat(markdown)}
+                    {detectChordFormat(markdown) === 'inline' && markdown.includes('#mic#') && (
+                      <span className="ml-2 text-green-600">✓ Tag #mic# encontrada</span>
+                    )}
+                    {/^(Intro|Ponte|Solo|Bridge|Instrumental|Interlude):?\s*$/im.test(markdown) && (
+                      <span className="ml-2 text-blue-600">✓ Seções de intro/ponte detectadas</span>
+                    )}
+                  </div>
+                  <div className="border rounded-lg overflow-hidden bg-white">
+                    <SimpleMDE 
+                      value={markdown} 
+                      onChange={setMarkdown}
+                      options={{
+                        spellChecker: false,
+                        placeholder: "Escreva a letra da música com acordes...",
+                        toolbar: ["bold", "italic", "|", "unordered-list", "ordered-list", "|", "preview", "guide"],
+                      }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Preview da Música</CardTitle>
+                  <CardDescription>
+                    Visualização de como a música será apresentada aos utilizadores
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="border rounded-lg p-6 bg-white min-h-[400px]">
+                    <div className="mb-4">
+                      <h2 className="text-2xl font-bold text-gray-900">{title || "Título da Música"}</h2>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {moments.map(moment => (
+                          <Badge key={moment} variant="outline">
+                            {moment.replaceAll("_", " ")}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                    <div
+                      className="prose max-w-none font-mono text-sm leading-relaxed"
+                      style={{ 
+                        lineHeight: '1.8',
+                        color: '#000',
+                        background: '#fff'
+                      }}
+                      dangerouslySetInnerHTML={{ __html: preview }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="preview">
