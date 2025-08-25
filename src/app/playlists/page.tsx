@@ -125,42 +125,78 @@ export default function MyPlaylistsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Minhas Playlists</h1>
-          <p className="text-muted-foreground">
-            Gerencie suas coleções de músicas
-          </p>
+    <div className="min-h-screen bg-white">
+      {/* Hero Section com estilo da landing page */}
+      <section className="relative bg-gradient-to-br from-blue-50 via-white to-purple-50">
+        {/* Background decoration */}
+        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+          <div className="absolute left-1/2 top-0 -translate-x-1/2">
+            <div className="h-60 w-60 rounded-full bg-gradient-to-tr from-blue-500/20 to-purple-500/20 blur-[80px]" />
+          </div>
         </div>
         
-        <Button asChild>
-          <Link href="/playlists/create">
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Playlist
-          </Link>
-        </Button>
-      </div>
-
-      {/* Lista de Playlists */}
-      {playlists.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <ListMusic className="h-16 w-16 text-muted-foreground mb-4" />
-            <h3 className="text-xl font-semibold mb-2">Nenhuma playlist criada</h3>
-            <p className="text-muted-foreground text-center mb-6 max-w-md">
-              Crie sua primeira playlist para organizar suas músicas favoritas e compartilhar com outros.
-            </p>
-            <Button asChild>
-              <Link href="/playlists/create">
-                <Plus className="h-4 w-4 mr-2" />
-                Criar primeira playlist
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="pb-8 pt-12 md:pb-12 md:pt-16 relative z-10">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-8">
+              <div className="text-center lg:text-left">
+                <div className="mb-4 border-y [border-image:linear-gradient(to_right,transparent,theme(colors.slate.300/.8),transparent)1]">
+                  <div className="-mx-0.5 flex justify-center lg:justify-start -space-x-2 py-2">
+                    <div className="w-6 h-6 bg-gradient-to-r from-green-500 to-blue-600 rounded-full flex items-center justify-center">
+                      <ListMusic className="text-white text-xs w-3 h-3" />
+                    </div>
+                    <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                      <Music className="text-white text-xs w-3 h-3" />
+                    </div>
+                    <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                      <Plus className="text-white text-xs w-3 h-3" />
+                    </div>
+                  </div>
+                </div>
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 border-y [border-image:linear-gradient(to_right,transparent,theme(colors.slate.300/.8),transparent)1] leading-tight">
+                  Minhas Playlists
+                </h1>
+                <p className="text-lg text-gray-700 max-w-2xl">
+                  Gerencie suas coleções de música litúrgica
+                </p>
+              </div>
+              
+              <Button 
+                asChild 
+                size="lg" 
+                className="bg-gradient-to-t from-green-600 to-green-500 text-white hover:from-green-700 hover:to-green-600"
+              >
+                <Link href="/playlists/create">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nova Playlist
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      {/* Main Content */}
+      <section className="bg-gray-50 py-8">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          {/* Lista de Playlists */}
+          {playlists.length === 0 ? (
+            <Card className="border-0 shadow-lg">
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <ListMusic className="h-16 w-16 text-muted-foreground mb-4" />
+                <h3 className="text-xl font-semibold mb-2">Nenhuma playlist criada</h3>
+                <p className="text-muted-foreground text-center mb-6 max-w-md">
+                  Crie sua primeira playlist para organizar suas músicas favoritas e compartilhar com outros.
+                </p>
+                <Button asChild>
+                  <Link href="/playlists/create">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Criar primeira playlist
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {playlists.map((playlist) => (
             <Card key={playlist.id} className="hover:shadow-md transition-shadow">
@@ -278,6 +314,8 @@ export default function MyPlaylistsPage() {
           </Link>
         </Button>
       </div>
+        </div>
+      </section>
     </div>
   );
 }

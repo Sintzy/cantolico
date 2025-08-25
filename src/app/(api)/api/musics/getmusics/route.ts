@@ -1,8 +1,21 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma"; 
 import { logGeneral, logErrors } from "@/lib/logs";
+import { protectApiRoute, applySecurityHeaders } from "@/lib/api-protection";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Verifica se a requisição vem de uma origem autorizada
+  const unauthorizedResponse = protectApiRoute(request);
+  if (unauthorizedResponse) {
+    await logGeneral('WARN', 'Tentativa de acesso não autorizado à API', 'Acesso negado por origem inválida', {
+      action: 'unauthorized_api_access',
+      origin: request.headers.get('origin'),
+      referer: request.headers.get('referer'),
+      userAgent: request.headers.get('user-agent'),
+      ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+    });
+    return unauthorizedResponse;
+  }
   try {
     await logGeneral('INFO', 'Busca de músicas iniciada', 'Utilizador a consultar lista de músicas', {
       action: 'fetch_musics_attempt'
@@ -50,13 +63,15 @@ export async function GET() {
       musicCount: songs.length
     });
 
-    return NextResponse.json(songs);
+    const response = NextResponse.json(songs);
+    return applySecurityHeaders(response, request);
   } catch (error) {
     await logErrors('ERROR', 'Erro ao buscar músicas', 'Falha na consulta de músicas', {
       error: error instanceof Error ? error.message : 'Erro desconhecido',
       action: 'fetch_musics_error'
     });
     console.error("[GET_MUSICS]", error);
-    return NextResponse.json({ error: "Erro ao buscar músicas." }, { status: 500 });
+    const response = NextResponse.json({ error: "Erro ao buscar músicas." }, { status: 500 });
+    return applySecurityHeaders(response, request);
   }
 }

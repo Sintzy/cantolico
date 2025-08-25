@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { BannerPage } from '@prisma/client';
+import { protectApiRoute, applySecurityHeaders } from '@/lib/api-protection';
 
 // GET - Buscar banners ativos para uma página específica
 export async function GET(request: NextRequest) {
+  // Verifica se a requisição vem de uma origem autorizada
+  const unauthorizedResponse = protectApiRoute(request);
+  if (unauthorizedResponse) {
+    return unauthorizedResponse;
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const pageParam = searchParams.get('page') || 'ALL';
@@ -50,9 +57,11 @@ export async function GET(request: NextRequest) {
       ]
     });
 
-    return NextResponse.json(banners);
+    const response = NextResponse.json(banners);
+    return applySecurityHeaders(response);
   } catch (error) {
     console.error('Erro ao buscar banners ativos:', error);
-    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
+    const response = NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
+    return applySecurityHeaders(response);
   }
 }

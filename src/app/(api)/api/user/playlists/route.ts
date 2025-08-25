@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { withAuthApiProtection } from '@/lib/api-middleware'
 
-export async function GET(request: NextRequest) {
+export const GET = withAuthApiProtection(async (request: NextRequest) => {
   try {
     const session = await getServerSession(authOptions)
     
@@ -41,4 +42,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+});

@@ -1,9 +1,22 @@
 import { prisma } from "@/lib/prisma";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { logGeneral, logErrors } from "@/lib/logs";
 import { findSongBySlug } from "@/lib/slugs";
+import { protectApiRoute, applySecurityHeaders } from "@/lib/api-protection";
 
-export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  // Verifica se a requisição vem de uma origem autorizada
+  const unauthorizedResponse = protectApiRoute(req);
+  if (unauthorizedResponse) {
+    await logGeneral('WARN', 'Tentativa de acesso não autorizado à API', 'Acesso negado por origem inválida', {
+      action: 'unauthorized_api_access',
+      origin: req.headers.get('origin'),
+      referer: req.headers.get('referer'),
+      endpoint: '/api/musics/[id]'
+    });
+    return unauthorizedResponse;
+  }
+
   const resolvedParams = await params;
   const { id } = resolvedParams;
 
@@ -37,7 +50,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         musicId: id,
         action: 'music_not_found'
       });
-      return NextResponse.json({ error: "Música não encontrada" }, { status: 404 });
+      const response = NextResponse.json({ error: "Música não encontrada" }, { status: 404 });
+      return applySecurityHeaders(response);
     }
 
     await logGeneral('SUCCESS', 'Música carregada com sucesso', 'Dados da música enviados ao utilizador', {
@@ -46,7 +60,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       action: 'music_loaded'
     });
 
-    return NextResponse.json(song);
+    const response = NextResponse.json(song);
+    return applySecurityHeaders(response);
   } catch (error) {
     await logErrors('ERROR', 'Erro ao carregar música', 'Falha na consulta de música individual', {
       musicId: id,
@@ -54,6 +69,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       action: 'fetch_single_music_error'
     });
     console.error("[GET_MUSIC_BY_ID]", error);
-    return NextResponse.json({ error: "Erro ao carregar música" }, { status: 500 });
+    const response = NextResponse.json({ error: "Erro ao carregar música" }, { status: 500 });
+    return applySecurityHeaders(response);
   }
 }

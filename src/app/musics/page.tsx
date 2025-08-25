@@ -126,86 +126,76 @@ export default function MusicsPage() {
   );
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-white">
       {/* Banners */}
       <BannerDisplay page="MUSICS" />
       
-      {/* Header */}
-      <section className="bg-white border-b shadow-sm">
-        <div className="max-w-6xl mx-auto px-6 py-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-4xl font-bold text-gray-900 flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Music className="h-8 w-8 text-blue-600" />
+      {/* Hero Section com estilo da landing page */}
+      <section className="relative bg-gradient-to-br from-blue-50 via-white to-purple-50">
+        {/* Background decoration */}
+        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+          <div className="absolute left-1/2 top-0 -translate-x-1/2">
+            <div className="h-60 w-60 rounded-full bg-gradient-to-tr from-blue-500/20 to-purple-500/20 blur-[80px]" />
+          </div>
+        </div>
+        
+        <div className="max-w-6xl mx-auto px-6 py-8 md:py-12 relative z-10">
+          <div className="text-center mb-8 md:mb-12">
+            {/* Decorative border */}
+            <div className="mb-4 border-y [border-image:linear-gradient(to_right,transparent,theme(colors.slate.300/.8),transparent)1]">
+              <div className="-mx-0.5 flex justify-center -space-x-2 py-2">
+                <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                  <Music className="text-white text-xs w-3 h-3" />
                 </div>
-                Músicas
-              </h1>
-              <p className="text-muted-foreground mt-2 text-lg">
-                Explora o nosso cancioneiro com filtros e pesquisa avançada.
-              </p>
+                <div className="w-6 h-6 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center">
+                  <Search className="text-white text-xs w-3 h-3" />
+                </div>
+                <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                  <Filter className="text-white text-xs w-3 h-3" />
+                </div>
+              </div>
             </div>
             
-            {/* View Toggle */}
-            <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
-              <Button
-                variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('grid')}
-                className="h-8 w-8 p-0"
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-                className="h-8 w-8 p-0"
-              >
-                <List className="h-4 w-4" />
-              </Button>
-            </div>
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 border-y [border-image:linear-gradient(to_right,transparent,theme(colors.slate.300/.8),transparent)1] leading-tight">
+              Biblioteca de Cânticos
+            </h1>
+            <p className="text-lg text-gray-700 max-w-2xl mx-auto">
+              Explora o nosso cancioneiro com filtros e pesquisa avançada.
+            </p>
           </div>
         </div>
       </section>
-
-      {/* Filters */}
-      <section className="bg-white border-b">
-        <div className="max-w-6xl mx-auto px-6 py-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Filter className="h-5 w-5" />
-                Filtros de Pesquisa
-              </CardTitle>
-              <CardDescription>
-                Usa os filtros abaixo para encontrar exatamente o que procuras
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-4 gap-4">
+      
+      {/* Main Content */}
+      <section className="bg-gray-50 py-8">
+        <div className="max-w-6xl mx-auto px-6">
+          {/* Filters - Redesigned */}
+          <Card className="mb-8 border-0 shadow-lg backdrop-blur-sm bg-white/95">
+            <CardContent className="p-6">
+              <div className="grid lg:grid-cols-4 md:grid-cols-2 gap-4">
+                {/* Search */}
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2 text-sm font-medium">
-                    <Search className="h-4 w-4" /> Pesquisar título
-                  </Label>
-                  <Input
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Ex: Deus está aqui"
-                    className="h-10"
-                  />
+                  <Label className="text-sm font-medium text-gray-700">Pesquisar</Label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Nome do cântico..."
+                      className="pl-10 h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                    />
+                  </div>
                 </div>
 
+                {/* Momento */}
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2 text-sm font-medium">
-                    <Filter className="h-4 w-4" /> Momento litúrgico
-                  </Label>
+                  <Label className="text-sm font-medium text-gray-700">Momento Litúrgico</Label>
                   <Select
                     onValueChange={(v) => setSelectedMoment(v === 'ALL' ? null : v)}
                     value={selectedMoment ?? 'ALL'}
                   >
-                    <SelectTrigger className="h-10">
-                      <SelectValue placeholder="Todos" />
+                    <SelectTrigger className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500">
+                      <SelectValue placeholder="Todos os momentos" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ALL">Todos os momentos</SelectItem>
@@ -218,43 +208,56 @@ export default function MusicsPage() {
                   </Select>
                 </div>
 
+                {/* Tags */}
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2 text-sm font-medium">
-                    <Tags className="h-4 w-4" /> Tags
-                  </Label>
-                  <Input
-                    value={tagFilter}
-                    onChange={(e) => setTagFilter(e.target.value)}
-                    placeholder="Ex: mariana"
-                    className="h-10"
-                  />
+                  <Label className="text-sm font-medium text-gray-700">Tags</Label>
+                  <div className="relative">
+                    <Tags className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      value={tagFilter}
+                      onChange={(e) => setTagFilter(e.target.value)}
+                      placeholder="Ex: mariana, juvenil..."
+                      className="pl-10 h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                    />
+                  </div>
                 </div>
 
+                {/* View and Sort */}
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2 text-sm font-medium">
-                    <ArrowDownAZ className="h-4 w-4" /> Ordenação
-                  </Label>
-                  <Select
-                    onValueChange={(v: 'asc' | 'desc') => setSortOrder(v)}
-                    value={sortOrder}
-                  >
-                    <SelectTrigger className="h-10">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="asc">A → Z</SelectItem>
-                      <SelectItem value="desc">Z → A</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label className="text-sm font-medium text-gray-700">Vista</Label>
+                  <div className="flex gap-2">
+                    <div className="flex bg-gray-100 rounded-lg p-1 flex-1">
+                      <Button
+                        variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => setViewMode('grid')}
+                        className="flex-1 h-9"
+                      >
+                        <LayoutGrid className="h-4 w-4 mr-2" />
+                        Grelha
+                      </Button>
+                      <Button
+                        variant={viewMode === 'list' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => setViewMode('list')}
+                        className="flex-1 h-9"
+                      >
+                        <List className="h-4 w-4 mr-2" />
+                        Lista
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
               
-              {/* Results Counter */}
-              <Separator className="my-4" />
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <span>
-                  {loading ? 'A carregar...' : `${filteredSongs.length} músicas encontradas`}
-                </span>
+              {/* Results and Clear */}
+              <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-100">
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Music className="h-4 w-4" />
+                  <span className="font-medium">
+                    {loading ? 'A carregar...' : `${filteredSongs.length} cânticos encontrados`}
+                  </span>
+                </div>
                 {(searchTerm || selectedMoment || tagFilter) && (
                   <Button
                     variant="outline"
@@ -264,6 +267,7 @@ export default function MusicsPage() {
                       setSelectedMoment(null);
                       setTagFilter('');
                     }}
+                    className="text-gray-600 border-gray-300 hover:bg-gray-50"
                   >
                     Limpar filtros
                   </Button>
@@ -275,63 +279,72 @@ export default function MusicsPage() {
       </section>
 
       {/* Content */}
-      <section className="py-8">
+      <section className="bg-white py-8">
         <div className="max-w-6xl mx-auto px-6">
           {loading ? (
             <MusicListSkeleton />
           ) : paginatedSongs.length === 0 ? (
-            <Card className="text-center py-12">
+            <Card className="text-center py-16 border-0 shadow-lg">
               <CardContent>
-                <Music className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                <CardTitle className="mb-2">Nenhuma música encontrada</CardTitle>
-                <CardDescription>
-                  Tenta ajustar os filtros ou procurar por outros termos.
+                <div className="w-20 h-20 bg-gradient-to-tr from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Music className="h-10 w-10 text-gray-400" />
+                </div>
+                <CardTitle className="text-xl mb-3 text-gray-900">Nenhum cântico encontrado</CardTitle>
+                <CardDescription className="text-gray-600 max-w-md mx-auto">
+                  Tenta ajustar os filtros ou procurar por outros termos. 
+                  Todos os cânticos estão organizados por momentos litúrgicos.
                 </CardDescription>
               </CardContent>
             </Card>
           ) : (
             <>
-              {/* Grid View */}
+              {/* Grid View - Redesigned */}
               {viewMode === 'grid' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {paginatedSongs.map((song) => (
                     <Card
                       key={song.id}
-                      className="hover:shadow-lg transition-shadow cursor-pointer border-0 shadow-sm"
+                      className="group hover:shadow-xl transition-all duration-300 border-0 shadow-md hover:-translate-y-1 bg-gradient-to-br from-white to-gray-50"
                     >
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-lg line-clamp-2">
-                          <Link
-                            href={`/musics/${song.slug || song.id}`}
-                            className="hover:text-blue-600 transition-colors"
-                          >
-                            {song.title}
-                          </Link>
-                        </CardTitle>
-                        <CardDescription className="flex items-center gap-2">
-                          <Music className="h-4 w-4" />
-                          {song.mainInstrument}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        {/* Momentos Litúrgicos */}
-                        <div className="space-y-2">
-                          <Label className="text-xs font-medium text-muted-foreground">
-                            MOMENTOS LITÚRGICOS
-                          </Label>
-                          <div className="flex flex-wrap gap-1">
-                            {song.moments.slice(0, 3).map((moment, momentIndex) => (
+                      <CardContent className="p-6">
+                        {/* Header com ícone */}
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="p-3 bg-gradient-to-tr from-blue-500 to-purple-600 rounded-xl text-white shadow-lg group-hover:shadow-xl transition-shadow">
+                            <Music className="h-6 w-6" />
+                          </div>
+                          <div className="flex gap-1">
+                            <StarButton songId={song.id} size="sm" />
+                            <AddToPlaylistButton songId={song.id} size="sm" />
+                          </div>
+                        </div>
+
+                        {/* Título */}
+                        <div className="mb-4">
+                          <h3 className="text-lg font-bold text-gray-900 line-clamp-2 mb-2 group-hover:text-blue-600 transition-colors">
+                            <Link href={`/musics/${song.slug || song.id}`}>
+                              {song.title}
+                            </Link>
+                          </h3>
+                          <p className="text-sm text-gray-600 flex items-center gap-2">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            {song.mainInstrument}
+                          </p>
+                        </div>
+
+                        {/* Momentos */}
+                        <div className="mb-4">
+                          <div className="flex flex-wrap gap-2">
+                            {song.moments.slice(0, 2).map((moment, momentIndex) => (
                               <Badge 
                                 key={`${song.id}-moment-${momentIndex}`} 
-                                variant="outline"
-                                className="text-xs"
+                                className="bg-blue-50 text-blue-700 border-blue-200 text-xs font-medium px-2 py-1"
                               >
                                 {moment.replaceAll('_', ' ')}
                               </Badge>
                             ))}
-                            {song.moments.length > 3 && (
-                              <Badge variant="outline" className="text-xs">
-                                +{song.moments.length - 3}
+                            {song.moments.length > 2 && (
+                              <Badge className="bg-gray-100 text-gray-600 text-xs">
+                                +{song.moments.length - 2}
                               </Badge>
                             )}
                           </div>
@@ -339,105 +352,109 @@ export default function MusicsPage() {
 
                         {/* Tags */}
                         {song.tags.length > 0 && (
-                          <div className="space-y-2">
-                            <Label className="text-xs font-medium text-muted-foreground">
-                              TAGS
-                            </Label>
+                          <div className="mb-6">
                             <div className="flex flex-wrap gap-1">
                               {song.tags.slice(0, 3).map((tag, tagIndex) => (
-                                <Badge 
+                                <span 
                                   key={`${song.id}-tag-${tagIndex}`} 
-                                  className="bg-blue-100 text-blue-800 text-xs"
+                                  className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-50 text-purple-700"
                                 >
                                   #{tag}
-                                </Badge>
+                                </span>
                               ))}
                               {song.tags.length > 3 && (
-                                <Badge className="bg-blue-100 text-blue-800 text-xs">
+                                <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600">
                                   +{song.tags.length - 3}
-                                </Badge>
+                                </span>
                               )}
                             </div>
                           </div>
                         )}
                         
-                        <Separator />
-                        
-                        {/* Botões de ação */}
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <StarButton songId={song.id} size="sm" />
-                            <AddToPlaylistButton songId={song.id} size="sm" />
-                          </div>
-                          <Button variant="outline" size="sm" asChild>
-                            <Link href={`/musics/${song.slug || song.id}`}>
-                              Ver detalhes
-                            </Link>
-                          </Button>
-                        </div>
+                        {/* Action Button */}
+                        <Button 
+                          asChild 
+                          className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-0 shadow-md hover:shadow-lg transition-all"
+                        >
+                          <Link href={`/musics/${song.slug || song.id}`}>
+                            Ver Cântico
+                          </Link>
+                        </Button>
                       </CardContent>
                     </Card>
                   ))}
                 </div>
               )}
 
-              {/* List View */}
+              {/* List View - Redesigned */}
               {viewMode === 'list' && (
                 <div className="space-y-4">
                   {paginatedSongs.map((song) => (
                     <Card
                       key={song.id}
-                      className="hover:shadow-md transition-shadow border-0 shadow-sm"
+                      className="group hover:shadow-lg transition-all duration-300 border-0 shadow-sm hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50"
                     >
                       <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-6">
+                          {/* Icon */}
+                          <div className="p-4 bg-gradient-to-tr from-blue-500 to-purple-600 rounded-xl text-white shadow-md group-hover:shadow-lg transition-shadow flex-shrink-0">
+                            <Music className="h-6 w-6" />
+                          </div>
+                          
+                          {/* Content */}
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-4">
-                              <div className="p-3 bg-blue-100 rounded-lg">
-                                <Music className="h-6 w-6 text-blue-600" />
-                              </div>
+                            <div className="flex items-start justify-between">
                               <div className="min-w-0 flex-1">
-                                <h3 className="text-lg font-semibold truncate">
-                                  <Link
-                                    href={`/musics/${song.slug || song.id}`}
-                                    className="hover:text-blue-600 transition-colors"
-                                  >
+                                <h3 className="text-xl font-bold text-gray-900 truncate mb-1 group-hover:text-blue-600 transition-colors">
+                                  <Link href={`/musics/${song.slug || song.id}`}>
                                     {song.title}
                                   </Link>
                                 </h3>
-                                <p className="text-sm text-muted-foreground">
+                                <p className="text-sm text-gray-600 mb-3 flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                                   {song.mainInstrument}
                                 </p>
-                                <div className="flex flex-wrap gap-1 mt-2">
-                                  {song.moments.slice(0, 4).map((moment, momentIndex) => (
+                                
+                                {/* Tags and Moments */}
+                                <div className="flex flex-wrap gap-2">
+                                  {song.moments.slice(0, 3).map((moment, momentIndex) => (
                                     <Badge 
                                       key={`${song.id}-moment-${momentIndex}`} 
-                                      variant="outline"
-                                      className="text-xs"
+                                      className="bg-blue-50 text-blue-700 border-blue-200 text-xs"
                                     >
                                       {moment.replaceAll('_', ' ')}
                                     </Badge>
                                   ))}
-                                  {song.tags.slice(0, 3).map((tag, tagIndex) => (
-                                    <Badge 
+                                  {song.tags.slice(0, 2).map((tag, tagIndex) => (
+                                    <span 
                                       key={`${song.id}-tag-${tagIndex}`} 
-                                      className="bg-blue-100 text-blue-800 text-xs"
+                                      className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-50 text-purple-700"
                                     >
                                       #{tag}
-                                    </Badge>
+                                    </span>
                                   ))}
+                                  {(song.moments.length > 3 || song.tags.length > 2) && (
+                                    <Badge className="bg-gray-100 text-gray-600 text-xs">
+                                      +{(song.moments.length > 3 ? song.moments.length - 3 : 0) + (song.tags.length > 2 ? song.tags.length - 2 : 0)}
+                                    </Badge>
+                                  )}
                                 </div>
                               </div>
+                              
+                              {/* Actions */}
+                              <div className="flex items-center gap-3 ml-6 flex-shrink-0">
+                                <StarButton songId={song.id} size="sm" />
+                                <AddToPlaylistButton songId={song.id} size="sm" />
+                                <Button 
+                                  asChild 
+                                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                                >
+                                  <Link href={`/musics/${song.slug || song.id}`}>
+                                    Ver Cântico
+                                  </Link>
+                                </Button>
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex items-center gap-2 ml-4">
-                            <StarButton songId={song.id} size="sm" />
-                            <AddToPlaylistButton songId={song.id} size="sm" />
-                            <Button variant="outline" size="sm" asChild>
-                              <Link href={`/musics/${song.slug || song.id}`}>
-                                Ver
-                              </Link>
-                            </Button>
                           </div>
                         </div>
                       </CardContent>
@@ -446,65 +463,74 @@ export default function MusicsPage() {
                 </div>
               )}
 
-              {/* Paginação */}
-              <Card className="mt-8">
-                <CardContent className="p-4">
-                  <div className="flex justify-center items-center gap-2 flex-wrap">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                      disabled={currentPage === 1}
-                      className="flex items-center gap-2"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      Anterior
-                    </Button>
-                    
-                    <div className="flex gap-1">
-                      {[...Array(Math.min(totalPages, 5))].map((_, i) => {
-                        let page;
-                        if (totalPages <= 5) {
-                          page = i + 1;
-                        } else if (currentPage <= 3) {
-                          page = i + 1;
-                        } else if (currentPage >= totalPages - 2) {
-                          page = totalPages - 4 + i;
-                        } else {
-                          page = currentPage - 2 + i;
-                        }
+              {/* Paginação - Redesigned */}
+              {totalPages > 1 && (
+                <div className="mt-12 flex justify-center">
+                  <Card className="border-0 shadow-lg backdrop-blur-sm bg-white/95">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                          disabled={currentPage === 1}
+                          className="border-gray-300 hover:bg-blue-50 hover:border-blue-300"
+                        >
+                          <ChevronLeft className="h-4 w-4 mr-1" />
+                          Anterior
+                        </Button>
                         
-                        return (
-                          <Button
-                            key={page}
-                            size="sm"
-                            variant={page === currentPage ? 'default' : 'outline'}
-                            onClick={() => setCurrentPage(page)}
-                            className="w-8 h-8 p-0"
-                          >
-                            {page}
-                          </Button>
-                        );
-                      })}
-                    </div>
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                      disabled={currentPage === totalPages}
-                      className="flex items-center gap-2"
-                    >
-                      Seguinte
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  
-                  <div className="text-center text-sm text-muted-foreground mt-3">
-                    Página {currentPage} de {totalPages} • {filteredSongs.length} músicas no total
-                  </div>
-                </CardContent>
-              </Card>
+                        <div className="flex gap-1 mx-2">
+                          {[...Array(Math.min(totalPages, 5))].map((_, i) => {
+                            let page;
+                            if (totalPages <= 5) {
+                              page = i + 1;
+                            } else if (currentPage <= 3) {
+                              page = i + 1;
+                            } else if (currentPage >= totalPages - 2) {
+                              page = totalPages - 4 + i;
+                            } else {
+                              page = currentPage - 2 + i;
+                            }
+                            
+                            return (
+                              <Button
+                                key={page}
+                                size="sm"
+                                variant={page === currentPage ? 'default' : 'outline'}
+                                onClick={() => setCurrentPage(page)}
+                                className={`w-10 h-10 p-0 ${
+                                  page === currentPage 
+                                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 border-0 text-white' 
+                                    : 'border-gray-300 hover:bg-blue-50 hover:border-blue-300'
+                                }`}
+                              >
+                                {page}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                          disabled={currentPage === totalPages}
+                          className="border-gray-300 hover:bg-blue-50 hover:border-blue-300"
+                        >
+                          Seguinte
+                          <ChevronRight className="h-4 w-4 ml-1" />
+                        </Button>
+                      </div>
+                      
+                      <div className="text-center text-sm text-gray-500 mt-3 px-2">
+                        Página <span className="font-medium text-gray-700">{currentPage}</span> de <span className="font-medium text-gray-700">{totalPages}</span> • 
+                        <span className="font-medium text-gray-700"> {filteredSongs.length}</span> cânticos no total
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
             </>
           )}
         </div>

@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { protectApiRoute, applySecurityHeaders } from '@/lib/api-protection'
 
 export async function GET(request: NextRequest) {
+  // Verifica se a requisição vem de uma origem autorizada
+  const unauthorizedResponse = protectApiRoute(request);
+  if (unauthorizedResponse) {
+    return unauthorizedResponse;
+  }
+
   try {
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
@@ -40,7 +47,7 @@ export async function GET(request: NextRequest) {
       })
     ])
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       playlists,
       pagination: {
         page,
@@ -48,12 +55,14 @@ export async function GET(request: NextRequest) {
         total,
         pages: Math.ceil(total / limit)
       }
-    })
+    });
+    return applySecurityHeaders(response);
   } catch (error) {
     console.error('Erro ao buscar playlists públicas:', error)
-    return NextResponse.json(
+    const response = NextResponse.json(
       { error: 'Erro interno do servidor' },
       { status: 500 }
-    )
+    );
+    return applySecurityHeaders(response);
   }
 }

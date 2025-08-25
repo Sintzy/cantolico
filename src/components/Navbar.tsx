@@ -436,7 +436,7 @@ export default function Navbar() {
 
             {/* Mobile Sidebar Overlay */}
             {mobileMenuOpen && (
-                <div className="fixed inset-0 z-50 lg:hidden">
+                <div className="fixed inset-0 z-[60] lg:hidden">
                     {/* Backdrop */}
                     <div 
                         className="fixed inset-0 bg-black/50 backdrop-blur-sm"
