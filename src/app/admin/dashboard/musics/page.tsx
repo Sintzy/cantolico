@@ -454,7 +454,7 @@ export default function MusicsManagement() {
                           Detalhes
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                      <DialogContent className="w-full max-w-5xl max-h-[80vh] overflow-y-auto">
                         <DialogHeader>
                           <DialogTitle className="flex items-center gap-2">
                             <Music className="h-5 w-5" />
@@ -571,6 +571,7 @@ export default function MusicsManagement() {
                     <Button
                       variant="destructive"
                       size="sm"
+                      className="bg-red-600 hover:bg-red-700 text-white"
                       onClick={() => {
                         setSongToDelete(song);
                         setShowDeleteDialog(true);

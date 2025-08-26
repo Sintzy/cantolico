@@ -1,46 +1,22 @@
 'use client';
+import "../../../../public/styles/chords.css";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { Guitar, ChevronDown, FileText, Music, Youtube } from 'lucide-react';
+import YouTube from 'react-youtube';
 
-import { useEffect, useState, useMemo } from 'react';
+
+import * as React from "react";
 import { useParams } from 'next/navigation';
-import MarkdownIt from 'markdown-it';
-import chords from 'markdown-it-chords';
-import { processChordHtml } from '@/lib/chord-processor';
+import { supabase } from '@/lib/supabase';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { supabase } from '@/lib/supabase';
-import YouTube from 'react-youtube';
-import { 
-  ChevronDown, 
-  Guitar, 
-  Download, 
-  Play, 
-  User, 
-  Calendar,
-  Tag,
-  Clock,
-  Music,
-  FileText,
-  Youtube,
-  Volume2,
-  Settings,
-  Eye
-} from 'lucide-react';
 import StarButton from '@/components/StarButton';
 import AddToPlaylistButton from '@/components/AddToPlaylistButton';
-import "../../../../public/styles/chords.css";
+import { Download } from 'lucide-react';
 
-const mdParser = new MarkdownIt({ breaks: true }).use(chords);
+
+
 
 type SongData = {
   id: string;
@@ -92,14 +68,14 @@ function transposeMarkdownChords(text: string, interval: number): string {
 
 export default function SongPage() {
   const { id } = useParams();
-  const [song, setSong] = useState<SongData | null>(null);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [transposition, setTransposition] = useState<number>(0);
-  const [showChords, setShowChords] = useState<boolean>(true);
-  const [loading, setLoading] = useState(true);
+  const [song, setSong] = React.useState<SongData | null>(null);
+  const [pdfUrl, setPdfUrl] = React.useState<string | null>(null);
+  const [audioUrl, setAudioUrl] = React.useState<string | null>(null);
+  const [transposition, setTransposition] = React.useState<number>(0);
+  const [showChords, setShowChords] = React.useState<boolean>(true);
+  const [loading, setLoading] = React.useState(true);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const fetchSong = async () => {
       try {
         setLoading(true);
@@ -234,7 +210,7 @@ export default function SongPage() {
     return result.join('\n');
   };
 
-  const renderedHtml = useMemo(() => {
+  const renderedHtml = React.useMemo(() => {
     if (!song?.currentVersion?.sourceText) return '';
     
     // Remove a tag #mic# do texto para processamento se presente
@@ -344,7 +320,7 @@ export default function SongPage() {
     return { leftColumn, rightColumn };
   };
 
-  const { leftColumn, rightColumn } = useMemo(() => {
+  const { leftColumn, rightColumn } = React.useMemo(() => {
     return splitContentIntoColumns(renderedHtml);
   }, [renderedHtml]);
   
@@ -368,219 +344,190 @@ export default function SongPage() {
     }
   };
 
+
   return (
-    <div className="w-full">
-      {/* Banner */}
-      <div
-        className="relative h-72 bg-cover bg-center"
-        style={{ backgroundImage: "url('/banner.jpg')" }}
-      >
-        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-5xl text-white font-bold uppercase tracking-wide mb-4">
-              {title}
-            </h1>
-            
-            {/* Botões de ação */}
-            <div className="flex items-center justify-center gap-3">
-              <StarButton 
-                songId={id as string} 
-                className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
-              />
-              <AddToPlaylistButton 
-                songId={id as string}
-                className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
-              />
-            </div>
+    <div className="relative w-full min-h-screen bg-gradient-to-br from-sky-50 to-blue-100">
+      {/* Hero Section with blurred background and overlay */}
+      <div className="relative h-64 md:h-80 w-full flex items-center justify-center overflow-hidden">
+        <div className="absolute inset-0">
+          <img src="/banner.jpg" alt="Banner" className="w-full h-full object-cover object-center scale-110 blur-sm brightness-75" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/60 to-transparent" />
+        </div>
+        <div className="relative z-10 flex flex-col items-center justify-center w-full">
+          <h1 className="text-3xl md:text-5xl font-extrabold text-white drop-shadow-lg tracking-tight text-center mb-2 md:mb-4">
+            {title}
+          </h1>
+          <div className="flex flex-wrap gap-2 justify-center mb-2">
+            {moments.map((m: string, i: number) => (
+              <Badge key={i} className="bg-white/80 text-blue-900 font-semibold px-3 py-1 text-xs shadow-sm">
+                {m.replaceAll('_', ' ')}
+              </Badge>
+            ))}
+          </div>
+          <div className="flex gap-3 justify-center mt-2">
+            <StarButton songId={id as string} className="bg-white/20 hover:bg-white/40 text-white border-white/30 shadow" />
+            <AddToPlaylistButton songId={id as string} className="bg-white/20 hover:bg-white/40 text-white border-white/30 shadow" />
+            {pdfUrl && (
+              <Button asChild variant="ghost" className="text-white hover:bg-white/20 border-white/30 shadow">
+                <a href={pdfUrl} target="_blank" rel="noopener noreferrer"><Download className="h-4 w-4 mr-1" /> PDF</a>
+              </Button>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Conteúdo */}
-      <div className="max-w-7xl mx-auto px-6 md:px-10 py-10 md:py-16 flex flex-col md:flex-row gap-12">
-        {/* Coluna esquerda (controlos) */}
-        <aside className="w-full md:w-72 space-y-10">
-          {/* Controlos de transposição */}
-          <div className="space-y-3">
-            <SidebarTitle>Controlos de transposição</SidebarTitle>
+      {/* Floating Action Bar (mobile) */}
+      <div className="fixed bottom-0 left-0 right-0 z-30 md:hidden bg-white/90 backdrop-blur border-t border-blue-100 flex justify-around py-2 shadow-lg">
+        <StarButton songId={id as string} className="text-blue-700" />
+        <AddToPlaylistButton songId={id as string} className="text-blue-700" />
+        {pdfUrl && (
+          <Button asChild variant="ghost" className="text-blue-700">
+            <a href={pdfUrl} target="_blank" rel="noopener noreferrer"><Download className="h-5 w-5" /></a>
+          </Button>
+        )}
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-14 flex flex-col md:flex-row gap-10 md:gap-16">
+        {/* Sidebar Controls */}
+        <aside className="w-full md:w-80 flex-shrink-0 space-y-8 md:sticky md:top-24">
+          {/* Transpose Controls */}
+          <div className="bg-white/80 rounded-xl shadow p-5 flex flex-col gap-3 border border-blue-100">
+            <SidebarTitle>Transpor Tom</SidebarTitle>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-8"
-                onClick={() => setTransposition(transposition - 1)}
-              >
-                -
-              </Button>
-              <span className="text-sm font-medium flex-1 text-center">
+              <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => setTransposition(transposition - 1)}>-</Button>
+              <span className="text-lg font-bold flex-1 text-center select-none">
                 {transposition >= 0 ? `+${transposition}` : transposition}
               </span>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-8"
-                onClick={() => setTransposition(transposition + 1)}
-              >
-                +
-              </Button>
+              <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => setTransposition(transposition + 1)}>+</Button>
             </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="gap-2 mt-2 w-full">
+                  <Guitar className="h-4 w-4" />
+                  {showChords ? 'Com acordes' : 'Sem acordes'}
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-40">
+                <DropdownMenuLabel>Visualização</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => setShowChords(true)}>
+                  Com acordes
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowChords(false)}>
+                  Sem acordes
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
-          {/* Momentos */}
-          <div className="space-y-3">
-            <SidebarTitle>Momentos</SidebarTitle>
-            <div className="space-y-2">
-              {moments.map((m, momentIndex) => (
-                <div
-                  key={`music-${id}-moment-${momentIndex}`}
-                  className="border rounded px-3 py-2 text-sm flex justify-between items-center"
-                >
-                  <span>{m.replaceAll('_', ' ')}</span>
-                  <span className="text-muted-foreground">›</span>
-                </div>
-              ))}
+          {/* Song Info */}
+          <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100 space-y-3">
+            <SidebarTitle>Informações</SidebarTitle>
+            <div className="flex items-center gap-2 text-sm text-blue-900/80">
+              <FileText className="h-4 w-4 mr-1" />
+              <span className="font-medium">Autor(a):</span> {currentVersion?.createdBy?.name || 'Desconhecido'}
+            </div>
+            <div className="flex items-center gap-2 text-sm text-blue-900/80">
+              <Music className="h-4 w-4 mr-1" />
+              <span className="font-medium">Instrumento:</span> {mainInstrument}
             </div>
           </div>
-
-          {/* Informações */}
-          <section className="space-y-3">
-            <SidebarTitle>Informações da música</SidebarTitle>
-
-            <p className="text-sm">
-              <strong>Autor(a):</strong> {currentVersion?.createdBy?.name || 'Desconhecido'}
-            </p>
-            <p className="text-sm">
-              <strong>Instrumento principal:</strong> {mainInstrument}
-            </p>
-          </section>
 
           {/* Tags */}
           {tags?.length > 0 && (
-            <section className="space-y-2">
+            <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100">
               <SidebarTitle>Tags</SidebarTitle>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-2 mt-2">
                 {tags.map((t, tagIndex) => (
-                  <Badge key={`music-${id}-tag-${tagIndex}`} className="bg-blue-100 text-blue-800">
+                  <Badge key={tagIndex} className="bg-blue-100 text-blue-800 font-semibold px-3 py-1 text-xs">
                     {t}
                   </Badge>
                 ))}
               </div>
-            </section>
+            </div>
           )}
 
-          {/* Download rápido */}
+          {/* Download PDF */}
           {pdfUrl && (
-            <div className="space-y-3">
-              <SidebarTitle>Download</SidebarTitle>
-              <Button className="w-full" asChild>
-                <a href={`/musics/${id}/pdf`} target="_blank" rel="noopener noreferrer">
-                  <Guitar className="h-4 w-4 mr-2" /> Download PDF com Acordes
+            <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100">
+              <SidebarTitle>PDF</SidebarTitle>
+              <Button asChild className="w-full" variant="outline">
+                <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
+                  <Download className="h-4 w-4 mr-2" /> Baixar PDF
                 </a>
               </Button>
             </div>
           )}
         </aside>
 
-        {/* Coluna direita (letra e conteúdo principal) */}
-        <div className="flex-1 space-y-10 leading-relaxed">
-          {/* Letra */}
+        {/* Main Song Content */}
+        <main className="flex-1 min-w-0 space-y-10">
+          {/* Lyrics Section */}
           {currentVersion?.sourceText && (
-            <section className="space-y-4">
-              <div className="flex items-center justify-between">
+            <section className="bg-white/90 rounded-2xl shadow-lg p-6 md:p-10 border border-blue-100">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-6">
                 <SectionTitle>Letra</SectionTitle>
-
-                {/* Opções (Com / Sem acordes) */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="gap-2 h-8">
-                      <Guitar className="h-4 w-4" />
-                      {showChords ? 'Com acordes' : 'Sem acordes'}
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-40">
-                    <DropdownMenuLabel>Opções</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => setShowChords(false)}>
-                      Sem acordes
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setShowChords(true)}>
-                      Com acordes
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="flex flex-wrap gap-2 mt-2 md:mt-0">
+                  {moments.map((m, i) => (
+                    <Badge key={i} className="bg-blue-50 text-blue-700 font-semibold px-3 py-1 text-xs">
+                      {m.replaceAll('_', ' ')}
+                    </Badge>
+                  ))}
+                </div>
               </div>
-
-              {/* Conteúdo da música - Sistema de duas colunas para telas grandes */}
+              {/* Two columns for large screens, one for small */}
               {rightColumn ? (
-                // Duas colunas dentro da mesma caixa (apenas em telas grandes)
-                <div className="music-content-container">
-                  <div className="music-columns-container">
-                    <div className="music-column">
-                      <div dangerouslySetInnerHTML={{ __html: leftColumn }} />
-                    </div>
-                    <div className="music-column">
-                      <div dangerouslySetInnerHTML={{ __html: rightColumn }} />
-                    </div>
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div><div dangerouslySetInnerHTML={{ __html: leftColumn }} /></div>
+                  <div><div dangerouslySetInnerHTML={{ __html: rightColumn }} /></div>
                 </div>
               ) : (
-                // Uma coluna (conteúdo curto ou telas pequenas)
-                <div className="music-content-container">
-                  <div dangerouslySetInnerHTML={{ __html: leftColumn || renderedHtml }} />
-                </div>
+                <div><div dangerouslySetInnerHTML={{ __html: leftColumn || renderedHtml }} /></div>
               )}
             </section>
           )}
 
-          {/* YouTube */}
+          {/* YouTube Section */}
           {currentVersion?.youtubeLink && (
-            <section className="space-y-4">
+            <section className="bg-white/90 rounded-2xl shadow-lg p-6 md:p-10 border border-blue-100">
               <SectionTitle>YouTube</SectionTitle>
-              <YouTube videoId={getYoutubeId(currentVersion.youtubeLink)} />
+              <div className="aspect-video max-w-2xl mx-auto rounded-lg overflow-hidden shadow">
+                <YouTube videoId={getYoutubeId(currentVersion.youtubeLink)} className="w-full h-full" />
+              </div>
+              <a href={currentVersion.youtubeLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-700 mt-2 text-sm hover:underline"><Youtube className="h-4 w-4" /> Abrir no YouTube</a>
             </section>
           )}
 
-          {/* Áudio */}
+          {/* Audio Section */}
           {audioUrl && (
-          <section className="space-y-4">
+            <section className="bg-white/90 rounded-2xl shadow-lg p-6 md:p-10 border border-blue-100">
               <SectionTitle>Áudio</SectionTitle>
-              <audio controls className="w-full">
-                <source src={audioUrl} type="audio/mpeg" />
-                O seu navegador não suporta o elemento de áudio.
-              </audio>
+              <div className="flex flex-col items-center gap-2">
+                <audio controls className="w-full max-w-lg">
+                  <source src={audioUrl} type="audio/mpeg" />
+                  O seu navegador não suporta o elemento de áudio.
+                </audio>
+              </div>
             </section>
           )}
 
-          {/* PDF */}
+          {/* PDF Section */}
           {pdfUrl && (
-            <section className="space-y-4">
-              <SectionTitle>PDF Correspondente</SectionTitle>
-                <p>
-                <a 
-                  href={pdfUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="text-sm text-gray-500 hover:underline"
-                >
-                  Fazer download do PDF
-                </a>
-                </p>
-
-              <iframe
-                src={pdfUrl}
-                className="w-full h-[500px] border rounded"
-                title="Pré-visualização do PDF"
-              />
+            <section className="bg-white/90 rounded-2xl shadow-lg p-6 md:p-10 border border-blue-100">
+              <SectionTitle>Partitura PDF</SectionTitle>
+              <div className="flex flex-col gap-2">
+                <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-700 text-sm hover:underline"><Download className="h-4 w-4" /> Baixar PDF</a>
+                <iframe src={pdfUrl} className="w-full h-[400px] md:h-[500px] border rounded-lg" title="Pré-visualização do PDF" />
+              </div>
             </section>
           )}
-        </div>
-      </div>
-      
-      {/* ID da música no fundo da página */}
-      <div className="w-full text-center py-4">
-        <p className="text-xs text-gray-400">
-          ID: {song.id}
-        </p>
+
+          {/* Song ID at the bottom */}
+          <div className="w-full text-center pt-6">
+            <p className="text-xs text-gray-400">ID: {song.id}</p>
+          </div>
+        </main>
       </div>
     </div>
   );

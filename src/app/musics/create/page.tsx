@@ -3,7 +3,7 @@
 import "easymde/dist/easymde.min.css";
 import "../../../../public/styles/chords.css";
 import { v4 as randomUUID } from "uuid";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -11,14 +11,7 @@ import { TurnstileCaptcha } from "@/components/TurnstileCaptcha";
 
 import MarkdownIt from "markdown-it";
 import chords from "markdown-it-chords";
-import { 
-  processChordHtml, 
-  detectChordFormat, 
-  processChords,
-  processMixedChords,
-  processSimpleInline,
-  ChordFormat 
-} from "@/lib/chord-processor";
+// Importação dinâmica será usada no preview para garantir consistência com a página de visualização
 import { ChordGuideButton } from "@/components/ChordGuidePopup";
 
 import { Instrument, LiturgicalMoment, SongType } from "@/lib/constants";
@@ -36,11 +29,27 @@ import { FaSpotify } from "react-icons/fa";
 const SimpleMDE = dynamic(() => import("react-simplemde-editor"), { ssr: false });
 const mdParser = new MarkdownIt({ breaks: true }).use(chords);
 
+
 export default function CreateNewMusicPage() {
   const { data: session } = useSession();
   const router = useRouter();
   const editorRef = useRef<any>(null);
   const [currentStep, setCurrentStep] = useState(1);
+  // O objeto options precisa ser estável para evitar perder o foco no SimpleMDE
+  const simpleMDEOptions = useMemo(() => ({
+    spellChecker: false,
+    placeholder: "Escreva a letra da música com acordes...",
+    toolbar: [
+      "bold",
+      "italic",
+      "|",
+      "unordered-list",
+      "ordered-list",
+      "|",
+      "preview",
+      "guide"
+    ] as const,
+  }), []);
 
   const [form, setForm] = useState({
     id: randomUUID(),
@@ -62,31 +71,46 @@ export default function CreateNewMusicPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Atualiza o preview quando o texto muda
+  // Preview avançado igual ao sistema de visualização (/musics/[id])
   useEffect(() => {
     if (!form.markdown) {
       setPreview('');
       return;
     }
-    
+    // Importa dinamicamente o chord-processor igual à página de visualização
+    const {
+      detectChordFormat,
+      processChords: processAboveChords,
+      processMixedChords,
+      processSimpleInline
+    } = require('@/lib/chord-processor');
+
+    // Remove a tag #mic# do texto para processamento se presente
+    let src = form.markdown.replace(/^#mic#\s*\n?/, '').trim();
+
+    // Detecta o formato original
     const originalFormat = detectChordFormat(form.markdown);
-    let processedHtml: string;
-    let wrapperClass: string;
-    
+    let processedHtml = '';
+    let wrapperClass = '';
+
     if (originalFormat === 'inline') {
       if (/^(Intro|Ponte|Solo|Bridge|Instrumental|Interlude):?\s*$/im.test(form.markdown)) {
         processedHtml = processMixedChords(form.markdown);
         wrapperClass = 'chord-container-inline';
       } else {
-        processedHtml = processSimpleInline(form.markdown);
+        processedHtml = processSimpleInline(src);
         wrapperClass = 'chord-container-inline';
       }
     } else {
-      processedHtml = processChords(form.markdown, 'above');
+      processedHtml = processAboveChords(src, 'above');
       wrapperClass = 'chord-container-above';
     }
-    
-    const wrappedHtml = `<div class="${wrapperClass}">${processedHtml}</div>`;
-    setPreview(wrappedHtml);
+
+    if (processedHtml.trim().startsWith(`<div class=\"${wrapperClass}`)) {
+      setPreview(processedHtml);
+    } else {
+      setPreview(`<div class=\"${wrapperClass}\">${processedHtml}</div>`);
+    }
   }, [form.markdown]);
 
   useEffect(() => {
@@ -570,6 +594,7 @@ export default function CreateNewMusicPage() {
                       value={form.markdown}
                       onChange={(val) => setForm({ ...form, markdown: val })}
                       getMdeInstance={(instance) => (editorRef.current = instance)}
+                      options={simpleMDEOptions}
                     />
                   </div>
 

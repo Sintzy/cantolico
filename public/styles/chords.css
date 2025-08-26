@@ -31,13 +31,14 @@
 [class*="chord-container"] .chord .inner,
 [class*="chord-container"] .above-chord .inner,
 [class*="chord-container"] .intro-chord .inner {
-	color: var(--chord-color) !important;
+	color: #1e293b !important; /* azul escuro */
 	background: transparent !important;
 	border: none !important;
 	border-radius: 0 !important;
 	box-shadow: none !important;
 	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
-	font-weight: 600 !important;
+	font-weight: bold !important;
+	font-style: italic !important;
 	transition: none !important;
 	white-space: nowrap !important;
 	padding: 0 !important;

@@ -325,10 +325,10 @@ export default function MusicsPage() {
                               {song.title}
                             </Link>
                           </h3>
-                          <p className="text-sm text-gray-600 flex items-center gap-2">
-                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          <span className="text-sm text-gray-600 flex items-center gap-2">
+                            <span className="w-2 h-2 bg-blue-500 rounded-full inline-block"></span>
                             {song.mainInstrument}
-                          </p>
+                          </span>
                         </div>
 
                         {/* Momentos */}
@@ -410,10 +410,10 @@ export default function MusicsPage() {
                                     {song.title}
                                   </Link>
                                 </h3>
-                                <p className="text-sm text-gray-600 mb-3 flex items-center gap-2">
-                                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                <span className="text-sm text-gray-600 mb-3 flex items-center gap-2">
+                                  <span className="w-2 h-2 bg-blue-500 rounded-full inline-block"></span>
                                   {song.mainInstrument}
-                                </p>
+                                </span>
                                 
                                 {/* Tags and Moments */}
                                 <div className="flex flex-wrap gap-2">

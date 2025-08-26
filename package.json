@@ -24,6 +24,7 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-tabs": "^1.1.12",
     "@supabase/supabase-js": "^2.52.0",
+
     "axios": "^1.11.0",
     "bcryptjs": "^3.0.2",
     "browser-image-compression": "^2.0.2",
@@ -54,10 +55,10 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
-    "@types/react": "^19",
+    "@types/react": "^19.1.11",
     "@types/react-dom": "^19",
     "prisma": "^6.13.0",
     "tailwindcss": "^4",
-    "typescript": "5.9.2"
+    "typescript": "^5.9.2"
   }
 }

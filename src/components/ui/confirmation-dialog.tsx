@@ -61,7 +61,7 @@ export function ConfirmationDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+  <DialogContent className="w-full max-w-2xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
@@ -94,6 +94,7 @@ export function ConfirmationDialog({
           </Button>
           <Button
             variant="destructive"
+            className="bg-red-600 hover:bg-red-700 text-white"
             onClick={handleConfirm}
             disabled={isSubmitting || (requireReason && reason.trim().length < 5)}
           >

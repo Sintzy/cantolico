@@ -1,7 +1,7 @@
 "use client";
 
 import "easymde/dist/easymde.min.css";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
@@ -80,6 +80,21 @@ const allMoments = [
 ];
 
 export default function ReviewSubmissionPage() {
+  // O objeto options precisa ser estável para evitar perder o foco no SimpleMDE
+  const simpleMDEOptions = useMemo(() => ({
+    spellChecker: false,
+    placeholder: "Escreva a letra da música com acordes...",
+    toolbar: [
+      "bold",
+      "italic",
+      "|",
+      "unordered-list",
+      "ordered-list",
+      "|",
+      "preview",
+      "guide"
+    ] as const,
+  }), []);
   const router = useRouter();
   const params = useParams();
   const { data: session, status } = useSession();
@@ -168,6 +183,8 @@ export default function ReviewSubmissionPage() {
       });
   }, [submissionId, authorized, router]);
 
+  const [approving, setApproving] = useState(false);
+
   const handleApprove = async () => {
     // Validações
     if (!title.trim()) {
@@ -201,6 +218,7 @@ export default function ReviewSubmissionPage() {
     if (newPdf) formData.append("pdf", newPdf);
     if (newMp3) formData.append("mp3", newMp3);
 
+    setApproving(true);
     try {
       const res = await fetch(`/api/admin/submission/${submissionId}/approve`, {
         method: "POST",
@@ -217,6 +235,8 @@ export default function ReviewSubmissionPage() {
     } catch (error) {
       console.error("Erro ao aprovar:", error);
       toast.error("Erro de conexão ao aprovar submissão");
+    } finally {
+      setApproving(false);
     }
   };
 
@@ -653,14 +673,10 @@ export default function ReviewSubmissionPage() {
                     )}
                   </div>
                   <div className="border rounded-lg overflow-hidden bg-white">
-                    <SimpleMDE 
-                      value={markdown} 
+                    <SimpleMDE
+                      value={markdown}
                       onChange={setMarkdown}
-                      options={{
-                        spellChecker: false,
-                        placeholder: "Escreva a letra da música com acordes...",
-                        toolbar: ["bold", "italic", "|", "unordered-list", "ordered-list", "|", "preview", "guide"],
-                      }}
+                      options={simpleMDEOptions}
                     />
                   </div>
                 </CardContent>
@@ -831,9 +847,22 @@ export default function ReviewSubmissionPage() {
                 onClick={handleApprove} 
                 className="bg-green-600 hover:bg-green-700 text-white flex-1"
                 size="lg"
+                disabled={approving}
               >
-                <CheckCircle className="h-5 w-5 mr-2" />
-                Aprovar Música
+                {approving ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                    </svg>
+                    Aprovando...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-5 w-5 mr-2" />
+                    Aprovar Música
+                  </>
+                )}
               </Button>
               
               <Button 
