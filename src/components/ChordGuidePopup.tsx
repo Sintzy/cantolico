@@ -11,59 +11,59 @@ interface ChordGuidePopupProps {
 
 export function ChordGuidePopup({ onClose }: ChordGuidePopupProps) {
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b">
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-gray-200">
+        <div className="flex items-center justify-between p-6 border-b border-gray-100">
           <div className="flex items-center gap-2">
             <Music className="w-5 h-5 text-blue-600" />
-            <h2 className="text-xl font-semibold">Sistema de Acordes - Guia Rápido</h2>
+            <h2 className="text-xl font-semibold text-gray-900">Sistema de Acordes - Guia Rápido</h2>
           </div>
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="w-4 h-4" />
           </Button>
         </div>
 
-        <div className="p-6 space-y-6">
+  <div className="p-6 space-y-6 bg-white">
           <div className="grid md:grid-cols-3 gap-4">
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-              <h3 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h3 className="font-semibold text-blue-800 mb-2">
                 🎯 Formato Inline
               </h3>
               <div className="text-sm space-y-2">
-                <p className="text-gray-600 dark:text-gray-400">
-                  Para acordes embutidos no texto. Inicia com <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">#mic#</code>
+                <p className="text-gray-600">
+                  Para acordes embutidos no texto. Inicia com <code className="bg-blue-100 px-1 rounded">#mic#</code>
                 </p>
-                <div className="bg-white dark:bg-gray-800 p-2 rounded text-xs font-mono">
+                <div className="bg-white p-2 rounded text-xs font-mono border border-blue-100">
                   #mic#<br />
                   [C]Deus est[Am]á aqui
                 </div>
               </div>
             </div>
 
-            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
-              <h3 className="font-semibold text-green-800 dark:text-green-200 mb-2">
+            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h3 className="font-semibold text-green-800 mb-2">
                 📝 Formato Above
               </h3>
               <div className="text-sm space-y-2">
-                <p className="text-gray-600 dark:text-gray-400">
+                <p className="text-gray-600">
                   Acordes numa linha, letra na seguinte
                 </p>
-                <div className="bg-white dark:bg-gray-800 p-2 rounded text-xs font-mono">
+                <div className="bg-white p-2 rounded text-xs font-mono border border-green-100">
                   [C] [Am] [F] [G]<br />
                   Deus está aqui
                 </div>
               </div>
             </div>
 
-            <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
-              <h3 className="font-semibold text-purple-800 dark:text-purple-200 mb-2">
+            <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h3 className="font-semibold text-purple-800 mb-2">
                 🎼 Intro/Ponte
               </h3>
               <div className="text-sm space-y-2">
-                <p className="text-gray-600 dark:text-gray-400">
+                <p className="text-gray-600">
                   Seções instrumentais especiais
                 </p>
-                <div className="bg-white dark:bg-gray-800 p-2 rounded text-xs font-mono">
+                <div className="bg-white p-2 rounded text-xs font-mono border border-purple-100">
                   Intro:<br />
                   [A] [G] [C]
                 </div>
@@ -71,8 +71,8 @@ export function ChordGuidePopup({ onClose }: ChordGuidePopupProps) {
             </div>
           </div>
 
-          <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-            <h3 className="font-semibold mb-3">✨ Funcionalidades Automáticas</h3>
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+            <h3 className="font-semibold mb-3 text-gray-900">✨ Funcionalidades Automáticas</h3>
             <div className="grid md:grid-cols-2 gap-4 text-sm">
               <ul className="space-y-1">
                 <li>• <strong>Detecção automática:</strong> O sistema detecta o formato automaticamente</li>
@@ -87,9 +87,9 @@ export function ChordGuidePopup({ onClose }: ChordGuidePopupProps) {
             </div>
           </div>
 
-          <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg border border-amber-200 dark:border-amber-800">
-            <h3 className="font-semibold text-amber-800 dark:text-amber-200 mb-2">💡 Exemplo Completo</h3>
-            <div className="bg-white dark:bg-gray-800 p-3 rounded text-xs font-mono">
+          <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
+            <h3 className="font-semibold text-amber-800 mb-2">💡 Exemplo Completo</h3>
+            <div className="bg-white p-3 rounded text-xs font-mono border border-amber-100">
               <pre>{`Intro:
 [Am] [F] [C] [G]
 
@@ -102,8 +102,8 @@ Ponte:
             </div>
           </div>
 
-          <div className="flex items-center justify-between pt-4 border-t">
-            <div className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+            <div className="text-sm text-gray-600">
               Podes combinar todos os formatos na mesma música!
             </div>
             <div className="flex gap-2">

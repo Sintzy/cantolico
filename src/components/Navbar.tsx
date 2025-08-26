@@ -25,7 +25,8 @@ import {
   FileText,
   UserPlus,
   Crown,
-  Eye
+  Eye,
+  Book
 } from "lucide-react";
 
 type Music = {
@@ -375,6 +376,19 @@ export default function Navbar() {
                                                         <Eye className="h-4 w-4" />
                                                         Painel Revisão
                                                     </Link>
+                                                    <Link
+                                                        href="https://www.notion.so/23b4e08599698024ba17edc88a522623?v=23b4e085996980c0a20d000ccb830dd5&source=copy_link"
+                                                        className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                                        onClick={() => {
+                                                            setUserMenuOpen(false);
+                                                            setUserMenuSticky(false);
+                                                        }}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                    >
+                                                        <Book className="h-4 w-4" />
+                                                        Notion
+                                                    </Link>
                                                 </>
                                             )}
                                             {session.user.role === "REVIEWER" && (
@@ -581,6 +595,16 @@ export default function Navbar() {
                                                 >
                                                     <Eye className="h-5 w-5" />
                                                     <span className="font-medium">Revisão</span>
+                                                </Link>
+                                                <Link 
+                                                    href="https://www.notion.so/23b4e08599698024ba17edc88a522623?v=23b4e085996980c0a20d000ccb830dd5&source=copy_link" 
+                                                    className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors"
+                                                    onClick={closeMobileMenu}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                >
+                                                    <Book className="h-5 w-5" />
+                                                    <span className="font-medium">Notion</span>
                                                 </Link>
                                             </>
                                         )}
