@@ -562,7 +562,20 @@ export default function ReviewSubmissionPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label>Título</Label>
+                  <Label className="flex items-center gap-2">
+                    Título
+                    {title && (
+                      <a
+                        href={`https://www.google.com/search?q=${encodeURIComponent(title)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ml-2 text-blue-600 hover:underline text-xs font-medium"
+                        title="Pesquisar no Google"
+                      >
+                        Pesquisar no Google
+                      </a>
+                    )}
+                  </Label>
                   <Input
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
