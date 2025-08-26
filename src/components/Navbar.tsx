@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import Image from "next/image";
@@ -45,6 +45,7 @@ export default function Navbar() {
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<Music[]>([]);
     const [isSearching, setIsSearching] = useState(false);
+    const searchTimeout = useRef<NodeJS.Timeout | null>(null);
     const userMenuRef = useRef<HTMLDivElement>(null);
     const playlistsMenuRef = useRef<HTMLDivElement>(null);
 
@@ -67,28 +68,32 @@ export default function Navbar() {
         };
     }, []);
 
-    useEffect(() => {
-        const fetchMusics = async () => {
+
+    // Busca debounced
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setSearchQuery(value);
+        setIsSearching(true);
+        if (searchTimeout.current) clearTimeout(searchTimeout.current);
+        if (value.trim() === "") {
+            setSearchResults([]);
+            setIsSearching(false);
+            return;
+        }
+        searchTimeout.current = setTimeout(async () => {
             try {
-                const res = await fetch(`/api/musics/getmusics`);
-                
-                if (!res.ok) {
-                    throw new Error('Erro ao carregar músicas para pesquisa');
-                }
-                
-                const data: Music[] = await res.json();
-                setSearchResults(data); 
+                const res = await fetch(`/api/musics/search?q=${encodeURIComponent(value)}&limit=10`);
+                if (!res.ok) throw new Error('Erro ao pesquisar músicas');
+                const data = await res.json();
+                setSearchResults(data.songs || []);
             } catch (error) {
-                console.error("Erro ao buscar músicas:", error);
+                setSearchResults([]);
             }
-        };
+            setIsSearching(false);
+        }, 400);
+    };
 
-        fetchMusics();
-    }, []);
 
-    const filteredResults = searchResults.filter((music) =>
-        music.title.toLowerCase().includes(searchQuery.toLowerCase())
-    );
 
     const closeMobileMenu = () => {
         setMobileMenuOpen(false);
@@ -253,33 +258,36 @@ export default function Navbar() {
                                     type="text"
                                     placeholder="Pesquisar músicas..."
                                     value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onChange={handleSearchChange}
                                     className="pl-10 pr-4 py-2 w-64 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all duration-200"
                                 />
                             </div>
-                            {searchQuery.trim() !== "" && filteredResults.length > 0 && (
+                            {searchQuery.trim() !== "" && (
                                 <div className="absolute top-full left-0 w-full bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg shadow-lg mt-2 z-50 overflow-hidden">
-                                    {filteredResults.slice(0, 5).map((result) => (
-                                        <Link
-                                            key={result.id}
-                                            href={`/musics/${result.id}`}
-                                            className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                                            onClick={() => setSearchQuery("")}
-                                        >
-                                            <Music className="h-4 w-4 text-gray-400" />
-                                            <span>{result.title}</span>
-                                        </Link>
-                                    ))}
-                                    {filteredResults.length > 5 && (
-                                        <div className="px-4 py-2 text-xs text-gray-500 bg-gray-50">
-                                            +{filteredResults.length - 5} mais resultados...
-                                        </div>
+                                    {isSearching ? (
+                                        <div className="px-4 py-3 text-sm text-gray-500 text-center">A procurar...</div>
+                                    ) : searchResults.length > 0 ? (
+                                        <>
+                                            {searchResults.slice(0, 5).map((result) => (
+                                                <Link
+                                                    key={result.id}
+                                                    href={`/musics/${result.id}`}
+                                                    className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                                    onClick={() => setSearchQuery("")}
+                                                >
+                                                    <Music className="h-4 w-4 text-gray-400" />
+                                                    <span>{result.title}</span>
+                                                </Link>
+                                            ))}
+                                            {searchResults.length > 5 && (
+                                                <div className="px-4 py-2 text-xs text-gray-500 bg-gray-50">
+                                                    +{searchResults.length - 5} mais resultados...
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <div className="px-4 py-3 text-sm text-gray-500 text-center">Nenhum resultado encontrado.</div>
                                     )}
-                                </div>
-                            )}
-                            {searchQuery.trim() !== "" && filteredResults.length === 0 && (
-                                <div className="absolute top-full left-0 w-full bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg shadow-lg mt-2 z-50">
-                                    <p className="px-4 py-3 text-sm text-gray-500 text-center">Nenhum resultado encontrado.</p>
                                 </div>
                             )}
                         </div>

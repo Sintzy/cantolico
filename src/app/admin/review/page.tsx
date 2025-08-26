@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { pt } from "date-fns/locale";
 import Link from "next/link";
@@ -80,22 +80,34 @@ type Submission = {
 
 export default function AdminReviewPage() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const [filteredSubmissions, setFilteredSubmissions] = useState<Submission[]>([]);
+  // Garante que submissions é sempre array
+  const safeSubmissions: Submission[] = Array.isArray(submissions) ? submissions : [];
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [loadingActions, setLoadingActions] = useState<Record<string, boolean>>({});
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [submissionToReject, setSubmissionToReject] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  const fetchSubmissions = async () => {
+  const fetchSubmissions = async (params?: { page?: number; q?: string; status?: string }) => {
     try {
       setLoading(true);
-      const res = await fetch("/api/admin/submissions");
+      const url = new URL("/api/admin/submissions", window.location.origin);
+      url.searchParams.set("page", String(params?.page ?? page));
+      url.searchParams.set("limit", "20");
+      if (params?.q !== undefined) url.searchParams.set("q", params.q);
+      else if (debouncedSearch) url.searchParams.set("q", debouncedSearch);
+      if (params?.status !== undefined) url.searchParams.set("status", params.status);
+      else if (statusFilter) url.searchParams.set("status", statusFilter);
+      const res = await fetch(url.toString());
       if (res.ok) {
-        const data: Submission[] = await res.json();
-        setSubmissions(data);
-        setFilteredSubmissions(data);
+        const data = await res.json();
+        setSubmissions(Array.isArray(data.submissions) ? data.submissions : []);
+        setTotalPages(data.totalPages || 1);
       } else {
         toast.error("Erro ao carregar submissões");
       }
@@ -106,33 +118,23 @@ export default function AdminReviewPage() {
     }
   };
 
+  // Debounce search
   useEffect(() => {
-    fetchSubmissions();
-  }, []);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setPage(1);
+    }, 400);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [searchTerm]);
 
+  // Fetch on debounced search, page, or status change
   useEffect(() => {
-    let filtered = submissions;
-
-    // Filtrar por termo de busca
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (submission) =>
-          submission.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          submission.submitter.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          submission.submitter.email.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Filtrar por status
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((submission) => submission.status === statusFilter);
-    }
-
-    // Ordenar alfabeticamente por título
-    filtered = filtered.slice().sort((a, b) => a.title.localeCompare(b.title, 'pt'));
-
-    setFilteredSubmissions(filtered);
-  }, [searchTerm, statusFilter, submissions]);
+    fetchSubmissions({ page, q: debouncedSearch, status: statusFilter });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, page, statusFilter]);
 
   const handleInstantApprove = async (submissionId: string) => {
     setLoadingActions(prev => ({ ...prev, [submissionId]: true }));
@@ -240,6 +242,8 @@ export default function AdminReviewPage() {
   const UserModerationDialog = ({ submission }: { submission: Submission }) => {
     const { submitter } = submission;
     
+    // Garante que moderationHistory é sempre array
+    const moderationHistory = Array.isArray(submitter.moderationHistory) ? submitter.moderationHistory : [];
     return (
       <Dialog>
         <DialogTrigger asChild>
@@ -258,7 +262,6 @@ export default function AdminReviewPage() {
               ID do Utilizador: #{submitter.id} | Email: {submitter.email}
             </DialogDescription>
           </DialogHeader>
-          
           <div className="space-y-6">
             {/* Status Atual */}
             <div>
@@ -271,7 +274,7 @@ export default function AdminReviewPage() {
                 <div>
                   <label className="text-sm font-medium text-gray-500">Status de Moderação</label>
                   <div className="mt-1">
-                    {submitter.currentModeration 
+                    {submitter.currentModeration && submitter.currentModeration.status
                       ? getModerationBadge(submitter.currentModeration.status)
                       : getModerationBadge("ACTIVE")
                     }
@@ -286,9 +289,8 @@ export default function AdminReviewPage() {
                   <p className="text-sm mt-1 font-mono">#{submitter.id}</p>
                 </div>
               </div>
-
               {/* Moderação Atual */}
-              {submitter.currentModeration && submitter.currentModeration.status !== 'ACTIVE' && (
+              {submitter.currentModeration && submitter.currentModeration.status && submitter.currentModeration.status !== 'ACTIVE' && (
                 <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
                   <div className="flex items-start gap-3">
                     <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5" />
@@ -297,15 +299,15 @@ export default function AdminReviewPage() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                         <div>
                           <label className="text-xs font-medium text-red-600">Tipo</label>
-                          <p className="text-sm text-red-800">{submitter.currentModeration.type}</p>
+                          <p className="text-sm text-red-800">{submitter.currentModeration?.type || '-'}</p>
                         </div>
                         <div>
                           <label className="text-xs font-medium text-red-600">Aplicada em</label>
                           <p className="text-sm text-red-800">
-                            {new Date(submitter.currentModeration.moderatedAt).toLocaleDateString('pt-PT')}
+                            {submitter.currentModeration?.moderatedAt ? new Date(submitter.currentModeration.moderatedAt).toLocaleDateString('pt-PT') : '-'}
                           </p>
                         </div>
-                        {submitter.currentModeration.expiresAt && (
+                        {submitter.currentModeration?.expiresAt && (
                           <div>
                             <label className="text-xs font-medium text-red-600">Expira em</label>
                             <p className="text-sm text-red-800">
@@ -313,14 +315,14 @@ export default function AdminReviewPage() {
                             </p>
                           </div>
                         )}
-                        {submitter.currentModeration.moderatedBy && (
+                        {submitter.currentModeration?.moderatedBy && (
                           <div>
                             <label className="text-xs font-medium text-red-600">Moderado por</label>
-                            <p className="text-sm text-red-800">{submitter.currentModeration.moderatedBy.name}</p>
+                            <p className="text-sm text-red-800">{submitter.currentModeration.moderatedBy?.name || '-'}</p>
                           </div>
                         )}
                       </div>
-                      {submitter.currentModeration.reason && (
+                      {submitter.currentModeration?.reason && (
                         <div className="mt-2">
                           <label className="text-xs font-medium text-red-600">Motivo</label>
                           <p className="text-sm text-red-800 bg-red-100 p-2 rounded mt-1">
@@ -328,7 +330,7 @@ export default function AdminReviewPage() {
                           </p>
                         </div>
                       )}
-                      {submitter.currentModeration.moderatorNote && (
+                      {submitter.currentModeration?.moderatorNote && (
                         <div className="mt-2">
                           <label className="text-xs font-medium text-red-600">Nota do Moderador</label>
                           <p className="text-sm text-red-700 bg-red-100 p-2 rounded mt-1 font-mono">
@@ -341,13 +343,12 @@ export default function AdminReviewPage() {
                 </div>
               )}
             </div>
-
             {/* Histórico de Moderações */}
             <div>
               <h3 className="text-lg font-semibold mb-3 border-b pb-2">Histórico de Moderações</h3>
-              {submitter.moderationHistory && submitter.moderationHistory.length > 0 ? (
+              {moderationHistory.length > 0 ? (
                 <div className="space-y-3">
-                  {submitter.moderationHistory.map((moderation, index) => (
+                  {moderationHistory.map((moderation, index) => (
                     <div 
                       key={moderation.id} 
                       className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
@@ -371,7 +372,6 @@ export default function AdminReviewPage() {
                           })}
                         </div>
                       </div>
-
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
                         <div>
                           <label className="text-xs font-medium text-gray-500">Tipo</label>
@@ -392,7 +392,6 @@ export default function AdminReviewPage() {
                           </div>
                         )}
                       </div>
-
                       {moderation.reason && (
                         <div className="mt-3">
                           <label className="text-xs font-medium text-gray-500">Motivo</label>
@@ -401,7 +400,6 @@ export default function AdminReviewPage() {
                           </p>
                         </div>
                       )}
-
                       {moderation.moderatorNote && (
                         <div className="mt-2">
                           <label className="text-xs font-medium text-gray-500">Nota do Moderador</label>
@@ -421,32 +419,31 @@ export default function AdminReviewPage() {
                 </div>
               )}
             </div>
-
             {/* Estatísticas */}
             <div>
               <h3 className="text-lg font-semibold mb-3 border-b pb-2">Estatísticas</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center p-3 bg-blue-50 rounded-lg">
                   <div className="text-2xl font-bold text-blue-600">
-                    {submitter.moderationHistory?.length || 0}
+                    {moderationHistory.length}
                   </div>
                   <div className="text-sm text-blue-600">Total Moderações</div>
                 </div>
                 <div className="text-center p-3 bg-yellow-50 rounded-lg">
                   <div className="text-2xl font-bold text-yellow-600">
-                    {submitter.moderationHistory?.filter(m => m.type === 'WARNING').length || 0}
+                    {moderationHistory.filter(m => m.type === 'WARNING').length}
                   </div>
                   <div className="text-sm text-yellow-600">Advertências</div>
                 </div>
                 <div className="text-center p-3 bg-orange-50 rounded-lg">
                   <div className="text-2xl font-bold text-orange-600">
-                    {submitter.moderationHistory?.filter(m => m.type === 'SUSPENSION').length || 0}
+                    {moderationHistory.filter(m => m.type === 'SUSPENSION').length}
                   </div>
                   <div className="text-sm text-orange-600">Suspensões</div>
                 </div>
                 <div className="text-center p-3 bg-red-50 rounded-lg">
                   <div className="text-2xl font-bold text-red-600">
-                    {submitter.moderationHistory?.filter(m => m.type === 'BAN').length || 0}
+                    {moderationHistory.filter(m => m.type === 'BAN').length}
                   </div>
                   <div className="text-sm text-red-600">Banimentos</div>
                 </div>
@@ -472,7 +469,7 @@ export default function AdminReviewPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+  <div className="container mx-auto p-6 space-y-6">
       <div className="flex flex-col space-y-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Revisão de Submissões</h1>
@@ -507,44 +504,43 @@ export default function AdminReviewPage() {
         </div>
 
         {/* Estatísticas */}
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total</CardTitle>
-              <Music className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{submissions.length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
-              <Clock className="h-4 w-4 text-yellow-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {submissions.filter(s => s.status === "PENDING").length}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Aprovadas</CardTitle>
-              <CheckCircle className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {submissions.filter(s => s.status === "APPROVED").length}
-              </div>
-            </CardContent>
-          </Card>
+        {/* Paginação e estatísticas */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mt-2">
+          <div className="grid gap-4 md:grid-cols-3 flex-1">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Página</CardTitle>
+                <Info className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{page} / {totalPages}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Submissões nesta página</CardTitle>
+                <Music className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{submissions.length}</div>
+              </CardContent>
+            </Card>
+          </div>
+          {/* Controles de paginação */}
+          <div className="flex gap-2 items-center justify-end">
+            <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
+              Anterior
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
+              Próxima
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Lista de submissões */}
+      {/* Lista de submissões paginada */}
       <div className="space-y-4">
-        {filteredSubmissions.length === 0 ? (
+        {safeSubmissions.length === 0 ? (
           <Card>
             <CardContent className="text-center py-8">
               <Music className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -552,7 +548,7 @@ export default function AdminReviewPage() {
             </CardContent>
           </Card>
         ) : (
-          filteredSubmissions.map((submission) => (
+          safeSubmissions.map((submission) => (
             <Card key={submission.id} className="hover:shadow-md transition-shadow">
               <CardHeader>
                 <div className="flex items-start justify-between">
