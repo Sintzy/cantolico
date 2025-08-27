@@ -41,7 +41,8 @@ import {
   Settings,
   Shield,
   Eye,
-  Download
+  Download,
+  Search as SearchIcon
 } from "lucide-react";
 import "../../../../../public/styles/chords.css";
 
@@ -278,6 +279,12 @@ export default function ReviewSubmissionPage() {
       toast.error("Motivo da advertência é obrigatório");
       return;
     }
+
+    console.log('Sending moderation data:', {
+      action: "WARN",
+      reason: moderationReason,
+      moderatorNote: moderationNote,
+    });
 
     try {
       const response = await fetch(`/api/admin/users/${submission.submitterId}/moderate`, {
@@ -562,26 +569,15 @@ export default function ReviewSubmissionPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label className="flex items-center gap-2">
-                    Título
-                    {title && (
-                      <a
-                        href={`https://www.google.com/search?q=${encodeURIComponent(title)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="ml-2 text-blue-600 hover:underline text-xs font-medium"
-                        title="Pesquisar no Google"
-                      >
-                        Pesquisar no Google
-                      </a>
-                    )}
-                  </Label>
-                  <Input
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Nome da música..."
-                    className="bg-white"
-                  />
+                  <Label className="flex items-center gap-2">Título</Label>
+                  <div className="flex gap-2 items-center">
+                    <Input
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="Nome da música..."
+                      className="bg-white flex-1"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-4">
@@ -659,8 +655,24 @@ export default function ReviewSubmissionPage() {
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle>Editor de Letra e Acordes</CardTitle>
-                    <ChordGuideButton />
+                    <div className="flex items-center gap-2 justify-between w-full">
+                      <CardTitle>Editor de Letra e Acordes</CardTitle>
+                      <div className="flex items-center gap-2">
+                        <ChordGuideButton />
+                        {title && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="flex items-center gap-2 border-gray-300 hover:bg-gray-100"
+                            onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(title)}`, '_blank')}
+                            title="Pesquisar no Google"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="h-4 w-4" style={{marginRight: 4}}><g><path fill="#4285F4" d="M43.611 20.083H42V20H24v8h11.303C33.962 32.833 29.418 36 24 36c-6.627 0-12-5.373-12-12s5.373-12 12-12c2.803 0 5.377.99 7.409 2.627l6.162-6.162C34.583 6.162 29.583 4 24 4 12.954 4 4 12.954 4 24s8.954 20 20 20c9.941 0 18-8.059 18-18 0-1.209-.13-2.385-.389-3.517z"/><path fill="#34A853" d="M6.306 14.691l6.571 4.819C14.655 16.108 19.001 13 24 13c2.803 0 5.377.99 7.409 2.627l6.162-6.162C34.583 6.162 29.583 4 24 4c-7.732 0-14.41 4.388-17.694 10.691z"/><path fill="#FBBC05" d="M24 44c5.363 0 10.29-1.843 14.143-4.995l-6.518-5.348C29.418 36 24 36 24 36c-5.408 0-9.947-3.155-11.293-7.417l-6.563 5.062C9.568 39.612 16.246 44 24 44z"/><path fill="#EA4335" d="M43.611 20.083H42V20H24v8h11.303c-1.23 3.273-4.418 5.917-11.303 5.917-5.408 0-9.947-3.155-11.293-7.417l-6.563 5.062C9.568 39.612 16.246 44 24 44c5.363 0 10.29-1.843 14.143-4.995l-6.518-5.348C29.418 36 24 36 24 36c-5.408 0-9.947-3.155-11.293-7.417l-6.563 5.062C9.568 39.612 16.246 44 24 44c9.941 0 18-8.059 18-18 0-1.209-.13-2.385-.389-3.517z"/></g></svg>
+                            Google
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                   <CardDescription>
                     Edite a letra da música com acordes usando markdown
@@ -881,7 +893,7 @@ export default function ReviewSubmissionPage() {
               <Button 
                 variant="destructive" 
                 onClick={() => setShowRejectDialog(true)}
-                className="flex-1"
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
                 size="lg"
               >
                 <XCircle className="h-5 w-5 mr-2" />

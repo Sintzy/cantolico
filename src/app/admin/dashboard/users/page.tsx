@@ -267,11 +267,23 @@ export default function UsersManagement() {
   const handleModerateUser = async () => {
     if (!selectedUser) return;
 
+    console.log('Sending moderation data:', {
+      action: moderateData.type,
+      reason: moderateData.reason,
+      moderatorNote: moderateData.moderatorNote,
+      duration: moderateData.duration,
+    });
+
     try {
       const response = await fetch(`/api/admin/users/${selectedUser.id}/moderate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(moderateData),
+        body: JSON.stringify({
+          action: moderateData.type,  // Mudança aqui: era 'type', agora é 'action'
+          reason: moderateData.reason,
+          moderatorNote: moderateData.moderatorNote,
+          duration: moderateData.duration,
+        }),
       });
 
       if (!response.ok) throw new Error('Erro ao aplicar moderação');

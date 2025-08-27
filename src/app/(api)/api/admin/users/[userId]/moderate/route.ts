@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { logAdmin, logErrors } from '@/lib/logs';
-import { sendEmail } from '@/lib/email';
+import { sendEmail, createWarningEmailTemplate, createSuspensionEmailTemplate, createBanEmailTemplate } from '@/lib/email';
 
 export async function POST(
   request: NextRequest,
@@ -16,12 +16,26 @@ export async function POST(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
-    const { type, reason, moderatorNote, duration } = await request.json();
+    const body = await request.json();
+    const { action, type, reason, moderatorNote, duration } = body;
     const { userId: userIdStr } = await params;
     const userId = parseInt(userIdStr);
 
-    if (!type || !reason) {
-      return NextResponse.json({ error: 'Tipo e motivo são obrigatórios' }, { status: 400 });
+    // Aceitar tanto 'action' como 'type' para compatibilidade
+    const moderationAction = action || type;
+
+    console.log('Received moderation request:', {
+      action: moderationAction,
+      reason,
+      moderatorNote,
+      duration,
+      userId,
+      originalBody: body
+    });
+
+    if (!moderationAction || !reason) {
+      console.log('Validation failed:', { action: !!moderationAction, reason: !!reason });
+      return NextResponse.json({ error: 'Ação e motivo são obrigatórios' }, { status: 400 });
     }
 
     // Não permitir moderar o próprio admin
@@ -41,7 +55,7 @@ export async function POST(
 
     // Calcular data de expiração para suspensões
     let expiresAt = null;
-    if (type === 'SUSPENSION' && duration) {
+    if (moderationAction === 'SUSPENSION' && duration) {
       expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + duration);
     }
@@ -50,8 +64,8 @@ export async function POST(
     const moderation = await prisma.userModeration.upsert({
       where: { userId },
       update: {
-        status: type === 'WARNING' ? 'WARNING' : type === 'SUSPENSION' ? 'SUSPENDED' : 'BANNED',
-        type,
+        status: moderationAction === 'WARNING' ? 'WARNING' : moderationAction === 'SUSPENSION' ? 'SUSPENDED' : 'BANNED',
+        type: moderationAction,
         reason,
         moderatorNote,
         moderatedById: session.user.id,
@@ -61,8 +75,8 @@ export async function POST(
       },
       create: {
         userId,
-        status: type === 'WARNING' ? 'WARNING' : type === 'SUSPENSION' ? 'SUSPENDED' : 'BANNED',
-        type,
+        status: moderationAction === 'WARNING' ? 'WARNING' : moderationAction === 'SUSPENSION' ? 'SUSPENDED' : 'BANNED',
+        type: moderationAction,
         reason,
         moderatorNote,
         moderatedById: session.user.id,
@@ -72,62 +86,46 @@ export async function POST(
     });
 
     // Forçar logout do utilizador - invalidar sessões no NextAuth
-    if (type === 'SUSPENSION' || type === 'BAN') {
+    if (moderationAction === 'SUSPENSION' || moderationAction === 'BAN') {
       // Note: Para implementar logout forçado, seria necessário um sistema de invalidação de tokens
       // Por agora, o middleware irá verificar o status de moderação em cada request
     }
 
     // Enviar email de notificação
     try {
-      const moderationTypeText: Record<string, string> = {
-        'WARNING': 'advertido',
-        'SUSPENSION': 'suspenso',
-        'BAN': 'banido'
-      };
+      let emailTemplate: string;
+      let subject: string;
 
-      const statusText = moderationTypeText[type] || 'moderado';
-      const subject = `Cancioneiro - Conta ${statusText}`;
-      
-      let emailContent = `
-        <h2>Notificação de Moderação - Cancioneiro</h2>
-        <p>Olá ${userToModerate.name || 'Utilizador'},</p>
-        <p>A sua conta no Cancioneiro foi <strong>${statusText}</strong> pela administração.</p>
-        <div style="background-color: #f8f9fa; padding: 15px; border-left: 4px solid #dc3545; margin: 20px 0;">
-          <h3>Motivo:</h3>
-          <p>${reason}</p>
-        </div>
-      `;
-
-      if (type === 'WARNING') {
-        emailContent += `
-          <p>Esta é uma advertência. Por favor, reveja os nossos termos de utilização e ajuste o seu comportamento em conformidade.</p>
-          <p>Pode continuar a utilizar a plataforma normalmente.</p>
-        `;
-      } else if (type === 'SUSPENSION') {
-        emailContent += `
-          <p>A sua conta foi suspensa temporariamente.</p>
-          ${expiresAt ? `<p><strong>Data de expiração:</strong> ${expiresAt.toLocaleDateString('pt-PT')}</p>` : ''}
-          <p>Durante este período, não poderá aceder à sua conta.</p>
-        `;
-      } else if (type === 'BAN') {
-        emailContent += `
-          <p>A sua conta foi permanentemente banida.</p>
-          <p>Não poderá mais aceder à plataforma.</p>
-        `;
+      if (moderationAction === 'WARNING') {
+        subject = 'Cantólico - Advertência Recebida';
+        emailTemplate = createWarningEmailTemplate(
+          userToModerate.name || 'Utilizador',
+          reason,
+          session.user.name || undefined
+        );
+      } else if (moderationAction === 'SUSPENSION') {
+        subject = 'Cantólico - Conta Suspensa';
+        emailTemplate = createSuspensionEmailTemplate(
+          userToModerate.name || 'Utilizador',
+          reason,
+          expiresAt || undefined,
+          session.user.name || undefined
+        );
+      } else if (moderationAction === 'BAN') {
+        subject = 'Cantólico - Conta Banida';
+        emailTemplate = createBanEmailTemplate(
+          userToModerate.name || 'Utilizador',
+          reason,
+          session.user.name || undefined
+        );
+      } else {
+        throw new Error('Tipo de moderação inválido');
       }
-
-      emailContent += `
-        <hr style="margin: 30px 0;">
-        <p>Se considera que esta ação foi tomada por engano, pode contactar a administração através do email de suporte.</p>
-        <p><small>Esta é uma mensagem automática. Por favor, não responda a este email.</small></p>
-        <br>
-        <p>Cumprimentos,<br>Equipa Cancioneiro</p>
-      `;
 
       await sendEmail({
         to: userToModerate.email,
         subject,
-        html: emailContent
+        html: emailTemplate
       });
 
     } catch (emailError) {
@@ -135,12 +133,12 @@ export async function POST(
       // Não falhar a moderação por causa do email
     }
 
-    await logAdmin('SUCCESS', 'Utilizador moderado', `Moderação aplicada: ${type}`, {
+    await logAdmin('SUCCESS', 'Utilizador moderado', `Moderação aplicada: ${moderationAction}`, {
       userId: session.user.id,
       targetUserId: userId,
       targetUserName: userToModerate.name,
       targetUserEmail: userToModerate.email,
-      moderationType: type,
+      moderationType: moderationAction,
       reason,
       duration,
       action: 'user_moderated'
