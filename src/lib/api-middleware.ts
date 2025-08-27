@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { protectApiRoute, applySecurityHeaders } from '@/lib/api-protection';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 
 /**
  * Middleware wrapper para proteger automaticamente qualquer rota de API
@@ -46,15 +48,13 @@ export function withAuthApiProtection<T extends any[]>(
   handler: (request: NextRequest, ...args: T) => Promise<Response>
 ) {
   return withApiProtection(async (request: NextRequest, ...args: T) => {
-    // Verificar se existe token de autorização
-    const authorization = request.headers.get('authorization');
-    const cookie = request.headers.get('cookie');
-    
-    // Verificar se há algum tipo de autenticação presente
-    if (!authorization && !cookie?.includes('next-auth')) {
+    // Verificar se há uma sessão válida usando next-auth
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.id) {
       return NextResponse.json(
         { 
-          error: 'Unauthorized',
+          error: 'Authentication required',
           message: 'Esta API requer autenticação. Faça login para continuar.',
           code: 'AUTH_REQUIRED'
         },
