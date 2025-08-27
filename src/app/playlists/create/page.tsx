@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -20,14 +20,48 @@ interface CreatePlaylistForm {
 }
 
 export default function CreatePlaylistPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingModeration, setIsCheckingModeration] = useState(true);
   const [form, setForm] = useState<CreatePlaylistForm>({
     name: '',
     description: '',
     isPublic: false
   });
+
+  // Verificar status de moderação no carregamento
+  useEffect(() => {
+    if (status === "loading") return;
+    
+    if (!session) {
+      router.push("/login");
+      return;
+    }
+
+    // Verificar se o utilizador pode criar playlists
+    fetch("/api/user/moderation-status")
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === "BANNED") {
+          router.push("/banned");
+          return;
+        }
+        
+        if (data.status === "SUSPENDED") {
+          toast.error("A sua conta está suspensa. Não pode criar playlists.", {
+            description: data.reason ? `Motivo: ${data.reason}` : undefined
+          });
+          router.push("/");
+          return;
+        }
+        
+        setIsCheckingModeration(false);
+      })
+      .catch(() => {
+        setIsCheckingModeration(false);
+      });
+  }, [session, status, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,6 +124,18 @@ export default function CreatePlaylistPage() {
             </Button>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  // Loading state enquanto verifica moderação
+  if (isCheckingModeration) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="text-gray-600">A verificar permissões...</p>
+        </div>
       </div>
     );
   }

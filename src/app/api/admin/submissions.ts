@@ -9,6 +9,8 @@ export async function GET(req: NextRequest) {
   const limit = parseInt(searchParams.get("limit") || "20", 10);
   const skip = (page - 1) * limit;
   const status = searchParams.get("status") || undefined;
+  // Força ordenação alfabética
+  const sort = "az";
 
   // Filtro de busca
   const where: any = {
@@ -22,10 +24,13 @@ export async function GET(req: NextRequest) {
     ...(status && status !== "all" && { status }),
   };
 
+  // Ordenação
+  let orderBy: any = { title: "asc" };
+
   const [rawSubmissions, total] = await Promise.all([
     prisma.songSubmission.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy,
       skip,
       take: limit,
       include: {

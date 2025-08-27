@@ -12,6 +12,12 @@ export async function middleware(req: NextRequest) {
   const token = (await getToken({ req })) as Token;
   const pathname = req.nextUrl.pathname;
 
+  // Permitir acesso à página de banimento e logout
+  const allowedBannedRoutes = ["/banned", "/api/auth/signout", "/api/user/moderation-status"];
+  if (allowedBannedRoutes.some(route => pathname.startsWith(route))) {
+    return NextResponse.next();
+  }
+
   // Verificar se o utilizador está banido ou suspenso (apenas se autenticado)
   if (token?.id) {
     try {
@@ -23,21 +29,29 @@ export async function middleware(req: NextRequest) {
       if (userModeration) {
         const now = new Date();
         
-        // Verificar se está banido
+        // Verificar se está banido - redirecionar para página de banimento
         if (userModeration.status === 'BANNED') {
-          const url = req.nextUrl.clone();
-          url.pathname = "/login";
-          url.searchParams.set("message", "A sua conta foi banida.");
-          return NextResponse.redirect(url);
+          if (pathname !== "/banned") {
+            const url = req.nextUrl.clone();
+            url.pathname = "/banned";
+            return NextResponse.redirect(url);
+          }
+          return NextResponse.next();
         }
         
         // Verificar se está suspenso e se a suspensão ainda está ativa
         if (userModeration.status === 'SUSPENDED') {
           if (!userModeration.expiresAt || userModeration.expiresAt > now) {
-            const url = req.nextUrl.clone();
-            url.pathname = "/login";
-            url.searchParams.set("message", "A sua conta está suspensa.");
-            return NextResponse.redirect(url);
+            // Utilizadores suspensos não podem criar músicas, mas podem ver o resto
+            const restrictedSuspendedRoutes = ["/musics/create", "/playlists/create"];
+            if (restrictedSuspendedRoutes.some(route => pathname.startsWith(route))) {
+              const url = req.nextUrl.clone();
+              url.pathname = "/";
+              url.searchParams.set("message", "A sua conta está suspensa. Não pode criar conteúdo.");
+              return NextResponse.redirect(url);
+            }
+          } else {
+            // Suspensão expirou - será reativado automaticamente na API
           }
         }
       }
@@ -97,11 +111,14 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    "/musics/create",
-    "/admin/dashboard/:path*",
-    "/admin/review/:path*",
-    "/playlists/:path*",
-    "/users/:path*",
-    "/profile/:path*",
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api/auth (auth endpoints)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - login, register (auth pages)
+     */
+    "/((?!api/auth|_next/static|_next/image|favicon.ico|login|register).*)",
   ],
 };

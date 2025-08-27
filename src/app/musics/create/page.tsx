@@ -31,10 +31,48 @@ const mdParser = new MarkdownIt({ breaks: true }).use(chords);
 
 
 export default function CreateNewMusicPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const editorRef = useRef<any>(null);
   const [currentStep, setCurrentStep] = useState(1);
+  const [isCheckingModeration, setIsCheckingModeration] = useState(true);
+  const [moderationStatus, setModerationStatus] = useState<any>(null);
+
+  // Verificar status de moderação no carregamento
+  useEffect(() => {
+    if (status === "loading") return;
+    
+    if (!session) {
+      router.push("/login");
+      return;
+    }
+
+    // Verificar se o utilizador pode criar músicas
+    fetch("/api/user/moderation-status")
+      .then(res => res.json())
+      .then(data => {
+        setModerationStatus(data);
+        
+        if (data.status === "BANNED") {
+          router.push("/banned");
+          return;
+        }
+        
+        if (data.status === "SUSPENDED") {
+          toast.error("A sua conta está suspensa. Não pode criar músicas.", {
+            description: data.reason ? `Motivo: ${data.reason}` : undefined
+          });
+          router.push("/");
+          return;
+        }
+        
+        setIsCheckingModeration(false);
+      })
+      .catch(() => {
+        setIsCheckingModeration(false);
+      });
+  }, [session, status, router]);
+
   // O objeto options precisa ser estável para evitar perder o foco no SimpleMDE
   const simpleMDEOptions = useMemo(() => ({
     spellChecker: false,
@@ -273,14 +311,27 @@ export default function CreateNewMusicPage() {
 
   return (
     <main className="min-h-screen bg-white">
-      {/* Hero Section com estilo da landing page */}
-      <section className="relative bg-gradient-to-br from-blue-50 via-white to-purple-50">
-        {/* Background decoration */}
-        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-          <div className="absolute left-1/2 top-0 -translate-x-1/2">
-            <div className="h-60 w-60 rounded-full bg-gradient-to-tr from-blue-500/20 to-purple-500/20 blur-[80px]" />
+      {/* Loading state enquanto verifica moderação */}
+      {isCheckingModeration && (
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="text-gray-600">A verificar permissões...</p>
           </div>
         </div>
+      )}
+      
+      {/* Conteúdo principal - só mostra após verificação */}
+      {!isCheckingModeration && (
+        <>
+          {/* Hero Section com estilo da landing page */}
+          <section className="relative bg-gradient-to-br from-blue-50 via-white to-purple-50">
+            {/* Background decoration */}
+            <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+              <div className="absolute left-1/2 top-0 -translate-x-1/2">
+                <div className="h-60 w-60 rounded-full bg-gradient-to-tr from-blue-500/20 to-purple-500/20 blur-[80px]" />
+              </div>
+            </div>
         
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="pb-8 pt-12 md:pb-12 md:pt-16 relative z-10">
@@ -824,6 +875,8 @@ export default function CreateNewMusicPage() {
           </div>
         </section>
       )}
+      </>
+    )}
 
     </main>
   );

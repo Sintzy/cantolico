@@ -92,6 +92,7 @@ export default function AdminReviewPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  // Ordenação fixa: sempre A-Z
 
   const fetchSubmissions = async (params?: { page?: number; q?: string; status?: string }) => {
     try {
@@ -103,6 +104,8 @@ export default function AdminReviewPage() {
       else if (debouncedSearch) url.searchParams.set("q", debouncedSearch);
       if (params?.status !== undefined) url.searchParams.set("status", params.status);
       else if (statusFilter) url.searchParams.set("status", statusFilter);
+      // Adiciona parâmetro de ordenação
+  url.searchParams.set("sort", "az");
       const res = await fetch(url.toString());
       if (res.ok) {
         const data = await res.json();
@@ -470,6 +473,7 @@ export default function AdminReviewPage() {
 
   return (
   <div className="container mx-auto p-6 space-y-6">
+
       <div className="flex flex-col space-y-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Revisão de Submissões</h1>
