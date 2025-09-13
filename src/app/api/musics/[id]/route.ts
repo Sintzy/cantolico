@@ -54,7 +54,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
           youtubeLink,
           spotifyLink,
           createdAt,
-          createdById
+          createdById,
+          createdBy:User!SongVersion_createdById_fkey (
+            name
+          )
         )
       `)
       .or(`id.eq.${id},slug.eq.${id}`)

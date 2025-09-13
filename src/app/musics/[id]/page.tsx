@@ -1,4 +1,5 @@
 'use client';
+'use client';
 import "../../../../public/styles/chords.css";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Guitar, ChevronDown, FileText, Music, Youtube } from 'lucide-react';
@@ -8,6 +9,7 @@ import YouTube from 'react-youtube';
 import * as React from "react";
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+// import { supabase } from '@/lib/supabase';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
