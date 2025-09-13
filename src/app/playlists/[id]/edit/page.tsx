@@ -317,15 +317,15 @@ export default function EditPlaylistPage({ params }: EditPlaylistPageProps) {
                 Ações irreversíveis que afetam permanentemente esta playlist.
               </p>
               
-              <Button 
+                <Button 
                 variant="destructive" 
-                className="w-full"
+                className="w-full bg-red-600 hover:bg-red-700 text-white"
                 disabled={deleting}
                 onClick={handleDelete}
-              >
+                >
                 <Trash2 className="h-4 w-4 mr-2" />
                 {deleting ? 'Eliminando...' : 'Eliminar Playlist'}
-              </Button>
+                </Button>
             </CardContent>
           </Card>
         </div>

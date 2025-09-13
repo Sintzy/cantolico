@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
-import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase-client";
 
 type Token = {
   id?: string;
@@ -21,16 +21,17 @@ export async function middleware(req: NextRequest) {
   // Verificar se o utilizador está banido ou suspenso (apenas se autenticado)
   if (token?.id) {
     try {
-      const userModeration = await prisma.userModeration.findUnique({
-        where: { userId: parseInt(token.id) },
-        select: { status: true, expiresAt: true }
-      });
+      const { data: userModeration } = await supabase
+        .from('UserModeration')
+        .select('status, expiresAt')
+        .eq('userId', parseInt(token.id))
+        .single();
 
       if (userModeration) {
         const now = new Date();
         
         // Verificar se está banido - redirecionar para página de banimento
-        if (userModeration.status === 'BANNED') {
+        if ((userModeration as any).status === 'BANNED') {
           if (pathname !== "/banned") {
             const url = req.nextUrl.clone();
             url.pathname = "/banned";
@@ -40,8 +41,8 @@ export async function middleware(req: NextRequest) {
         }
         
         // Verificar se está suspenso e se a suspensão ainda está ativa
-        if (userModeration.status === 'SUSPENDED') {
-          if (!userModeration.expiresAt || userModeration.expiresAt > now) {
+        if ((userModeration as any).status === 'SUSPENDED') {
+          if (!(userModeration as any).expiresAt || new Date((userModeration as any).expiresAt) > now) {
             // Utilizadores suspensos não podem criar músicas, mas podem ver o resto
             const restrictedSuspendedRoutes = ["/musics/create", "/playlists/create"];
             if (restrictedSuspendedRoutes.some(route => pathname.startsWith(route))) {
@@ -61,13 +62,13 @@ export async function middleware(req: NextRequest) {
   }
 
   // rotas publicas sem auth
-  const publicRoutes = ["/", "/musics", "/music/[id]", "/profile/[id]"];
+  const publicRoutes = ["/", "/musics", "/music/[id]", "/users", "/guide", "/privacy-policy", "/terms", "/playlists/explore"];
   if (publicRoutes.some((route) => pathname.startsWith(route))) {
     return NextResponse.next();
   }
 
   // rotas com auth
-  const userRoutes = ["/musics/create"];
+  const userRoutes = ["/musics/create", "/playlists"];
   if (userRoutes.some((route) => pathname.startsWith(route))) {
     if (!token) {
       const url = req.nextUrl.clone();

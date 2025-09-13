@@ -33,8 +33,8 @@
 ### **Backend**
 - **Next.js API Routes** - Endpoints REST serverless
 - **NextAuth.js 4.24.11** - Autenticação
-- **Prisma 6.12.0** - ORM e client de base de dados
-- **PostgreSQL** - Base de dados relacional
+- **Supabase.js 2.39.0** - Client de base de dados PostgreSQL
+- **PostgreSQL** - Base de dados relacional (via Supabase)
 
 ### **Serviços Externos**
 - **Supabase** - Storage de ficheiros (PDFs, imagens, áudio)
@@ -74,7 +74,7 @@ src/
 │   └── *.tsx                    # Componentes específicos
 ├── lib/                         # Bibliotecas e utilitários
 ├── types/                       # Definições TypeScript
-└── prisma/                      # Schema e migrações
+└── supabase/                    # Configuração Supabase
 ```
 
 ### **Padrão de Arquitetura**
@@ -88,44 +88,31 @@ src/
 
 ## 🗄 Base de Dados
 
-### **Schema Prisma**
+### **Schema Supabase**
 
 #### **Utilizadores e Autenticação**
-```prisma
-model User {
-  id             Int            @id @default(autoincrement())
-  name           String?
-  email          String         @unique
-  passwordHash   String?
-  image          String?
-  role           Role           @default(USER)
-  bio            String?
-  profileImage   String?
-  emailVerified  DateTime?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  
-  // Relações
-  submissions    SongSubmission[]
-  reviews        SongSubmission[]
-  favorites      Favorite[]
-  stars          Star[]
-  playlists      Playlist[]
-  accounts       Account[]      // NextAuth
-  sessions       Session[]      // NextAuth
-  moderation     UserModeration?
-}
+```sql
+-- Tabela User
+CREATE TABLE "User" (
+    "id" SERIAL PRIMARY KEY,
+    "name" TEXT,
+    "email" TEXT UNIQUE NOT NULL,
+    "passwordHash" TEXT,
+    "image" TEXT,
+    "role" "Role" DEFAULT 'USER' NOT NULL,
+    "bio" TEXT,
+    "profileImage" TEXT,
+    "emailVerified" TIMESTAMPTZ,
+    "createdAt" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updatedAt" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
 
-enum Role {
-  USER      // Utilizador normal
-  TRUSTED   // Utilizador confiável
-  REVIEWER  // Revisor de conteúdo
-  ADMIN     // Administrador
-}
+-- Enum para roles
+CREATE TYPE "Role" AS ENUM ('USER', 'TRUSTED', 'REVIEWER', 'ADMIN');
 ```
 
 #### **Sistema de Músicas**
-```prisma
+```sql
 model Song {
   id               String             @id @default(cuid())
   title            String
@@ -150,98 +137,136 @@ model SongVersion {
   id            String     @id @default(cuid())
   songId        String
   versionNumber Int
-  sourceType    SourceType // PDF ou MARKDOWN
-  sourcePdfKey  String?    // Chave no Supabase
-  sourceText    String?    // Texto markdown
-  renderedHtml  String?    // HTML renderizado
-  lyricsPlain   String     // Letras em texto simples
-  chordsJson    Json?      // Acordes em JSON
-  mediaUrl      String?    // URL de áudio
-  spotifyLink   String?
-  youtubeLink   String?
-  approvedAt    DateTime?
-  createdAt     DateTime   @default(now())
-  createdById   Int
-}
+-- Tabela Song
+CREATE TABLE "Song" (
+    "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid(),
+    "title" TEXT NOT NULL,
+    "moments" "LiturgicalMoment"[] NOT NULL,
+    "type" "SongType" NOT NULL,
+    "mainInstrument" "Instrument" NOT NULL,
+    "tags" TEXT[] NOT NULL,
+    "slug" TEXT UNIQUE NOT NULL,
+    "currentVersionId" TEXT,
+    "createdAt" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updatedAt" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
 
-enum LiturgicalMoment {
-  ENTRADA, ATO_PENITENCIAL, GLORIA, SALMO,
-  ACLAMACAO, OFERTORIO, SANTO, COMUNHAO,
-  ACAO_DE_GRACAS, FINAL, ADORACAO, ASPERSAO,
-  BAPTISMO, BENCAO_DAS_ALIANCAS, CORDEIRO_DE_DEUS,
-  CRISMA, INTRODUCAO_DA_PALAVRA, LOUVOR,
-  PAI_NOSSO, REFLEXAO, TERCO_MISTERIO
-}
+-- Tabela SongVersion
+CREATE TABLE "SongVersion" (
+    "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid(),
+    "songId" TEXT NOT NULL,
+    "versionNumber" INTEGER NOT NULL,
+    "sourceType" "SourceType" NOT NULL,
+    "sourcePdfKey" TEXT,
+    "sourceText" TEXT,
+    "renderedHtml" TEXT,
+    "keyOriginal" TEXT,
+    "lyricsPlain" TEXT NOT NULL,
+    "chordsJson" JSON,
+    "abcBlocks" JSON,
+    "mediaUrl" TEXT,
+    "spotifyLink" TEXT,
+    "youtubeLink" TEXT,
+    "approvedAt" TIMESTAMPTZ,
+    "createdAt" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "createdById" INTEGER NOT NULL,
+    CONSTRAINT "SongVersion_songId_fkey" FOREIGN KEY ("songId") REFERENCES "Song"("id") ON DELETE CASCADE,
+    CONSTRAINT "SongVersion_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id")
+);
+
+-- Enums relacionados
+CREATE TYPE "LiturgicalMoment" AS ENUM (
+  'ENTRADA', 'ATO_PENITENCIAL', 'GLORIA', 'SALMO',
+  'ACLAMACAO', 'OFERTORIO', 'SANTO', 'COMUNHAO', 
+  'ACAO_DE_GRACAS', 'FINAL', 'ADORACAO', 'ASPERSAO',
+  'BAPTISMO', 'BENCAO_DAS_ALIANCAS', 'CORDEIRO_DE_DEUS',
+  'CRISMA', 'INTRODUCAO_DA_PALAVRA', 'LOUVOR',
+  'PAI_NOSSO', 'REFLEXAO', 'TERCO_MISTERIO'
+);
 ```
 
 #### **Sistema de Playlists**
-```prisma
-model Playlist {
-  id          String         @id @default(cuid())
-  name        String
-  description String?
-  isPublic    Boolean        @default(false)
-  userId      Int
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  
-  // Relações
-  user        User
-  items       PlaylistItem[]
-}
+```sql
+-- Tabela Playlist
+CREATE TABLE "Playlist" (
+    "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid(),
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "isPublic" BOOLEAN DEFAULT false NOT NULL,
+    "userId" INTEGER NOT NULL,
+    "createdAt" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updatedAt" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT "Playlist_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE
+);
 
-model PlaylistItem {
-  id         String   @id @default(cuid())
-  playlistId String
-  songId     String
-  order      Int      // Ordem na playlist
-  addedById  Int
-  createdAt  DateTime @default(now())
-}
+-- Tabela PlaylistItem
+CREATE TABLE "PlaylistItem" (
+    "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid(),
+    "playlistId" TEXT NOT NULL,
+    "songId" TEXT NOT NULL,
+    "order" INTEGER NOT NULL,
+    "addedById" INTEGER NOT NULL,
+    "createdAt" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT "PlaylistItem_playlistId_fkey" FOREIGN KEY ("playlistId") REFERENCES "Playlist"("id") ON DELETE CASCADE,
+    CONSTRAINT "PlaylistItem_songId_fkey" FOREIGN KEY ("songId") REFERENCES "Song"("id") ON DELETE CASCADE,
+    CONSTRAINT "PlaylistItem_addedById_fkey" FOREIGN KEY ("addedById") REFERENCES "User"("id")
+);
 ```
 
 #### **Sistema de Moderação**
-```prisma
-model UserModeration {
-  id           Int            @id @default(autoincrement())
-  userId       Int            @unique
-  status       ModerationStatus @default(ACTIVE)
-  type         ModerationType?
-  reason       String?
-  moderatorNote String?
-  moderatedById Int?
-  expiresAt    DateTime?      // Para suspensões temporárias
-}
+```sql
+-- Tabela UserModeration
+CREATE TABLE "UserModeration" (
+    "id" SERIAL PRIMARY KEY,
+    "userId" INTEGER UNIQUE NOT NULL,
+    "status" "ModerationStatus" DEFAULT 'ACTIVE' NOT NULL,
+    "type" "ModerationType",
+    "reason" TEXT,
+    "moderatorNote" TEXT,
+    "ipAddress" TEXT,
+    "moderatedById" INTEGER,
+    "moderatedAt" TIMESTAMPTZ,
+    "expiresAt" TIMESTAMPTZ,
+    "createdAt" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updatedAt" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT "UserModeration_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE,
+    CONSTRAINT "UserModeration_moderatedById_fkey" FOREIGN KEY ("moderatedById") REFERENCES "User"("id")
+);
 
-enum ModerationStatus {
-  ACTIVE, WARNING, SUSPENDED, BANNED
-}
+-- Enums de moderação
+CREATE TYPE "ModerationStatus" AS ENUM ('ACTIVE', 'WARNING', 'SUSPENDED', 'BANNED');
+CREATE TYPE "ModerationType" AS ENUM ('WARNING', 'SUSPENSION', 'BAN');
 ```
 
 #### **Sistema de Submissões**
-```prisma
-model SongSubmission {
-  id              String             @id @default(cuid())
-  title           String
-  moment          LiturgicalMoment[]
-  type            SongType
-  mainInstrument  Instrument
-  tags            String[]
-  submitterId     Int
-  status          SubmissionStatus   @default(PENDING)
-  rejectionReason String?
-  tempSourceType  SourceType
-  tempPdfKey      String?
-  tempText        String?
-  parsedPreview   Json?
-  createdAt       DateTime           @default(now())
-  reviewedAt      DateTime?
-  reviewerId      Int?
-}
+```sql
+-- Tabela SongSubmission
+CREATE TABLE "SongSubmission" (
+    "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid(),
+    "title" TEXT NOT NULL,
+    "moment" "LiturgicalMoment"[] NOT NULL,
+    "type" "SongType" NOT NULL,
+    "mainInstrument" "Instrument" NOT NULL,
+    "tags" TEXT[] NOT NULL,
+    "submitterId" INTEGER NOT NULL,
+    "status" "SubmissionStatus" DEFAULT 'PENDING' NOT NULL,
+    "rejectionReason" TEXT,
+    "tempSourceType" "SourceType" NOT NULL,
+    "tempPdfKey" TEXT,
+    "tempText" TEXT,
+    "parsedPreview" JSON,
+    "mediaUrl" TEXT,
+    "spotifyLink" TEXT,
+    "youtubeLink" TEXT,
+    "createdAt" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "reviewedAt" TIMESTAMPTZ,
+    "reviewerId" INTEGER,
+    CONSTRAINT "SongSubmission_submitterId_fkey" FOREIGN KEY ("submitterId") REFERENCES "User"("id") ON DELETE CASCADE,
+    CONSTRAINT "SongSubmission_reviewerId_fkey" FOREIGN KEY ("reviewerId") REFERENCES "User"("id")
+);
 
-enum SubmissionStatus {
-  PENDING, APPROVED, REJECTED
-}
+-- Enum para status de submissão
+CREATE TYPE "SubmissionStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
 ```
 
 ---
@@ -596,7 +621,7 @@ enum SubmissionStatus {
 ### **Sistema de Autenticação**
 - **NextAuth.js** com múltiplos providers
 - **JWT tokens** para sessões
-- **Adapter Prisma** para persistência
+- **Supabase** para persistência de dados
 
 ### **Providers Configurados**
 1. **Credentials Provider**
@@ -738,7 +763,7 @@ const config = {
 ### **Gestão de Logs**
 - **Biblioteca:** `src/lib/logs.ts`
 - **Tipos:** INFO, WARN, ERROR, SUCCESS
-- **Persistência:** Base de dados Prisma
+- **Persistência:** Base de dados Supabase
 - **Contexto:** Metadados estruturados
 
 ### **Geração de Slugs**
@@ -796,15 +821,17 @@ const nextConfig = {
 - **Strict mode:** Activado
 - **Path mapping:** Aliases para imports
 
-### **Prisma** (`prisma/schema.prisma`)
+### **Supabase** (`src/lib/supabase-client.ts`)
 - **Provider:** PostgreSQL
-- **Generator:** Prisma Client
-- **Migrations:** Versionadas e automáticas
+- **Client:** Supabase.js
+- **Real-time:** Subscriptions automáticas
 
 ### **Variáveis de Ambiente**
 ```env
-# Base de dados
-DATABASE_URL="postgresql://..."
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL="https://..."
+NEXT_PUBLIC_SUPABASE_ANON_KEY="..."
+SUPABASE_SERVICE_ROLE_KEY="..."
 
 # NextAuth
 NEXTAUTH_SECRET="..."
@@ -865,7 +892,7 @@ RESEND_API_KEY="..."
 - **Captcha** em formulários sensíveis
 - **Rate limiting** implícito do Vercel
 - **Input validation** em todos os endpoints
-- **SQL injection protection** via Prisma
+- **SQL injection protection** via Supabase RLS
 - **XSS protection** via sanitização
 
 ---

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase-client";
 
 // /api/admin/submissions?page=1&limit=20&q=&status=
 export async function GET(req: NextRequest) {
@@ -27,66 +27,74 @@ export async function GET(req: NextRequest) {
   // Ordenação
   let orderBy: any = { title: "asc" };
 
-  const [rawSubmissions, total] = await Promise.all([
-    prisma.songSubmission.findMany({
-      where,
-      orderBy,
-      skip,
-      take: limit,
-      include: {
-        submitter: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-            createdAt: true,
-            image: true,
-            bio: true,
-            moderationHistory: {
-              orderBy: { moderatedAt: "desc" },
-              take: 5,
-              select: {
-                id: true,
-                status: true,
-                type: true,
-                reason: true,
-                moderatorNote: true,
-                moderatedAt: true,
-                expiresAt: true,
-                moderatedBy: { select: { name: true } },
-              },
-            },
-            moderation: {
-              select: {
-                id: true,
-                status: true,
-                type: true,
-                reason: true,
-                moderatorNote: true,
-                moderatedAt: true,
-                expiresAt: true,
-                moderatedBy: { select: { name: true } },
-              },
-            },
-          },
-        },
-      },
-    }),
-    prisma.songSubmission.count({ where }),
-  ]);
+  // Build query
+  let query = supabase
+    .from('SongSubmission')
+    .select(`
+      *,
+      submitter:User!SongSubmission_submitterId_fkey (
+        id,
+        name,
+        email,
+        role,
+        createdAt,
+        image,
+        bio,
+        moderationHistory:UserModeration!UserModeration_userId_fkey (
+          id,
+          status,
+          type,
+          reason,
+          moderatorNote,
+          moderatedAt,
+          expiresAt,
+          moderatedBy:User!UserModeration_moderatedById_fkey (
+            name
+          )
+        ),
+        moderation:UserModeration!UserModeration_userId_fkey (
+          id,
+          status,
+          type,
+          reason,
+          moderatorNote,
+          moderatedAt,
+          expiresAt,
+          moderatedBy:User!UserModeration_moderatedById_fkey (
+            name
+          )
+        )
+      )
+    `, { count: 'exact' })
+    .order('title', { ascending: true })
+    .range(skip, skip + limit - 1);
+
+  // Apply filters
+  if (q) {
+    query = query.or(`title.ilike.%${q}%,submitter.name.ilike.%${q}%,submitter.email.ilike.%${q}%`);
+  }
+  
+  if (status && status !== "all") {
+    query = query.eq('status', status);
+  }
+
+  const { data: rawSubmissions, error, count: total } = await query;
+
+  if (error) {
+    throw new Error(`Erro ao buscar submissões: ${error.message}`);
+  }
 
   // Garante que moderationHistory e moderation (currentModeration) nunca sejam undefined
-  const submissions = rawSubmissions.map((s) => ({
+  const submissions = (rawSubmissions || []).map((s: any) => ({
     ...s,
     submitter: {
       ...s.submitter,
-      moderationHistory: s.submitter.moderationHistory ?? [],
-      currentModeration: s.submitter.moderation ?? null,
+      moderationHistory: s.submitter?.moderationHistory ?? [],
+      currentModeration: s.submitter?.moderation ?? null,
     },
   }));
 
-  const totalPages = Math.ceil(total / limit);
+  const totalPages = Math.ceil((total || 0) / limit);
 
   return NextResponse.json({ submissions, totalPages });
 }

@@ -68,7 +68,7 @@ export default function MusicsPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   const itemsPerPage = 15;
-  const totalPages = Math.ceil(filteredSongs.length / itemsPerPage);
+  const totalPages = Math.ceil((filteredSongs || []).length / itemsPerPage);
 
   useEffect(() => {
     const fetchSongs = async () => {
@@ -81,7 +81,7 @@ export default function MusicsPage() {
         }
         
         const data = await res.json();
-        setSongs(data);
+        setSongs(data.songs || []);
       } catch (error) {
         console.error('Erro ao carregar músicas:', error);
         toast.error('Erro ao carregar as músicas. Tenta recarregar a página.');
@@ -99,10 +99,10 @@ export default function MusicsPage() {
           removeAccents(searchTerm.toLowerCase())
         );
         const momentMatch = selectedMoment
-          ? song.moments.includes(selectedMoment)
+          ? (song.moments || []).includes(selectedMoment)
           : true;
         const tagMatch = tagFilter
-          ? song.tags.some((tag) =>
+          ? (song.tags || []).some((tag) =>
               removeAccents(tag.toLowerCase()).includes(
                 removeAccents(tagFilter.toLowerCase())
               )
@@ -120,7 +120,7 @@ export default function MusicsPage() {
     setCurrentPage(1);
   }, [searchTerm, selectedMoment, tagFilter, sortOrder, songs]);
 
-  const paginatedSongs = filteredSongs.slice(
+  const paginatedSongs = (filteredSongs || []).slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -131,11 +131,11 @@ export default function MusicsPage() {
       <BannerDisplay page="MUSICS" />
       
       {/* Hero Section com estilo da landing page */}
-      <section className="relative bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <section className="relative bg-gradient-to-br from-blue-50 via-white to-purple-10">
         {/* Background decoration */}
         <div className="pointer-events-none absolute inset-0" aria-hidden="true">
           <div className="absolute left-1/2 top-0 -translate-x-1/2">
-            <div className="h-60 w-60 rounded-full bg-gradient-to-tr from-blue-500/20 to-purple-500/20 blur-[80px]" />
+            <div className="h-60 w-60 rounded-full bg-gradient-to-br from-blue-50 via-white to-purple-50" />
           </div>
         </div>
         
@@ -167,7 +167,7 @@ export default function MusicsPage() {
       </section>
       
       {/* Main Content */}
-      <section className="bg-gray-50 py-8">
+      <section className="bg-white py-8">
         <div className="max-w-6xl mx-auto px-6">
           {/* Filters - Redesigned */}
           <Card className="mb-8 border-0 shadow-lg backdrop-blur-sm bg-white/95">
@@ -334,7 +334,7 @@ export default function MusicsPage() {
                         {/* Momentos */}
                         <div className="mb-4">
                           <div className="flex flex-wrap gap-2">
-                            {song.moments.slice(0, 2).map((moment, momentIndex) => (
+                            {(song.moments || []).slice(0, 2).map((moment, momentIndex) => (
                               <Badge 
                                 key={`${song.id}-moment-${momentIndex}`} 
                                 className="bg-blue-50 text-blue-700 border-blue-200 text-xs font-medium px-2 py-1"
@@ -342,19 +342,19 @@ export default function MusicsPage() {
                                 {moment.replaceAll('_', ' ')}
                               </Badge>
                             ))}
-                            {song.moments.length > 2 && (
+                            {(song.moments || []).length > 2 && (
                               <Badge className="bg-gray-100 text-gray-600 text-xs">
-                                +{song.moments.length - 2}
+                                +{(song.moments || []).length - 2}
                               </Badge>
                             )}
                           </div>
                         </div>
 
                         {/* Tags */}
-                        {song.tags.length > 0 && (
+                        {(song.tags || []).length > 0 && (
                           <div className="mb-6">
                             <div className="flex flex-wrap gap-1">
-                              {song.tags.slice(0, 3).map((tag, tagIndex) => (
+                              {(song.tags || []).slice(0, 3).map((tag, tagIndex) => (
                                 <span 
                                   key={`${song.id}-tag-${tagIndex}`} 
                                   className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-50 text-purple-700"
@@ -362,9 +362,9 @@ export default function MusicsPage() {
                                   #{tag}
                                 </span>
                               ))}
-                              {song.tags.length > 3 && (
+                              {(song.tags || []).length > 3 && (
                                 <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600">
-                                  +{song.tags.length - 3}
+                                  +{(song.tags || []).length - 3}
                                 </span>
                               )}
                             </div>
@@ -417,7 +417,7 @@ export default function MusicsPage() {
                                 
                                 {/* Tags and Moments */}
                                 <div className="flex flex-wrap gap-2">
-                                  {song.moments.slice(0, 3).map((moment, momentIndex) => (
+                                  {(song.moments || []).slice(0, 3).map((moment, momentIndex) => (
                                     <Badge 
                                       key={`${song.id}-moment-${momentIndex}`} 
                                       className="bg-blue-50 text-blue-700 border-blue-200 text-xs"
@@ -425,7 +425,7 @@ export default function MusicsPage() {
                                       {moment.replaceAll('_', ' ')}
                                     </Badge>
                                   ))}
-                                  {song.tags.slice(0, 2).map((tag, tagIndex) => (
+                                  {(song.tags || []).slice(0, 2).map((tag, tagIndex) => (
                                     <span 
                                       key={`${song.id}-tag-${tagIndex}`} 
                                       className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-50 text-purple-700"
@@ -433,9 +433,9 @@ export default function MusicsPage() {
                                       #{tag}
                                     </span>
                                   ))}
-                                  {(song.moments.length > 3 || song.tags.length > 2) && (
+                                  {((song.moments || []).length > 3 || (song.tags || []).length > 2) && (
                                     <Badge className="bg-gray-100 text-gray-600 text-xs">
-                                      +{(song.moments.length > 3 ? song.moments.length - 3 : 0) + (song.tags.length > 2 ? song.tags.length - 2 : 0)}
+                                      +{((song.moments || []).length > 3 ? (song.moments || []).length - 3 : 0) + ((song.tags || []).length > 2 ? (song.tags || []).length - 2 : 0)}
                                     </Badge>
                                   )}
                                 </div>

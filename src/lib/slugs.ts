@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase-client";
 
 /**
  * Converte um título numa slug URL-friendly
@@ -31,16 +31,18 @@ export async function generateUniqueSlug(title: string, excludeId?: string): Pro
   }
 
   // Verifica se a slug base já existe
-  const existingCount = await prisma.song.count({
-    where: {
-      slug: {
-        startsWith: baseSlug
-      },
-      ...(excludeId && { id: { not: excludeId } })
-    }
-  });
+  let query = (supabase as any)
+    .from('Song')
+    .select('id', { count: 'exact' })
+    .like('slug', `${baseSlug}%`);
 
-  if (existingCount === 0) {
+  if (excludeId) {
+    query = query.neq('id', excludeId);
+  }
+
+  const { count } = await query;
+
+  if (!count || count === 0) {
     return baseSlug;
   }
 
@@ -49,12 +51,16 @@ export async function generateUniqueSlug(title: string, excludeId?: string): Pro
   let slugCandidate = `${baseSlug}-${counter}`;
   
   while (true) {
-    const existing = await prisma.song.findFirst({
-      where: {
-        slug: slugCandidate,
-        ...(excludeId && { id: { not: excludeId } })
-      }
-    });
+    let existingQuery = (supabase as any)
+      .from('Song')
+      .select('id')
+      .eq('slug', slugCandidate);
+
+    if (excludeId) {
+      existingQuery = existingQuery.neq('id', excludeId);
+    }
+
+    const { data: existing } = await existingQuery.single();
 
     if (!existing) {
       return slugCandidate;
@@ -69,18 +75,20 @@ export async function generateUniqueSlug(title: string, excludeId?: string): Pro
  * Encontra uma música pela slug
  */
 export async function findSongBySlug(slug: string) {
-  return await prisma.song.findUnique({
-    where: { slug },
-    include: {
-      currentVersion: {
-        include: {
-          createdBy: {
-            select: { name: true }
-          }
-        }
-      }
-    }
-  });
+  const { data: song, error } = await (supabase as any)
+    .from('Song')
+    .select(`
+      *,
+      currentVersion:SongVersion!Song_currentVersionId_fkey(
+        *,
+        createdBy:User!SongVersion_createdById_fkey(name)
+      )
+    `)
+    .eq('slug', slug)
+    .single();
+
+  if (error) return null;
+  return song;
 }
 
 /**
@@ -89,10 +97,11 @@ export async function findSongBySlug(slug: string) {
 export async function updateSongSlug(songId: string, newTitle: string): Promise<string> {
   const newSlug = await generateUniqueSlug(newTitle, songId);
   
-  await prisma.song.update({
-    where: { id: songId },
-    data: { slug: newSlug }
-  });
+  const { error } = await (supabase as any)
+    .from('Song')
+    .update({ slug: newSlug })
+    .eq('id', songId);
 
+  if (error) throw error;
   return newSlug;
 }

@@ -1,13 +1,13 @@
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import { SupabaseAdapter } from "@/lib/supabase-adapter";
 import { AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
-import prisma from "@/lib/prisma";
+import { supabase } from "@/lib/supabase-client";
 import bcrypt from "bcryptjs";
 import { logGeneral, logErrors } from "@/lib/logs";
 
 export const authOptions: AuthOptions = {
-  adapter: PrismaAdapter(prisma),
+  adapter: SupabaseAdapter(),
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -20,7 +20,10 @@ export const authOptions: AuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
+        console.log('🔍 [AUTH] Iniciando processo de autorização:', { email: credentials?.email });
+        
         if (!credentials?.email || !credentials?.password) {
+          console.log('❌ [AUTH] Credenciais incompletas');
           await logGeneral('WARN', 'Tentativa de login com credenciais incompletas', 'Email ou password em falta', {
             action: 'login_incomplete_credentials'
           });
@@ -28,14 +31,19 @@ export const authOptions: AuthOptions = {
         }
 
         try {
-          const user = await prisma.user.findUnique({
-            where: { email: credentials.email },
-            include: {
-              moderation: true
-            }
-          });
+          console.log('🔍 [AUTH] Buscando utilizador na base de dados:', credentials.email);
+          
+          // Primeiro buscar o utilizador
+          const { data: user, error: userError } = await (supabase as any)
+            .from('User')
+            .select('*')
+            .eq('email', credentials.email)
+            .single();
 
-          if (!user) {
+          console.log('🔍 [AUTH] Resultado da consulta do utilizador:', { user: user ? 'found' : 'not found', error: userError?.message });
+
+          if (userError || !user) {
+            console.log('❌ [AUTH] Utilizador não encontrado');
             await logGeneral('WARN', 'Tentativa de login com email não registado', 'Email não existe na base de dados', {
               email: credentials.email,
               action: 'login_email_not_found'
@@ -43,28 +51,62 @@ export const authOptions: AuthOptions = {
             return null;
           }
 
+          // Depois buscar dados de moderação separadamente
+          const { data: userModeration, error: moderationError } = await (supabase as any)
+            .from('UserModeration')
+            .select('*')
+            .eq('userId', user.id)
+            .single();
+
+          console.log('🔍 [AUTH] Resultado da consulta de moderação:', { 
+            moderation: userModeration ? 'found' : 'not found', 
+            error: moderationError?.message 
+          });
+
+          console.log('🔍 [AUTH] Utilizador encontrado, verificando moderação');
+
           // Verificar se o utilizador está banido ou suspenso
-          if (user.moderation && (user.moderation.status === 'BANNED' || user.moderation.status === 'SUSPENDED')) {
+          if (userModeration && (userModeration.status === 'BANNED' || userModeration.status === 'SUSPENDED')) {
+            console.log('⚠️ [AUTH] Utilizador com status de moderação:', userModeration.status);
+            
             // Verificar se a suspensão expirou
-            if (user.moderation.status === 'SUSPENDED' && user.moderation.expiresAt && user.moderation.expiresAt < new Date()) {
+            if (userModeration.status === 'SUSPENDED' && userModeration.expiresAt && new Date(userModeration.expiresAt) < new Date()) {
+              console.log('✅ [AUTH] Suspensão expirou, reativando utilizador');
               // Suspensão expirou, reativar utilizador
-              await prisma.userModeration.update({
-                where: { userId: user.id },
-                data: { status: 'ACTIVE' }
-              });
+              await (supabase as any)
+                .from('UserModeration')
+                .update({ status: 'ACTIVE' })
+                .eq('userId', user.id);
             } else {
-              await logGeneral('WARN', 'Tentativa de login de utilizador moderado', `Utilizador ${user.moderation.status.toLowerCase()} a tentar login`, {
+              console.log('❌ [AUTH] Utilizador ainda está moderado');
+              await logGeneral('WARN', 'Tentativa de login de utilizador moderado', `Utilizador ${userModeration.status.toLowerCase()} a tentar login`, {
                 userId: user.id,
                 email: credentials.email,
-                moderationStatus: user.moderation.status,
-                moderationReason: user.moderation.reason,
+                moderationStatus: userModeration.status,
+                moderationReason: userModeration.reason,
                 action: 'login_moderated_user'
               });
-              throw new Error(`Conta ${user.moderation.status === 'BANNED' ? 'banida' : 'suspensa'}. Motivo: ${user.moderation.reason || 'Não especificado'}. Consulte o seu email para mais informações.`);
+              throw new Error(`Conta ${userModeration.status === 'BANNED' ? 'banida' : 'suspensa'}. Motivo: ${userModeration.reason || 'Não especificado'}. Consulte o seu email para mais informações.`);
             }
           }
 
-          if (!user.passwordHash || !bcrypt.compareSync(credentials.password, user.passwordHash)) {
+          console.log('🔍 [AUTH] Verificando password');
+          
+          if (!user.passwordHash) {
+            console.log('❌ [AUTH] Utilizador não tem password hash (possivelmente OAuth)');
+            await logGeneral('WARN', 'Tentativa de login com credenciais em conta OAuth', 'Utilizador sem password hash', {
+              userId: user.id,
+              email: credentials.email,
+              action: 'login_oauth_account_with_credentials'
+            });
+            return null;
+          }
+
+          const passwordMatch = bcrypt.compareSync(credentials.password, user.passwordHash);
+          console.log('🔍 [AUTH] Password match:', passwordMatch);
+
+          if (!passwordMatch) {
+            console.log('❌ [AUTH] Password incorreta');
             await logGeneral('WARN', 'Tentativa de login com password incorreta', 'Password não confere', {
               userId: user.id,
               email: credentials.email,
@@ -72,6 +114,8 @@ export const authOptions: AuthOptions = {
             });
             return null;
           }
+
+          console.log('✅ [AUTH] Password correta, autenticação bem-sucedida');
 
           if(user.role === "ADMIN" || user.role === "REVIEWER") {
             await logGeneral('INFO', 'Tentativa de login com role privilegiada', 'Utilizador com role ADMIN ou REVIEWER a tentar login', {
@@ -89,14 +133,19 @@ export const authOptions: AuthOptions = {
             action: 'login_success'
           });
 
-          return {
+          const userResult = {
             id: String(user.id),
             name: user.name,
             email: user.email,
             image: user.image,
             role: user.role,
           };
+
+          console.log('✅ [AUTH] Retornando utilizador:', { id: userResult.id, email: userResult.email });
+          
+          return userResult;
         } catch (error) {
+          console.error('❌ [AUTH] Erro durante processo de login:', error);
           await logErrors('ERROR', 'Erro durante processo de login', 'Erro interno na autenticação', {
             email: credentials.email,
             error: error instanceof Error ? error.message : 'Erro desconhecido',
@@ -111,19 +160,26 @@ export const authOptions: AuthOptions = {
     strategy: "jwt",
   },
   secret: process.env.NEXTAUTH_SECRET,
+  pages: {
+    signIn: '/login',
+    error: '/login',
+  },
   callbacks: {
     
     async session({ session, token }) {
       if (token?.sub) {
-        const user = await prisma.user.findUnique({
-          where: { id: Number(token.sub) },
-        });
+        const { data: user } = await (supabase as any)
+          .from('User')
+          .select('*')
+          .eq('id', Number(token.sub))
+          .single();
+        
         if (token?.picture) {
           session.user.image = token.picture; // <- adiciona imagem
         }
         if (user && session.user) {
-          session.user.id = user.id;
-          session.user.role = user.role;
+          (session.user as any).id = (user as any).id;
+          (session.user as any).role = (user as any).role;
         }
       }
       return session;
@@ -137,42 +193,56 @@ export const authOptions: AuthOptions = {
       return token;
     },
     async signIn({ user, account, profile }) {
+      console.log('🔍 [AUTH] SignIn callback chamado:', { 
+        provider: account?.provider, 
+        userId: user?.id, 
+        email: user?.email 
+      });
+      
       // Allow all sign-ins for credentials and OAuth
       if (account?.provider === 'credentials') {
+        console.log('✅ [AUTH] Autenticação por credenciais aprovada');
         return true;
       }
       
       if (account?.provider === 'google') {
         try {
           // Check if user already exists
-          const existingUser = await prisma.user.findUnique({
-            where: { email: user.email! },
-            include: { moderation: true }
-          });
+          const { data: existingUser } = await (supabase as any)
+            .from('User')
+            .select('*')
+            .eq('email', user.email!)
+            .single();
 
           if (existingUser) {
-            // Check moderation status
-            if (existingUser.moderation && 
-                (existingUser.moderation.status === 'BANNED' || 
-                 existingUser.moderation.status === 'SUSPENDED')) {
+            // Check moderation status separately
+            const { data: userModeration } = await (supabase as any)
+              .from('UserModeration')
+              .select('*')
+              .eq('userId', existingUser.id)
+              .single();
+
+            if (userModeration && 
+                (userModeration.status === 'BANNED' || 
+                 userModeration.status === 'SUSPENDED')) {
               
               // Check if suspension expired
-              if (existingUser.moderation.status === 'SUSPENDED' && 
-                  existingUser.moderation.expiresAt && 
-                  existingUser.moderation.expiresAt < new Date()) {
+              if (userModeration.status === 'SUSPENDED' && 
+                  userModeration.expiresAt && 
+                  new Date(userModeration.expiresAt) < new Date()) {
                 // Reactivate user
-                await prisma.userModeration.update({
-                  where: { userId: existingUser.id },
-                  data: { status: 'ACTIVE' }
-                });
+                await (supabase as any)
+                  .from('UserModeration')
+                  .update({ status: 'ACTIVE' })
+                  .eq('userId', existingUser.id);
               } else {
                 // User is still banned/suspended
                 await logGeneral('WARN', 'Tentativa de login OAuth de utilizador moderado', 
-                  `Utilizador ${existingUser.moderation.status.toLowerCase()} a tentar login via Google`, {
+                  `Utilizador ${userModeration.status.toLowerCase()} a tentar login via Google`, {
                   userId: existingUser.id,
                   email: user.email,
-                  moderationStatus: existingUser.moderation.status,
-                  moderationReason: existingUser.moderation.reason,
+                  moderationStatus: userModeration.status,
+                  moderationReason: userModeration.reason,
                   action: 'oauth_login_moderated_user'
                 });
                 return false;
@@ -181,14 +251,14 @@ export const authOptions: AuthOptions = {
 
             // Update user info from Google if needed
             if (existingUser.name !== user.name || existingUser.image !== user.image) {
-              await prisma.user.update({
-                where: { id: existingUser.id },
-                data: {
+              await (supabase as any)
+                .from('User')
+                .update({
                   name: user.name,
                   image: user.image,
-                  emailVerified: existingUser.emailVerified || new Date()
-                }
-              });
+                  emailVerified: existingUser.emailVerified || new Date().toISOString()
+                })
+                .eq('id', existingUser.id);
             }
 
             await logGeneral('SUCCESS', 'Login OAuth realizado com sucesso', 

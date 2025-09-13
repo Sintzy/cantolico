@@ -191,7 +191,7 @@ export default function AdminDashboard() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalUsers.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{stats?.totalUsers?.toLocaleString() || '0'}</div>
             <p className="text-xs text-muted-foreground">+12% desde o mês passado</p>
           </CardContent>
         </Card>
@@ -215,7 +215,7 @@ export default function AdminDashboard() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalSongs.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{stats?.totalSongs?.toLocaleString() || '0'}</div>
             <p className="text-xs text-muted-foreground">+8% desde o mês passado</p>
           </CardContent>
         </Card>
@@ -237,7 +237,7 @@ export default function AdminDashboard() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{stats.pendingSubmissions}</div>
+            <div className="text-2xl font-bold text-orange-600">{stats?.pendingSubmissions || 0}</div>
             <p className="text-xs text-muted-foreground">Requer atenção</p>
           </CardContent>
         </Card>
@@ -259,7 +259,7 @@ export default function AdminDashboard() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalSubmissions}</div>
+            <div className="text-2xl font-bold">{stats?.totalSubmissions || 0}</div>
             <p className="text-xs text-muted-foreground">Este mês</p>
           </CardContent>
         </Card>
@@ -275,7 +275,7 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={stats.submissionsByMonth}>
+              <LineChart data={stats?.submissionsByMonth || []}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" fontSize={12} />
                 <YAxis fontSize={12} />
@@ -296,7 +296,7 @@ export default function AdminDashboard() {
             <ResponsiveContainer width="100%" height={250}>
               <PieChart>
                 <Pie
-                  data={stats.usersByRole}
+                  data={stats?.usersByRole || []}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
@@ -306,7 +306,7 @@ export default function AdminDashboard() {
                   dataKey="count"
                   fontSize={12}
                 >
-                  {stats.usersByRole.map((entry, index) => (
+                  {(stats?.usersByRole || []).map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
@@ -324,7 +324,7 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={stats.songsByType}>
+              <BarChart data={stats?.songsByType || []}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="type" fontSize={12} />
                 <YAxis fontSize={12} />
@@ -343,7 +343,7 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3 max-h-64 overflow-y-auto">
-              {stats.recentActivities.map((activity) => (
+              {(stats?.recentActivities || []).map((activity) => (
                 <div key={activity.id} className={`flex items-start space-x-3 p-3 rounded-lg border ${getActivityColor(activity.type)}`}>
                   {getActivityIcon(activity.type)}
                   <div className="flex-1 min-w-0">

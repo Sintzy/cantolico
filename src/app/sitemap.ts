@@ -1,5 +1,5 @@
 import { MetadataRoute } from 'next'
-import { prisma } from '@/lib/prisma'
+import { supabase } from '@/lib/supabase-client'
 
 export const revalidate = 3600; // Cache por 1 hora
 
@@ -55,28 +55,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   try {
     // Get all published songs with optimized query
-    const songs = await prisma.song.findMany({
-      select: {
-        id: true,
-        slug: true,
-        title: true,
-        updatedAt: true,
-        createdAt: true,
-      },
-      orderBy: [
-        { createdAt: 'desc' }, // Músicas mais recentes primeiro
-        { updatedAt: 'desc' }
-      ]
-    });
+    const { data: songs, error } = await supabase
+      .from('Song')
+      .select('id, slug, title, updatedAt, createdAt')
+      .order('createdAt', { ascending: false })
+      .order('updatedAt', { ascending: false });
 
-    console.log(`📄 Sitemap: ${songs.length} músicas encontradas`);
+    if (error) {
+      console.error('❌ Erro ao buscar músicas para sitemap:', error);
+      return staticPages;
+    }
+
+    console.log(`📄 Sitemap: ${songs?.length || 0} músicas encontradas`);
 
     // Dynamic music pages
     // Prioridade baseada em recência e popularidade potencial
-    const musicPages = songs.map((song: any, index: number) => {
+    const musicPages = (songs || []).map((song: any, index: number) => {
       const url = `${baseUrl}/musics/${song.slug || song.id}`;
-      const isRecent = (Date.now() - song.createdAt.getTime()) < (30 * 24 * 60 * 60 * 1000); // 30 dias
-      const isVeryRecent = (Date.now() - song.createdAt.getTime()) < (7 * 24 * 60 * 60 * 1000); // 7 dias
+      const isRecent = (Date.now() - new Date(song.createdAt).getTime()) < (30 * 24 * 60 * 60 * 1000); // 30 dias
+      const isVeryRecent = (Date.now() - new Date(song.createdAt).getTime()) < (7 * 24 * 60 * 60 * 1000); // 7 dias
       
       // Prioridade decrescente por posição, com boost para conteúdo recente
       let priority = Math.max(0.5, 0.9 - (index * 0.01)); // Decresce gradualmente
@@ -85,7 +82,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       
       return {
         url,
-        lastModified: song.updatedAt, // Mantido para compatibilidade
+        lastModified: new Date(song.updatedAt), // Mantido para compatibilidade
         changeFrequency: isRecent ? 'weekly' as const : 'monthly' as const,
         priority: Math.round(priority * 100) / 100, // Arredonda para 2 casas
       };

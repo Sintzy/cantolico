@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase-client";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { PAGE_METADATA } from "@/lib/metadata";
@@ -52,10 +52,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     };
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { name: true, bio: true },
-  });
+  const { data: user } = await supabase
+    .from('User')
+    .select('name, bio')
+    .eq('id', userId)
+    .single();
 
   if (!user) {
     return PAGE_METADATA.userProfile();
@@ -74,56 +75,62 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   const userId = Number(id);
   if (isNaN(userId)) return notFound();
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    include: {
-      moderation: {
-        include: {
-          moderatedBy: {
-            select: { name: true }
-          }
-        }
-      },
-      submissions: {
-        select: {
-          id: true,
-          title: true,
-          createdAt: true,
-          status: true,
-        },
-      },
-      _count: {
-        select: {
-          submissions: true,
-        },
-      },
-    },
-  });
+  // Buscar utilizador
+  const { data: user, error: userError } = await supabase
+    .from('User')
+    .select('*')
+    .eq('id', userId)
+    .single();
 
-  if (!user) return notFound();
+  if (userError || !user) return notFound();
+
+  // Buscar dados de moderação separadamente
+  const { data: userModeration } = await supabase
+    .from('UserModeration')
+    .select(`
+      *,
+      User!UserModeration_moderatedById_fkey (
+        name
+      )
+    `)
+    .eq('userId', userId)
+    .single();
+
+  // Buscar submissões
+  const { data: submissions } = await supabase
+    .from('SongSubmission')
+    .select('id, title, createdAt, status')
+    .eq('submitterId', userId)
+    .order('createdAt', { ascending: false });
+
+  // Contar submissões
+  const { count: submissionsCount } = await supabase
+    .from('SongSubmission')
+    .select('*', { count: 'exact', head: true })
+    .eq('submitterId', userId);
 
   const formattedUser: ProfileViewProps['user'] = {
     ...user,
-    submissions: user.submissions.map((submission: any) => ({
-      ...submission,
-      createdAt: submission.createdAt.toISOString(),
-    })),
-    createdAt: user.createdAt.toISOString(),
-    moderation: user.moderation
+    submissions: submissions || [],
+    _count: {
+      submissions: submissionsCount || 0
+    },
+    createdAt: user.createdAt,
+    moderation: userModeration
       ? {
-          id: user.moderation.id,
-          status: user.moderation.status as string,
-          type: user.moderation.type as string | null,
-          reason: user.moderation.reason,
-          moderatorNote: user.moderation.moderatorNote,
-          moderatedAt: user.moderation.moderatedAt?.toISOString() || null,
-          expiresAt: user.moderation.expiresAt?.toISOString() || null,
-          moderatedBy: user.moderation.moderatedBy || undefined,
+          id: userModeration.id,
+          status: userModeration.status as string,
+          type: userModeration.type as string | null,
+          reason: userModeration.reason,
+          moderatorNote: userModeration.moderatorNote,
+          moderatedAt: userModeration.moderatedAt,
+          expiresAt: userModeration.expiresAt,
+          moderatedBy: userModeration.User || undefined,
         }
       : undefined,
   };
 
-  const isOwner = session?.user?.id === user.id;
+  const isOwner = session?.user?.id ? Number(session.user.id) === user.id : false;
 
   return <ProfileView user={formattedUser} isOwner={isOwner} />;
 }

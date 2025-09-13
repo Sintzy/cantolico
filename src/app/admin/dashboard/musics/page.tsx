@@ -30,7 +30,8 @@ import {
   Mail,
   Shield,
   Crown,
-  UserCheck
+  UserCheck,
+  Edit3
 } from 'lucide-react';
 import { toast } from 'sonner';
 import UserAvatar from '@/components/ui/user-avatar';
@@ -42,6 +43,16 @@ interface Song {
   type: string;
   lyrics: string;
   createdAt: string;
+  currentVersion?: {
+    id: string;
+    versionNumber: number;
+    lyricsPlain: string;
+    author?: {
+      id: string;
+      name: string;
+      email: string;
+    };
+  };
   author?: {
     id: string;
     name: string;
@@ -249,7 +260,11 @@ export default function MusicsManagement() {
     setExpandedSongs(newExpanded);
   };
 
-  const formatLyrics = (lyrics: string) => {
+  const formatLyrics = (lyrics: string | null | undefined) => {
+    if (!lyrics) {
+      return <div className="text-gray-500 italic">Sem letra disponível</div>;
+    }
+    
     const lines = lyrics.split('\n');
     return lines.map((line, index) => {
       const chordRegex = /\[([A-G][#b]?[^[\]]*)\]/g;
@@ -446,6 +461,13 @@ export default function MusicsManagement() {
                         </>
                       )}
                     </Button>
+
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/admin/dashboard/musics/${song.id}/edit`}>
+                        <Edit3 className="h-4 w-4" />
+                        Editar
+                      </Link>
+                    </Button>
                     
                     <Dialog>
                       <DialogTrigger asChild>
@@ -561,7 +583,7 @@ export default function MusicsManagement() {
                           <div>
                             <h4 className="font-semibold mb-2">Letra:</h4>
                             <div className="border rounded-lg p-4 bg-white font-mono text-sm max-h-96 overflow-y-auto">
-                              {formatLyrics(song.lyrics)}
+                              {formatLyrics(song.currentVersion?.lyricsPlain)}
                             </div>
                           </div>
                         </div>
@@ -623,7 +645,7 @@ export default function MusicsManagement() {
                         </div>
                       </div>
                       <div className="bg-white border rounded-lg p-4 font-mono text-sm max-h-64 overflow-y-auto">
-                        {formatLyrics(song.lyrics)}
+                        {formatLyrics(song.currentVersion?.lyricsPlain)}
                       </div>
                     </div>
                   </div>

@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase-client";
 import { findSongBySlug } from "@/lib/slugs";
 import { createMusicMetadata } from "@/lib/metadata";
 
@@ -13,44 +13,39 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   
   try {
     // Tentar encontrar por ID primeiro, depois por slug
-    let song = await prisma.song.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        tags: true,
-        moments: true,
-        mainInstrument: true,
-        currentVersion: {
-          select: {
-            sourceText: true,
-            createdBy: {
-              select: {
-                name: true
-              }
-            }
-          }
-        }
-      }
-    });
+    let { data: song } = await supabase
+      .from('Song')
+      .select(`
+        id,
+        title,
+        slug,
+        tags,
+        moments,
+        mainInstrument,
+        currentVersion:SongVersion!Song_currentVersionId_fkey(
+          sourceText,
+          createdBy:User!SongVersion_createdById_fkey(name)
+        )
+      `)
+      .eq('id', id)
+      .single();
 
     // Se não encontrou por ID, tentar por slug
     if (!song) {
       const songBySlug = await findSongBySlug(id);
       if (songBySlug) {
         song = {    
-          id: songBySlug.id,
-          title: songBySlug.title,
-          slug: songBySlug.slug,
-          tags: songBySlug.tags,
-          moments: songBySlug.moments,
-          mainInstrument: songBySlug.mainInstrument,
-          currentVersion: songBySlug.currentVersion ? {
-            sourceText: songBySlug.currentVersion.sourceText,
-            createdBy: songBySlug.currentVersion.createdBy
+          id: (songBySlug as any).id,
+          title: (songBySlug as any).title,
+          slug: (songBySlug as any).slug,
+          tags: (songBySlug as any).tags,
+          moments: (songBySlug as any).moments,
+          mainInstrument: (songBySlug as any).mainInstrument,
+          currentVersion: (songBySlug as any).currentVersion ? {
+            sourceText: (songBySlug as any).currentVersion.sourceText,
+            createdBy: (songBySlug as any).currentVersion.createdBy
           } : null
-        };
+        } as any;
       }
     }
 
@@ -61,13 +56,13 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       };
     }
 
-    const autor = song.currentVersion?.createdBy?.name;
+    const autor = (song as any)?.currentVersion?.createdBy?.name;
     
     return createMusicMetadata({
-      title: song.title,
-      moments: song.moments,
-      tags: song.tags,
-      slug: song.slug,
+      title: (song as any)?.title,
+      moments: (song as any)?.moments,
+      tags: (song as any)?.tags,
+      slug: (song as any)?.slug,
       author: autor || undefined,
     });
   } catch (error) {

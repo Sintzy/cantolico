@@ -43,7 +43,7 @@ interface User {
   id: string;
   name: string;
   email: string;
-  role: 'USER' | 'REVIEWER' | 'ADMIN';
+  role: 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN';
   createdAt: string;
   image?: string;
   totalSongs?: number;
@@ -78,12 +78,14 @@ interface UsersResponse {
 
 const ROLE_COLORS = {
   USER: 'bg-blue-100 text-blue-800 border-blue-200',
+  TRUSTED: 'bg-green-100 text-green-800 border-green-200',
   REVIEWER: 'bg-orange-100 text-orange-800 border-orange-200',
   ADMIN: 'bg-purple-100 text-purple-800 border-purple-200'
 };
 
 const ROLE_ICONS = {
   USER: <UserCheck className="h-3 w-3" />,
+  TRUSTED: <Shield className="h-3 w-3" />,
   REVIEWER: <Shield className="h-3 w-3" />,
   ADMIN: <Crown className="h-3 w-3" />
 };
@@ -189,7 +191,7 @@ export default function UsersManagement() {
     }
   };
 
-  const handleRoleChange = async (userId: string, newRole: 'USER' | 'REVIEWER' | 'ADMIN') => {
+  const handleRoleChange = async (userId: string, newRole: 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN') => {
     try {
       setChangingRole(userId);
       
@@ -402,6 +404,7 @@ export default function UsersManagement() {
                   <SelectContent>
                     <SelectItem value="all">Todas as roles</SelectItem>
                     <SelectItem value="USER">Utilizador</SelectItem>
+                    <SelectItem value="TRUSTED">Confiável</SelectItem>
                     <SelectItem value="REVIEWER">Revisor</SelectItem>
                     <SelectItem value="ADMIN">Administrador</SelectItem>
                   </SelectContent>
@@ -534,7 +537,7 @@ export default function UsersManagement() {
                         <div className="w-full lg:w-32">
                           <Select
                             value={user.role}
-                            onValueChange={(newRole: 'USER' | 'REVIEWER' | 'ADMIN') => 
+                            onValueChange={(newRole: 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN') => 
                               handleRoleChange(user.id, newRole)
                             }
                             disabled={changingRole === user.id}
@@ -544,6 +547,7 @@ export default function UsersManagement() {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="USER">Utilizador</SelectItem>
+                              <SelectItem value="TRUSTED">Confiável</SelectItem>
                               <SelectItem value="REVIEWER">Revisor</SelectItem>
                               <SelectItem value="ADMIN">Administrador</SelectItem>
                             </SelectContent>

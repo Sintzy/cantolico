@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase-client";
 import { SITE_IMAGES } from "@/lib/site-images";
 import { notFound } from "next/navigation";
 
@@ -11,27 +11,24 @@ export async function generateMetadata({ params }: MusicPageProps): Promise<Meta
   const { id } = await params;
   
   try {
-    const song = await prisma.song.findUnique({
-      where: { id },
-      select: {
-        title: true,
-        tags: true,
-        moments: true,
-        mainInstrument: true,
-        currentVersion: {
-          select: {
-            sourceText: true,
-            createdBy: {
-              select: {
-                name: true
-              }
-            }
-          }
-        }
-      }
-    });
+    const { data: song, error } = await supabase
+      .from('Song')
+      .select(`
+        title,
+        tags,
+        moments,
+        mainInstrument,
+        currentVersion:SongVersion!Song_currentVersionId_fkey (
+          sourceText,
+          createdBy:User!SongVersion_createdById_fkey (
+            name
+          )
+        )
+      `)
+      .eq('id', id)
+      .single();
 
-    if (!song) {
+    if (error || !song) {
       return {
         title: "Música não encontrada",
         description: "Esta música não existe no nosso cancioneiro.",
@@ -40,7 +37,7 @@ export async function generateMetadata({ params }: MusicPageProps): Promise<Meta
 
     const momentos = song.moments.join(", ");
     const tags = song.tags.slice(0, 5).join(", ");
-    const autor = song.currentVersion?.createdBy?.name || "Autor desconhecido";
+    const autor = song.currentVersion?.[0]?.createdBy?.[0]?.name || "Autor desconhecido";
 
     return {
       title: song.title,
