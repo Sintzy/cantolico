@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase-client';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -14,7 +14,7 @@ export async function GET(
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }
 
-    const userId = params.id;
+  const { id: userId } = await params;
 
     // Get moderation history for user
     const { data: history, error } = await supabase
@@ -30,7 +30,7 @@ export async function GET(
         ipAddress,
         moderatedBy
       `)
-      .eq('userId', userId)
+  .eq('userId', parseInt(userId))
       .order('moderatedAt', { ascending: false });
 
     if (error) {
@@ -46,7 +46,7 @@ export async function GET(
           const { data: moderator } = await supabase
             .from('User')
             .select('name, email')
-            .eq('id', item.moderatedBy)
+            .eq('id', parseInt(item.moderatedBy))
             .single();
           moderatorInfo = moderator;
         }

@@ -13,7 +13,7 @@ const ModerateUserSchema = z.object({
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -22,7 +22,7 @@ export async function POST(
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }
 
-    const userId = params.id;
+  const { id: userId } = await params;
     const body = await request.json();
     const { action, reason, moderatorNote, duration   } = ModerateUserSchema.parse(body);
 
@@ -51,7 +51,7 @@ export async function POST(
     const { data: targetUser, error: userError } = await supabase
       .from('User')
       .select('id, name, email')
-      .eq('id', userId)
+      .eq('id', parseInt(userId))
       .single();
 
     if (userError || !targetUser) {
@@ -67,7 +67,7 @@ export async function POST(
         type: action,
         reason,
         moderatorNote: moderatorNote || null,
-        moderatedBy: session.user.id,
+  moderatedById: session.user.id,
         moderatedAt: new Date().toISOString(),
         expiresAt,
         ipAddress,
@@ -103,7 +103,7 @@ export async function POST(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -112,7 +112,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }
 
-    const userId = params.id;
+  const { id: userId } = await params;
 
     // Remove moderation (set status back to ACTIVE)
     const { error } = await supabase
@@ -126,7 +126,7 @@ export async function DELETE(
         moderatedAt: new Date().toISOString(),
         moderatedBy: session.user.id
       })
-      .eq('userId', userId);
+  .eq('userId', parseInt(userId));
 
     if (error) {
       console.error('Error removing moderation:', error);
