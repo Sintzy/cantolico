@@ -3,13 +3,13 @@ import { supabase } from '@/lib/supabase-client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }
-    const { id } = params;
+    const { id } = await context.params;
     const { data: banner, error } = await supabase
       .from('Banner')
       .select('*')
@@ -24,13 +24,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }
-    const { id } = params;
+    const { id } = await context.params;
     const body = await request.json();
     const { title, message, type, position, priority, isActive, pages, startDate, endDate } = body;
     const { data: updated, error } = await supabase

@@ -5,13 +5,13 @@ import { authOptions } from '@/lib/auth';
 import { randomUUID } from "crypto";
 
 // ADMIN: Adicionar música à playlist
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }
-    const { id: playlistId } = params;
+    const { id: playlistId } = await context.params;
     const body = await request.json();
     const { songId } = body;
     if (!songId) {
@@ -70,13 +70,13 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 }
 
 // ADMIN: Remover música da playlist
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }
-    const { id: playlistId } = params;
+    const { id: playlistId } = await context.params;
     const { searchParams } = new URL(request.url);
     const songIdOrSlug = searchParams.get('songId');
     if (!songIdOrSlug) {
