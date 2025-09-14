@@ -26,11 +26,11 @@ interface Banner {
   priority: number;
   startDate: string | null;
   endDate: string | null;
-  createdBy: {
+  createdBy?: {
     id: number;
     name: string;
     email: string;
-  };
+  } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -116,7 +116,12 @@ export default function BannerManagement() {
       const response = await fetch('/api/admin/banners');
       if (response.ok) {
         const data = await response.json();
-        setBanners(data);
+        // Normaliza o payload para sempre ter createdBy
+        const normalized = (Array.isArray(data) ? data : []).map((b: any) => ({
+          ...b,
+          createdBy: b?.createdBy ?? b?.user ?? null,
+        }));
+        setBanners(normalized);
       } else {
         toast.error('Erro ao carregar banners');
       }
@@ -355,7 +360,7 @@ export default function BannerManagement() {
                   </div>
                   <div>
                     <span className="font-medium">Criado por:</span>
-                    <div className="mt-1">{banner.createdBy.name}</div>
+                    <div className="mt-1">{banner.createdBy?.name || banner.createdBy?.email || 'Desconhecido'}</div>
                   </div>
                   <div>
                     <span className="font-medium">Data:</span>

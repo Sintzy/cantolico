@@ -18,7 +18,8 @@ export async function GET(request: NextRequest) {
 
     const offset = (page - 1) * limit;
 
-    // Buscar playlists com dados do criador
+
+    // Buscar playlists com dados do criador (usando userId)
     let playlistsQuery = supabase
       .from('Playlist')
       .select(`
@@ -28,8 +29,8 @@ export async function GET(request: NextRequest) {
         isPublic,
         createdAt,
         updatedAt,
-        createdBy,
-        creator:User!Playlist_createdBy_fkey(
+        userId,
+        user:User!Playlist_userId_fkey(
           id,
           name,
           email,
@@ -54,14 +55,14 @@ export async function GET(request: NextRequest) {
     // Para cada playlist, buscar contagem de músicas
     const playlistsWithData = await Promise.all(
       (playlists || []).map(async (playlist: any) => {
-        const { count: songCount } = await supabase
+        const { count: items } = await supabase
           .from('PlaylistSong')
           .select('id', { count: 'exact', head: true })
           .eq('playlistId', playlist.id);
 
         return {
           ...playlist,
-          songCount: songCount || 0
+          _count: { items: items || 0 }
         };
       })
     );

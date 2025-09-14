@@ -52,6 +52,53 @@ interface PlaylistsResponse {
 }
 
 export default function PlaylistsManagement() {
+  // Hooks de estado para edição de playlist
+  const [editingPlaylist, setEditingPlaylist] = useState<Playlist | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editIsPublic, setEditIsPublic] = useState(true);
+  const [savingEdit, setSavingEdit] = useState(false);
+
+
+      // Funções auxiliares de edição (após os hooks de estado)
+      function openEditDialog(playlist: Playlist) {
+        setEditingPlaylist(playlist);
+        setEditName(playlist.name);
+        setEditDescription(playlist.description || '');
+        setEditIsPublic(playlist.isPublic);
+      }
+
+      function closeEditDialog() {
+        setEditingPlaylist(null);
+        setEditName('');
+        setEditDescription('');
+        setEditIsPublic(true);
+      }
+
+      async function handleEditSave() {
+        if (!editingPlaylist) return;
+        setSavingEdit(true);
+        try {
+          const response = await fetch(`/api/admin/playlists/${editingPlaylist.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: editName,
+              description: editDescription,
+              isPublic: editIsPublic
+            })
+          });
+          if (!response.ok) throw new Error('Erro ao editar playlist');
+          const updated = await response.json();
+          setPlaylists(playlists.map((p: Playlist) => p.id === updated.id ? { ...p, ...updated } : p));
+          toast.success('Playlist atualizada!');
+          closeEditDialog();
+        } catch (e) {
+          toast.error('Erro ao editar playlist');
+        } finally {
+          setSavingEdit(false);
+        }
+      }
   const { data: session } = useSession();
   const router = useRouter();
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
@@ -271,6 +318,11 @@ export default function PlaylistsManagement() {
                     </Badge>
                   </div>
                 </div>
+                <div>
+                  <Button size="sm" variant="outline" onClick={() => openEditDialog(playlist)}>
+                    Editar
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -279,7 +331,6 @@ export default function PlaylistsManagement() {
                   {playlist.description}
                 </p>
               )}
-              
               <div className="space-y-2 text-xs text-gray-500">
                 <div className="flex items-center gap-1">
                   <User className="h-3 w-3" />
@@ -296,8 +347,46 @@ export default function PlaylistsManagement() {
                   </div>
                 )}
               </div>
-              
               <div className="flex gap-2 pt-2 border-t">
+      {/* Dialog de edição de playlist */}
+      <Dialog open={!!editingPlaylist} onOpenChange={open => { if (!open) closeEditDialog(); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Playlist</DialogTitle>
+            <DialogDescription>Altere os dados da playlist abaixo:</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              placeholder="Nome da playlist"
+              value={editName}
+              onChange={e => setEditName(e.target.value)}
+              maxLength={100}
+              required
+            />
+            <Input
+              placeholder="Descrição"
+              value={editDescription}
+              onChange={e => setEditDescription(e.target.value)}
+              maxLength={255}
+            />
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="edit-public"
+                checked={editIsPublic}
+                onChange={e => setEditIsPublic(e.target.checked)}
+              />
+              <label htmlFor="edit-public">Pública</label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeEditDialog} disabled={savingEdit}>Cancelar</Button>
+            <Button onClick={handleEditSave} disabled={savingEdit || !editName.trim()}>
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
                 <Button asChild variant="outline" size="sm" className="flex-1">
                   <Link href={`/playlists/${playlist.id}`} target="_blank">
                     <Eye className="h-4 w-4 mr-1" />
