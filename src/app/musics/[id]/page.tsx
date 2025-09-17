@@ -348,7 +348,7 @@ export default function SongPage() {
 
 
   return (
-    <div className="relative w-full min-h-screen bg-gradient-to-br from-sky-50 to-blue-100">
+    <div className="relative w-full min-h-screen bg-white">
       {/* Hero Section with blurred background and overlay */}
       <div className="relative h-64 md:h-80 w-full flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0">

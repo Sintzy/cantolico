@@ -113,3 +113,62 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return applySecurityHeaders(response, req);
   }
 }
+
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const unauthorizedResponse = protectApiRoute(req);
+  if (unauthorizedResponse) {
+    return unauthorizedResponse;
+  }
+
+  const resolvedParams = await params;
+  const { id } = resolvedParams;
+
+  try {
+    const body = await req.json();
+    // Processar tags: transformar array em string para salvar no banco
+    let tags = body.tags;
+    if (Array.isArray(tags)) {
+      tags = `{${tags.map((tag: string) => tag.trim().toLowerCase()).join(',')}}`;
+    }
+
+    const { error } = await supabase
+      .from('Song')
+      .update({
+        title: body.title,
+        type: body.type,
+        mainInstrument: body.mainInstrument,
+        moments: body.moments,
+        tags: tags,
+        lyricsPlain: body.lyricsPlain,
+        sourceText: body.sourceText,
+        keyOriginal: body.keyOriginal,
+        mediaUrl: body.mediaUrl,
+        spotifyLink: body.spotifyLink,
+        youtubeLink: body.youtubeLink
+      })
+      .eq('id', id);
+
+    if (error) {
+      await logErrors('ERROR', 'Erro ao atualizar música', 'Falha na atualização de música', {
+        musicId: id,
+        error: error.message,
+        action: 'update_music_error'
+      });
+      return NextResponse.json({ error: 'Erro ao atualizar música' }, { status: 500 });
+    }
+
+    await logGeneral('SUCCESS', 'Música atualizada com sucesso', 'Dados da música atualizados', {
+      musicId: id,
+      musicTitle: body.title,
+      action: 'music_updated'
+    });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    await logErrors('ERROR', 'Erro ao atualizar música', 'Falha na atualização de música', {
+      musicId: id,
+      error: error instanceof Error ? error.message : 'Erro desconhecido',
+      action: 'update_music_error'
+    });
+    return NextResponse.json({ error: 'Erro ao atualizar música' }, { status: 500 });
+  }
+}
