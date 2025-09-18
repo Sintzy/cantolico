@@ -25,7 +25,9 @@ export async function POST(
     const instrument = formData.get('instrument') as string;
     const moments = JSON.parse(formData.get('moments') as string || '[]');
     const tagsString = formData.get('tags') as string;
+    // Processar tags do formato {tag1,tag2} para array
     const tags = (tagsString || '')
+      .replace(/[{}]/g, '') // Remove chaves
       .split(',')
       .map(t => t.trim())
       .filter(Boolean)

@@ -133,6 +133,11 @@ export async function PUT(
       counter++;
     }
 
+    // Processar tags para formato correto do banco
+    const processedTags = Array.isArray(tags) 
+      ? `{${tags.map(tag => String(tag).trim()).join(',')}}`
+      : tags || '{}';
+
     // Atualizar dados da música
     const { error: updateSongError } = await supabase
       .from('Song')
@@ -142,7 +147,7 @@ export async function PUT(
         type,
         mainInstrument,
         moments,
-        tags: tags || [],
+        tags: processedTags,
         updatedAt: new Date().toISOString()
       })
       .eq('id', songId);
