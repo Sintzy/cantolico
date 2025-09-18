@@ -14,6 +14,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { toast } from "sonner";
 import UserHoverCard from "@/components/UserHoverCard";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { 
   CheckCircle, 
   XCircle, 
@@ -30,7 +32,21 @@ import {
   Ban,
   Shield,
   History,
-  Info
+  Info,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  RefreshCw,
+  MoreHorizontal,
+  Download,
+  CheckSquare,
+  Square,
+  Settings,
+  SortAsc,
+  SortDesc,
+  Users,
+  Tag,
+  Guitar
 } from "lucide-react";
 
 type Submission = {
@@ -92,25 +108,127 @@ export default function AdminReviewPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
-  // Ordenação fixa: sempre A-Z
+  
+  // Novos estados para filtros avançados
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [instrumentFilter, setInstrumentFilter] = useState<string>("all");
+  const [userRoleFilter, setUserRoleFilter] = useState<string>("all");
+  const [dateFilter, setDateFilter] = useState<string>("all");
+  const [moderationFilter, setModerationFilter] = useState<string>("all");
+  
+  // Estados para ordenação
+  const [sortBy, setSortBy] = useState<string>("createdAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  
+  // Estados para seleção múltipla
+  const [selectedSubmissions, setSelectedSubmissions] = useState<Set<string>>(new Set());
+  const [showBulkActions, setShowBulkActions] = useState(false);
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  
+  // Estados para estatísticas
+  const [totalSubmissions, setTotalSubmissions] = useState(0);
+  const [stats, setStats] = useState({
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+    total: 0
+  });
 
-  const fetchSubmissions = async (params?: { page?: number; q?: string; status?: string }) => {
+  // Função para buscar estatísticas globais
+  const fetchGlobalStats = async () => {
+    try {
+      // Primeiro tenta buscar estatísticas da API principal
+      const url = new URL("/api/admin/submissions", window.location.origin);
+      url.searchParams.set("page", "1");
+      url.searchParams.set("limit", "1"); // Limite baixo para economizar
+      
+      const res = await fetch(url.toString());
+      if (res.ok) {
+        const data = await res.json();
+        
+        // Se a API retornar estatísticas, usa elas
+        if (data.stats && data.stats.total > 0) {
+          setStats(data.stats);
+          return;
+        }
+        
+        // Senão, busca todas as submissões para calcular
+        const allUrl = new URL("/api/admin/submissions", window.location.origin);
+        allUrl.searchParams.set("page", "1");
+        allUrl.searchParams.set("limit", "1000");
+        
+        const allRes = await fetch(allUrl.toString());
+        if (allRes.ok) {
+          const allData = await allRes.json();
+          const allSubmissions = Array.isArray(allData.submissions) ? allData.submissions : [];
+          
+          const globalStats = {
+            pending: allSubmissions.filter((s: Submission) => s.status === "PENDING").length,
+            approved: allSubmissions.filter((s: Submission) => s.status === "APPROVED").length,
+            rejected: allSubmissions.filter((s: Submission) => s.status === "REJECTED").length,
+            total: allSubmissions.length
+          };
+          
+          setStats(globalStats);
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao buscar estatísticas globais:", error);
+      // Em caso de erro, mantém as estatísticas atuais ou define como 0
+      setStats(prev => prev.total > 0 ? prev : { pending: 0, approved: 0, rejected: 0, total: 0 });
+    }
+  };
+
+  const fetchSubmissions = async (params?: { 
+    page?: number; 
+    q?: string; 
+    status?: string;
+    type?: string;
+    instrument?: string;
+    userRole?: string;
+    dateFilter?: string;
+    moderationFilter?: string;
+    sortBy?: string;
+    sortOrder?: "asc" | "desc";
+  }) => {
     try {
       setLoading(true);
       const url = new URL("/api/admin/submissions", window.location.origin);
       url.searchParams.set("page", String(params?.page ?? page));
       url.searchParams.set("limit", "20");
+      
       if (params?.q !== undefined) url.searchParams.set("q", params.q);
       else if (debouncedSearch) url.searchParams.set("q", debouncedSearch);
-      if (params?.status !== undefined) url.searchParams.set("status", params.status);
-      else if (statusFilter) url.searchParams.set("status", statusFilter);
-      // Adiciona parâmetro de ordenação
-  url.searchParams.set("sort", "az");
+      
+      if (params?.status !== undefined && params.status !== "all") url.searchParams.set("status", params.status);
+      else if (statusFilter !== "all") url.searchParams.set("status", statusFilter);
+      
+      if (params?.type !== undefined && params.type !== "all") url.searchParams.set("type", params.type);
+      else if (typeFilter !== "all") url.searchParams.set("type", typeFilter);
+      
+      if (params?.instrument !== undefined && params.instrument !== "all") url.searchParams.set("instrument", params.instrument);
+      else if (instrumentFilter !== "all") url.searchParams.set("instrument", instrumentFilter);
+      
+      if (params?.userRole !== undefined && params.userRole !== "all") url.searchParams.set("userRole", params.userRole);
+      else if (userRoleFilter !== "all") url.searchParams.set("userRole", userRoleFilter);
+      
+      if (params?.dateFilter !== undefined && params.dateFilter !== "all") url.searchParams.set("dateFilter", params.dateFilter);
+      else if (dateFilter !== "all") url.searchParams.set("dateFilter", dateFilter);
+      
+      if (params?.moderationFilter !== undefined && params.moderationFilter !== "all") url.searchParams.set("moderationFilter", params.moderationFilter);
+      else if (moderationFilter !== "all") url.searchParams.set("moderationFilter", moderationFilter);
+      
+      // Parâmetros de ordenação
+      url.searchParams.set("sortBy", params?.sortBy ?? sortBy);
+      url.searchParams.set("sortOrder", params?.sortOrder ?? sortOrder);
+      
       const res = await fetch(url.toString());
       if (res.ok) {
         const data = await res.json();
-        setSubmissions(Array.isArray(data.submissions) ? data.submissions : []);
+        const fetchedSubmissions = Array.isArray(data.submissions) ? data.submissions : [];
+        setSubmissions(fetchedSubmissions);
         setTotalPages(data.totalPages || 1);
+        setTotalSubmissions(data.totalSubmissions || fetchedSubmissions.length);
       } else {
         toast.error("Erro ao carregar submissões");
       }
@@ -120,6 +238,11 @@ export default function AdminReviewPage() {
       setLoading(false);
     }
   };
+
+  // Fetch inicial das estatísticas globais
+  useEffect(() => {
+    fetchGlobalStats();
+  }, []);
 
   // Debounce search
   useEffect(() => {
@@ -133,11 +256,22 @@ export default function AdminReviewPage() {
     };
   }, [searchTerm]);
 
-  // Fetch on debounced search, page, or status change
+  // Fetch on debounced search, page, or any filter change
   useEffect(() => {
-    fetchSubmissions({ page, q: debouncedSearch, status: statusFilter });
+    fetchSubmissions({ 
+      page, 
+      q: debouncedSearch, 
+      status: statusFilter,
+      type: typeFilter,
+      instrument: instrumentFilter,
+      userRole: userRoleFilter,
+      dateFilter: dateFilter,
+      moderationFilter: moderationFilter,
+      sortBy,
+      sortOrder
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, page, statusFilter]);
+  }, [debouncedSearch, page, statusFilter, typeFilter, instrumentFilter, userRoleFilter, dateFilter, moderationFilter, sortBy, sortOrder]);
 
   const handleInstantApprove = async (submissionId: string) => {
     setLoadingActions(prev => ({ ...prev, [submissionId]: true }));
@@ -152,6 +286,7 @@ export default function AdminReviewPage() {
       if (res.ok) {
         toast.success("Música aprovada instantaneamente!");
         fetchSubmissions(); // Recarregar lista
+        fetchGlobalStats(); // Atualizar estatísticas
       } else {
         toast.error(data.error || "Erro ao aprovar música");
       }
@@ -164,6 +299,12 @@ export default function AdminReviewPage() {
 
   const handleReject = async (rejectionReason: string) => {
     if (!submissionToReject) return;
+    
+    // Se for uma ação em lote
+    if (submissionToReject === "bulk") {
+      await handleBulkReject(rejectionReason);
+      return;
+    }
     
     setLoadingActions(prev => ({ ...prev, [submissionToReject]: true }));
     
@@ -179,6 +320,7 @@ export default function AdminReviewPage() {
       if (res.ok) {
         toast.success("Submissão rejeitada com sucesso");
         fetchSubmissions();
+        fetchGlobalStats(); // Atualizar estatísticas
       } else {
         toast.error(data.error || "Erro ao rejeitar submissão");
         throw new Error(data.error || "Erro ao rejeitar submissão");
@@ -189,6 +331,113 @@ export default function AdminReviewPage() {
     } finally {
       setLoadingActions(prev => ({ ...prev, [submissionToReject]: false }));
       setSubmissionToReject(null);
+    }
+  };
+
+  // Funções para seleção múltipla
+  const toggleSubmissionSelection = (submissionId: string) => {
+    const newSelected = new Set(selectedSubmissions);
+    if (newSelected.has(submissionId)) {
+      newSelected.delete(submissionId);
+    } else {
+      newSelected.add(submissionId);
+    }
+    setSelectedSubmissions(newSelected);
+  };
+
+  const selectAllSubmissions = () => {
+    const pendingSubmissions = safeSubmissions
+      .filter(s => s.status === "PENDING")
+      .map(s => s.id);
+    setSelectedSubmissions(new Set(pendingSubmissions));
+  };
+
+  const clearSelection = () => {
+    setSelectedSubmissions(new Set());
+  };
+
+  // Ações em lote
+  const handleBulkApprove = async () => {
+    setBulkActionLoading(true);
+    try {
+      const promises = Array.from(selectedSubmissions).map(id =>
+        fetch(`/api/admin/submission/${id}/instant-approve`, { method: "POST" })
+      );
+      
+      const results = await Promise.allSettled(promises);
+      const successful = results.filter(r => r.status === "fulfilled").length;
+      const failed = results.filter(r => r.status === "rejected").length;
+      
+      if (successful > 0) {
+        toast.success(`${successful} submissões aprovadas com sucesso`);
+      }
+      if (failed > 0) {
+        toast.error(`${failed} submissões falharam na aprovação`);
+      }
+      
+      clearSelection();
+      fetchSubmissions();
+      fetchGlobalStats(); // Atualizar estatísticas
+    } catch (error) {
+      toast.error("Erro nas ações em lote");
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkReject = async (reason: string) => {
+    setBulkActionLoading(true);
+    try {
+      const promises = Array.from(selectedSubmissions).map(id =>
+        fetch(`/api/admin/submission/${id}/reject`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rejectionReason: reason.trim() }),
+        })
+      );
+      
+      const results = await Promise.allSettled(promises);
+      const successful = results.filter(r => r.status === "fulfilled").length;
+      const failed = results.filter(r => r.status === "rejected").length;
+      
+      if (successful > 0) {
+        toast.success(`${successful} submissões rejeitadas com sucesso`);
+      }
+      if (failed > 0) {
+        toast.error(`${failed} submissões falharam na rejeição`);
+      }
+      
+      clearSelection();
+      fetchSubmissions();
+      fetchGlobalStats(); // Atualizar estatísticas
+    } catch (error) {
+      toast.error("Erro nas ações em lote");
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  // Função para resetar filtros
+  const resetFilters = () => {
+    setSearchTerm("");
+    setStatusFilter("all");
+    setTypeFilter("all");
+    setInstrumentFilter("all");
+    setUserRoleFilter("all");
+    setDateFilter("all");
+    setModerationFilter("all");
+    setSortBy("createdAt");
+    setSortOrder("desc");
+    setPage(1);
+  };
+
+  // Função para alterar ordenação
+  const handleSortChange = (newSortBy: string) => {
+    if (sortBy === newSortBy) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(newSortBy);
+      setSortOrder("desc");
     }
   };
 
@@ -472,83 +721,341 @@ export default function AdminReviewPage() {
   }
 
   return (
-  <div className="container mx-auto p-6 space-y-6">
-
+    <div className="container mx-auto p-6 space-y-6">
       <div className="flex flex-col space-y-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Revisão de Submissões</h1>
-          <p className="text-muted-foreground">
-            Gerir e revisar submissões de músicas dos utilizadores
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Revisão de Submissões</h1>
+            <p className="text-muted-foreground">
+              Gerir e revisar submissões de músicas dos utilizadores
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => {
+              fetchSubmissions();
+              fetchGlobalStats();
+            }}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Atualizar
+            </Button>
+            <Button variant="outline" size="sm" onClick={resetFilters}>
+              <Settings className="w-4 h-4 mr-2" />
+              Limpar Filtros
+            </Button>
+          </div>
         </div>
 
-        {/* Filtros */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Pesquisar por título, autor ou email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8"
-            />
-          </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <Filter className="w-4 h-4 mr-2" />
-              <SelectValue placeholder="Filtrar por status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os status</SelectItem>
-              <SelectItem value="PENDING">Pendentes</SelectItem>
-              <SelectItem value="APPROVED">Aprovadas</SelectItem>
-              <SelectItem value="REJECTED">Rejeitadas</SelectItem>
-            </SelectContent>
-          </Select>
+        {/* Estatísticas Resumidas */}
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total</CardTitle>
+              <Music className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.total || 0}</div>
+              <p className="text-xs text-muted-foreground">submissões no total</p>
+              {stats.total === 0 && (
+                <p className="text-xs text-yellow-600 mt-1">Carregando...</p>
+              )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
+              <Clock className="h-4 w-4 text-yellow-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-yellow-600">{stats.pending || 0}</div>
+              <p className="text-xs text-muted-foreground">aguardam revisão</p>
+              {stats.total > 0 && (
+                <p className="text-xs text-yellow-600 mt-1">
+                  {stats.total > 0 ? Math.round((stats.pending / stats.total) * 100) : 0}% do total
+                </p>
+              )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Aprovadas</CardTitle>
+              <CheckCircle className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{stats.approved || 0}</div>
+              <p className="text-xs text-muted-foreground">já publicadas</p>
+              {stats.total > 0 && (
+                <p className="text-xs text-green-600 mt-1">
+                  {stats.total > 0 ? Math.round((stats.approved / stats.total) * 100) : 0}% do total
+                </p>
+              )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Rejeitadas</CardTitle>
+              <XCircle className="h-4 w-4 text-red-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">{stats.rejected || 0}</div>
+              <p className="text-xs text-muted-foreground">não aprovadas</p>
+              {stats.total > 0 && (
+                <p className="text-xs text-red-600 mt-1">
+                  {stats.total > 0 ? Math.round((stats.rejected / stats.total) * 100) : 0}% do total
+                </p>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Estatísticas */}
-        {/* Paginação e estatísticas */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mt-2">
-          <div className="grid gap-4 md:grid-cols-3 flex-1">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Página</CardTitle>
-                <Info className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{page} / {totalPages}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Submissões nesta página</CardTitle>
-                <Music className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{submissions.length}</div>
-              </CardContent>
-            </Card>
+        {/* Filtros Avançados */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Filter className="w-5 h-5" />
+              Filtros e Ordenação
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Linha 1: Pesquisa e Status */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Pesquisar por título, autor ou email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <Clock className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Filtrar por status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os status</SelectItem>
+                  <SelectItem value="PENDING">Pendentes</SelectItem>
+                  <SelectItem value="APPROVED">Aprovadas</SelectItem>
+                  <SelectItem value="REJECTED">Rejeitadas</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Linha 2: Tipo e Instrumento */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger>
+                  <Music className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Filtrar por tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os tipos</SelectItem>
+                  <SelectItem value="HINO">Hino</SelectItem>
+                  <SelectItem value="CANTICO">Cântico</SelectItem>
+                  <SelectItem value="SALMO">Salmo</SelectItem>
+                  <SelectItem value="OUTRO">Outro</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={instrumentFilter} onValueChange={setInstrumentFilter}>
+                <SelectTrigger>
+                  <Guitar className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Filtrar por instrumento" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os instrumentos</SelectItem>
+                  <SelectItem value="VIOLAO">Violão</SelectItem>
+                  <SelectItem value="GUITARRA">Guitarra</SelectItem>
+                  <SelectItem value="PIANO">Piano</SelectItem>
+                  <SelectItem value="UKULELE">Ukulele</SelectItem>
+                  <SelectItem value="OUTRO">Outro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Linha 3: Role do Utilizador e Data */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <Select value={userRoleFilter} onValueChange={setUserRoleFilter}>
+                <SelectTrigger>
+                  <Users className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Filtrar por role do utilizador" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as roles</SelectItem>
+                  <SelectItem value="USER">Utilizador</SelectItem>
+                  <SelectItem value="TRUSTED">Utilizador Confiável</SelectItem>
+                  <SelectItem value="REVIEWER">Revisor</SelectItem>
+                  <SelectItem value="ADMIN">Administrador</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={dateFilter} onValueChange={setDateFilter}>
+                <SelectTrigger>
+                  <Calendar className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Filtrar por data" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as datas</SelectItem>
+                  <SelectItem value="today">Hoje</SelectItem>
+                  <SelectItem value="yesterday">Ontem</SelectItem>
+                  <SelectItem value="last7days">Últimos 7 dias</SelectItem>
+                  <SelectItem value="last30days">Últimos 30 dias</SelectItem>
+                  <SelectItem value="last90days">Últimos 90 dias</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Linha 4: Status de Moderação e Ordenação */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <Select value={moderationFilter} onValueChange={setModerationFilter}>
+                <SelectTrigger>
+                  <Shield className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Filtrar por moderação" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os status</SelectItem>
+                  <SelectItem value="ACTIVE">Utilizadores Ativos</SelectItem>
+                  <SelectItem value="WARNING">Com Advertência</SelectItem>
+                  <SelectItem value="SUSPENDED">Suspensos</SelectItem>
+                  <SelectItem value="BANNED">Banidos</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="flex gap-2">
+                <Select value={sortBy} onValueChange={(value) => handleSortChange(value)}>
+                  <SelectTrigger className="flex-1">
+                    <ArrowUpDown className="w-4 h-4 mr-2" />
+                    <SelectValue placeholder="Ordenar por" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="createdAt">Data de Criação</SelectItem>
+                    <SelectItem value="title">Título (A-Z)</SelectItem>
+                    <SelectItem value="status">Status</SelectItem>
+                    <SelectItem value="submitter.role">Role do Utilizador</SelectItem>
+                    <SelectItem value="type">Tipo</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                  className="px-3"
+                >
+                  {sortOrder === "asc" ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Ações em Lote */}
+        {selectedSubmissions.size > 0 && (
+          <Card className="border-blue-200 bg-blue-50">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <CheckSquare className="w-5 h-5" />
+                Ações em Lote ({selectedSubmissions.size} selecionadas)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  onClick={handleBulkApprove}
+                  disabled={bulkActionLoading}
+                  size="sm"
+                >
+                  {bulkActionLoading ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                  )}
+                  Aprovar Selecionadas
+                </Button>
+                <Button
+                  variant="destructive"
+                  disabled={bulkActionLoading}
+                  size="sm"
+                  onClick={() => {
+                    // Implementar diálogo personalizado para bulk reject
+                    setShowRejectDialog(true);
+                    setSubmissionToReject("bulk");
+                  }}
+                >
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Rejeitar Selecionadas
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={clearSelection}
+                  size="sm"
+                >
+                  <Square className="w-4 h-4 mr-2" />
+                  Limpar Seleção
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={selectAllSubmissions}
+                  size="sm"
+                >
+                  <CheckSquare className="w-4 h-4 mr-2" />
+                  Selecionar Todas (Pendentes)
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Paginação e Informações */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <p className="text-sm text-muted-foreground">
+              Página {page} de {totalPages} • {totalSubmissions} submissões no total • {submissions.length} nesta página
+            </p>
           </div>
-          {/* Controles de paginação */}
-          <div className="flex gap-2 items-center justify-end">
-            <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
+          <div className="flex gap-2 items-center">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setPage((p) => Math.max(1, p - 1))} 
+              disabled={page === 1}
+            >
               Anterior
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
+            <div className="flex items-center gap-2">
+              <span className="text-sm">Página</span>
+              <Input
+                type="number"
+                min="1"
+                max={totalPages}
+                value={page}
+                onChange={(e) => setPage(Math.max(1, Math.min(totalPages, parseInt(e.target.value) || 1)))}
+                className="w-20 text-center"
+              />
+              <span className="text-sm">de {totalPages}</span>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))} 
+              disabled={page === totalPages}
+            >
               Próxima
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Lista de submissões paginada */}
+      {/* Lista de submissões */}
       <div className="space-y-4">
         {safeSubmissions.length === 0 ? (
           <Card>
-            <CardContent className="text-center py-8">
-              <Music className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">Nenhuma submissão encontrada</p>
+            <CardContent className="text-center py-12">
+              <Music className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Nenhuma submissão encontrada</h3>
+              <p className="text-muted-foreground mb-4">
+                Não foram encontradas submissões com os filtros aplicados.
+              </p>
+              <Button onClick={resetFilters} variant="outline">
+                <Settings className="w-4 h-4 mr-2" />
+                Limpar Filtros
+              </Button>
             </CardContent>
           </Card>
         ) : (
@@ -556,22 +1063,49 @@ export default function AdminReviewPage() {
             <Card key={submission.id} className="hover:shadow-md transition-shadow">
               <CardHeader>
                 <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <CardTitle className="text-xl">{submission.title}</CardTitle>
-                    <CardDescription className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4" />
-                      Submetida {formatDistanceToNow(new Date(submission.createdAt), { 
-                        addSuffix: true, 
-                        locale: pt 
-                      })}
-                    </CardDescription>
+                  <div className="flex items-start gap-3 flex-1">
+                    {submission.status === "PENDING" && (
+                      <Checkbox
+                        checked={selectedSubmissions.has(submission.id)}
+                        onCheckedChange={() => toggleSubmissionSelection(submission.id)}
+                        className="mt-1"
+                      />
+                    )}
+                    <div className="space-y-1 flex-1">
+                      <CardTitle className="text-xl flex items-center gap-2">
+                        {submission.title}
+                        <Badge variant="outline" className="text-xs">
+                          #{submission.id.slice(-6)}
+                        </Badge>
+                      </CardTitle>
+                      <CardDescription className="flex items-center gap-4 flex-wrap">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-4 h-4" />
+                          Submetida {formatDistanceToNow(new Date(submission.createdAt), { 
+                            addSuffix: true, 
+                            locale: pt 
+                          })}
+                        </span>
+                        {submission.reviewedAt && (
+                          <span className="flex items-center gap-1">
+                            <Eye className="w-4 h-4" />
+                            Revista {formatDistanceToNow(new Date(submission.reviewedAt), { 
+                              addSuffix: true, 
+                              locale: pt 
+                            })}
+                          </span>
+                        )}
+                      </CardDescription>
+                    </div>
                   </div>
-                  {getStatusBadge(submission.status)}
+                  <div className="flex items-center gap-2">
+                    {getStatusBadge(submission.status)}
+                  </div>
                 </div>
               </CardHeader>
               
               <CardContent className="space-y-4">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <User className="w-4 h-4 text-muted-foreground" />
                   <UserHoverCard user={{
                     ...submission.submitter,
@@ -589,8 +1123,14 @@ export default function AdminReviewPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline">{submission.type}</Badge>
-                  <Badge variant="outline">{submission.mainInstrument}</Badge>
+                  <Badge variant="outline" className="flex items-center gap-1">
+                    <Music className="w-3 h-3" />
+                    {submission.type}
+                  </Badge>
+                  <Badge variant="outline" className="flex items-center gap-1">
+                    <Guitar className="w-3 h-3" />
+                    {submission.mainInstrument}
+                  </Badge>
                   {submission.moment.map((m, momentIndex) => (
                     <Badge key={`${submission.id}-moment-${momentIndex}`} variant="outline" className="text-xs">
                       {m.replace(/_/g, " ")}
@@ -600,11 +1140,17 @@ export default function AdminReviewPage() {
 
                 {submission.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1">
-                    {submission.tags.map((tag, tagIndex) => (
-                      <Badge key={`${submission.id}-tag-${tagIndex}`} variant="secondary" className="text-xs">
-                        #{tag}
+                    {submission.tags.slice(0, 5).map((tag, tagIndex) => (
+                      <Badge key={`${submission.id}-tag-${tagIndex}`} variant="secondary" className="text-xs flex items-center gap-1">
+                        <Tag className="w-3 h-3" />
+                        {tag}
                       </Badge>
                     ))}
+                    {submission.tags.length > 5 && (
+                      <Badge variant="secondary" className="text-xs">
+                        +{submission.tags.length - 5} mais
+                      </Badge>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -612,23 +1158,23 @@ export default function AdminReviewPage() {
               {submission.status === "PENDING" && (
                 <>
                   <Separator />
-                  <CardFooter className="flex gap-2">
+                  <CardFooter className="flex gap-2 flex-wrap">
                     <Button
                       variant="outline"
                       size="sm"
                       asChild
-                      className="flex-1"
+                      className="flex-1 min-w-[120px]"
                     >
                       <Link href={`/admin/review/${submission.id}`}>
                         <Eye className="w-4 h-4 mr-2" />
-                        Revisar
+                        Revisar Detalhes
                       </Link>
                     </Button>
                     <Button
                       onClick={() => handleInstantApprove(submission.id)}
                       disabled={loadingActions[submission.id]}
                       size="sm"
-                      className="flex-1"
+                      className="flex-1 min-w-[140px]"
                     >
                       {loadingActions[submission.id] ? (
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -645,12 +1191,29 @@ export default function AdminReviewPage() {
                       }}
                       disabled={loadingActions[submission.id]}
                       size="sm"
+                      className="min-w-[100px]"
                     >
                       <XCircle className="w-4 h-4 mr-2" />
                       Rejeitar
                     </Button>
                   </CardFooter>
                 </>
+              )}
+
+              {submission.status !== "PENDING" && (
+                <CardFooter className="pt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    asChild
+                    className="w-full"
+                  >
+                    <Link href={`/admin/review/${submission.id}`}>
+                      <Eye className="w-4 h-4 mr-2" />
+                      Ver Detalhes
+                    </Link>
+                  </Button>
+                </CardFooter>
               )}
             </Card>
           ))
@@ -665,13 +1228,21 @@ export default function AdminReviewPage() {
           setSubmissionToReject(null);
         }}
         onConfirm={handleReject}
-        title="Rejeitar Submissão"
-        description="Tem a certeza que pretende rejeitar esta submissão? Forneça um motivo detalhado para o utilizador."
+        title={submissionToReject === "bulk" ? "Rejeitar Submissões Selecionadas" : "Rejeitar Submissão"}
+        description={
+          submissionToReject === "bulk" 
+            ? "Tem a certeza que pretende rejeitar todas as submissões selecionadas? Forneça um motivo detalhado."
+            : "Tem a certeza que pretende rejeitar esta submissão? Forneça um motivo detalhado para o utilizador."
+        }
         confirmText="Rejeitar"
         cancelText="Cancelar"
         requireReason={true}
-        reasonPlaceholder="Explique o motivo da rejeição (ex: qualidade do áudio, letra incorreta, etc.)..."
-        reasonLabel="Motivo da Rejeição"
+        reasonPlaceholder={
+          submissionToReject === "bulk"
+            ? "Explique o motivo da rejeição em lote (ex: critérios de qualidade não atendidos, etc.)..."
+            : "Explique o motivo da rejeição (ex: qualidade do áudio, letra incorreta, etc.)..."
+        }
+        reasonLabel={submissionToReject === "bulk" ? "Motivo da Rejeição em Lote" : "Motivo da Rejeição"}
       />
     </div>
   );
