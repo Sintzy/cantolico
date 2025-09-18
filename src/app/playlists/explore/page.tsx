@@ -1,5 +1,6 @@
-import { prisma } from '@/lib/prisma';
+
 import Link from 'next/link';
+import { supabase } from '@/lib/supabase-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,29 +15,34 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export default async function ExplorePlaylistsPage() {
-  const publicPlaylists = await prisma.playlist.findMany({
-    where: {
-      isPublic: true
-    },
-    include: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          image: true
-        }
-      },
-      _count: {
-        select: {
-          items: true
-        }
-      }
-    },
-    orderBy: {
-      updatedAt: 'desc'
-    },
-    take: 50 // Limitar para não carregar demais
-  });
+  const { data: publicPlaylists = [] } = await supabase
+    .from('Playlist')
+    .select(`
+      *,
+      User!Playlist_userId_fkey (
+        id,
+        name,
+        image
+      )
+    `)
+    .eq('isPublic', true)
+    .order('updatedAt', { ascending: false })
+    .limit(50);
+
+  // Buscar contagem de itens para cada playlist
+  const playlistsWithCounts = await Promise.all(
+    (publicPlaylists || []).map(async (playlist) => {
+      const { count } = await supabase
+        .from('PlaylistItem')
+        .select('*', { count: 'exact', head: true })
+        .eq('playlistId', playlist.id);
+      
+      return {
+        ...playlist,
+        _count: { items: count || 0 }
+      };
+    })
+  );
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -56,7 +62,7 @@ export default async function ExplorePlaylistsPage() {
       </div>
 
       {/* Lista de Playlists */}
-      {publicPlaylists.length === 0 ? (
+      {playlistsWithCounts.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Globe className="h-16 w-16 text-muted-foreground mb-4" />
@@ -68,7 +74,7 @@ export default async function ExplorePlaylistsPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {publicPlaylists.map((playlist: any) => (
+          {playlistsWithCounts.map((playlist: any) => (
             <Card key={playlist.id} className="hover:shadow-md transition-shadow">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
@@ -101,7 +107,7 @@ export default async function ExplorePlaylistsPage() {
               <CardContent className="pt-0 space-y-3">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <User className="h-4 w-4" />
-                  <span>Por {playlist.user.name}</span>
+                  <span>Por {playlist.User.name}</span>
                 </div>
                 
                 <div className="flex items-center justify-between text-sm text-muted-foreground">

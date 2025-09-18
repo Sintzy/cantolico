@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner, type SpinnerProps } from '@/components/ui/shadcn-io/spinner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -43,7 +43,7 @@ interface User {
   id: string;
   name: string;
   email: string;
-  role: 'USER' | 'REVIEWER' | 'ADMIN';
+  role: 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN';
   createdAt: string;
   image?: string;
   totalSongs?: number;
@@ -78,12 +78,14 @@ interface UsersResponse {
 
 const ROLE_COLORS = {
   USER: 'bg-blue-100 text-blue-800 border-blue-200',
+  TRUSTED: 'bg-green-100 text-green-800 border-green-200',
   REVIEWER: 'bg-orange-100 text-orange-800 border-orange-200',
   ADMIN: 'bg-purple-100 text-purple-800 border-purple-200'
 };
 
 const ROLE_ICONS = {
   USER: <UserCheck className="h-3 w-3" />,
+  TRUSTED: <Shield className="h-3 w-3" />,
   REVIEWER: <Shield className="h-3 w-3" />,
   ADMIN: <Crown className="h-3 w-3" />
 };
@@ -189,7 +191,7 @@ export default function UsersManagement() {
     }
   };
 
-  const handleRoleChange = async (userId: string, newRole: 'USER' | 'REVIEWER' | 'ADMIN') => {
+  const handleRoleChange = async (userId: string, newRole: 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN') => {
     try {
       setChangingRole(userId);
       
@@ -339,7 +341,7 @@ export default function UsersManagement() {
   if (status === 'loading' || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Spinner className="h-8 w-8" />
+  <Spinner variant="circle" size={32} className="text-black" />
       </div>
     );
   }
@@ -402,6 +404,7 @@ export default function UsersManagement() {
                   <SelectContent>
                     <SelectItem value="all">Todas as roles</SelectItem>
                     <SelectItem value="USER">Utilizador</SelectItem>
+                    <SelectItem value="TRUSTED">Confiável</SelectItem>
                     <SelectItem value="REVIEWER">Revisor</SelectItem>
                     <SelectItem value="ADMIN">Administrador</SelectItem>
                   </SelectContent>
@@ -534,7 +537,7 @@ export default function UsersManagement() {
                         <div className="w-full lg:w-32">
                           <Select
                             value={user.role}
-                            onValueChange={(newRole: 'USER' | 'REVIEWER' | 'ADMIN') => 
+                            onValueChange={(newRole: 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN') => 
                               handleRoleChange(user.id, newRole)
                             }
                             disabled={changingRole === user.id}
@@ -544,6 +547,7 @@ export default function UsersManagement() {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="USER">Utilizador</SelectItem>
+                              <SelectItem value="TRUSTED">Confiável</SelectItem>
                               <SelectItem value="REVIEWER">Revisor</SelectItem>
                               <SelectItem value="ADMIN">Administrador</SelectItem>
                             </SelectContent>
@@ -833,7 +837,7 @@ export default function UsersManagement() {
                                     disabled={deletingUser === user.id}
                                   >
                                     {deletingUser === user.id ? (
-                                      <Spinner className="h-4 w-4 mr-2" />
+                                      <Spinner variant="circle" size={16} className="text-black mr-2" />
                                     ) : (
                                       <Ban className="h-4 w-4 mr-2" />
                                     )}
@@ -862,7 +866,7 @@ export default function UsersManagement() {
                             className="flex-1 lg:flex-none"
                           >
                             {deletingUser === user.id ? (
-                              <Spinner className="h-4 w-4" />
+                              <Spinner variant="circle" size={16} className="text-black" />
                             ) : (
                               <>
                                 <Ban className="h-4 w-4 lg:mr-0" />
@@ -875,7 +879,7 @@ export default function UsersManagement() {
                     )}
                     
                     {changingRole === user.id && (
-                      <Spinner className="h-4 w-4" />
+                      <Spinner variant="circle" size={16} className="text-black" />
                     )}
                     
                     {user.id === session?.user.id?.toString() && (

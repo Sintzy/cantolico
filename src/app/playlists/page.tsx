@@ -127,7 +127,7 @@ export default function MyPlaylistsPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section com estilo da landing page */}
-      <section className="relative bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <section className="relative bg-gradient-to-br from-blue-50 via-white to-purple-10">
         {/* Background decoration */}
         <div className="pointer-events-none absolute inset-0" aria-hidden="true">
           <div className="absolute left-1/2 top-0 -translate-x-1/2">
@@ -177,7 +177,7 @@ export default function MyPlaylistsPage() {
       </section>
       
       {/* Main Content */}
-      <section className="bg-gray-50 py-8">
+      <section className="bg-white py-8">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           {/* Lista de Playlists */}
           {playlists.length === 0 ? (

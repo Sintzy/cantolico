@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase-client";
 import { PAGE_METADATA } from "@/lib/metadata";
 
 interface PlaylistLayoutProps {
@@ -11,19 +11,18 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   
   try {
-    const playlist = await prisma.playlist.findUnique({
-      where: { id },
-      select: {
-        name: true,
-        description: true,
-        isPublic: true,
-        user: {
-          select: {
-            name: true
-          }
-        }
-      }
-    });
+    const { data: playlist } = await supabase
+      .from('Playlist')
+      .select(`
+        name,
+        description,
+        isPublic,
+        User!Playlist_userId_fkey (
+          name
+        )
+      `)
+      .eq('id', id)
+      .single();
 
     if (!playlist) {
       return {

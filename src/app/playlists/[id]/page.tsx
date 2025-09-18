@@ -110,10 +110,10 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="animate-pulse space-y-4">
-          <div className="h-32 bg-gray-200 rounded-lg"></div>
+          <div className="h-32 bg-gray rounded-lg"></div>
           <div className="space-y-2">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-16 bg-gray-200 rounded"></div>
+              <div key={i} className="h-16 bg-white rounded"></div>
             ))}
           </div>
         </div>
@@ -200,7 +200,7 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
       </section>
       
       {/* Main Content */}
-      <section className="bg-gray-50 py-8">
+      <section className="bg-white py-8">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           {/* Lista de Músicas */}
           <div className="space-y-4">
@@ -230,20 +230,28 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-3">
                             <h3 className="font-semibold truncate">
-                              <Link 
-                                href={`/musics/${item.song.slug}`}
-                                className="hover:underline"
-                              >
-                                {item.song.title}
-                              </Link>
+                              {item.song ? (
+                                <Link 
+                                  href={`/musics/${item.song.slug}`}
+                                  className="hover:underline"
+                                >
+                                  {item.song.title}
+                                </Link>
+                              ) : (
+                                <span className="text-muted-foreground italic">
+                                  Música não encontrada
+                                </span>
+                              )}
                             </h3>
                             
                             <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-xs">
-                                {item.song.type.toLowerCase()}
-                              </Badge>
+                              {item.song?.type && (
+                                <Badge variant="outline" className="text-xs">
+                                  {item.song.type.toLowerCase()}
+                                </Badge>
+                              )}
                               
-                              {item.song.moments.length > 0 && (
+                              {item.song?.moments?.length > 0 && (
                                 <Badge variant="secondary" className="text-xs">
                                   {item.song.moments[0].toLowerCase().replace(/_/g, ' ')}
                                 </Badge>
@@ -263,28 +271,32 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
 
                         {/* Ações */}
                         <div className="flex items-center gap-2">
-                          <StarButton 
-                            songId={item.song.id} 
-                            size="sm" 
-                            showCount={false}
-                          />
-                          
-                          <Button size="sm" variant="ghost" asChild>
-                            <Link href={`/musics/${item.song.slug}`}>
-                              <Play className="h-4 w-4 mr-1" />
-                              Ver
-                            </Link>
-                          </Button>
-                          
-                          <Button size="sm" variant="ghost" asChild>
-                            <Link 
-                              href={`/musics/${item.song.slug}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              <ExternalLink className="h-4 w-4" />
-                            </Link>
-                          </Button>
+                          {item.song && (
+                            <>
+                              <StarButton 
+                                songId={item.song.id} 
+                                size="sm" 
+                                showCount={false}
+                              />
+                              
+                              <Button size="sm" variant="ghost" asChild>
+                                <Link href={`/musics/${item.song.slug}`}>
+                                  <Play className="h-4 w-4 mr-1" />
+                                  Ver
+                                </Link>
+                              </Button>
+                              
+                              <Button size="sm" variant="ghost" asChild>
+                                <Link 
+                                  href={`/musics/${item.song.slug}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  <ExternalLink className="h-4 w-4" />
+                                </Link>
+                              </Button>
+                            </>
+                          )}
 
                           {/* Dropdown de ações para o dono */}
                           {isOwner && (
@@ -297,7 +309,7 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
                               <DropdownMenuContent>
                                 <DropdownMenuItem 
                                   className="text-red-600 focus:text-red-600"
-                                  onClick={() => handleRemoveSong(item.song.id)}
+                                  onClick={() => handleRemoveSong(item.song?.id || item.songId)}
                                 >
                                   <Trash2 className="h-4 w-4 mr-2" />
                                   Remover da playlist

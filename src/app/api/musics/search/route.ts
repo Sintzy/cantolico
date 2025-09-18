@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase-client";
 
 // /api/musics/search?q=...&page=1&limit=20
 export async function GET(req: NextRequest) {
@@ -9,33 +9,37 @@ export async function GET(req: NextRequest) {
   const limit = parseInt(searchParams.get("limit") || "20", 10);
   const skip = (page - 1) * limit;
 
-  // Basic search: title contains query (case-insensitive)
-  const where = q
-    ? {
-        title: {
-          contains: q,
-          mode: "insensitive" as const,
-        },
-      }
-    : {};
+  // Build query
+  let songsQuery = supabase
+    .from('Song')
+    .select('id, title, slug, createdAt')
+    .order('createdAt', { ascending: false });
 
-  const [songs, total] = await Promise.all([
-    prisma.song.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      skip,
-      take: limit,
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        createdAt: true,
-        // Add more fields as needed for search results
-      },
-    }),
-    prisma.song.count({ where }),
+  let countQuery = supabase
+    .from('Song')
+    .select('*', { count: 'exact', head: true });
+
+  // Apply search filter if provided
+  if (q) {
+    songsQuery = songsQuery.ilike('title', `%${q}%`);
+    countQuery = countQuery.ilike('title', `%${q}%`);
+  }
+
+  // Apply pagination
+  songsQuery = songsQuery.range(skip, skip + limit - 1);
+
+  const [songsResult, totalResult] = await Promise.all([
+    songsQuery,
+    countQuery
   ]);
 
+  if (songsResult.error) {
+    console.error('Error searching songs:', songsResult.error);
+    return NextResponse.json({ error: "Error searching songs" }, { status: 500 });
+  }
+
+  const songs = songsResult.data || [];
+  const total = totalResult.count || 0;
   const totalPages = Math.ceil(total / limit);
 
   return NextResponse.json({ songs, totalPages });

@@ -1,4 +1,5 @@
 'use client';
+'use client';
 import "../../../../public/styles/chords.css";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Guitar, ChevronDown, FileText, Music, Youtube } from 'lucide-react';
@@ -8,9 +9,10 @@ import YouTube from 'react-youtube';
 import * as React from "react";
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+// import { supabase } from '@/lib/supabase';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner, type SpinnerProps } from '@/components/ui/shadcn-io/spinner';
 import StarButton from '@/components/StarButton';
 import AddToPlaylistButton from '@/components/AddToPlaylistButton';
 import { Download } from 'lucide-react';
@@ -83,11 +85,17 @@ export default function SongPage() {
         const data = await res.json();
 
         if (!data || data.error) {
+          document.title = "Erro ao carregar música";
           console.error('Erro ao carregar música:', data.error || 'Dados inválidos');
           return;
         }
 
         setSong(data);
+
+        // Atualiza o título da página com o nome da música
+        if (data.title) {
+          document.title = data.title;
+        }
 
         if (data.currentVersion?.sourcePdfKey) {
           const { data: signedPdfUrlData, error: pdfError } = await supabase
@@ -107,6 +115,7 @@ export default function SongPage() {
           if (!audioError) setAudioUrl(signedAudioUrlData?.signedUrl || null);
         }
       } catch (err) {
+        document.title = "Erro ao carregar música";
         console.error('erro ao procurar a música:', err);
       } finally {
         setLoading(false);
@@ -325,10 +334,14 @@ export default function SongPage() {
   }, [renderedHtml]);
   
 
-  if (loading) return <div className="p-6 text-center"><Spinner size="medium"/>A carregar música...</div>;
+  if (loading) return (
+    <div className="flex items-center justify-center h-[300px]">
+  <Spinner variant="circle" size={48} className="text-black" />
+    </div>
+  );
 
   if (!song) {
-    return <div className="p-6 text-muted-foreground text-center"><Spinner size="medium" />A carregar música...</div>;
+  return <div className="p-6 text-muted-foreground text-center"><Spinner variant="circle" size={32} className="text-black" />A carregar música...</div>;
   }
 
   const { title, mainInstrument, tags, moments, currentVersion } = song;
@@ -346,7 +359,7 @@ export default function SongPage() {
 
 
   return (
-    <div className="relative w-full min-h-screen bg-gradient-to-br from-sky-50 to-blue-100">
+    <div className="relative w-full min-h-screen bg-white">
       {/* Hero Section with blurred background and overlay */}
       <div className="relative h-64 md:h-80 w-full flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0">

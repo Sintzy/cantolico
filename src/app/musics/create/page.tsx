@@ -325,7 +325,7 @@ export default function CreateNewMusicPage() {
       {!isCheckingModeration && (
         <>
           {/* Hero Section com estilo da landing page */}
-          <section className="relative bg-gradient-to-br from-blue-50 via-white to-purple-50">
+          <section className="relative ">
             {/* Background decoration */}
             <div className="pointer-events-none absolute inset-0" aria-hidden="true">
               <div className="absolute left-1/2 top-0 -translate-x-1/2">
@@ -361,7 +361,7 @@ export default function CreateNewMusicPage() {
       </section>
 
       {/* Progress Indicator */}
-      <section className="bg-gray-50 py-8">
+      <section className=" py-8">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="flex items-center justify-center space-x-8">
             {steps.map((step, index) => {

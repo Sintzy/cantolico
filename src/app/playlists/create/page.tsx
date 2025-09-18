@@ -114,7 +114,7 @@ export default function CreatePlaylistPage() {
   // Redirect se não estiver autenticado
   if (!session) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-white flex items-center justify-center p-4">
         <Card className="max-w-md w-full border-0 shadow-lg">
           <CardContent className="flex flex-col items-center justify-center py-12 px-6">
             <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-blue-500 to-blue-400 shadow-lg flex items-center justify-center mb-6">
@@ -122,7 +122,7 @@ export default function CreatePlaylistPage() {
             </div>
             <h3 className="text-2xl font-bold mb-3 text-center text-gray-900">Autenticação Necessária</h3>
             <p className="text-gray-700 text-center mb-6 leading-relaxed">
-              Para criar e personalizar suas próprias playlists, você precisa estar logado na sua conta.
+              Para criar e personalizar suas próprias playlists, tu precisas estar logado na sua conta.
             </p>
             <Button asChild size="lg" className="bg-gradient-to-t from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600">
               <Link href="/login">
@@ -139,7 +139,7 @@ export default function CreatePlaylistPage() {
   // Loading state enquanto verifica moderação
   if (isCheckingModeration) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center space-y-6">
           <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-tr from-blue-500 to-blue-400 shadow-lg flex items-center justify-center">
             <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -154,16 +154,16 @@ export default function CreatePlaylistPage() {
   }
 
   return (
-    <div className="min-h-screen">
-      {/* Hero Section - Seguindo o padrão das outras páginas */}
-      <section className="relative">
+    <div className="min-h-screen bg-white">
+      {/* Hero Section com estilo da landing page */}
+      <section className="relative bg-gradient-to-br from-blue-50 via-white to-purple-10">
         {/* Background decoration */}
         <div className="pointer-events-none absolute inset-0" aria-hidden="true">
           <div className="absolute left-1/2 top-0 -translate-x-1/2">
-            <div className="h-80 w-80 rounded-full bg-gradient-to-tr from-blue-500/20 to-purple-500/20 blur-[120px]" />
+            <div className="h-60 w-60 rounded-full bg-gradient-to-tr from-blue-500/20 to-purple-500/20 blur-[80px]" />
           </div>
         </div>
-
+        
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="pb-8 pt-12 md:pb-12 md:pt-16 relative z-10">
             {/* Navigation */}
@@ -183,6 +183,9 @@ export default function CreatePlaylistPage() {
                   <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
                     <ListMusic className="text-white text-xs w-3 h-3" />
                   </div>
+                  <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                    <Plus className="text-white text-xs w-3 h-3" />
+                  </div>
                 </div>
               </div>
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 border-y [border-image:linear-gradient(to_right,transparent,theme(colors.slate.300/.8),transparent)1] leading-tight">
@@ -196,28 +199,16 @@ export default function CreatePlaylistPage() {
         </div>
       </section>
 
-      {/* Main Content - Seguindo o padrão bg-gray-50 */}
-      <section className="bg-gray-50 py-8">
+      {/* Main Content */}
+      <section className="bg-white py-8">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           {/* Form */}
-          <Card className="max-w-2xl mx-auto border-0 shadow-lg backdrop-blur-sm bg-white/95">
-            <CardHeader className="border-b border-gray-100">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-blue-500 to-blue-400 shadow-lg flex items-center justify-center">
-                  <Music className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <CardTitle className="text-2xl font-bold text-gray-900">Detalhes da Playlist</CardTitle>
-                  <p className="text-sm text-gray-700">Preencha as informações da sua nova playlist</p>
-                </div>
-              </div>
-            </CardHeader>
-
+          <Card className="max-w-2xl mx-auto border-0 shadow-lg">
             <CardContent className="p-8">
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Nome da Playlist */}
                 <div className="space-y-2">
-                  <Label htmlFor="name" className="text-sm font-medium text-gray-700">
+                  <Label htmlFor="name" className="text-sm font-medium text-gray-900">
                     Nome da Playlist *
                   </Label>
                   <Input
@@ -226,7 +217,7 @@ export default function CreatePlaylistPage() {
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
                     placeholder="Ex: Minhas Músicas Favoritas"
                     required
-                    className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                    className="h-11"
                   />
                   <p className="text-xs text-gray-500">
                     Escolha um nome descritivo para facilitar a organização
@@ -235,7 +226,7 @@ export default function CreatePlaylistPage() {
 
                 {/* Descrição */}
                 <div className="space-y-2">
-                  <Label htmlFor="description" className="text-sm font-medium text-gray-700">
+                  <Label htmlFor="description" className="text-sm font-medium text-gray-900">
                     Descrição (opcional)
                   </Label>
                   <Textarea
@@ -243,7 +234,7 @@ export default function CreatePlaylistPage() {
                     value={form.description}
                     onChange={(e) => setForm({ ...form, description: e.target.value })}
                     placeholder="Descreva o tipo de músicas que esta playlist contém..."
-                    className="min-h-24 resize-none border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                    className="min-h-24 resize-none"
                   />
                   <p className="text-xs text-gray-500">
                     Uma descrição ajuda você e outros a entenderem o propósito da playlist
@@ -254,52 +245,50 @@ export default function CreatePlaylistPage() {
 
                 {/* Configurações de Privacidade */}
                 <div className="space-y-4">
-                  <Label className="text-sm font-medium text-gray-700">Configurações de Privacidade</Label>
+                  <Label className="text-sm font-medium text-gray-900">Configurações de Privacidade</Label>
 
-                  <Card className="bg-gray-50 border-gray-200">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          {form.isPublic ? (
-                            <Globe className="h-5 w-5 text-blue-600" />
-                          ) : (
-                            <Lock className="h-5 w-5 text-gray-600" />
-                          )}
-                          <div>
-                            <Label htmlFor="isPublic" className="font-medium cursor-pointer text-gray-900">
-                              {form.isPublic ? 'Playlist Pública' : 'Playlist Privada'}
-                            </Label>
-                            <p className="text-sm text-gray-600 mt-1">
-                              {form.isPublic
-                                ? 'Outros usuários podem descobrir e visualizar sua playlist'
-                                : 'Apenas você pode ver e acessar esta playlist'
-                              }
-                            </p>
-                            <div className="flex items-center gap-2 mt-2">
-                              <Badge variant={form.isPublic ? "secondary" : "outline"} className="text-xs">
-                                {form.isPublic ? (
-                                  <>
-                                    <Globe className="h-3 w-3 mr-1" />
-                                    Visível para todos
-                                  </>
-                                ) : (
-                                  <>
-                                    <Lock className="h-3 w-3 mr-1" />
-                                    Apenas para você
-                                  </>
-                                )}
-                              </Badge>
-                            </div>
+                  <div className="border border-gray-200 rounded-lg p-6 bg-white">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        {form.isPublic ? (
+                          <Globe className="h-5 w-5 text-blue-600" />
+                        ) : (
+                          <Lock className="h-5 w-5 text-gray-600" />
+                        )}
+                        <div>
+                          <Label htmlFor="isPublic" className="font-medium cursor-pointer text-gray-900">
+                            {form.isPublic ? 'Playlist Pública' : 'Playlist Privada'}
+                          </Label>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {form.isPublic
+                              ? 'Outros usuários podem descobrir e visualizar sua playlist'
+                              : 'Apenas você pode ver e acessar esta playlist'
+                            }
+                          </p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <Badge variant={form.isPublic ? "secondary" : "outline"} className="text-xs">
+                              {form.isPublic ? (
+                                <>
+                                  <Globe className="h-3 w-3 mr-1" />
+                                  Visível para todos
+                                </>
+                              ) : (
+                                <>
+                                  <Lock className="h-3 w-3 mr-1" />
+                                  Apenas para você
+                                </>
+                              )}
+                            </Badge>
                           </div>
                         </div>
-                        <Switch
-                          id="isPublic"
-                          checked={form.isPublic}
-                          onCheckedChange={(checked) => setForm({ ...form, isPublic: checked })}
-                        />
                       </div>
-                    </CardContent>
-                  </Card>
+                      <Switch
+                        id="isPublic"
+                        checked={form.isPublic}
+                        onCheckedChange={(checked) => setForm({ ...form, isPublic: checked })}
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <Separator />
@@ -310,7 +299,7 @@ export default function CreatePlaylistPage() {
                     type="button"
                     variant="outline"
                     size="lg"
-                    className="flex-1 border-gray-300 hover:bg-gray-50"
+                    className="flex-1"
                     onClick={() => router.back()}
                   >
                     <ArrowLeft className="h-4 w-4 mr-2" />
@@ -321,7 +310,7 @@ export default function CreatePlaylistPage() {
                     type="submit"
                     disabled={!form.name.trim() || isLoading}
                     size="lg"
-                    className="flex-1 bg-gradient-to-t from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 shadow-lg hover:shadow-xl transition-all duration-200"
+                    className="flex-1"
                   >
                     {isLoading ? (
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />

@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner, type SpinnerProps } from '@/components/ui/shadcn-io/spinner';
 import { ListMusic, ArrowLeft, Globe, Lock, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -159,7 +159,7 @@ export default function EditPlaylistPage({ params }: EditPlaylistPageProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Spinner className="h-8 w-8" />
+  <Spinner variant="circle" size={32} className="text-black" />
       </div>
     );
   }
@@ -317,15 +317,15 @@ export default function EditPlaylistPage({ params }: EditPlaylistPageProps) {
                 Ações irreversíveis que afetam permanentemente esta playlist.
               </p>
               
-              <Button 
+                <Button 
                 variant="destructive" 
-                className="w-full"
+                className="w-full bg-red-600 hover:bg-red-700 text-white"
                 disabled={deleting}
                 onClick={handleDelete}
-              >
+                >
                 <Trash2 className="h-4 w-4 mr-2" />
                 {deleting ? 'Eliminando...' : 'Eliminar Playlist'}
-              </Button>
+                </Button>
             </CardContent>
           </Card>
         </div>

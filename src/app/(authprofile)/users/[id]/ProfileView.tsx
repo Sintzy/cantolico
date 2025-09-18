@@ -128,7 +128,10 @@ export default function ProfileView({ user, isOwner }: ProfileViewProps) {
     const fetchMusics = async () => {
       try {
         const res = await fetch("/api/musics/getmusics");
-        const data: Music[] = await res.json();
+        const response = await res.json();
+        
+        // Verificar se a resposta tem a estrutura esperada
+        const data: Music[] = Array.isArray(response.songs) ? response.songs : [];
 
         const filteredMusics = data.filter((music) =>
           music.versions.some((version) => version.createdById === user.id)
@@ -145,6 +148,7 @@ export default function ProfileView({ user, isOwner }: ProfileViewProps) {
       } catch (error) {
         console.error("Erro ao buscar músicas:", error);
         toast.error("Erro ao carregar músicas");
+        setMusics([]); // Garantir que musics é sempre um array
       }
     };
 
@@ -160,7 +164,7 @@ export default function ProfileView({ user, isOwner }: ProfileViewProps) {
     setLoading(true);
     
     try {
-      const res = await fetch("/api/profile/update", {
+      const res = await fetch("/api/user/profile/update", {
         method: "POST",
         body: JSON.stringify(form),
         headers: { "Content-Type": "application/json" },

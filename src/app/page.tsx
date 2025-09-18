@@ -136,7 +136,7 @@ export default function HomePage() {
         </section>
 
         {/* Features Section - Template Style */}
-        <section className="py-12 md:py-20 bg-gray-50">
+        <section className="py-12 md:py-20 bg-white">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <div className="pb-8 md:pb-12 lg:pb-20 text-center">
               <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-3 md:mb-4">
@@ -306,7 +306,7 @@ export default function HomePage() {
         </section>
 
         {/* How it Works Section */}
-        <section className="py-12 md:py-20 bg-gray-50">
+        <section className="py-12 md:py-20 bg-white">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <div className="text-center mb-12 md:mb-16">
               <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 md:mb-4">
@@ -354,7 +354,7 @@ export default function HomePage() {
         {/* Call to Action Final */}
         <section className="relative py-12 md:py-20">
           {/* Background gradient */}
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-blue-50 to-transparent" aria-hidden="true" />
+          <div className="pointer-events-none absolute inset-0" aria-hidden="true" />
           
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <div className="py-8 md:py-12 lg:py-20">

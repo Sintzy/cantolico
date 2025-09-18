@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner, type SpinnerProps } from '@/components/ui/shadcn-io/spinner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { 
@@ -30,7 +30,8 @@ import {
   Mail,
   Shield,
   Crown,
-  UserCheck
+  UserCheck,
+  Edit3
 } from 'lucide-react';
 import { toast } from 'sonner';
 import UserAvatar from '@/components/ui/user-avatar';
@@ -42,6 +43,16 @@ interface Song {
   type: string;
   lyrics: string;
   createdAt: string;
+  currentVersion?: {
+    id: string;
+    versionNumber: number;
+    lyricsPlain: string;
+    author?: {
+      id: string;
+      name: string;
+      email: string;
+    };
+  };
   author?: {
     id: string;
     name: string;
@@ -249,7 +260,11 @@ export default function MusicsManagement() {
     setExpandedSongs(newExpanded);
   };
 
-  const formatLyrics = (lyrics: string) => {
+  const formatLyrics = (lyrics: string | null | undefined) => {
+    if (!lyrics) {
+      return <div className="text-gray-500 italic">Sem letra disponível</div>;
+    }
+    
     const lines = lyrics.split('\n');
     return lines.map((line, index) => {
       const chordRegex = /\[([A-G][#b]?[^[\]]*)\]/g;
@@ -282,7 +297,7 @@ export default function MusicsManagement() {
   if (status === 'loading' || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Spinner className="h-8 w-8" />
+  <Spinner variant="circle" size={32} className="text-black" />
       </div>
     );
   }
@@ -446,6 +461,13 @@ export default function MusicsManagement() {
                         </>
                       )}
                     </Button>
+
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/admin/dashboard/musics/${song.id}/edit`}>
+                        <Edit3 className="h-4 w-4" />
+                        Editar
+                      </Link>
+                    </Button>
                     
                     <Dialog>
                       <DialogTrigger asChild>
@@ -545,7 +567,7 @@ export default function MusicsManagement() {
                                       disabled={banningUser === song.author.id}
                                     >
                                       {banningUser === song.author.id ? (
-                                        <Spinner className="h-4 w-4 mr-2" />
+                                        <Spinner variant="circle" size={16} className="text-black mr-2" />
                                       ) : (
                                         <UserX className="h-4 w-4 mr-2" />
                                       )}
@@ -561,7 +583,7 @@ export default function MusicsManagement() {
                           <div>
                             <h4 className="font-semibold mb-2">Letra:</h4>
                             <div className="border rounded-lg p-4 bg-white font-mono text-sm max-h-96 overflow-y-auto">
-                              {formatLyrics(song.lyrics)}
+                              {formatLyrics(song.currentVersion?.lyricsPlain)}
                             </div>
                           </div>
                         </div>
@@ -579,7 +601,7 @@ export default function MusicsManagement() {
                       disabled={deletingSong === song.id}
                     >
                       {deletingSong === song.id ? (
-                        <Spinner className="h-4 w-4" />
+                        <Spinner variant="circle" size={16} className="text-black" />
                       ) : (
                         <Trash2 className="h-4 w-4" />
                       )}
@@ -623,7 +645,7 @@ export default function MusicsManagement() {
                         </div>
                       </div>
                       <div className="bg-white border rounded-lg p-4 font-mono text-sm max-h-64 overflow-y-auto">
-                        {formatLyrics(song.lyrics)}
+                        {formatLyrics(song.currentVersion?.lyricsPlain)}
                       </div>
                     </div>
                   </div>
