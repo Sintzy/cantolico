@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner, type SpinnerProps } from '@/components/ui/shadcn-io/spinner';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { Users, Music, Clock, TrendingUp, Activity, AlertCircle } from 'lucide-react';
 import BannerDisplay from '@/components/BannerDisplay';
@@ -113,7 +113,7 @@ export default function AdminDashboard() {
   if (status === 'loading' || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Spinner className="h-8 w-8" />
+  <Spinner variant="circle" size={32} className="text-black" />
       </div>
     );
   }

@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner, type SpinnerProps } from '@/components/ui/shadcn-io/spinner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { 
@@ -297,7 +297,7 @@ export default function MusicsManagement() {
   if (status === 'loading' || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Spinner className="h-8 w-8" />
+  <Spinner variant="circle" size={32} className="text-black" />
       </div>
     );
   }
@@ -567,7 +567,7 @@ export default function MusicsManagement() {
                                       disabled={banningUser === song.author.id}
                                     >
                                       {banningUser === song.author.id ? (
-                                        <Spinner className="h-4 w-4 mr-2" />
+                                        <Spinner variant="circle" size={16} className="text-black mr-2" />
                                       ) : (
                                         <UserX className="h-4 w-4 mr-2" />
                                       )}
@@ -601,7 +601,7 @@ export default function MusicsManagement() {
                       disabled={deletingSong === song.id}
                     >
                       {deletingSong === song.id ? (
-                        <Spinner className="h-4 w-4" />
+                        <Spinner variant="circle" size={16} className="text-black" />
                       ) : (
                         <Trash2 className="h-4 w-4" />
                       )}

@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner, type SpinnerProps } from '@/components/ui/shadcn-io/spinner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -341,7 +341,7 @@ export default function UsersManagement() {
   if (status === 'loading' || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Spinner className="h-8 w-8" />
+  <Spinner variant="circle" size={32} className="text-black" />
       </div>
     );
   }
@@ -837,7 +837,7 @@ export default function UsersManagement() {
                                     disabled={deletingUser === user.id}
                                   >
                                     {deletingUser === user.id ? (
-                                      <Spinner className="h-4 w-4 mr-2" />
+                                      <Spinner variant="circle" size={16} className="text-black mr-2" />
                                     ) : (
                                       <Ban className="h-4 w-4 mr-2" />
                                     )}
@@ -866,7 +866,7 @@ export default function UsersManagement() {
                             className="flex-1 lg:flex-none"
                           >
                             {deletingUser === user.id ? (
-                              <Spinner className="h-4 w-4" />
+                              <Spinner variant="circle" size={16} className="text-black" />
                             ) : (
                               <>
                                 <Ban className="h-4 w-4 lg:mr-0" />
@@ -879,7 +879,7 @@ export default function UsersManagement() {
                     )}
                     
                     {changingRole === user.id && (
-                      <Spinner className="h-4 w-4" />
+                      <Spinner variant="circle" size={16} className="text-black" />
                     )}
                     
                     {user.id === session?.user.id?.toString() && (

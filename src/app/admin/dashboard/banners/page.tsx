@@ -7,7 +7,7 @@ import { Plus, Edit, Trash2, Eye, EyeOff, Calendar, ArrowUp, ArrowDown } from 'l
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner, type SpinnerProps } from '@/components/ui/shadcn-io/spinner';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -238,7 +238,7 @@ export default function BannerManagement() {
   if (status === 'loading' || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Spinner className="h-8 w-8" />
+  <Spinner variant="circle" size={32} className="text-black" />
       </div>
     );
   }
@@ -527,7 +527,7 @@ export default function BannerManagement() {
               <Button type="submit" disabled={saving}>
                 {saving ? (
                   <>
-                    <Spinner className="h-4 w-4 mr-2" />
+                    <Spinner variant="circle" size={16} className="text-black mr-2" />
                     Salvando...
                   </>
                 ) : (

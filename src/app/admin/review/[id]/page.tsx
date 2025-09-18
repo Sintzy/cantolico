@@ -18,7 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Spinner } from "@/components/ui/spinner";
+import { Spinner, type SpinnerProps } from "@/components/ui/shadcn-io/spinner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -351,7 +351,7 @@ export default function ReviewSubmissionPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
-          <Spinner size="large" />
+          <Spinner variant="circle" size={48} className="text-black" />
           <p className="text-gray-600">A carregar submissão...</p>
         </div>
       </div>
