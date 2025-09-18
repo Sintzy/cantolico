@@ -248,7 +248,7 @@ export default function CreateNewMusicPage() {
       formData.append("instrument", form.instrument);
       formData.append("type", form.type);
       formData.append("markdown", form.markdown);
-      formData.append("tags", `{${form.tags.join(",")}}`);
+      formData.append("tags", form.tags.join(","));
       formData.append("moments", JSON.stringify(form.moments));
       formData.append("captchaToken", captchaToken);
       if (form.pdfFile) formData.append("pdf", form.pdfFile);

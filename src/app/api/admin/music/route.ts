@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     
     const offset = (page - 1) * limit;
 
-    // Construir query base
+    // Construir query base 
     let query = supabase
       .from('Song')
       .select(`
@@ -40,7 +40,9 @@ export async function GET(req: NextRequest) {
           author:User!SongVersion_createdById_fkey (
             id,
             name,
-            email
+            email,
+            role,
+            image
           )
         )
       `, { count: 'exact' })
@@ -65,8 +67,34 @@ export async function GET(req: NextRequest) {
 
     const totalPages = Math.ceil((count || 0) / limit);
 
+    // Mapear dados para incluir informações do autor
+    const formattedSongs = (songs || []).map(song => {
+      const currentVersion = Array.isArray(song.currentVersion) ? song.currentVersion[0] : song.currentVersion;
+      let author = null;
+      
+      if (currentVersion?.author) {
+        author = Array.isArray(currentVersion.author) ? currentVersion.author[0] : currentVersion.author;
+      }
+      
+      return {
+        ...song,
+        // Mapear o autor da versão atual como autor principal
+        author: author || {
+          id: 'unknown',
+          name: 'Utilizador desconhecido',
+          email: '',
+          role: 'USER'
+        },
+        // Incluir informações da versão atual para compatibilidade
+        currentVersion: currentVersion,
+        // Adicionar campos de compatibilidade
+        artist: (author && typeof author === 'object' && 'name' in author) ? author.name : 'Artista desconhecido',
+        lyrics: currentVersion?.lyricsPlain || ''
+      };
+    });
+
     return NextResponse.json({
-      songs: songs || [],
+      songs: formattedSongs,
       pagination: {
         currentPage: page,
         totalPages,
@@ -94,17 +122,17 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'ID da música não fornecido' }, { status: 400 });
     }
 
-    // Apagar todas as versões da música
-    const { error: versionError, count: versionsDeleted } = await supabase
-      .from('SongVersion')
-      .delete({ count: 'exact' })
-      .eq('songId', songId);
+    // 1. Primeiro, remover a referência currentVersionId da música para evitar violação de foreign key
+    const { error: updateSongError } = await supabase
+      .from('Song')
+      .update({ currentVersionId: null })
+      .eq('id', songId);
 
-    if (versionError) {
-      throw new Error(`Erro ao apagar versões: ${versionError.message}`);
+    if (updateSongError) {
+      throw new Error(`Erro ao remover referência da versão atual: ${updateSongError.message}`);
     }
 
-    // Apagar favoritos relacionados
+    // 2. Apagar favoritos relacionados
     const { error: favoriteError, count: favoritesDeleted } = await supabase
       .from('Favorite')
       .delete({ count: 'exact' })
@@ -114,7 +142,7 @@ export async function DELETE(req: NextRequest) {
       throw new Error(`Erro ao apagar favoritos: ${favoriteError.message}`);
     }
 
-    // Apagar estrelas relacionadas
+    // 3. Apagar estrelas relacionadas
     const { error: starError } = await supabase
       .from('Star')
       .delete()
@@ -124,7 +152,7 @@ export async function DELETE(req: NextRequest) {
       throw new Error(`Erro ao apagar estrelas: ${starError.message}`);
     }
 
-    // Apagar playlist items relacionados
+    // 4. Apagar playlist items relacionados
     const { error: playlistItemError } = await supabase
       .from('PlaylistItem')
       .delete()
@@ -134,7 +162,17 @@ export async function DELETE(req: NextRequest) {
       throw new Error(`Erro ao apagar playlist items: ${playlistItemError.message}`);
     }
 
-    // Por fim, apagar a música
+    // 5. Agora apagar todas as versões da música (já não há foreign key constraint)
+    const { error: versionError, count: versionsDeleted } = await supabase
+      .from('SongVersion')
+      .delete({ count: 'exact' })
+      .eq('songId', songId);
+
+    if (versionError) {
+      throw new Error(`Erro ao apagar versões: ${versionError.message}`);
+    }
+
+    // 6. Por fim, apagar a música
     const { error: songError } = await supabase
       .from('Song')
       .delete()
@@ -153,6 +191,10 @@ export async function DELETE(req: NextRequest) {
     });
   } catch (error) {
     console.error('Erro ao eliminar música:', error);
-    return NextResponse.json({ error: 'Erro interno ao eliminar música' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Erro interno ao eliminar música';
+    return NextResponse.json({ 
+      error: errorMessage,
+      details: error instanceof Error ? error.stack : 'Erro desconhecido'
+    }, { status: 500 });
   }
 }

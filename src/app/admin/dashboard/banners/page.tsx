@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Plus, Edit, Trash2, Eye, EyeOff, Calendar, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, EyeOff, Calendar, ArrowUp, ArrowDown, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +13,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { TableSkeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+import { useStableData, useWindowFocus } from '@/hooks/useOptimization';
 
 interface Banner {
   id: string;
@@ -98,6 +100,30 @@ export default function BannerManagement() {
   const [editingBanner, setEditingBanner] = useState<Banner | null>(null);
   const [formData, setFormData] = useState<BannerFormData>(initialFormData);
   const [saving, setSaving] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Define the fetch function for useStableData
+  const fetchBannersData = useCallback(async (): Promise<Banner[]> => {
+    const response = await fetch('/api/admin/banners');
+    if (!response.ok) {
+      throw new Error('Erro ao carregar banners');
+    }
+    const data = await response.json();
+    // Normaliza o payload para sempre ter createdBy
+    return (Array.isArray(data) ? data : []).map((b: any) => ({
+      ...b,
+      createdBy: b?.createdBy ?? b?.user ?? null,
+    }));
+  }, []);
+
+  const { data: cachedData, loading: dataLoading, error: dataError, refresh: refreshData } = useStableData<Banner[]>(
+    fetchBannersData,
+    [],
+    'banners'
+  );
+  
+  // Get window focus state but don't use it for auto-refresh
+  const isWindowFocused = useWindowFocus();
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -107,30 +133,39 @@ export default function BannerManagement() {
       return;
     }
 
-    fetchBanners();
-  }, [session, status]);
-
-  const fetchBanners = async () => {
-    try {
+    // Update local state when cached data changes
+    if (cachedData) {
+      setBanners(cachedData);
+      setLoading(false);
+    }
+    
+    // Set loading state from the data hook
+    if (dataLoading && !cachedData) {
       setLoading(true);
-      const response = await fetch('/api/admin/banners');
-      if (response.ok) {
-        const data = await response.json();
-        // Normaliza o payload para sempre ter createdBy
-        const normalized = (Array.isArray(data) ? data : []).map((b: any) => ({
-          ...b,
-          createdBy: b?.createdBy ?? b?.user ?? null,
-        }));
-        setBanners(normalized);
-      } else {
-        toast.error('Erro ao carregar banners');
+    } else {
+      setLoading(false);
+    }
+  }, [session, status, cachedData, dataLoading]);
+
+  const fetchBanners = async (forceFetch = false) => {
+    try {
+      setIsRefreshing(true);
+      
+      if (forceFetch) {
+        refreshData(); // This will trigger a fresh fetch
       }
     } catch (error) {
       console.error('Erro ao carregar banners:', error);
       toast.error('Erro ao carregar banners');
     } finally {
-      setLoading(false);
+      setIsRefreshing(false);
     }
+  };
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    refreshData(); // Use the refresh function from useStableData
+    setIsRefreshing(false);
   };
 
   const openCreateDialog = () => {
@@ -178,7 +213,7 @@ export default function BannerManagement() {
       if (response.ok) {
         toast.success(editingBanner ? 'Banner atualizado!' : 'Banner criado!');
         setShowDialog(false);
-        fetchBanners();
+        refreshData(); // Use refreshData instead of fetchBanners
       } else {
         toast.error('Erro ao salvar banner');
       }
@@ -203,7 +238,7 @@ export default function BannerManagement() {
 
       if (response.ok) {
         toast.success(`Banner ${!banner.isActive ? 'ativado' : 'desativado'}!`);
-        fetchBanners();
+        refreshData();
       } else {
         toast.error('Erro ao alterar status do banner');
       }
@@ -225,7 +260,7 @@ export default function BannerManagement() {
 
       if (response.ok) {
         toast.success('Banner removido!');
-        fetchBanners();
+        refreshData();
       } else {
         toast.error('Erro ao remover banner');
       }
@@ -235,10 +270,30 @@ export default function BannerManagement() {
     }
   };
 
-  if (status === 'loading' || loading) {
+  if (status === 'loading') {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-  <Spinner variant="circle" size={32} className="text-black" />
+      <div className="container mx-auto px-4 py-8 space-y-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Gestão de Banners</h1>
+            <p className="text-gray-600">A carregar...</p>
+          </div>
+        </div>
+        <TableSkeleton rows={5} />
+      </div>
+    );
+  }
+
+  if (loading && !cachedData) {
+    return (
+      <div className="container mx-auto px-4 py-8 space-y-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Gestão de Banners</h1>
+            <p className="text-gray-600">A carregar banners...</p>
+          </div>
+        </div>
+        <TableSkeleton rows={5} />
       </div>
     );
   }
@@ -251,14 +306,40 @@ export default function BannerManagement() {
           <h1 className="text-2xl sm:text-3xl font-bold">Gestão de Banners</h1>
           <p className="text-gray-600">Gerir alertas e anúncios do site</p>
         </div>
-        <Button onClick={openCreateDialog} className="w-full sm:w-auto">
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Banner
-        </Button>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button 
+            onClick={handleManualRefresh} 
+            variant="outline"
+            disabled={isRefreshing}
+            className="flex-1 sm:flex-initial"
+          >
+            {isRefreshing ? (
+              <Spinner variant="circle" size={16} className="text-black mr-2" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            Atualizar
+          </Button>
+          <Button onClick={openCreateDialog} className="flex-1 sm:flex-initial">
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Banner
+          </Button>
+        </div>
       </div>
 
       {/* Banners List */}
-      <div className="grid gap-6">
+      <div className="relative">
+        {/* Loading overlay */}
+        {isRefreshing && (
+          <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center">
+            <div className="bg-white p-4 rounded-lg shadow-lg flex items-center gap-2">
+              <Spinner variant="circle" size={20} className="text-black" />
+              <span>A atualizar dados...</span>
+            </div>
+          </div>
+        )}
+        
+        <div className="grid gap-6">
         {banners.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
@@ -385,6 +466,7 @@ export default function BannerManagement() {
             </Card>
           ))
         )}
+        </div>
       </div>
 
       {/* Dialog */}

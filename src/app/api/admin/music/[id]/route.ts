@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase-client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { formatTagsForPostgreSQL } from '@/lib/utils';
 
 export async function GET(
   req: NextRequest,
@@ -133,10 +134,8 @@ export async function PUT(
       counter++;
     }
 
-    // Processar tags para formato correto do banco
-    const processedTags = Array.isArray(tags) 
-      ? `{${tags.map(tag => String(tag).trim()).join(',')}}`
-      : tags || '{}';
+    // Processar tags usando a função utilitária
+    const processedTags = formatTagsForPostgreSQL(tags);
 
     // Atualizar dados da música
     const { error: updateSongError } = await supabase

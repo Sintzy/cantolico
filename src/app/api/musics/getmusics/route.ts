@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase-client";
 import { logGeneral, logErrors } from "@/lib/logs";
 import { protectApiRoute, applySecurityHeaders } from "@/lib/api-protection";
+import { parseTagsFromPostgreSQL, parseMomentsFromPostgreSQL } from "@/lib/utils";
 
 export async function GET(request: NextRequest) {
   // Verifica se a requisição vem de uma origem autorizada
@@ -60,16 +61,10 @@ export async function GET(request: NextRequest) {
     // Reformatar dados para manter compatibilidade
     const formattedSongs = (songs || []).map(song => ({
       ...song,
-      // Processar tags de string para array
-      tags: song.tags 
-        ? song.tags.replace(/[{}]/g, '').split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0)
-        : [],
-      // Processar moments de string para array (se necessário)
-      moments: song.moments 
-        ? (typeof song.moments === 'string' 
-           ? song.moments.replace(/[{}]/g, '').split(',').map((moment: string) => moment.trim()).filter((moment: string) => moment.length > 0)
-           : song.moments)
-        : [],
+      // Processar tags usando a função utilitária
+      tags: parseTagsFromPostgreSQL(song.tags),
+      // Processar moments usando a função utilitária
+      moments: parseMomentsFromPostgreSQL(song.moments),
       versions: song.SongVersion ? [song.SongVersion] : []
     }));
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -13,6 +13,7 @@ import { Spinner, type SpinnerProps } from '@/components/ui/shadcn-io/spinner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { TableSkeleton } from '@/components/ui/skeleton';
 import { 
   Users, 
   Search, 
@@ -34,10 +35,12 @@ import {
   AlertTriangle,
   Clock,
   Eye,
-  X
+  X,
+  RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import UserAvatar from '@/components/ui/user-avatar';
+import { useDebounce, useStableData, useWindowFocus } from '@/hooks/useOptimization';
 
 interface User {
   id: string;
@@ -147,6 +150,41 @@ export default function UsersManagement() {
     moderatorNote: '',
   });
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Use optimization hooks
+  const debouncedSearchTerm = useDebounce(searchTerm, 400);
+  
+  // Create a stable cache key for the current search params
+  const cacheKey = `users-${currentPage}-${debouncedSearchTerm}-${roleFilter}-${statusFilter}`;
+  
+  // Define the fetch function for useStableData
+  const fetchUsersData = useCallback(async (): Promise<UsersResponse> => {
+    const params = new URLSearchParams({
+      page: currentPage.toString(),
+      limit: '10',
+      search: debouncedSearchTerm,
+      role: roleFilter === 'all' ? '' : roleFilter,
+      status: statusFilter === 'all' ? '' : statusFilter
+    });
+
+    const response = await fetch(`/api/admin/users?${params}`);
+    
+    if (!response.ok) {
+      throw new Error('Erro ao carregar utilizadores');
+    }
+    
+    return response.json();
+  }, [currentPage, debouncedSearchTerm, roleFilter, statusFilter]);
+
+  const { data: cachedData, loading: dataLoading, error: dataError, refresh: refreshData } = useStableData<UsersResponse>(
+    fetchUsersData,
+    [currentPage, debouncedSearchTerm, roleFilter, statusFilter],
+    cacheKey
+  );
+  
+  // Get window focus state but don't use it for auto-refresh
+  const isWindowFocused = useWindowFocus();
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -156,39 +194,48 @@ export default function UsersManagement() {
       return;
     }
 
-    fetchUsers();
-  }, [session, status, router, currentPage, searchTerm, roleFilter, statusFilter]);
-
-  const fetchUsers = async () => {
-    try {
+    // Update local state when cached data changes
+    if (cachedData) {
+      setUsers(cachedData.users);
+      setTotalPages(cachedData.totalPages);
+      setTotalCount(cachedData.totalCount);
+      setLoading(false);
+      setError(null);
+    }
+    
+    // Set loading and error states from the data hook
+    if (dataLoading && !cachedData) {
       setLoading(true);
+    } else {
+      setLoading(false);
+    }
+    
+    if (dataError) {
+      setError(dataError);
+    }
+  }, [session, status, cachedData, dataLoading, dataError]);
+
+  const fetchUsers = async (forceFetch = false) => {
+    try {
+      setIsRefreshing(true);
       setError(null);
       
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: '10',
-        search: searchTerm,
-        role: roleFilter === 'all' ? '' : roleFilter,
-        status: statusFilter === 'all' ? '' : statusFilter
-      });
-
-      const response = await fetch(`/api/admin/users?${params}`);
-      
-      if (!response.ok) {
-        throw new Error('Erro ao carregar utilizadores');
+      if (forceFetch) {
+        refreshData(); // This will trigger a fresh fetch
       }
-      
-      const data: UsersResponse = await response.json();
-      setUsers(data.users);
-      setTotalPages(data.totalPages);
-      setTotalCount(data.totalCount);
     } catch (error) {
       console.error('Erro ao carregar utilizadores:', error);
       setError(error instanceof Error ? error.message : 'Erro desconhecido');
       toast.error('Erro ao carregar utilizadores');
     } finally {
-      setLoading(false);
+      setIsRefreshing(false);
     }
+  };
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    refreshData(); // Use the refresh function from useStableData
+    setIsRefreshing(false);
   };
 
   const handleRoleChange = async (userId: string, newRole: 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN') => {
@@ -338,10 +385,30 @@ export default function UsersManagement() {
     setCurrentPage(1); // Reset to first page when filtering
   };
 
-  if (status === 'loading' || loading) {
+  if (status === 'loading') {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-  <Spinner variant="circle" size={32} className="text-black" />
+      <div className="container mx-auto px-4 py-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Gestão de Utilizadores</h1>
+            <p className="text-gray-600">A carregar...</p>
+          </div>
+        </div>
+        <TableSkeleton rows={8} />
+      </div>
+    );
+  }
+
+  if (loading && !cachedData) {
+    return (
+      <div className="container mx-auto px-4 py-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Gestão de Utilizadores</h1>
+            <p className="text-gray-600">A carregar utilizadores...</p>
+          </div>
+        </div>
+        <TableSkeleton rows={8} />
       </div>
     );
   }
@@ -352,7 +419,7 @@ export default function UsersManagement() {
         <AlertCircle className="h-12 w-12 text-red-500" />
         <h2 className="text-xl font-semibold">Erro ao carregar utilizadores</h2>
         <p className="text-gray-600">{error}</p>
-        <Button onClick={fetchUsers} variant="outline">
+        <Button onClick={() => fetchUsers(true)} variant="outline">
           Tentar novamente
         </Button>
       </div>
@@ -369,7 +436,17 @@ export default function UsersManagement() {
             Gerir roles e permissões dos utilizadores ({totalCount} total)
           </p>
         </div>
-        <Button onClick={fetchUsers} variant="outline" size="sm">
+        <Button 
+          onClick={handleManualRefresh} 
+          variant="outline" 
+          size="sm"
+          disabled={isRefreshing}
+        >
+          {isRefreshing ? (
+            <Spinner variant="circle" size={16} className="text-black mr-2" />
+          ) : (
+            <RefreshCw className="h-4 w-4 mr-2" />
+          )}
           Atualizar
         </Button>
       </div>
@@ -435,12 +512,28 @@ export default function UsersManagement() {
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
             Utilizadores
+            {isRefreshing && (
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <Spinner variant="circle" size={16} className="text-black" />
+                A atualizar...
+              </div>
+            )}
           </CardTitle>
           <CardDescription>
             Lista de todos os utilizadores registados
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="relative">
+          {/* Loading overlay */}
+          {isRefreshing && (
+            <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center">
+              <div className="bg-white p-4 rounded-lg shadow-lg flex items-center gap-2">
+                <Spinner variant="circle" size={20} className="text-black" />
+                <span>A atualizar dados...</span>
+              </div>
+            </div>
+          )}
+          
           <div className="space-y-4">
             {users.map((user) => (
               <div
