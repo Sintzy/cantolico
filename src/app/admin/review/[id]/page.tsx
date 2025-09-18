@@ -215,7 +215,7 @@ export default function ReviewSubmissionPage() {
     formData.append("youtubeLink", youtubeLink);
     formData.append("instrument", instrument);
     formData.append("moments", JSON.stringify(moments));
-    formData.append("tags", tags);
+    formData.append("tags", `{${tags}}`);
     if (newPdf) formData.append("pdf", newPdf);
     if (newMp3) formData.append("mp3", newMp3);
 

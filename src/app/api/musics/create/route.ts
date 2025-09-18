@@ -112,7 +112,9 @@ export async function POST(req: Request) {
     const tagString = formData.get("tags")?.toString() ?? "";
     const momentsRaw = formData.get("moments")?.toString() ?? "[]";
 
+    // Processar tags do formato {tag1,tag2} para array
     const tags = tagString
+      .replace(/[{}]/g, '') // Remove chaves
       .split(",")
       .map((t) => t.trim())
       .filter((t) => t.length > 0);
