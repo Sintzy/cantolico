@@ -1116,9 +1116,225 @@ Por favor não respondas a este email.
 </td></tr></table>
 </td></tr></table>
 </td></tr></table>
-</div>
+    </div>
 </body>
 </html>
 
   `;
+}
+
+// ================================================
+// ALERTAS DE SEGURANÇA - TEMPLATES ESPECÍFICOS
+// ================================================
+
+export function createSecurityAlertTemplate(
+  alertType: string,
+  severity: number,
+  description: string,
+  details: any
+): string {
+  const severityText = {
+    1: 'Baixa',
+    2: 'Média', 
+    3: 'Alta',
+    4: 'Crítica',
+    5: 'Emergência'
+  }[severity] || 'Desconhecida';
+
+  const severityColor = {
+    1: '#28a745',
+    2: '#ffc107',
+    3: '#fd7e14', 
+    4: '#dc3545',
+    5: '#6f42c1'
+  }[severity] || '#6c757d';
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Alerta de Segurança - Cantólico</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f8f9fa; }
+        .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #FF595F, #FF7B7F); color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
+        .content { padding: 30px; }
+        .alert-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; color: white; background: ${severityColor}; }
+        .details { background: #f8f9fa; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid ${severityColor}; }
+        .footer { text-align: center; padding: 20px; color: #6c757d; font-size: 12px; border-top: 1px solid #dee2e6; }
+        .logo { width: 40px; height: 40px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="https://truenas-scale.fold-pence.ts.net/storage/v1/object/public/assets/cantolicoimagens/transparentes/android-chrome-512x512.png" alt="Cantólico" class="logo">
+            <h1 style="margin: 0; font-size: 24px;">🔐 Alerta de Segurança</h1>
+            <span class="alert-badge">Severidade: ${severityText}</span>
+        </div>
+        
+        <div class="content">
+            <h2 style="color: #333; margin-top: 0;">${alertType}</h2>
+            <p style="color: #666; line-height: 1.6;">${description}</p>
+            
+            <div class="details">
+                <h3 style="margin-top: 0; color: #333;">Detalhes do Evento:</h3>
+                <ul style="color: #555;">
+                    <li><strong>Timestamp:</strong> ${new Date().toLocaleString('pt-PT')}</li>
+                    <li><strong>IP Address:</strong> ${details.ip || 'N/A'}</li>
+                    <li><strong>User Agent:</strong> ${details.userAgent || 'N/A'}</li>
+                    <li><strong>URL:</strong> ${details.url || 'N/A'}</li>
+                    ${details.userId ? `<li><strong>User ID:</strong> ${details.userId}</li>` : ''}
+                    ${details.email ? `<li><strong>Email:</strong> ${details.email}</li>` : ''}
+                </ul>
+            </div>
+            
+            <p style="color: #666;">
+                <strong>Ação Recomendada:</strong><br>
+                Por favor, revê este alerta e toma as medidas necessárias se aplicável.
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="https://cantolico.pt/logs" 
+                   style="background: #FF595F; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                   Ver Logs Completos
+                </a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Este email foi enviado automaticamente pelo sistema de segurança do Cantólico.<br>
+            Por favor, não responder a este email.</p>
+        </div>
+    </div>
+</body>
+</html>
+  `;
+}
+
+export function createAdminLoginAlertTemplate(
+  userEmail: string,
+  ip: string,
+  userAgent: string,
+  timestamp: Date,
+  location?: string
+): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Login de Administrador - Cantólico</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f8f9fa; }
+        .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #007bff, #0056b3); color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
+        .content { padding: 30px; }
+        .info-box { background: #e7f3ff; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #007bff; }
+        .footer { text-align: center; padding: 20px; color: #6c757d; font-size: 12px; border-top: 1px solid #dee2e6; }
+        .logo { width: 40px; height: 40px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="https://truenas-scale.fold-pence.ts.net/storage/v1/object/public/assets/cantolicoimagens/transparentes/android-chrome-512x512.png" alt="Cantólico" class="logo">
+            <h1 style="margin: 0; font-size: 24px;">👨‍💼 Login de Administrador Detectado</h1>
+        </div>
+        
+        <div class="content">
+            <p style="color: #333; line-height: 1.6;">
+                Um login de administrador foi detectado no sistema Cantólico.
+            </p>
+            
+            <div class="info-box">
+                <h3 style="margin-top: 0; color: #007bff;">Informações do Login:</h3>
+                <ul style="color: #333;">
+                    <li><strong>Email:</strong> ${userEmail}</li>
+                    <li><strong>Timestamp:</strong> ${timestamp.toLocaleString('pt-PT')}</li>
+                    <li><strong>Endereço IP:</strong> ${ip}</li>
+                    <li><strong>User Agent:</strong> ${userAgent}</li>
+                    ${location ? `<li><strong>Localização:</strong> ${location}</li>` : ''}
+                </ul>
+            </div>
+            
+            <p style="color: #666;">
+                Se este login não foi autorizado, por favor contacta imediatamente a equipa de segurança.
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="https://cantolico.pt/admin" 
+                   style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-right: 10px;">
+                   Aceder ao Admin
+                </a>
+                <a href="https://cantolico.pt/logs" 
+                   style="background: #6c757d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                   Ver Logs
+                </a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Este email foi enviado automaticamente pelo sistema de monitorização do Cantólico.<br>
+            Por favor, não responder a este email.</p>
+        </div>
+    </div>
+</body>
+</html>
+  `;
+}
+
+// ================================================
+// FUNÇÕES DE ENVIO DE ALERTAS DE SEGURANÇA
+// ================================================
+
+export async function sendSecurityAlert(
+  alertType: string,
+  severity: number,
+  description: string,
+  details: any
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const securityEmail = process.env.SECURITY_EMAIL || 'sintzyy@gmail.com';
+    
+    const template: EmailTemplate = {
+      to: securityEmail,
+      subject: `🔐 [${severity === 5 ? 'EMERGÊNCIA' : severity >= 4 ? 'CRÍTICO' : 'ALERTA'}] ${alertType} - Cantólico`,
+      html: createSecurityAlertTemplate(alertType, severity, description, details)
+    };
+
+    return await sendEmail(template);
+  } catch (error) {
+    console.error('Erro ao enviar alerta de segurança:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Erro desconhecido' 
+    };
+  }
+}
+
+export async function sendAdminLoginAlert(
+  userEmail: string,
+  ip: string,
+  userAgent: string,
+  location?: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const securityEmail = process.env.SECURITY_EMAIL || 'sintzyy@gmail.com';
+    
+    const template: EmailTemplate = {
+      to: securityEmail,
+      subject: `👨‍💼 Login de Administrador Detectado - ${userEmail}`,
+      html: createAdminLoginAlertTemplate(userEmail, ip, userAgent, new Date(), location)
+    };
+
+    return await sendEmail(template);
+  } catch (error) {
+    console.error('Erro ao enviar alerta de login admin:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Erro desconhecido' 
+    };
+  }
 }

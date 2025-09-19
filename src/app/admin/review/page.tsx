@@ -433,11 +433,28 @@ export default function AdminReviewPage() {
 
   // Função para alterar ordenação
   const handleSortChange = (newSortBy: string) => {
-    if (sortBy === newSortBy) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortBy(newSortBy);
+    // Handle special sorting options with built-in direction
+    if (newSortBy === "title_desc") {
+      setSortBy("title");
       setSortOrder("desc");
+    } else if (newSortBy === "createdAt_asc") {
+      setSortBy("createdAt");
+      setSortOrder("asc");
+    } else {
+      // For regular options, if same field is selected, toggle order
+      if (sortBy === newSortBy) {
+        setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+      } else {
+        setSortBy(newSortBy);
+        // Set default order based on field type
+        if (newSortBy === "title") {
+          setSortOrder("asc"); // A-Z by default
+        } else if (newSortBy === "createdAt") {
+          setSortOrder("desc"); // Most recent by default
+        } else {
+          setSortOrder("desc");
+        }
+      }
     }
   };
 
@@ -919,27 +936,28 @@ export default function AdminReviewPage() {
                 </SelectContent>
               </Select>
               <div className="flex gap-2">
-                <Select value={sortBy} onValueChange={(value) => handleSortChange(value)}>
+                <Select 
+                  value={
+                    sortBy === "title" && sortOrder === "desc" ? "title_desc" :
+                    sortBy === "createdAt" && sortOrder === "asc" ? "createdAt_asc" :
+                    sortBy
+                  } 
+                  onValueChange={(value) => handleSortChange(value)}
+                >
                   <SelectTrigger className="flex-1">
                     <ArrowUpDown className="w-4 h-4 mr-2" />
                     <SelectValue placeholder="Ordenar por" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="createdAt">Data de Criação</SelectItem>
                     <SelectItem value="title">Título (A-Z)</SelectItem>
+                    <SelectItem value="title_desc">Título (Z-A)</SelectItem>
+                    <SelectItem value="createdAt">Data (Mais Recente)</SelectItem>
+                    <SelectItem value="createdAt_asc">Data (Mais Antiga)</SelectItem>
                     <SelectItem value="status">Status</SelectItem>
                     <SelectItem value="submitter.role">Role do Utilizador</SelectItem>
                     <SelectItem value="type">Tipo</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-                  className="px-3"
-                >
-                  {sortOrder === "asc" ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />}
-                </Button>
               </div>
             </div>
           </CardContent>

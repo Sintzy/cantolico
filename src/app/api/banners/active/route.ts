@@ -22,29 +22,44 @@ export async function GET(request: NextRequest) {
     
     const now = new Date();
     
-    const { data: banners, error } = await supabase
-      .from('Banner')
-      .select(`
-        id,
-        title,
-        message,
-        type,
-        position,
-        priority
-      `)
-      .eq('isActive', true)
-      .or(`pages.cs.{${page}}, pages.cs.{ALL}`)
-      .or(`startDate.is.null, startDate.lte.${now.toISOString()}`)
-      .or(`endDate.is.null, endDate.gte.${now.toISOString()}`)
-      .order('priority', { ascending: false })
-      .order('createdAt', { ascending: false });
+    // Verificar se o Supabase está acessível
+    try {
+      const { data: banners, error } = await supabase
+        .from('Banner')
+        .select(`
+          id,
+          title,
+          message,
+          type,
+          position,
+          priority
+        `)
+        .eq('isActive', true)
+        .or(`pages.cs.{${page}}, pages.cs.{ALL}`)
+        .or(`startDate.is.null, startDate.lte.${now.toISOString()}`)
+        .or(`endDate.is.null, endDate.gte.${now.toISOString()}`)
+        .order('priority', { ascending: false })
+        .order('createdAt', { ascending: false });
 
-    if (error) {
-      throw error;
+      if (error) {
+        throw error;
+      }
+
+      const response = NextResponse.json(banners || []);
+      return applySecurityHeaders(response);
+    } catch (supabaseError: any) {
+      console.error('Erro de conectividade com Supabase:', supabaseError);
+      
+      // Fallback: retornar array vazio se o Supabase não estiver acessível
+      const response = NextResponse.json([], { 
+        status: 200,
+        headers: {
+          'X-Fallback': 'true',
+          'X-Error': 'Supabase not accessible'
+        }
+      });
+      return applySecurityHeaders(response);
     }
-
-    const response = NextResponse.json(banners || []);
-    return applySecurityHeaders(response);
   } catch (error) {
     console.error('Erro ao buscar banners ativos:', error);
     const response = NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });

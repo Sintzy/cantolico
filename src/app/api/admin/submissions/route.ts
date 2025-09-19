@@ -17,8 +17,18 @@ export async function GET(req: NextRequest) {
     const page = parseInt(searchParams.get("page") || "1", 10);
     const limit = parseInt(searchParams.get("limit") || "20", 10);
     const skip = (page - 1) * limit;
-    const status = searchParams.get("status") || undefined;
-    const sort = searchParams.get("sort") || "az";
+    
+    // Filter parameters
+    const status = searchParams.get("status");
+    const type = searchParams.get("type");
+    const instrument = searchParams.get("instrument");
+    const userRole = searchParams.get("userRole");
+    const dateFilter = searchParams.get("dateFilter");
+    const moderationFilter = searchParams.get("moderationFilter");
+    
+    // Sort parameters
+    const sortBy = searchParams.get("sortBy") || "createdAt";
+    const sortOrder = searchParams.get("sortOrder") || "desc";
 
     // Build query for submissions
     let query = supabase
@@ -34,18 +44,35 @@ export async function GET(req: NextRequest) {
           image,
           bio
         )
-      `, { count: 'exact' })
-      .order('title', { ascending: sort === 'az' })
-      .range(skip, skip + limit - 1);
+      `, { count: 'exact' });
 
-    // Apply filters
+    // Apply filters only if they're not "all"
     if (q) {
-      query = query.or(`title.ilike.%${q}%`);
+      query = query.or(`title.ilike.%${q}%,tags.cs.{${q}},mainInstrument.ilike.%${q}%`);
     }
     
     if (status && status !== "all") {
       query = query.eq('status', status);
     }
+    
+    if (type && type !== "all") {
+      query = query.eq('type', type);
+    }
+    
+    if (instrument && instrument !== "all") {
+      query = query.eq('mainInstrument', instrument);
+    }
+
+    // Apply sorting
+    const ascending = sortOrder === "asc";
+    if (sortBy === "submitter.role") {
+      // This will need to be handled after fetching since it's a relation
+      query = query.order('createdAt', { ascending: !ascending });
+    } else {
+      query = query.order(sortBy, { ascending });
+    }
+    
+    query = query.range(skip, skip + limit - 1);
 
     const { data: rawSubmissions, error, count: total } = await query;
 
@@ -55,7 +82,7 @@ export async function GET(req: NextRequest) {
     }
 
     // For each submission, get moderation data for submitter
-    const submissions = await Promise.all(
+    let submissions = await Promise.all(
       (rawSubmissions || []).map(async (submission: any) => {
         let moderationData = null;
         if (submission.submitter?.id) {
@@ -89,9 +116,86 @@ export async function GET(req: NextRequest) {
       })
     );
 
-    const totalPages = Math.ceil((total || 0) / limit);
+    // Apply filters that couldn't be done in the database query
+    if (userRole && userRole !== "all") {
+      submissions = submissions.filter(submission => 
+        submission.submitter?.role === userRole
+      );
+    }
 
-    return NextResponse.json({ submissions, totalPages });
+    if (dateFilter && dateFilter !== "all") {
+      const now = new Date();
+      const filterDate = new Date();
+      
+      switch (dateFilter) {
+        case "today":
+          filterDate.setHours(0, 0, 0, 0);
+          submissions = submissions.filter(submission => 
+            new Date(submission.createdAt) >= filterDate
+          );
+          break;
+        case "week":
+          filterDate.setDate(now.getDate() - 7);
+          submissions = submissions.filter(submission => 
+            new Date(submission.createdAt) >= filterDate
+          );
+          break;
+        case "month":
+          filterDate.setMonth(now.getMonth() - 1);
+          submissions = submissions.filter(submission => 
+            new Date(submission.createdAt) >= filterDate
+          );
+          break;
+      }
+    }
+
+    if (moderationFilter && moderationFilter !== "all") {
+      switch (moderationFilter) {
+        case "banned":
+          submissions = submissions.filter(submission => 
+            submission.submitter?.currentModeration?.status === 'BANNED'
+          );
+          break;
+        case "warned":
+          submissions = submissions.filter(submission => 
+            submission.submitter?.currentModeration?.status === 'WARNING'
+          );
+          break;
+        case "clean":
+          submissions = submissions.filter(submission => 
+            !submission.submitter?.currentModeration || 
+            submission.submitter?.currentModeration?.status === 'RESOLVED'
+          );
+          break;
+      }
+    }
+
+    // Handle special sorting cases that need to be done after fetching
+    if (sortBy === "submitter.role") {
+      submissions = submissions.sort((a, b) => {
+        const roleA = a.submitter?.role || '';
+        const roleB = b.submitter?.role || '';
+        const comparison = roleA.localeCompare(roleB);
+        return ascending ? comparison : -comparison;
+      });
+    }
+
+    // Recalculate pagination after filtering
+    const filteredTotal = submissions.length;
+    const totalPages = Math.ceil(filteredTotal / limit);
+    
+    // Apply pagination to filtered results
+    const startIndex = skip;
+    const endIndex = startIndex + limit;
+    submissions = submissions.slice(startIndex, endIndex);
+
+    return NextResponse.json({ 
+      submissions, 
+      totalPages,
+      total: filteredTotal,
+      page,
+      limit
+    });
 
   } catch (error) {
     console.error('Error in admin submissions API:', error);

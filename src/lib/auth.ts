@@ -5,6 +5,9 @@ import GoogleProvider from "next-auth/providers/google";
 import { supabase } from "@/lib/supabase-client";
 import bcrypt from "bcryptjs";
 import { logGeneral, logErrors } from "@/lib/logs";
+import { createSecurityLog, createSecurityAlert } from "@/lib/logging-middleware";
+import { trackLoginAttempt, isIPBlocked, getFailedAttemptsCount } from "@/lib/login-monitor";
+import { triggerAdminLoginEvent } from "@/lib/realtime-alerts";
 
 export const authOptions: AuthOptions = {
   adapter: SupabaseAdapter(),
@@ -19,15 +22,51 @@ export const authOptions: AuthOptions = {
         email: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         console.log('🔍 [AUTH] Iniciando processo de autorização:', { email: credentials?.email });
+        
+        // Obter IP do cliente
+        const ip = req?.headers?.['x-forwarded-for'] || 
+                   req?.headers?.['x-real-ip'] || 
+                   'unknown';
+        const userAgent = req?.headers?.['user-agent'] || 'unknown';
         
         if (!credentials?.email || !credentials?.password) {
           console.log('❌ [AUTH] Credenciais incompletas');
+          
+          // Rastrear tentativa falhada
+          await trackLoginAttempt({
+            email: credentials?.email || 'unknown',
+            ip: ip as string,
+            success: false,
+            timestamp: new Date(),
+            userAgent: userAgent as string
+          });
+          
           await logGeneral('WARN', 'Tentativa de login com credenciais incompletas', 'Email ou password em falta', {
-            action: 'login_incomplete_credentials'
+            action: 'login_incomplete_credentials',
+            ip
           });
           return null;
+        }
+
+        // Verificar se IP está bloqueado
+        if (await isIPBlocked(ip as string)) {
+          console.log('🚫 [AUTH] IP bloqueado temporariamente');
+          
+          await createSecurityAlert('BLOCKED_IP_ATTEMPT', 'Tentativa de login de IP bloqueado', {
+            email: credentials.email,
+            ip,
+            userAgent
+          }, 4);
+          
+          return null;
+        }
+
+        // Verificar número de tentativas falhadas recentes
+        const failedCount = await getFailedAttemptsCount(credentials.email, ip as string);
+        if (failedCount >= 3) {
+          console.log(`⚠️ [AUTH] Múltiplas tentativas falhadas detectadas: ${failedCount}`);
         }
 
         try {
@@ -44,9 +83,20 @@ export const authOptions: AuthOptions = {
 
           if (userError || !user) {
             console.log('❌ [AUTH] Utilizador não encontrado');
+            
+            // Rastrear tentativa falhada
+            await trackLoginAttempt({
+              email: credentials.email,
+              ip: ip as string,
+              success: false,
+              timestamp: new Date(),
+              userAgent: userAgent as string
+            });
+            
             await logGeneral('WARN', 'Tentativa de login com email não registado', 'Email não existe na base de dados', {
               email: credentials.email,
-              action: 'login_email_not_found'
+              action: 'login_email_not_found',
+              ip
             });
             return null;
           }
@@ -107,15 +157,35 @@ export const authOptions: AuthOptions = {
 
           if (!passwordMatch) {
             console.log('❌ [AUTH] Password incorreta');
+            
+            // Rastrear tentativa falhada
+            await trackLoginAttempt({
+              email: credentials.email,
+              ip: ip as string,
+              success: false,
+              timestamp: new Date(),
+              userAgent: userAgent as string
+            });
+            
             await logGeneral('WARN', 'Tentativa de login com password incorreta', 'Password não confere', {
               userId: user.id,
               email: credentials.email,
-              action: 'login_wrong_password'
+              action: 'login_wrong_password',
+              ip
             });
             return null;
           }
 
           console.log('✅ [AUTH] Password correta, autenticação bem-sucedida');
+
+          // Rastrear tentativa bem-sucedida
+          await trackLoginAttempt({
+            email: credentials.email,
+            ip: ip as string,
+            success: true,
+            timestamp: new Date(),
+            userAgent: userAgent as string
+          });
 
           if(user.role === "ADMIN" || user.role === "REVIEWER") {
             await logGeneral('INFO', 'Tentativa de login com role privilegiada', 'Utilizador com role ADMIN ou REVIEWER a tentar login', {
@@ -123,6 +193,23 @@ export const authOptions: AuthOptions = {
               email: user.email,
               action: 'login_privileged_role'
             });
+
+            // Criar alerta de segurança para login de admin
+            await createSecurityAlert('ADMIN_LOGIN', 'Login de administrador detectado', {
+              userId: user.id,
+              email: user.email,
+              role: user.role,
+              provider: 'credentials',
+              ip: 'unknown' // será capturado pelo middleware
+            }, user.role === 'ADMIN' ? 4 : 3);
+
+            // Disparar alerta em tempo real com informações do contexto
+            await triggerAdminLoginEvent(
+              user.email,
+              'unknown', // IP será capturado pelo middleware  
+              'unknown', // User Agent será capturado pelo middleware
+              undefined // Localização opcional
+            );
           }
 
           await logGeneral('SUCCESS', 'Login realizado com sucesso', 'Utilizador autenticado', {
@@ -167,22 +254,37 @@ export const authOptions: AuthOptions = {
   callbacks: {
     
     async session({ session, token }) {
-      if (token?.sub) {
-        const { data: user } = await (supabase as any)
-          .from('User')
-          .select('*')
-          .eq('id', Number(token.sub))
-          .single();
-        
-        if (token?.picture) {
-          session.user.image = token.picture; // <- adiciona imagem
+      try {
+        if (token?.sub) {
+          const { data: user } = await (supabase as any)
+            .from('User')
+            .select('*')
+            .eq('id', Number(token.sub))
+            .single();
+          
+          if (token?.picture) {
+            session.user.image = token.picture;
+          }
+          if (user && session.user) {
+            (session.user as any).id = (user as any).id;
+            (session.user as any).role = (user as any).role;
+            
+            // Log de criação de sessão para roles privilegiadas
+            if (user.role === 'ADMIN' || user.role === 'REVIEWER') {
+              await createSecurityLog('SESSION_CREATED', 'Sessão criada para utilizador privilegiado', {
+                userId: user.id,
+                email: user.email,
+                role: user.role,
+                sessionId: token.jti || 'unknown'
+              }, user);
+            }
+          }
         }
-        if (user && session.user) {
-          (session.user as any).id = (user as any).id;
-          (session.user as any).role = (user as any).role;
-        }
+        return session;
+      } catch (error) {
+        console.error('Erro no callback de sessão:', error);
+        return session;
       }
-      return session;
     },
     async jwt({ token, user, account }) {
       if (user) {
@@ -268,6 +370,30 @@ export const authOptions: AuthOptions = {
               name: user.name,
               action: 'oauth_login_success'
             });
+
+            // Log de segurança adicional para roles privilegiadas via OAuth
+            if (existingUser.role === 'ADMIN' || existingUser.role === 'REVIEWER') {
+              await createSecurityAlert('ADMIN_OAUTH_LOGIN', 'Login OAuth de administrador', {
+                userId: existingUser.id,
+                email: user.email,
+                role: existingUser.role,
+                provider: 'google'
+              }, 3);
+
+              // Trigger admin login alert
+              await triggerAdminLoginEvent(
+                'OAuth Login', 
+                'Unknown IP', 
+                'Google OAuth Provider', 
+                JSON.stringify({
+                  userId: existingUser.id,
+                  email: user.email,
+                  role: existingUser.role,
+                  provider: 'google',
+                  timestamp: new Date().toISOString()
+                })
+              );
+            }
           } else {
             // New user via Google OAuth
             await logGeneral('INFO', 'Novo utilizador criado via OAuth', 
