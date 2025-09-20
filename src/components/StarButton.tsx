@@ -53,7 +53,7 @@ export default function StarButton({
 
   const handleStar = async () => {
     if (!session) {
-      toast.error('Precisa fazer login para dar star às músicas');
+      toast.error('Precisas de fazer login para dares estrela às músicas');
       return;
     }
 

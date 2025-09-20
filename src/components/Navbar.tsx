@@ -26,7 +26,8 @@ import {
   UserPlus,
   Crown,
   Eye,
-  Book
+  Book,
+  Star
 } from "lucide-react";
 
 type Music = {
@@ -358,6 +359,18 @@ export default function Navbar() {
                                             >
                                                 <User className="h-4 w-4" />
                                                 Ver Perfil
+                                            </Link>
+                                            
+                                            <Link
+                                                href="/starred-songs"
+                                                className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                                onClick={() => {
+                                                    setUserMenuOpen(false);
+                                                    setUserMenuSticky(false);
+                                                }}
+                                            >
+                                                <Star className="h-4 w-4" />
+                                                Músicas Favoritas
                                             </Link>
                                             
                                             {session.user.role === "ADMIN" && (

@@ -752,7 +752,7 @@ export default function EditMusicPage() {
                       <div className="text-sm text-gray-600 mb-2">Preview do Áudio:</div>
                       <audio controls className="w-full">
                         <source src={form.mediaUrl} type="audio/mpeg" />
-                        O seu browser não suporta áudio.
+                        O teu browser não suporta áudio.
                       </audio>
                     </div>
                   )}
