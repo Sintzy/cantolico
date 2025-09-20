@@ -181,7 +181,7 @@ text-decoration: none
 <table class="t104" role="presentation" cellpadding="0" cellspacing="0" style="Margin-left:auto;Margin-right:auto;"><tr><td width="630" class="t103" style="width:630px;">
 <table class="t102" role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;"><tr><td class="t101" style="background-color:#FFFFFF;padding:40px 60px 40px 60px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100% !important;"><tr><td align="left">
 <table class="t4" role="presentation" cellpadding="0" cellspacing="0" style="Margin-right:auto;"><tr><td width="40" class="t3" style="width:40px;">
-<table class="t2" role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;"><tr><td class="t1"><div style="font-size:0px;"><img class="t0" style="display:block;border:0;height:auto;width:100%;Margin:0;max-width:100%;" width="40" height="40" alt="" src="https://truenas-scale.fold-pence.ts.net/storage/v1/object/public/assets/cantolicoimagens/transparentes/android-chrome-512x512.png"/></div></td></tr></table>
+<table class="t2" role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;"><tr><td class="t1"><div style="font-size:0px;"><img class="t0" style="display:block;border:0;height:auto;width:100%;Margin:0;max-width:100%;" width="40" height="40" alt="" src="https://cantolico.pt/cantolicoemail.png"/></div></td></tr></table>
 </td></tr></table>
 </td></tr><tr><td><div class="t5" style="mso-line-height-rule:exactly;mso-line-height-alt:40px;line-height:40px;font-size:1px;display:block;">&nbsp;&nbsp;</div></td></tr><tr><td align="center">
 <table class="t10" role="presentation" cellpadding="0" cellspacing="0" style="Margin-left:auto;Margin-right:auto;"><tr><td width="510" class="t9" style="width:744px;">
@@ -404,7 +404,7 @@ text-decoration: none
 <table class="t104" role="presentation" cellpadding="0" cellspacing="0" style="Margin-left:auto;Margin-right:auto;"><tr><td width="630" class="t103" style="width:630px;">
 <table class="t102" role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;"><tr><td class="t101" style="background-color:#FFFFFF;padding:40px 60px 40px 60px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100% !important;"><tr><td align="left">
 <table class="t4" role="presentation" cellpadding="0" cellspacing="0" style="Margin-right:auto;"><tr><td width="40" class="t3" style="width:40px;">
-<table class="t2" role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;"><tr><td class="t1"><div style="font-size:0px;"><img class="t0" style="display:block;border:0;height:auto;width:100%;Margin:0;max-width:100%;" width="40" height="40" alt="" src="https://truenas-scale.fold-pence.ts.net/storage/v1/object/public/assets/cantolicoimagens/transparentes/android-chrome-512x512.png"/></div></td></tr></table>
+<table class="t2" role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;"><tr><td class="t1"><div style="font-size:0px;"><img class="t0" style="display:block;border:0;height:auto;width:100%;Margin:0;max-width:100%;" width="40" height="40" alt="" src="https://cantolico.pt/cantolicoemail.png"/></div></td></tr></table>
 </td></tr></table>
 </td></tr><tr><td><div class="t5" style="mso-line-height-rule:exactly;mso-line-height-alt:40px;line-height:40px;font-size:1px;display:block;">&nbsp;&nbsp;</div></td></tr><tr><td align="center">
 <table class="t10" role="presentation" cellpadding="0" cellspacing="0" style="Margin-left:auto;Margin-right:auto;"><tr><td width="510" class="t9" style="width:877px;">
@@ -609,7 +609,7 @@ text-decoration: none
 <tr><td width="40" style="width:40px;">
 <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;">
 <tr><td><div style="font-size:0px;">
-<img style="display:block;border:0;height:auto;width:100%;Margin:0;max-width:100%;" width="40" height="40" alt="" src="https://truenas-scale.fold-pence.ts.net/storage/v1/object/public/assets/cantolicoimagens/transparentes/android-chrome-512x512.png"/>
+<img style="display:block;border:0;height:auto;width:100%;Margin:0;max-width:100%;" width="40" height="40" alt="" src="https://cantolico.pt/cantolicoemail.png"/>
 </div></td></tr></table>
 </td></tr></table>
 </td></tr>
@@ -824,7 +824,7 @@ text-decoration: none
 <tr><td width="40" style="width:40px;">
 <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;">
 <tr><td><div style="font-size:0px;">
-<img style="display:block;border:0;height:auto;width:100%;Margin:0;max-width:100%;" width="40" height="40" alt="" src="https://truenas-scale.fold-pence.ts.net/storage/v1/object/public/assets/cantolicoimagens/transparentes/android-chrome-512x512.png"/>
+<img style="display:block;border:0;height:auto;width:100%;Margin:0;max-width:100%;" width="40" height="40" alt="" src="https://cantolico.pt/cantolicoemail.png"/>
 </div></td></tr></table>
 </td></tr></table>
 </td></tr>
@@ -1039,7 +1039,7 @@ text-decoration: none
 <tr><td width="40" style="width:40px;">
 <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;">
 <tr><td><div style="font-size:0px;">
-<img style="display:block;border:0;height:auto;width:100%;Margin:0;max-width:100%;" width="40" height="40" alt="" src="https://truenas-scale.fold-pence.ts.net/storage/v1/object/public/assets/cantolicoimagens/transparentes/android-chrome-512x512.png"/>
+<img style="display:block;border:0;height:auto;width:100%;Margin:0;max-width:100%;" width="40" height="40" alt="" src="https://cantolico.pt/cantolicoemail.png"/>
 </div></td></tr></table>
 </td></tr></table>
 </td></tr>
@@ -1169,7 +1169,7 @@ export function createSecurityAlertTemplate(
 <body>
     <div class="container">
         <div class="header">
-            <img src="https://truenas-scale.fold-pence.ts.net/storage/v1/object/public/assets/cantolicoimagens/transparentes/android-chrome-512x512.png" alt="Cantólico" class="logo">
+            <img src="https://cantolico.pt/cantolicoemail.png" alt="Cantólico" class="logo">
             <h1 style="margin: 0; font-size: 24px;">🔐 Alerta de Segurança</h1>
             <span class="alert-badge">Severidade: ${severityText}</span>
         </div>
@@ -1239,7 +1239,7 @@ export function createAdminLoginAlertTemplate(
 <body>
     <div class="container">
         <div class="header">
-            <img src="https://truenas-scale.fold-pence.ts.net/storage/v1/object/public/assets/cantolicoimagens/transparentes/android-chrome-512x512.png" alt="Cantólico" class="logo">
+            <img src="https://cantolico.pt/cantolicoemail.png" alt="Cantólico" class="logo">
             <h1 style="margin: 0; font-size: 24px;">👨‍💼 Login de Administrador Detectado</h1>
         </div>
         
@@ -1474,7 +1474,7 @@ text-decoration: none
 <tr><td width="40" style="width:40px;">
 <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;">
 <tr><td><div style="font-size:0px;">
-<img style="display:block;border:0;height:auto;width:100%;Margin:0;max-width:100%;" width="40" height="40" alt="" src="https://truenas-scale.fold-pence.ts.net/storage/v1/object/public/assets/cantolicoimagens/transparentes/android-chrome-512x512.png"/>
+<img style="display:block;border:0;height:auto;width:100%;Margin:0;max-width:100%;" width="40" height="40" alt="" src="https://cantolico.pt/cantolicoemail.png"/>
 </div></td></tr></table>
 </td></tr></table>
 </td></tr>
@@ -1712,7 +1712,7 @@ text-decoration: none
 <tr><td width="40" style="width:40px;">
 <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;">
 <tr><td><div style="font-size:0px;">
-<img style="display:block;border:0;height:auto;width:100%;Margin:0;max-width:100%;" width="40" height="40" alt="" src="https://truenas-scale.fold-pence.ts.net/storage/v1/object/public/assets/cantolicoimagens/transparentes/android-chrome-512x512.png"/>
+<img style="display:block;border:0;height:auto;width:100%;Margin:0;max-width:100%;" width="40" height="40" alt="" src="https://cantolico.pt/cantolicoemail.png"/>
 </div></td></tr></table>
 </td></tr></table>
 </td></tr>
