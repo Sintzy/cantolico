@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase-client";
 import bcrypt from "bcryptjs";
 import { logGeneral, logErrors } from "@/lib/logs";
+import { sendWelcomeEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   let email: string = '';
@@ -96,6 +97,19 @@ export async function POST(req: NextRequest) {
       action: 'user_registered',
       entity: 'user'
     });
+
+    // Enviar email de boas-vindas
+    try {
+      await sendWelcomeEmail(
+        user.name || 'Utilizador',
+        user.email || email,
+        'Email/Password'
+      );
+      console.log('✅ Email de boas-vindas enviado para:', user.email);
+    } catch (emailError) {
+      console.error('❌ Erro ao enviar email de boas-vindas:', emailError);
+      // Não falhar o registo se o email falhar
+    }
 
     return NextResponse.json({ success: true, userId: user.id });
   } catch (error) {

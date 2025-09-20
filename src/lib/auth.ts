@@ -8,6 +8,27 @@ import { logGeneral, logErrors } from "@/lib/logs";
 import { createSecurityLog, createSecurityAlert } from "@/lib/logging-middleware";
 import { trackLoginAttempt, isIPBlocked, getFailedAttemptsCount } from "@/lib/login-monitor";
 import { triggerAdminLoginEvent } from "@/lib/realtime-alerts";
+import { sendWelcomeEmail, sendLoginAlert } from "@/lib/email";
+
+// Função para obter localização do IP
+async function getLocationFromIP(ip: string): Promise<string> {
+  if (ip === 'unknown' || ip === '127.0.0.1' || ip === '::1') {
+    return 'Localização Local/VPN';
+  }
+  
+  try {
+    const response = await fetch(`http://ip-api.com/json/${ip}?fields=country,regionName,city,status`);
+    const data = await response.json();
+    
+    if (data.status === 'success') {
+      return `${data.city || 'Cidade Desconhecida'}, ${data.regionName || 'Região'}, ${data.country || 'País'}`;
+    }
+  } catch (error) {
+    console.error('Erro ao obter localização do IP:', error);
+  }
+  
+  return 'Localização Indisponível';
+}
 
 export const authOptions: AuthOptions = {
   adapter: SupabaseAdapter(),
@@ -228,6 +249,23 @@ export const authOptions: AuthOptions = {
             entity: 'user_session'
           });
 
+          // Enviar email de alerta de login
+          try {
+            const location = await getLocationFromIP(ip as string);
+            await sendLoginAlert(
+              user.name || 'Utilizador',
+              user.email,
+              ip as string,
+              userAgent as string,
+              location,
+              user.role === 'ADMIN' || user.role === 'REVIEWER'
+            );
+            console.log('✅ Email de alerta de login enviado para:', user.email);
+          } catch (emailError) {
+            console.error('❌ Erro ao enviar email de alerta de login:', emailError);
+            // Não falhar o login se o email falhar
+          }
+
           const userResult = {
             id: String(user.id),
             name: user.name,
@@ -385,6 +423,23 @@ export const authOptions: AuthOptions = {
               entity: 'user_session'
             });
 
+            // Enviar email de alerta de login OAuth
+            try {
+              const location = await getLocationFromIP('unknown'); // IP não disponível em OAuth
+              await sendLoginAlert(
+                existingUser.name || 'Utilizador',
+                existingUser.email,
+                'unknown',
+                'Google OAuth Provider',
+                location,
+                existingUser.role === 'ADMIN' || existingUser.role === 'REVIEWER'
+              );
+              console.log('✅ Email de alerta de login OAuth enviado para:', existingUser.email);
+            } catch (emailError) {
+              console.error('❌ Erro ao enviar email de alerta OAuth:', emailError);
+              // Não falhar o login se o email falhar
+            }
+
             // Log de segurança adicional para roles privilegiadas via OAuth
             if (existingUser.role === 'ADMIN' || existingUser.role === 'REVIEWER') {
               await createSecurityAlert('ADMIN_OAUTH_LOGIN', 'Login OAuth de administrador', {
@@ -419,6 +474,19 @@ export const authOptions: AuthOptions = {
               action: 'oauth_new_user',
               entity: 'user'
             });
+
+            // Enviar email de boas-vindas para novo utilizador OAuth
+            try {
+              await sendWelcomeEmail(
+                user.name || 'Utilizador',
+                user.email || '',
+                'OAuth'
+              );
+              console.log('✅ Email de boas-vindas OAuth enviado para:', user.email);
+            } catch (emailError) {
+              console.error('❌ Erro ao enviar email de boas-vindas OAuth:', emailError);
+              // Não falhar o registo se o email falhar
+            }
           }
           
           return true;

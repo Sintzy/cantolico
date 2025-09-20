@@ -1338,3 +1338,518 @@ export async function sendAdminLoginAlert(
     };
   }
 }
+
+// ================================================
+// NOVOS TEMPLATES - BOAS-VINDAS E LOGIN
+// ================================================
+
+export function createWelcomeEmailTemplate(
+  userName: string,
+  userEmail: string,
+  loginMethod: string // 'OAuth' ou 'Email/Password'
+): string {
+  return `
+    <!--
+* This email was built using Tabular.
+* For more information, visit https://tabular.email
+-->
+<!DOCTYPE html PUBLIC="-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" lang="en">
+<head>
+<title></title>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<!--[if !mso]>-->
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<!--<![endif]-->
+<meta name="x-apple-disable-message-reformatting" content="" />
+<meta content="target-densitydpi=device-dpi" name="viewport" />
+<meta content="true" name="HandheldFriendly" />
+<meta content="width=device-width" name="viewport" />
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no, url=no" />
+<style type="text/css">
+table {
+border-collapse: separate;
+table-layout: fixed;
+mso-table-lspace: 0pt;
+mso-table-rspace: 0pt
+}
+table td {
+border-collapse: collapse
+}
+.ExternalClass {
+width: 100%
+}
+.ExternalClass,
+.ExternalClass p,
+.ExternalClass span,
+.ExternalClass font,
+.ExternalClass td,
+.ExternalClass div {
+line-height: 100%
+}
+body, a, li, p, h1, h2, h3 {
+-ms-text-size-adjust: 100%;
+-webkit-text-size-adjust: 100%;
+}
+html {
+-webkit-text-size-adjust: none !important
+}
+body {
+min-width: 100%;
+Margin: 0px;
+padding: 0px;
+}
+body, #innerTable {
+-webkit-font-smoothing: antialiased;
+-moz-osx-font-smoothing: grayscale
+}
+#innerTable img+div {
+display: none;
+display: none !important
+}
+img {
+Margin: 0;
+padding: 0;
+-ms-interpolation-mode: bicubic
+}
+h1, h2, h3, p, a {
+line-height: inherit;
+overflow-wrap: normal;
+white-space: normal;
+word-break: break-word
+}
+a {
+text-decoration: none
+}
+h1, h2, h3, p {
+min-width: 100%!important;
+width: 100%!important;
+max-width: 100%!important;
+display: inline-block!important;
+border: 0;
+padding: 0;
+margin: 0
+}
+a[x-apple-data-detectors] {
+color: inherit !important;
+text-decoration: none !important;
+font-size: inherit !important;
+font-family: inherit !important;
+font-weight: inherit !important;
+line-height: inherit !important
+}
+u + #body a {
+color: inherit;
+text-decoration: none;
+font-size: inherit;
+font-family: inherit;
+font-weight: inherit;
+line-height: inherit;
+}
+a[href^="mailto"],
+a[href^="tel"],
+a[href^="sms"] {
+color: inherit;
+text-decoration: none
+}
+</style>
+<!--[if !mso]>-->
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700&amp;family=Roboto:wght@400;700&amp;display=swap" rel="stylesheet" type="text/css" />
+<!--<![endif]-->
+</head>
+<body id="body" style="min-width:100%;Margin:0px;padding:0px;background-color:#FAFAFA;">
+<div style="background-color:#FAFAFA;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center">
+<tr><td style="font-size:0;line-height:0;mso-line-height-rule:exactly;background-color:#FAFAFA;" valign="top" align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" id="innerTable">
+<tr><td align="center">
+<table role="presentation" cellpadding="0" cellspacing="0" style="Margin-left:auto;Margin-right:auto;">
+<tr><td width="630" style="width:630px;">
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;">
+<tr><td style="background-color:#FFFFFF;padding:40px 60px 40px 60px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100% !important;">
+<tr><td align="left">
+<table role="presentation" cellpadding="0" cellspacing="0" style="Margin-right:auto;">
+<tr><td width="40" style="width:40px;">
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;">
+<tr><td><div style="font-size:0px;">
+<img style="display:block;border:0;height:auto;width:100%;Margin:0;max-width:100%;" width="40" height="40" alt="" src="https://truenas-scale.fold-pence.ts.net/storage/v1/object/public/assets/cantolicoimagens/transparentes/android-chrome-512x512.png"/>
+</div></td></tr></table>
+</td></tr></table>
+</td></tr>
+<tr><td><div style="mso-line-height-rule:exactly;mso-line-height-alt:40px;line-height:40px;font-size:1px;display:block;">&nbsp;&nbsp;</div></td></tr>
+<tr><td align="center">
+<table role="presentation" cellpadding="0" cellspacing="0" style="Margin-left:auto;Margin-right:auto;">
+<tr><td width="510" style="width:744px;">
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;">
+<tr><td>
+<h1 style="margin:0;Margin:0;font-family:Poppins,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif;line-height:34px;font-weight:700;font-style:normal;font-size:29px;text-decoration:none;text-transform:none;direction:ltr;color:#333333;text-align:left;mso-line-height-rule:exactly;mso-text-raise:2px;">🎵 Bem-vindo ao Cantólico!</h1>
+</td></tr></table>
+</td></tr></table>
+</td></tr>
+<tr><td><div style="mso-line-height-rule:exactly;mso-line-height-alt:11px;line-height:11px;font-size:1px;display:block;">&nbsp;&nbsp;</div></td></tr>
+<tr><td align="center">
+<table role="presentation" cellpadding="0" cellspacing="0" style="Margin-left:auto;Margin-right:auto;">
+<tr><td>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;">
+<tr><td>
+<p style="margin:0;Margin:0;font-family:Poppins,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif;line-height:22px;font-weight:500;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#333333;text-align:left;mso-line-height-rule:exactly;mso-text-raise:2px;">Olá ${userName}! É um prazer ter-te connosco na nossa comunidade de música católica.</p>
+</td></tr></table>
+</td></tr></table>
+</td></tr>
+<tr><td><div style="mso-line-height-rule:exactly;mso-line-height-alt:20px;line-height:20px;font-size:1px;display:block;">&nbsp;&nbsp;</div></td></tr>
+<tr><td align="center">
+<table role="presentation" cellpadding="0" cellspacing="0" style="Margin-left:auto;Margin-right:auto;">
+<tr><td width="510" style="width:800px;">
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;">
+<tr><td style="border:1px solid #28a745;background-color:#d4edda;overflow:hidden;padding:30px 30px 30px 30px;border-radius:6px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100% !important;">
+<tr><td align="center">
+<table role="presentation" cellpadding="0" cellspacing="0" style="Margin-left:auto;Margin-right:auto;">
+<tr><td width="448" style="width:600px;">
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;">
+<tr><td>
+<p style="margin:0;Margin:0;font-family:Roboto,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif;line-height:22px;font-weight:400;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#333333;text-align:left;mso-line-height-rule:exactly;mso-text-raise:2px;">
+<span style="margin:0;Margin:0;font-weight:bold;mso-line-height-rule:exactly;">Detalhes da Conta:</span><br>
+📧 Email: ${userEmail}<br>
+🔐 Método de Registo: ${loginMethod === 'OAuth' ? 'Google/OAuth' : 'Email e Password'}
+</p>
+</td></tr></table>
+</td></tr></table>
+</td></tr></table>
+</td></tr></table>
+</td></tr></table>
+</td></tr>
+<tr><td><div style="mso-line-height-rule:exactly;mso-line-height-alt:20px;line-height:20px;font-size:1px;display:block;">&nbsp;&nbsp;</div></td></tr>
+<tr><td align="center">
+<table role="presentation" cellpadding="0" cellspacing="0" style="Margin-left:auto;Margin-right:auto;">
+<tr><td>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;">
+<tr><td>
+<p style="margin:0;Margin:0;font-family:Roboto,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif;line-height:22px;font-weight:400;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#333333;text-align:left;mso-line-height-rule:exactly;mso-text-raise:2px;">
+<strong>🎶 O que podes fazer no Cantólico:</strong><br>
+• Explorar centenas de músicas católicas com acordes<br>
+• Criar e gerir as tuas próprias playlists<br>
+• Submeter novas músicas para a comunidade<br>
+• Dar estrelas às tuas músicas favoritas<br>
+• Participar numa comunidade de fé e música
+</p>
+</td></tr></table>
+</td></tr></table>
+</td></tr>
+<tr><td><div style="mso-line-height-rule:exactly;mso-line-height-alt:30px;line-height:30px;font-size:1px;display:block;">&nbsp;&nbsp;</div></td></tr>
+<tr><td align="center">
+<table role="presentation" cellpadding="0" cellspacing="0" style="Margin-left:auto;Margin-right:auto;">
+<tr><td>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;">
+<tr><td style="overflow:hidden;background-color:#FF595F;text-align:center;line-height:24px;mso-line-height-rule:exactly;mso-text-raise:2px;padding:18px 14px 18px 14px;border-radius:4px 4px 4px 4px;">
+<a href="https://cantolico.pt/musics" style="display:block;margin:0;Margin:0;font-family:Poppins,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif;line-height:24px;font-weight:700;font-style:normal;font-size:16px;text-decoration:none;direction:ltr;color:#FFFFFF;text-align:center;mso-line-height-rule:exactly;mso-text-raise:2px;" target="_blank">Explorar Músicas</a>
+</td></tr></table>
+</td></tr></table>
+</td></tr>
+<tr><td><div style="mso-line-height-rule:exactly;mso-line-height-alt:40px;line-height:40px;font-size:1px;display:block;">&nbsp;&nbsp;</div></td></tr>
+<tr><td align="center">
+<table role="presentation" cellpadding="0" cellspacing="0" style="Margin-left:auto;Margin-right:auto;">
+<tr><td>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;">
+<tr><td>
+<p style="margin:0;Margin:0;font-family:Poppins,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif;line-height:22px;font-weight:500;font-style:normal;font-size:13px;text-decoration:none;text-transform:none;direction:ltr;color:#949494;text-align:left;mso-line-height-rule:exactly;mso-text-raise:3px;">
+Enviado automaticamente pelo sistema interno do Cantólico<br>
+Por favor não respondas a este email.
+</p>
+</td></tr></table>
+</td></tr></table>
+</td></tr>
+</table>
+</td></tr></table>
+</td></tr></table>
+</td></tr></table>
+</td></tr></table>
+</div>
+</body>
+</html>
+  `;
+}
+
+export function createLoginAlertEmailTemplate(
+  userName: string,
+  userEmail: string,
+  ip: string,
+  userAgent: string,
+  location: string,
+  timestamp: Date,
+  isAdmin: boolean = false
+): string {
+  const deviceInfo = userAgent.includes('Mobile') ? '📱 Dispositivo Móvel' : '💻 Computador';
+  const browserInfo = userAgent.includes('Chrome') ? 'Chrome' : 
+                      userAgent.includes('Firefox') ? 'Firefox' : 
+                      userAgent.includes('Safari') ? 'Safari' : 'Outro';
+
+  return `
+    <!--
+* This email was built using Tabular.
+* For more information, visit https://tabular.email
+-->
+<!DOCTYPE html PUBLIC="-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" lang="en">
+<head>
+<title></title>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<!--[if !mso]>-->
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<!--<![endif]-->
+<meta name="x-apple-disable-message-reformatting" content="" />
+<meta content="target-densitydpi=device-dpi" name="viewport" />
+<meta content="true" name="HandheldFriendly" />
+<meta content="width=device-width" name="viewport" />
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no, url=no" />
+<style type="text/css">
+table {
+border-collapse: separate;
+table-layout: fixed;
+mso-table-lspace: 0pt;
+mso-table-rspace: 0pt
+}
+table td {
+border-collapse: collapse
+}
+.ExternalClass {
+width: 100%
+}
+.ExternalClass,
+.ExternalClass p,
+.ExternalClass span,
+.ExternalClass font,
+.ExternalClass td,
+.ExternalClass div {
+line-height: 100%
+}
+body, a, li, p, h1, h2, h3 {
+-ms-text-size-adjust: 100%;
+-webkit-text-size-adjust: 100%;
+}
+html {
+-webkit-text-size-adjust: none !important
+}
+body {
+min-width: 100%;
+Margin: 0px;
+padding: 0px;
+}
+body, #innerTable {
+-webkit-font-smoothing: antialiased;
+-moz-osx-font-smoothing: grayscale
+}
+#innerTable img+div {
+display: none;
+display: none !important
+}
+img {
+Margin: 0;
+padding: 0;
+-ms-interpolation-mode: bicubic
+}
+h1, h2, h3, p, a {
+line-height: inherit;
+overflow-wrap: normal;
+white-space: normal;
+word-break: break-word
+}
+a {
+text-decoration: none
+}
+h1, h2, h3, p {
+min-width: 100%!important;
+width: 100%!important;
+max-width: 100%!important;
+display: inline-block!important;
+border: 0;
+padding: 0;
+margin: 0
+}
+a[x-apple-data-detectors] {
+color: inherit !important;
+text-decoration: none !important;
+font-size: inherit !important;
+font-family: inherit !important;
+font-weight: inherit !important;
+line-height: inherit !important
+}
+u + #body a {
+color: inherit;
+text-decoration: none;
+font-size: inherit;
+font-family: inherit;
+font-weight: inherit;
+line-height: inherit;
+}
+a[href^="mailto"],
+a[href^="tel"],
+a[href^="sms"] {
+color: inherit;
+text-decoration: none
+}
+</style>
+<!--[if !mso]>-->
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700&amp;family=Roboto:wght@400;700&amp;display=swap" rel="stylesheet" type="text/css" />
+<!--<![endif]-->
+</head>
+<body id="body" style="min-width:100%;Margin:0px;padding:0px;background-color:#FAFAFA;">
+<div style="background-color:#FAFAFA;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center">
+<tr><td style="font-size:0;line-height:0;mso-line-height-rule:exactly;background-color:#FAFAFA;" valign="top" align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" id="innerTable">
+<tr><td align="center">
+<table role="presentation" cellpadding="0" cellspacing="0" style="Margin-left:auto;Margin-right:auto;">
+<tr><td width="630" style="width:630px;">
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;">
+<tr><td style="background-color:#FFFFFF;padding:40px 60px 40px 60px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100% !important;">
+<tr><td align="left">
+<table role="presentation" cellpadding="0" cellspacing="0" style="Margin-right:auto;">
+<tr><td width="40" style="width:40px;">
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;">
+<tr><td><div style="font-size:0px;">
+<img style="display:block;border:0;height:auto;width:100%;Margin:0;max-width:100%;" width="40" height="40" alt="" src="https://truenas-scale.fold-pence.ts.net/storage/v1/object/public/assets/cantolicoimagens/transparentes/android-chrome-512x512.png"/>
+</div></td></tr></table>
+</td></tr></table>
+</td></tr>
+<tr><td><div style="mso-line-height-rule:exactly;mso-line-height-alt:40px;line-height:40px;font-size:1px;display:block;">&nbsp;&nbsp;</div></td></tr>
+<tr><td align="center">
+<table role="presentation" cellpadding="0" cellspacing="0" style="Margin-left:auto;Margin-right:auto;">
+<tr><td width="510" style="width:744px;">
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;">
+<tr><td>
+<h1 style="margin:0;Margin:0;font-family:Poppins,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif;line-height:34px;font-weight:700;font-style:normal;font-size:29px;text-decoration:none;text-transform:none;direction:ltr;color:#333333;text-align:left;mso-line-height-rule:exactly;mso-text-raise:2px;">${isAdmin ? '🛡️ Login de Administrador' : '🔐 Novo Login Detectado'}</h1>
+</td></tr></table>
+</td></tr></table>
+</td></tr>
+<tr><td><div style="mso-line-height-rule:exactly;mso-line-height-alt:11px;line-height:11px;font-size:1px;display:block;">&nbsp;&nbsp;</div></td></tr>
+<tr><td align="center">
+<table role="presentation" cellpadding="0" cellspacing="0" style="Margin-left:auto;Margin-right:auto;">
+<tr><td>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;">
+<tr><td>
+<p style="margin:0;Margin:0;font-family:Poppins,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif;line-height:22px;font-weight:500;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#333333;text-align:left;mso-line-height-rule:exactly;mso-text-raise:2px;">${isAdmin ? `Detectámos um login de administrador no Cantólico.` : `Olá ${userName}! Foi detectado um novo login na tua conta.`}</p>
+</td></tr></table>
+</td></tr></table>
+</td></tr>
+<tr><td><div style="mso-line-height-rule:exactly;mso-line-height-alt:20px;line-height:20px;font-size:1px;display:block;">&nbsp;&nbsp;</div></td></tr>
+<tr><td align="center">
+<table role="presentation" cellpadding="0" cellspacing="0" style="Margin-left:auto;Margin-right:auto;">
+<tr><td width="510" style="width:800px;">
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;">
+<tr><td style="border:1px solid ${isAdmin ? '#dc3545' : '#007bff'};background-color:${isAdmin ? '#f8d7da' : '#e7f3ff'};overflow:hidden;padding:30px 30px 30px 30px;border-radius:6px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100% !important;">
+<tr><td align="center">
+<table role="presentation" cellpadding="0" cellspacing="0" style="Margin-left:auto;Margin-right:auto;">
+<tr><td width="448" style="width:600px;">
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;">
+<tr><td>
+<p style="margin:0;Margin:0;font-family:Roboto,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif;line-height:22px;font-weight:400;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#333333;text-align:left;mso-line-height-rule:exactly;mso-text-raise:2px;">
+<span style="margin:0;Margin:0;font-weight:bold;mso-line-height-rule:exactly;">Detalhes do Login:</span><br><br>
+👤 <strong>Utilizador:</strong> ${userName} (${userEmail})<br>
+🕒 <strong>Data/Hora:</strong> ${timestamp.toLocaleString('pt-PT')}<br>
+🌍 <strong>Localização:</strong> ${location}<br>
+📍 <strong>Endereço IP:</strong> ${ip}<br>
+${deviceInfo} <strong>Dispositivo:</strong> ${browserInfo}<br>
+${isAdmin ? '⚠️ <strong>Tipo:</strong> Acesso Administrativo' : ''}
+</p>
+</td></tr></table>
+</td></tr></table>
+</td></tr></table>
+</td></tr></table>
+</td></tr></table>
+</td></tr>
+<tr><td><div style="mso-line-height-rule:exactly;mso-line-height-alt:20px;line-height:20px;font-size:1px;display:block;">&nbsp;&nbsp;</div></td></tr>
+<tr><td align="center">
+<table role="presentation" cellpadding="0" cellspacing="0" style="Margin-left:auto;Margin-right:auto;">
+<tr><td>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;">
+<tr><td>
+<p style="margin:0;Margin:0;font-family:Roboto,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif;line-height:22px;font-weight:400;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#333333;text-align:left;mso-line-height-rule:exactly;mso-text-raise:2px;">
+${isAdmin ? 
+  '<strong>⚠️ Se este login não foi autorizado, contacta imediatamente a equipa de segurança.</strong>' : 
+  'Se este login não foste tu, recomendamos que alteres a tua password imediatamente e contactes o nosso suporte.'
+}<br><br>
+Para mais informações sobre segurança, consulta a nossa <a href="https://cantolico.pt/privacy-policy" style="color:#FF595F;text-decoration:underline;">política de privacidade</a>.
+</p>
+</td></tr></table>
+</td></tr></table>
+</td></tr>
+<tr><td><div style="mso-line-height-rule:exactly;mso-line-height-alt:40px;line-height:40px;font-size:1px;display:block;">&nbsp;&nbsp;</div></td></tr>
+<tr><td align="center">
+<table role="presentation" cellpadding="0" cellspacing="0" style="Margin-left:auto;Margin-right:auto;">
+<tr><td>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;">
+<tr><td>
+<p style="margin:0;Margin:0;font-family:Poppins,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif;line-height:22px;font-weight:500;font-style:normal;font-size:13px;text-decoration:none;text-transform:none;direction:ltr;color:#949494;text-align:left;mso-line-height-rule:exactly;mso-text-raise:3px;">
+Enviado automaticamente pelo sistema de segurança do Cantólico<br>
+Por favor não respondas a este email.
+</p>
+</td></tr></table>
+</td></tr></table>
+</td></tr>
+</table>
+</td></tr></table>
+</td></tr></table>
+</td></tr></table>
+</td></tr></table>
+</div>
+</body>
+</html>
+  `;
+}
+
+// ================================================
+// FUNÇÕES DE ENVIO DOS NOVOS EMAILS
+// ================================================
+
+export async function sendWelcomeEmail(
+  userName: string,
+  userEmail: string,
+  loginMethod: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const template: EmailTemplate = {
+      to: userEmail,
+      subject: '🎵 Bem-vindo ao Cantólico! - A tua jornada musical começa aqui',
+      html: createWelcomeEmailTemplate(userName, userEmail, loginMethod)
+    };
+
+    return await sendEmail(template);
+  } catch (error) {
+    console.error('Erro ao enviar email de boas-vindas:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Erro desconhecido' 
+    };
+  }
+}
+
+export async function sendLoginAlert(
+  userName: string,
+  userEmail: string,
+  ip: string,
+  userAgent: string,
+  location: string,
+  isAdmin: boolean = false
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const template: EmailTemplate = {
+      to: userEmail,
+      subject: isAdmin ? '🛡️ Login de Administrador Detectado - Cantólico' : '🔐 Novo Login na Tua Conta - Cantólico',
+      html: createLoginAlertEmailTemplate(userName, userEmail, ip, userAgent, location, new Date(), isAdmin)
+    };
+
+    return await sendEmail(template);
+  } catch (error) {
+    console.error('Erro ao enviar alerta de login:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Erro desconhecido' 
+    };
+  }
+}
