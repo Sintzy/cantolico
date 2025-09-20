@@ -114,7 +114,7 @@ export default function BannedPage() {
 
             <div className="text-center space-y-4">
               <p className="text-sm text-gray-600">
-                Não pode continuar a utilizar este serviço enquanto o banimento estiver ativo.
+                Não podes continuar a utilizar este serviço enquanto o banimento estiver ativo.
               </p>
               
               <Button 

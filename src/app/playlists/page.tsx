@@ -157,7 +157,7 @@ export default function MyPlaylistsPage() {
                   Minhas Playlists
                 </h1>
                 <p className="text-lg text-gray-700 max-w-2xl">
-                  Gerencie suas coleções de música litúrgica
+                  Gere as tuas coleções de música litúrgica
                 </p>
               </div>
               
@@ -186,7 +186,7 @@ export default function MyPlaylistsPage() {
                 <ListMusic className="h-16 w-16 text-muted-foreground mb-4" />
                 <h3 className="text-xl font-semibold mb-2">Nenhuma playlist criada</h3>
                 <p className="text-muted-foreground text-center mb-6 max-w-md">
-                  Crie sua primeira playlist para organizar suas músicas favoritas e compartilhar com outros.
+                  Cria a tua primeira playlist para organizares as tuas músicas favoritas e partilhares com outros.
                 </p>
                 <Button asChild>
                   <Link href="/playlists/create">

@@ -160,7 +160,7 @@ export default function AddToPlaylistButton({
         variant={variant}
         size={size}
         className={className}
-        onClick={() => toast.error('Precisa fazer login para criar playlists')}
+        onClick={() => toast.error('Precisas de fazer login para criares playlists')}
       >
         <ListMusic className="h-4 w-4 mr-2" />
         Playlist
@@ -316,7 +316,7 @@ export default function AddToPlaylistButton({
                   <Label htmlFor="description">Descrição (opcional)</Label>
                   <Textarea
                     id="description"
-                    placeholder="Descreva sua playlist..."
+                    placeholder="Descreve a tua playlist..."
                     value={newPlaylistDescription}
                     onChange={(e) => setNewPlaylistDescription(e.target.value)}
                     className="min-h-[80px] resize-none"

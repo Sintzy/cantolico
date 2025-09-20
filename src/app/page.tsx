@@ -143,7 +143,7 @@ export default function HomePage() {
                 Funcionalidades Principais
               </h2>
               <p className="text-base md:text-lg text-gray-700 max-w-2xl mx-auto px-4 sm:px-0">
-                Tudo o que precisas para organizar a música litúrgica católica
+                Tudo o que precisas para organizares a música litúrgica católica
               </p>
             </div>
               <div className="grid gap-6 md:gap-8 sm:grid-cols-2 lg:grid-cols-3">

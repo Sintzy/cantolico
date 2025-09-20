@@ -52,7 +52,7 @@ export default function CreatePlaylistPage() {
         }
         
         if (data.status === "SUSPENDED") {
-          toast.error("A sua conta está suspensa. Não pode criar playlists.", {
+          toast.error("A tua conta está suspensa. Não podes criar playlists.", {
             description: data.reason ? `Motivo: ${data.reason}` : undefined
           });
           router.push("/");
@@ -70,7 +70,7 @@ export default function CreatePlaylistPage() {
     e.preventDefault();
     
     if (!session?.user?.id) {
-      toast.error('Precisas de estar autenticado para criar playlists');
+      toast.error('Precisas de estar autenticado para criares playlists');
       router.push('/login');
       return;
     }
@@ -122,7 +122,7 @@ export default function CreatePlaylistPage() {
             </div>
             <h3 className="text-2xl font-bold mb-3 text-center text-gray-900">Autenticação Necessária</h3>
             <p className="text-gray-700 text-center mb-6 leading-relaxed">
-              Para criar e personalizar suas próprias playlists, tu precisas estar logado na sua conta.
+              Para criares e personalizares as tuas próprias playlists, precisas de estar autenticado na tua conta.
             </p>
             <Button asChild size="lg" className="bg-gradient-to-t from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600">
               <Link href="/login">
@@ -237,7 +237,7 @@ export default function CreatePlaylistPage() {
                     className="min-h-24 resize-none"
                   />
                   <p className="text-xs text-gray-500">
-                    Uma descrição ajuda você e outros a entenderem o propósito da playlist
+                    Uma descrição ajuda-te a ti e a outros a entenderem o propósito da playlist
                   </p>
                 </div>
 
@@ -261,8 +261,8 @@ export default function CreatePlaylistPage() {
                           </Label>
                           <p className="text-sm text-gray-600 mt-1">
                             {form.isPublic
-                              ? 'Outros usuários podem descobrir e visualizar sua playlist'
-                              : 'Apenas você pode ver e acessar esta playlist'
+                              ? 'Outros utilizadores podem descobrir e visualizar a tua playlist'
+                              : 'Apenas tu podes ver e aceder a esta playlist'
                             }
                           </p>
                           <div className="flex items-center gap-2 mt-2">

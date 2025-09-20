@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase-client";
 import { randomUUID } from 'crypto';
 import { logAdmin, logErrors } from '@/lib/logs';
 import { sendEmail, createApprovalEmailTemplate } from '@/lib/email';
+import { formatTagsForPostgreSQL, formatMomentsForPostgreSQL } from '@/lib/utils';
 
 export async function POST(
   req: NextRequest,
@@ -28,19 +29,13 @@ export async function POST(
     const moments = JSON.parse(formData.get('moments') as string || '[]');
     
     const tagsString = formData.get('tags') as string;
-    // Processar tags mantendo o formato PostgreSQL {tag1,tag2}
-    let processedTags = tagsString || '{}';
-    
-    // Se não tem chaves, adicionar
-    if (!processedTags.startsWith('{')) {
-      const tagArray = processedTags
-        .split(',')
+    // Processar tags usando a função utilitária
+    const processedTags = formatTagsForPostgreSQL(
+      tagsString
+        ?.split(',')
         .map((t: string) => t.trim())
-        .filter(Boolean)
-        .map((t: string) => t.toLowerCase())
-        .map((t: string) => t.replace(/['/"]/g, ''));
-      processedTags = `{${tagArray.join(',')}}`;
-    }
+        .filter(Boolean) || []
+    );
 
     console.log('Tags processing:', {
       original: tagsString,

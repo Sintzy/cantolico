@@ -59,7 +59,7 @@ export default function CreateNewMusicPage() {
         }
         
         if (data.status === "SUSPENDED") {
-          toast.error("A sua conta está suspensa. Não pode criar músicas.", {
+          toast.error("A tua conta está suspensa. Não podes criar músicas.", {
             description: data.reason ? `Motivo: ${data.reason}` : undefined
           });
           router.push("/");
@@ -287,12 +287,12 @@ export default function CreateNewMusicPage() {
               <CardHeader className="text-center border-b border-border">
                 <CardTitle className="text-xl sm:text-2xl">Acesso Necessário</CardTitle>
                 <CardDescription>
-                  Precisas de estar autenticado para criar uma música
+                  Precisas de estar autenticado para criares uma música
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-6">
                 <Button onClick={() => router.push("/login")} size="lg" className="w-full">
-                  Ir para Login
+                  Fazer Login
                 </Button>
               </CardContent>
             </Card>

@@ -143,10 +143,10 @@ export default async function ExplorePlaylistsPage() {
       <div className="mt-12 text-center">
         <Card className="bg-gradient-to-r from-blue-50 to-green-50 border-blue-200">
           <CardContent className="py-8">
-            <h2 className="text-2xl font-bold mb-4">Crie sua própria playlist</h2>
+            <h2 className="text-2xl font-bold mb-4">Cria a tua própria playlist</h2>
             <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-              Organize suas músicas favoritas e compartilhe com a comunidade. 
-              Suas playlists podem ser privadas (só você vê) ou públicas (qualquer um com o link pode ver).
+              Organiza as tuas músicas favoritas e partilha com a comunidade. 
+              As tuas playlists podem ser privadas (só tu vês) ou públicas (qualquer pessoa com o link pode ver).
             </p>
             <Button size="lg" asChild>
               <Link href="/playlists">
