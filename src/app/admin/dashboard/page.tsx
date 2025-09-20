@@ -167,6 +167,9 @@ export default function AdminDashboard() {
           <Button asChild variant="outline" className="w-full sm:w-auto">
             <Link href="/admin/dashboard/banners">Gestão Banners</Link>
           </Button>
+          <Button asChild variant="outline" className="w-full sm:w-auto">
+            <Link href="/logs">Logging <span className="text-xs text-muted-foreground">[Beta]</span></Link>
+          </Button>
         </div>
       </div>
 

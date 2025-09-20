@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase-client";
 import bcrypt from "bcryptjs";
 import { logGeneral, logErrors } from "@/lib/logs";
+import { logSystemEvent, logDatabaseError } from "@/lib/enhanced-logging";
 import { sendWelcomeEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
@@ -36,10 +37,12 @@ export async function POST(req: NextRequest) {
     
     if (connectionError) {
       console.error('Supabase connection test failed:', connectionError);
-      await logErrors('ERROR', 'Erro de conectividade Supabase', 'Falha na conexão com a base de dados', {
-        error: connectionError.message,
-        action: 'supabase_connection_test_failed'
-      });
+      await logDatabaseError(
+        'connection_test',
+        'User',
+        connectionError,
+        'SELECT count FROM User LIMIT 1'
+      );
       throw new Error(`Database connection failed: ${connectionError.message}`);
     }
 
@@ -50,10 +53,17 @@ export async function POST(req: NextRequest) {
       .single();
       
     if (existing) {
-      await logGeneral('WARN', 'Registo falhado - Email já existe', 'Tentativa de registo com email já existente', {
-        email,
-        action: 'registration_failed_existing_email'
-      });
+      await logSystemEvent(
+        'registration_blocked',
+        'Registo bloqueado - Email já existe',
+        {
+          email,
+          ip,
+          userAgent,
+          reason: 'email_already_exists'
+        },
+        'WARN'
+      );
       return NextResponse.json({ error: "Email já usado" }, { status: 400 });
     }
 
@@ -74,29 +84,29 @@ export async function POST(req: NextRequest) {
         code: createError?.code
       });
       
-      await logErrors('ERROR', 'Erro Supabase ao criar utilizador', 'Erro detalhado da base de dados', {
-        error: createError?.message || 'Erro desconhecido',
-        details: createError?.details,
-        hint: createError?.hint,
-        code: createError?.code,
-        email,
-        name,
-        action: 'supabase_user_creation_error'
-      });
+      await logDatabaseError(
+        'insert',
+        'User',
+        createError,
+        `INSERT INTO User (email, name, passwordHash) VALUES (${email}, ${name}, [REDACTED])`
+      );
       
       throw new Error(`Supabase error: ${createError?.message || 'Unknown error'}`);
     }
 
-    await logGeneral('SUCCESS', 'Utilizador registado com sucesso', 'Novo utilizador criado no sistema via email/password', {
-      userId: user.id,
-      email: user.email,
-      name: user.name,
-      registrationMethod: 'email_password',
-      ipAddress: ip,
-      userAgent: userAgent,
-      action: 'user_registered',
-      entity: 'user'
-    });
+    // Log de evento crítico do sistema
+    await logSystemEvent(
+      'user_registered',
+      'Novo utilizador registado no sistema',
+      {
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+        registrationMethod: 'email_password',
+        ip,
+        userAgent
+      }
+    );
 
     // Enviar email de boas-vindas
     try {

@@ -38,7 +38,7 @@ interface SecurityAlert {
   title: string;
   description: string;
   status: string;
-  acknowledged_by: string;
+  acknowledged_by: string | null; // ID do utilizador que reconheceu
   acknowledged_at: string;
   resolved_at: string;
   email_sent: boolean;

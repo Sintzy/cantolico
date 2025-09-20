@@ -387,43 +387,71 @@ export const authOptions: AuthOptions = {
     
     async session({ session, token }) {
       try {
+        console.log('🔍 [SESSION] Session callback chamado:', { 
+          hasSession: !!session,
+          hasToken: !!token,
+          tokenSub: token?.sub,
+          tokenRole: token?.role,
+          sessionEmail: session?.user?.email
+        });
+        
         if (token?.sub) {
-          const { data: user } = await (supabase as any)
+          console.log('🔍 [SESSION] Buscando utilizador na BD:', token.sub);
+          
+          const { data: user, error } = await (supabase as any)
             .from('User')
             .select('*')
             .eq('id', Number(token.sub))
             .single();
           
+          console.log('🔍 [SESSION] Resultado da BD:', { 
+            found: !!user, 
+            userRole: user?.role,
+            error: error?.message 
+          });
+          
           if (token?.picture) {
             session.user.image = token.picture;
           }
+          
           if (user && session.user) {
             (session.user as any).id = (user as any).id;
             (session.user as any).role = (user as any).role;
             
-            // Log de criação de sessão para roles privilegiadas
-            if (user.role === 'ADMIN' || user.role === 'REVIEWER') {
-              await createSecurityLog('SESSION_CREATED', 'Sessão criada para utilizador privilegiado', {
-                userId: user.id,
-                email: user.email,
-                role: user.role,
-                sessionId: token.jti || 'unknown'
-              }, user);
-            }
+            console.log('✅ [SESSION] Sessão atualizada:', { 
+              id: (session.user as any).id, 
+              role: (session.user as any).role 
+            });
           }
+        } else {
+          console.log('❌ [SESSION] Token sem sub (ID do utilizador)');
         }
+        
         return session;
       } catch (error) {
-        console.error('Erro no callback de sessão:', error);
+        console.error('❌ [SESSION] Erro no callback de sessão:', error);
         return session;
       }
     },
     async jwt({ token, user, account }) {
+      console.log('🔍 [JWT] JWT callback chamado:', { 
+        hasUser: !!user, 
+        userId: user?.id, 
+        userRole: user?.role,
+        tokenRole: token.role
+      });
+      
       if (user) {
         token.sub = String(user.id);
         token.role = user.role;
-        token.picture = user.image; 
+        token.picture = user.image;
+        
+        console.log('✅ [JWT] Token atualizado:', { 
+          id: token.sub, 
+          role: token.role 
+        });
       }
+      
       return token;
     },
     async signIn({ user, account, profile }) {

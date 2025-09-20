@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase-client';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { withApiProtection, withAuthApiProtection } from '@/lib/api-middleware';
+import { withUserProtection, withPublicMonitoring, logPlaylistAction } from '@/lib/enhanced-api-protection';
 import { randomUUID } from 'crypto';
 import { logGeneral, logErrors } from '@/lib/logs';
 
-export const GET = withApiProtection(async (request: NextRequest) => {
+export const GET = withPublicMonitoring<any>(async (request: NextRequest) => {
   try {
     const session = await getServerSession(authOptions);
     const { searchParams } = new URL(request.url);
@@ -110,23 +110,13 @@ export const GET = withApiProtection(async (request: NextRequest) => {
   }
 });
 
-export const POST = withAuthApiProtection(async (request: NextRequest) => {
-  try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+export const POST = withUserProtection<any>(async (request: NextRequest, session: any) => {
+  const body = await request.json();
+  const { name, description, isPublic } = body;
 
-    const body = await request.json();
-    const { name, description, isPublic } = body;
-
-    // Obter informações de IP e User-Agent para logs
-    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
-    const userAgent = request.headers.get('user-agent') || 'unknown';
+  // Obter informações de IP e User-Agent para logs
+  const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+  const userAgent = request.headers.get('user-agent') || 'unknown';
 
     await logGeneral('INFO', 'Criação de playlist iniciada', 'Utilizador iniciou criação de nova playlist', {
       userId: session.user.id,
@@ -207,19 +197,27 @@ export const POST = withAuthApiProtection(async (request: NextRequest) => {
     // Reformatar dados para manter compatibilidade
     const formattedPlaylist = {
       ...playlist,
-      user: playlist.User || null,
-      _count: {
-        items: 0
-      }
-    };
+    user: playlist.User || null,
+    _count: {
+      items: 0
+    }
+  };
 
-    return NextResponse.json(formattedPlaylist, { status: 201 });
+  // Log da ação crítica de criação de playlist
+  await logPlaylistAction(
+    'create',
+    playlist.id.toString(),
+    playlist.name,
+    session,
+    request,
+    {
+      isPublic: playlist.isPublic,
+      hasDescription: !!playlist.description
+    }
+  );
 
-  } catch (error) {
-    console.error('Error creating playlist:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
+  return NextResponse.json(formattedPlaylist, { status: 201 });
+}, {
+  logAction: 'playlist_create',
+  actionDescription: 'Criação de nova playlist'
 });
