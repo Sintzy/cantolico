@@ -115,3 +115,87 @@ export function parseMomentsFromPostgreSQL(moments: string | string[]): string[]
   
   return [];
 }
+
+/**
+ * Extrai o IP real do cliente a partir dos headers da requisição
+ * Verifica múltiplos headers para obter o IP verdadeiro
+ */
+export function getClientIP(headers: any): string {
+  // Verificar x-forwarded-for (proxy/load balancer)
+  const forwarded = headers?.get?.('x-forwarded-for') || headers?.['x-forwarded-for'];
+  if (forwarded) {
+    // x-forwarded-for pode conter múltiplos IPs separados por vírgula
+    // O primeiro é normalmente o IP do cliente
+    const ips = forwarded.split(',').map((ip: string) => ip.trim());
+    for (const ip of ips) {
+      if (isValidPublicIP(ip)) {
+        return ip;
+      }
+    }
+  }
+
+  // Verificar x-real-ip
+  const realIP = headers?.get?.('x-real-ip') || headers?.['x-real-ip'];
+  if (realIP && isValidPublicIP(realIP)) {
+    return realIP;
+  }
+
+  // Verificar cf-connecting-ip (Cloudflare)
+  const cfIP = headers?.get?.('cf-connecting-ip') || headers?.['cf-connecting-ip'];
+  if (cfIP && isValidPublicIP(cfIP)) {
+    return cfIP;
+  }
+
+  // Verificar x-client-ip
+  const clientIP = headers?.get?.('x-client-ip') || headers?.['x-client-ip'];
+  if (clientIP && isValidPublicIP(clientIP)) {
+    return clientIP;
+  }
+
+  return 'unknown';
+}
+
+/**
+ * Verifica se um IP é público (não local/privado)
+ */
+function isValidPublicIP(ip: string): boolean {
+  if (!ip || ip === 'unknown') return false;
+  
+  // Remover espaços e verificar formato básico de IP
+  ip = ip.trim();
+  
+  // Verificar se é IPv4 válido
+  const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
+  if (!ipv4Regex.test(ip)) {
+    // Se não for IPv4, pode ser IPv6 - aceitar por enquanto
+    return ip.includes(':') && ip.length > 7;
+  }
+
+  const parts = ip.split('.').map(Number);
+  
+  // Verificar se cada parte está no range válido
+  if (parts.some(part => part < 0 || part > 255)) {
+    return false;
+  }
+
+  // Excluir ranges privados/locais
+  // 127.x.x.x (localhost)
+  if (parts[0] === 127) return false;
+  
+  // 10.x.x.x (private)
+  if (parts[0] === 10) return false;
+  
+  // 172.16.x.x - 172.31.x.x (private)
+  if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return false;
+  
+  // 192.168.x.x (private)
+  if (parts[0] === 192 && parts[1] === 168) return false;
+  
+  // 169.254.x.x (link-local)
+  if (parts[0] === 169 && parts[1] === 254) return false;
+  
+  // 0.0.0.0
+  if (parts.every(part => part === 0)) return false;
+
+  return true;
+}

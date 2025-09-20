@@ -9,25 +9,111 @@ import { createSecurityLog, createSecurityAlert } from "@/lib/logging-middleware
 import { trackLoginAttempt, isIPBlocked, getFailedAttemptsCount } from "@/lib/login-monitor";
 import { triggerAdminLoginEvent } from "@/lib/realtime-alerts";
 import { sendWelcomeEmail, sendLoginAlert } from "@/lib/email";
+import { getClientIP } from "@/lib/utils";
 
 // Função para obter localização do IP
 async function getLocationFromIP(ip: string): Promise<string> {
-  if (ip === 'unknown' || ip === '127.0.0.1' || ip === '::1') {
+  if (ip === 'unknown' || ip === '127.0.0.1' || ip === '::1' || !ip) {
     return 'Localização Local/VPN';
   }
   
-  try {
-    const response = await fetch(`http://ip-api.com/json/${ip}?fields=country,regionName,city,status`);
-    const data = await response.json();
-    
-    if (data.status === 'success') {
-      return `${data.city || 'Cidade Desconhecida'}, ${data.regionName || 'Região'}, ${data.country || 'País'}`;
+  // Lista de serviços de geolocalização como fallback
+  const geoServices = [
+    {
+      name: 'ip-api',
+      url: `http://ip-api.com/json/${ip}?fields=country,regionName,city,status`,
+      parse: (data: any) => {
+        if (data.status === 'success') {
+          return `${data.city || 'Cidade Desconhecida'}, ${data.regionName || 'Região'}, ${data.country || 'País'}`;
+        }
+        return null;
+      }
+    },
+    {
+      name: 'ipapi',
+      url: `https://ipapi.co/${ip}/json/`,
+      parse: (data: any) => {
+        if (data.city && data.region && data.country_name) {
+          return `${data.city}, ${data.region}, ${data.country_name}`;
+        }
+        return null;
+      }
+    },
+    {
+      name: 'ipgeolocation',
+      url: `https://api.ipgeolocation.io/ipgeo?apiKey=free&ip=${ip}`,
+      parse: (data: any) => {
+        if (data.city && data.state_prov && data.country_name) {
+          return `${data.city}, ${data.state_prov}, ${data.country_name}`;
+        }
+        return null;
+      }
     }
-  } catch (error) {
-    console.error('Erro ao obter localização do IP:', error);
+  ];
+
+  // Tentar cada serviço sequencialmente
+  for (const service of geoServices) {
+    try {
+      console.log(`🌍 [GEOLOCATION] Tentando ${service.name} para IP: ${ip}`);
+      
+      // Criar timeout manual para o fetch
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 segundos de timeout
+      
+      const response = await fetch(service.url, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Cantolico-App/1.0'
+        }
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        console.warn(`⚠️ [GEOLOCATION] ${service.name} retornou status ${response.status}`);
+        continue;
+      }
+      
+      const data = await response.json();
+      console.log(`📍 [GEOLOCATION] Resposta do ${service.name}:`, data);
+      
+      const location = service.parse(data);
+      if (location) {
+        console.log(`✅ [GEOLOCATION] Localização obtida via ${service.name}: ${location}`);
+        return location;
+      }
+    } catch (error) {
+      console.error(`❌ [GEOLOCATION] Erro no ${service.name}:`, error);
+      continue;
+    }
   }
-  
+
+  // Se todos os serviços falharam, verificar se é IP privado
+  if (isPrivateIP(ip)) {
+    return 'Rede Local/Privada';
+  }
+
+  console.warn(`⚠️ [GEOLOCATION] Todos os serviços falharam para IP: ${ip}`);
   return 'Localização Indisponível';
+}
+
+// Função para verificar se é IP privado
+function isPrivateIP(ip: string): boolean {
+  if (!ip) return false;
+  
+  const parts = ip.split('.').map(Number);
+  if (parts.length !== 4) return false;
+  
+  // 10.x.x.x
+  if (parts[0] === 10) return true;
+  
+  // 172.16.x.x - 172.31.x.x
+  if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+  
+  // 192.168.x.x
+  if (parts[0] === 192 && parts[1] === 168) return true;
+  
+  return false;
 }
 
 export const authOptions: AuthOptions = {
@@ -46,11 +132,11 @@ export const authOptions: AuthOptions = {
       async authorize(credentials, req) {
         console.log('🔍 [AUTH] Iniciando processo de autorização:', { email: credentials?.email });
         
-        // Obter IP do cliente
-        const ip = req?.headers?.['x-forwarded-for'] || 
-                   req?.headers?.['x-real-ip'] || 
-                   'unknown';
+        // Obter IP do cliente usando a nova função utilitária
+        const ip = getClientIP(req?.headers) || 'unknown';
         const userAgent = req?.headers?.['user-agent'] || 'unknown';
+        
+        console.log(`🌐 [AUTH] IP detectado: ${ip}, User Agent: ${userAgent.substring(0, 50)}...`);
         
         if (!credentials?.email || !credentials?.password) {
           console.log('❌ [AUTH] Credenciais incompletas');
