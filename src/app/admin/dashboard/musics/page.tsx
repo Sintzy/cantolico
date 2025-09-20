@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useRef } from 'react';
+import React from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -12,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Spinner, type SpinnerProps } from '@/components/ui/shadcn-io/spinner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
+import { TableSkeleton } from '@/components/ui/skeleton';
 import { 
   Music, 
   Search, 
@@ -31,10 +34,14 @@ import {
   Shield,
   Crown,
   UserCheck,
-  Edit3
+  Edit3,
+  RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import UserAvatar from '@/components/ui/user-avatar';
+import UserHoverCard from '@/components/UserHoverCard';
+import { useDebounce } from '@/hooks/useOptimization';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 
 interface Song {
   id: string;
@@ -93,16 +100,12 @@ const ROLE_ICONS = {
 };
 
 export default function MusicsManagement() {
+  const loadingRef = React.useRef(null);
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [songs, setSongs] = useState<Song[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 400);
   const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
   const [deletingSong, setDeletingSong] = useState<string | null>(null);
   const [banningUser, setBanningUser] = useState<string | null>(null);
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
@@ -111,57 +114,65 @@ export default function MusicsManagement() {
   const [showBanDialog, setShowBanDialog] = useState(false);
   const [songToDelete, setSongToDelete] = useState<Song | null>(null);
   const [userToBan, setUserToBan] = useState<{id: string, name: string} | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Infinite scroll hook
+  const fetchSongsApi = async (page: number, limit: number) => {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      search: debouncedSearchTerm,
+      type: typeFilter === 'all' ? '' : typeFilter
+    });
+    const response = await fetch(`/api/admin/music?${params}`);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Erro ao carregar músicas');
+    }
+    const data: SongsResponse = await response.json();
+    return {
+      data: data.songs,
+      totalCount: data.totalCount,
+      totalPages: data.totalPages,
+      currentPage: data.currentPage
+    };
+  };
+
+  const {
+    data: songs,
+    totalCount,
+    hasMore,
+    loading: infiniteLoading,
+    error: infiniteError,
+    loadMore,
+    refresh
+  } = useInfiniteScroll<Song>(fetchSongsApi, [debouncedSearchTerm, typeFilter], { limit: 10 });
+
+  const loading = infiniteLoading;
+  const error = infiniteError;
+
+  // Use optimization hooks
+  
+
+  // Authentication
   useEffect(() => {
     if (status === 'loading') return;
-    
     if (!session || session.user.role !== 'ADMIN') {
       router.push('/');
       return;
     }
+  }, [session, status, router]);
 
-    fetchSongs();
-  }, [session, status, currentPage, searchTerm, typeFilter]); // Removido router das dependências
-
-  const fetchSongs = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: '10',
-        search: searchTerm,
-        type: typeFilter === 'all' ? '' : typeFilter
-      });
-
-      const response = await fetch(`/api/admin/music?${params}`);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Erro ao carregar músicas');
-      }
-      
-      const data: SongsResponse = await response.json();
-      setSongs(data.songs);
-      setTotalPages(data.totalPages);
-      setTotalCount(data.totalCount);
-    } catch (error) {
-      console.error('Erro ao carregar músicas:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      setError(errorMessage);
-      toast.error(`Erro ao carregar músicas: ${errorMessage}`);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const handleManualRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await refresh();
+    setIsRefreshing(false);
+  }, [refresh]);
 
   const handleDeleteSong = async () => {
     if (!songToDelete) return;
-
     try {
       setDeletingSong(songToDelete.id);
-      
       const response = await fetch(`/api/admin/music`, {
         method: 'DELETE',
         headers: {
@@ -169,21 +180,16 @@ export default function MusicsManagement() {
         },
         body: JSON.stringify({ songId: songToDelete.id }),
       });
-
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Erro ao eliminar música');
       }
-
       const result = await response.json();
-      setSongs(songs.filter(song => song.id !== songToDelete.id));
-      setTotalCount(prev => prev - 1);
-      
+      await refresh();
       // Show detailed success message
       const details = result.details;
       const detailsText = details ? 
         ` (${details.versionsDeleted} versões e ${details.favoritesDeleted} favoritos eliminados)` : '';
-      
       toast.success(`Música "${songToDelete.title}" eliminada com sucesso${detailsText}!`);
     } catch (error) {
       console.error('Erro ao eliminar música:', error);
@@ -198,10 +204,8 @@ export default function MusicsManagement() {
 
   const handleBanUser = async () => {
     if (!userToBan) return;
-
     try {
       setBanningUser(userToBan.id);
-      
       const response = await fetch('/api/admin/users', {
         method: 'PATCH',
         headers: {
@@ -209,18 +213,11 @@ export default function MusicsManagement() {
         },
         body: JSON.stringify({ userId: userToBan.id, banned: true }),
       });
-
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Erro ao banir utilizador');
       }
-
-      setSongs(songs.map(song => 
-        song.author?.id === userToBan.id 
-          ? { ...song, author: { ...song.author, banned: true } }
-          : song
-      ));
-
+      await refresh();
       toast.success(`Utilizador "${userToBan.name}" foi banido com sucesso!`);
     } catch (error) {
       console.error('Erro ao banir utilizador:', error);
@@ -233,24 +230,22 @@ export default function MusicsManagement() {
     }
   };
 
-  const handleSendEmail = (userEmail: string, userName: string) => {
+  const handleSendEmail = useCallback((userEmail: string, userName: string) => {
     const subject = encodeURIComponent(`Cancioneiro - Contacto da Administração`);
     const body = encodeURIComponent(`Olá ${userName},\n\nEsta mensagem é da administração do Cancioneiro.\n\n\n\nCumprimentos,\nEquipa Cancioneiro`);
     const mailtoLink = `mailto:${userEmail}?subject=${subject}&body=${body}`;
     window.open(mailtoLink, '_blank');
-  };
+  }, []);
 
-  const handleSearch = (value: string) => {
+  const handleSearch = useCallback((value: string) => {
     setSearchTerm(value);
-    setCurrentPage(1);
-  };
+  }, []);
 
-  const handleTypeFilter = (value: string) => {
+  const handleTypeFilter = useCallback((value: string) => {
     setTypeFilter(value);
-    setCurrentPage(1);
-  };
+  }, []);
 
-  const toggleSongExpansion = (songId: string) => {
+  const toggleSongExpansion = useCallback((songId: string) => {
     const newExpanded = new Set(expandedSongs);
     if (newExpanded.has(songId)) {
       newExpanded.delete(songId);
@@ -258,7 +253,7 @@ export default function MusicsManagement() {
       newExpanded.add(songId);
     }
     setExpandedSongs(newExpanded);
-  };
+  }, [expandedSongs]);
 
   const formatLyrics = (lyrics: string | null | undefined) => {
     if (!lyrics) {
@@ -294,10 +289,31 @@ export default function MusicsManagement() {
     });
   };
 
-  if (status === 'loading' || loading) {
+  if (status === 'loading') {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-  <Spinner variant="circle" size={32} className="text-black" />
+      <div className="container mx-auto px-4 py-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Gestão de Músicas</h1>
+            <p className="text-gray-600">A carregar...</p>
+          </div>
+        </div>
+        <TableSkeleton rows={8} />
+      </div>
+    );
+  }
+
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Gestão de Músicas</h1>
+            <p className="text-gray-600">A carregar músicas...</p>
+          </div>
+        </div>
+        <TableSkeleton rows={8} />
       </div>
     );
   }
@@ -308,7 +324,7 @@ export default function MusicsManagement() {
         <AlertCircle className="h-12 w-12 text-red-500" />
         <h2 className="text-xl font-semibold">Erro ao carregar músicas</h2>
         <p className="text-gray-600">{error}</p>
-        <Button onClick={fetchSongs} variant="outline">
+        <Button onClick={refresh} variant="outline">
           Tentar novamente
         </Button>
       </div>
@@ -326,7 +342,17 @@ export default function MusicsManagement() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={fetchSongs} variant="outline" size="sm">
+          <Button 
+            onClick={handleManualRefresh} 
+            variant="outline" 
+            size="sm"
+            disabled={isRefreshing}
+          >
+            {isRefreshing ? (
+              <Spinner variant="circle" size={16} className="text-black mr-2" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
             Atualizar
           </Button>
           <Button asChild size="sm">
@@ -386,14 +412,30 @@ export default function MusicsManagement() {
           <CardTitle className="flex items-center gap-2">
             <Music className="h-5 w-5" />
             Músicas
+            {isRefreshing && (
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <Spinner variant="circle" size={16} className="text-black" />
+                A atualizar...
+              </div>
+            )}
           </CardTitle>
           <CardDescription>
             Lista de todas as músicas publicadas
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="relative">
+          {/* Loading overlay */}
+          {isRefreshing && (
+            <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center">
+              <div className="bg-white p-4 rounded-lg shadow-lg flex items-center gap-2">
+                <Spinner variant="circle" size={20} className="text-black" />
+                <span>A atualizar dados...</span>
+              </div>
+            </div>
+          )}
+          
           <div className="space-y-4">
-            {songs.map((song) => (
+            {songs.map((song: Song, idx: number) => (
               <div
                 key={song.id}
                 className="border rounded-lg hover:bg-gray-50 transition-colors"
@@ -422,10 +464,20 @@ export default function MusicsManagement() {
                       </div>
                       
                       <div className="flex items-center gap-4 text-sm text-gray-600">
-                        <span className="truncate">Por {song.artist}</span>
                         <span className="flex items-center gap-1 flex-shrink-0">
                           <User className="h-3 w-3" />
-                          {song.author?.name || 'Utilizador desconhecido'}
+                          {song.author ? (
+                            <UserHoverCard 
+                              user={{
+                                name: song.author.name,
+                                email: song.author.email || '',
+                                createdAt: song.createdAt,
+                                image: song.author.profileImage || ''
+                              }}
+                            />
+                          ) : (
+                            'Utilizador desconhecido'
+                          )}
                         </span>
                         {song.author?.role && (
                           <Badge className={`text-xs ${ROLE_COLORS[song.author.role as keyof typeof ROLE_COLORS] || ROLE_COLORS['USER']}`}>
@@ -482,8 +534,20 @@ export default function MusicsManagement() {
                             <Music className="h-5 w-5" />
                             {song.title}
                           </DialogTitle>
-                          <DialogDescription>
-                            Por {song.artist} • Publicado por {song.author?.name || 'Utilizador desconhecido'}
+                          <DialogDescription className="flex items-center gap-1">
+                            <span>Publicado por</span>
+                            {song.author ? (
+                              <UserHoverCard 
+                                user={{
+                                  name: song.author.name,
+                                  email: song.author.email || '',
+                                  createdAt: song.createdAt,
+                                  image: song.author.profileImage || ''
+                                }}
+                              />
+                            ) : (
+                              <span>Utilizador desconhecido</span>
+                            )}
                           </DialogDescription>
                         </DialogHeader>
                         <div className="mt-4 space-y-4">
@@ -653,6 +717,17 @@ export default function MusicsManagement() {
               </div>
             ))}
 
+
+
+            {/* Infinite scroll loader e elemento de referência */}
+            {hasMore && (
+              <div ref={loadingRef} className="flex justify-center py-6">
+                <Spinner variant="circle" size={32} className="text-black" />
+                <span className="ml-2 text-gray-500">A carregar mais músicas...</span>
+              </div>
+            )}
+
+            {/* No songs found */}
             {songs.length === 0 && (
               <div className="text-center py-8">
                 <Music className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -664,55 +739,10 @@ export default function MusicsManagement() {
                 </p>
               </div>
             )}
+
           </div>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-6 pt-4 border-t">
-              <div className="text-sm text-gray-600">
-                Página {currentPage} de {totalPages} ({totalCount} músicas)
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Anterior
-                </Button>
-                
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    const page = i + 1;
-                    return (
-                      <Button
-                        key={page}
-                        variant={currentPage === page ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setCurrentPage(page)}
-                        className="w-8 h-8"
-                      >
-                        {page}
-                      </Button>
-                    );
-                  })}
-                </div>
-                
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                  disabled={currentPage === totalPages}
-                >
-                  Próxima
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
+          {/* Remover paginação, infinite scroll faz o trabalho */}
         </CardContent>
       </Card>
 

@@ -119,7 +119,7 @@ export const PAGE_METADATA = {
   }),
 
   musics: (): Metadata => createMetadata({
-    title: "Cânticos Católicos",
+    title: "Lista de Cânticos",
     description: "Descobre e pesquisa cânticos católicos para a liturgia. Mais de 100 cânticos organizados por momentos litúrgicos, instrumentos e tags.",
     keywords: ["pesquisar cânticos", "música litúrgica", "cancioneiro católico"],
     url: "https://cantolico.pt/musics",

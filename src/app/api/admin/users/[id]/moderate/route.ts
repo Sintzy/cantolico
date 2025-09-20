@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { supabase } from '@/lib/supabase-client';
 import { z } from 'zod';
+import { logAdmin, logErrors } from '@/lib/logs';
+import { sendEmail, createWarningEmailTemplate, createBanEmailTemplate, createSuspensionEmailTemplate } from '@/lib/email';
 
 const ModerateUserSchema = z.object({
   action: z.enum(['WARNING', 'SUSPENSION', 'BAN']),
@@ -55,8 +57,34 @@ export async function POST(
       .single();
 
     if (userError || !targetUser) {
+      await logAdmin('WARN', 'Tentativa de moderação de utilizador inexistente', 'Admin tentou moderar utilizador que não existe', {
+        adminId: session.user.id,
+        adminEmail: session.user.email,
+        targetUserId: userId,
+        moderationAction: action,
+        reason,
+        action: 'moderate_user_not_found'
+      });
       return NextResponse.json({ error: 'Utilizador não encontrado' }, { status: 404 });
     }
+
+    // Log do início da moderação
+    await logAdmin('INFO', 'Moderação de utilizador iniciada', 'Admin iniciou processo de moderação de utilizador', {
+      adminId: session.user.id,
+      adminEmail: session.user.email,
+      targetUserId: targetUser.id,
+      targetUserEmail: targetUser.email,
+      targetUserName: targetUser.name,
+      moderationAction: action,
+      moderationStatus: status,
+      reason,
+      moderatorNote,
+      duration,
+      expiresAt,
+      ipAddress,
+      action: 'moderate_user_started',
+      entity: 'user_moderation'
+    });
 
     // Insert or update moderation record
     const { error: moderationError } = await supabase
@@ -76,6 +104,15 @@ export async function POST(
       });
 
     if (moderationError) {
+      await logErrors('ERROR', 'Erro ao aplicar moderação', 'Erro na base de dados ao aplicar moderação', {
+        adminId: session.user.id,
+        adminEmail: session.user.email,
+        targetUserId: targetUser.id,
+        targetUserEmail: targetUser.email,
+        moderationAction: action,
+        error: moderationError.message,
+        action: 'moderate_user_error'
+      });
       console.error('Error creating moderation record:', moderationError);
       return NextResponse.json({ error: 'Erro ao aplicar moderação' }, { status: 500 });
     }
@@ -108,6 +145,75 @@ export async function POST(
       expiresAt,
       ipAddress
     });
+
+    // Log de sucesso da moderação
+    await logAdmin('SUCCESS', 'Moderação aplicada com sucesso', 'Admin aplicou moderação a utilizador', {
+      adminId: session.user.id,
+      adminEmail: session.user.email,
+      targetUserId: targetUser.id,
+      targetUserEmail: targetUser.email,
+      targetUserName: targetUser.name,
+      moderationAction: action,
+      moderationStatus: status,
+      reason,
+      moderatorNote,
+      duration,
+      expiresAt,
+      ipAddress,
+      action: 'user_moderated',
+      entity: 'user_moderation'
+    });
+
+    // Enviar email de moderação para o utilizador
+    if (targetUser.email) {
+      try {
+        let emailTemplate = '';
+        let subject = '';
+        
+        switch (action) {
+          case 'WARNING':
+            emailTemplate = createWarningEmailTemplate(
+              targetUser.name || 'Utilizador',
+              reason,
+              session.user.name || 'Equipa de Moderação'
+            );
+            subject = '⚠️ Advertência Recebida - Cantólico';
+            break;
+            
+          case 'SUSPENSION':
+            emailTemplate = createSuspensionEmailTemplate(
+              targetUser.name || 'Utilizador',
+              reason,
+              expiresAt ? new Date(expiresAt) : undefined,
+              session.user.name || 'Equipa de Moderação'
+            );
+            subject = '⏸️ Conta Suspensa Temporariamente - Cantólico';
+            break;
+            
+          case 'BAN':
+            emailTemplate = createBanEmailTemplate(
+              targetUser.name || 'Utilizador',
+              reason,
+              session.user.name || 'Equipa de Moderação'
+            );
+            subject = '🚫 Conta Banida Permanentemente - Cantólico';
+            break;
+        }
+        
+        if (emailTemplate) {
+          await sendEmail({
+            to: targetUser.email,
+            subject: subject,
+            html: emailTemplate
+          });
+
+          console.log(`✅ Email de ${action.toLowerCase()} enviado para:`, targetUser.email);
+        }
+      } catch (emailError) {
+        console.error(`❌ Erro ao enviar email de ${action.toLowerCase()}:`, emailError);
+        // Não falhar a operação se o email falhar
+      }
+    }
 
     return NextResponse.json({ 
       success: true,

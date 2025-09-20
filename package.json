@@ -54,6 +54,7 @@
     "react-simplemde-editor": "^5.2.0",
     "react-youtube": "^10.1.0",
     "recharts": "^3.1.0",
+    "remove": "^0.1.5",
     "remove-accents": "^0.5.0",
     "resend": "^4.7.0",
     "sonner": "^2.0.7",

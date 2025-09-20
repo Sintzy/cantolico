@@ -17,8 +17,35 @@ export async function POST(req: NextRequest) {
     const data = await req.json();
     const { name, bio, image } = data;
 
+    // Obter informações de IP e User-Agent para logs
+    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    const userAgent = req.headers.get('user-agent') || 'unknown';
+
+    // Buscar dados atuais do utilizador para comparação
+    const { data: currentUser } = await supabase
+      .from('User')
+      .select('name, bio, image')
+      .eq('id', session.user.id)
+      .single();
+
+    // Criar objeto com as mudanças
+    const changes = {
+      name: currentUser?.name !== name ? { from: currentUser?.name, to: name } : null,
+      bio: currentUser?.bio !== bio ? { from: currentUser?.bio, to: bio } : null,
+      image: currentUser?.image !== image ? { from: currentUser?.image, to: image } : null
+    };
+
+    // Filtrar apenas mudanças válidas
+    const actualChanges = Object.fromEntries(
+      Object.entries(changes).filter(([_, value]) => value !== null)
+    );
+
     await logGeneral('INFO', 'Atualização de perfil iniciada', 'Utilizador a atualizar o seu perfil', {
       userId: session.user.id,
+      userEmail: session.user.email,
+      changes: actualChanges,
+      ipAddress: ip,
+      userAgent: userAgent,
       action: 'profile_update_attempt',
       entity: 'user_profile'
     });
@@ -34,6 +61,10 @@ export async function POST(req: NextRequest) {
 
     await logGeneral('SUCCESS', 'Perfil atualizado com sucesso', 'Dados do perfil do utilizador foram atualizados', {
       userId: session.user.id,
+      userEmail: session.user.email,
+      changes: actualChanges,
+      ipAddress: ip,
+      userAgent: userAgent,
       action: 'profile_updated',
       entity: 'user_profile'
     });

@@ -5,6 +5,116 @@ import GoogleProvider from "next-auth/providers/google";
 import { supabase } from "@/lib/supabase-client";
 import bcrypt from "bcryptjs";
 import { logGeneral, logErrors } from "@/lib/logs";
+import { createSecurityLog, createSecurityAlert } from "@/lib/logging-middleware";
+import { trackLoginAttempt, isIPBlocked, getFailedAttemptsCount } from "@/lib/login-monitor";
+import { triggerAdminLoginEvent } from "@/lib/realtime-alerts";
+import { sendWelcomeEmail, sendLoginAlert } from "@/lib/email";
+import { getClientIP } from "@/lib/utils";
+
+// Função para obter localização do IP
+async function getLocationFromIP(ip: string): Promise<string> {
+  if (ip === 'unknown' || ip === '127.0.0.1' || ip === '::1' || !ip) {
+    return 'Localização Local/VPN';
+  }
+  
+  // Lista de serviços de geolocalização como fallback
+  const geoServices = [
+    {
+      name: 'ip-api',
+      url: `http://ip-api.com/json/${ip}?fields=country,regionName,city,status`,
+      parse: (data: any) => {
+        if (data.status === 'success') {
+          return `${data.city || 'Cidade Desconhecida'}, ${data.regionName || 'Região'}, ${data.country || 'País'}`;
+        }
+        return null;
+      }
+    },
+    {
+      name: 'ipapi',
+      url: `https://ipapi.co/${ip}/json/`,
+      parse: (data: any) => {
+        if (data.city && data.region && data.country_name) {
+          return `${data.city}, ${data.region}, ${data.country_name}`;
+        }
+        return null;
+      }
+    },
+    {
+      name: 'ipgeolocation',
+      url: `https://api.ipgeolocation.io/ipgeo?apiKey=free&ip=${ip}`,
+      parse: (data: any) => {
+        if (data.city && data.state_prov && data.country_name) {
+          return `${data.city}, ${data.state_prov}, ${data.country_name}`;
+        }
+        return null;
+      }
+    }
+  ];
+
+  // Tentar cada serviço sequencialmente
+  for (const service of geoServices) {
+    try {
+      console.log(`🌍 [GEOLOCATION] Tentando ${service.name} para IP: ${ip}`);
+      
+      // Criar timeout manual para o fetch
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 segundos de timeout
+      
+      const response = await fetch(service.url, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Cantolico-App/1.0'
+        }
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        console.warn(`⚠️ [GEOLOCATION] ${service.name} retornou status ${response.status}`);
+        continue;
+      }
+      
+      const data = await response.json();
+      console.log(`📍 [GEOLOCATION] Resposta do ${service.name}:`, data);
+      
+      const location = service.parse(data);
+      if (location) {
+        console.log(`✅ [GEOLOCATION] Localização obtida via ${service.name}: ${location}`);
+        return location;
+      }
+    } catch (error) {
+      console.error(`❌ [GEOLOCATION] Erro no ${service.name}:`, error);
+      continue;
+    }
+  }
+
+  // Se todos os serviços falharam, verificar se é IP privado
+  if (isPrivateIP(ip)) {
+    return 'Rede Local/Privada';
+  }
+
+  console.warn(`⚠️ [GEOLOCATION] Todos os serviços falharam para IP: ${ip}`);
+  return 'Localização Indisponível';
+}
+
+// Função para verificar se é IP privado
+function isPrivateIP(ip: string): boolean {
+  if (!ip) return false;
+  
+  const parts = ip.split('.').map(Number);
+  if (parts.length !== 4) return false;
+  
+  // 10.x.x.x
+  if (parts[0] === 10) return true;
+  
+  // 172.16.x.x - 172.31.x.x
+  if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+  
+  // 192.168.x.x
+  if (parts[0] === 192 && parts[1] === 168) return true;
+  
+  return false;
+}
 
 export const authOptions: AuthOptions = {
   adapter: SupabaseAdapter(),
@@ -19,15 +129,53 @@ export const authOptions: AuthOptions = {
         email: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         console.log('🔍 [AUTH] Iniciando processo de autorização:', { email: credentials?.email });
+        
+        // Obter IP do cliente usando a nova função utilitária
+        const ip = getClientIP(req?.headers) || 'unknown';
+        const userAgent = req?.headers?.['user-agent'] || 'unknown';
+        
+        console.log(`🌐 [AUTH] IP detectado: ${ip}, User Agent: ${userAgent.substring(0, 50)}...`);
         
         if (!credentials?.email || !credentials?.password) {
           console.log('❌ [AUTH] Credenciais incompletas');
-          await logGeneral('WARN', 'Tentativa de login com credenciais incompletas', 'Email ou password em falta', {
-            action: 'login_incomplete_credentials'
+          
+          // Rastrear tentativa falhada
+          await trackLoginAttempt({
+            email: credentials?.email || 'unknown',
+            ip: ip as string,
+            success: false,
+            timestamp: new Date(),
+            userAgent: userAgent as string
+          });
+          
+          await logGeneral('WARN', 'Tentativa de login com credenciais incompletas', 'Email ou password em falta para login email/password', {
+            action: 'login_incomplete_credentials',
+            loginMethod: 'email_password',
+            ipAddress: ip,
+            userAgent: userAgent
           });
           return null;
+        }
+
+        // Verificar se IP está bloqueado
+        if (await isIPBlocked(ip as string)) {
+          console.log('🚫 [AUTH] IP bloqueado temporariamente');
+          
+          await createSecurityAlert('BLOCKED_IP_ATTEMPT', 'Tentativa de login de IP bloqueado', {
+            email: credentials.email,
+            ip,
+            userAgent
+          }, 4);
+          
+          return null;
+        }
+
+        // Verificar número de tentativas falhadas recentes
+        const failedCount = await getFailedAttemptsCount(credentials.email, ip as string);
+        if (failedCount >= 3) {
+          console.log(`⚠️ [AUTH] Múltiplas tentativas falhadas detectadas: ${failedCount}`);
         }
 
         try {
@@ -44,9 +192,20 @@ export const authOptions: AuthOptions = {
 
           if (userError || !user) {
             console.log('❌ [AUTH] Utilizador não encontrado');
+            
+            // Rastrear tentativa falhada
+            await trackLoginAttempt({
+              email: credentials.email,
+              ip: ip as string,
+              success: false,
+              timestamp: new Date(),
+              userAgent: userAgent as string
+            });
+            
             await logGeneral('WARN', 'Tentativa de login com email não registado', 'Email não existe na base de dados', {
               email: credentials.email,
-              action: 'login_email_not_found'
+              action: 'login_email_not_found',
+              ip
             });
             return null;
           }
@@ -107,15 +266,35 @@ export const authOptions: AuthOptions = {
 
           if (!passwordMatch) {
             console.log('❌ [AUTH] Password incorreta');
+            
+            // Rastrear tentativa falhada
+            await trackLoginAttempt({
+              email: credentials.email,
+              ip: ip as string,
+              success: false,
+              timestamp: new Date(),
+              userAgent: userAgent as string
+            });
+            
             await logGeneral('WARN', 'Tentativa de login com password incorreta', 'Password não confere', {
               userId: user.id,
               email: credentials.email,
-              action: 'login_wrong_password'
+              action: 'login_wrong_password',
+              ip
             });
             return null;
           }
 
           console.log('✅ [AUTH] Password correta, autenticação bem-sucedida');
+
+          // Rastrear tentativa bem-sucedida
+          await trackLoginAttempt({
+            email: credentials.email,
+            ip: ip as string,
+            success: true,
+            timestamp: new Date(),
+            userAgent: userAgent as string
+          });
 
           if(user.role === "ADMIN" || user.role === "REVIEWER") {
             await logGeneral('INFO', 'Tentativa de login com role privilegiada', 'Utilizador com role ADMIN ou REVIEWER a tentar login', {
@@ -123,15 +302,55 @@ export const authOptions: AuthOptions = {
               email: user.email,
               action: 'login_privileged_role'
             });
+
+            // Criar alerta de segurança para login de admin
+            await createSecurityAlert('ADMIN_LOGIN', 'Login de administrador detectado', {
+              userId: user.id,
+              email: user.email,
+              role: user.role,
+              provider: 'credentials',
+              ip: 'unknown' // será capturado pelo middleware
+            }, user.role === 'ADMIN' ? 4 : 3);
+
+            // Disparar alerta em tempo real com informações do contexto
+            await triggerAdminLoginEvent(
+              user.email,
+              'unknown', // IP será capturado pelo middleware  
+              'unknown', // User Agent será capturado pelo middleware
+              undefined // Localização opcional
+            );
           }
 
-          await logGeneral('SUCCESS', 'Login realizado com sucesso', 'Utilizador autenticado', {
+          await logGeneral('SUCCESS', 'Login realizado com sucesso', 'Utilizador autenticado via email/password', {
             userId: user.id,
             email: user.email,
             name: user.name,
             role: user.role,
-            action: 'login_success'
+            loginMethod: 'email_password',
+            isAdmin: user.role === 'ADMIN',
+            isReviewer: user.role === 'REVIEWER',
+            ipAddress: ip,
+            userAgent: userAgent,
+            action: 'login_success',
+            entity: 'user_session'
           });
+
+          // Enviar email de alerta de login
+          try {
+            const location = await getLocationFromIP(ip as string);
+            await sendLoginAlert(
+              user.name || 'Utilizador',
+              user.email,
+              ip as string,
+              userAgent as string,
+              location,
+              user.role === 'ADMIN' || user.role === 'REVIEWER'
+            );
+            console.log('✅ Email de alerta de login enviado para:', user.email);
+          } catch (emailError) {
+            console.error('❌ Erro ao enviar email de alerta de login:', emailError);
+            // Não falhar o login se o email falhar
+          }
 
           const userResult = {
             id: String(user.id),
@@ -167,22 +386,37 @@ export const authOptions: AuthOptions = {
   callbacks: {
     
     async session({ session, token }) {
-      if (token?.sub) {
-        const { data: user } = await (supabase as any)
-          .from('User')
-          .select('*')
-          .eq('id', Number(token.sub))
-          .single();
-        
-        if (token?.picture) {
-          session.user.image = token.picture; // <- adiciona imagem
+      try {
+        if (token?.sub) {
+          const { data: user } = await (supabase as any)
+            .from('User')
+            .select('*')
+            .eq('id', Number(token.sub))
+            .single();
+          
+          if (token?.picture) {
+            session.user.image = token.picture;
+          }
+          if (user && session.user) {
+            (session.user as any).id = (user as any).id;
+            (session.user as any).role = (user as any).role;
+            
+            // Log de criação de sessão para roles privilegiadas
+            if (user.role === 'ADMIN' || user.role === 'REVIEWER') {
+              await createSecurityLog('SESSION_CREATED', 'Sessão criada para utilizador privilegiado', {
+                userId: user.id,
+                email: user.email,
+                role: user.role,
+                sessionId: token.jti || 'unknown'
+              }, user);
+            }
+          }
         }
-        if (user && session.user) {
-          (session.user as any).id = (user as any).id;
-          (session.user as any).role = (user as any).role;
-        }
+        return session;
+      } catch (error) {
+        console.error('Erro no callback de sessão:', error);
+        return session;
       }
-      return session;
     },
     async jwt({ token, user, account }) {
       if (user) {
@@ -262,20 +496,83 @@ export const authOptions: AuthOptions = {
             }
 
             await logGeneral('SUCCESS', 'Login OAuth realizado com sucesso', 
-              'Utilizador existente autenticado via Google', {
+              'Utilizador existente autenticado via Google OAuth', {
               userId: existingUser.id,
               email: user.email,
               name: user.name,
-              action: 'oauth_login_success'
+              role: existingUser.role,
+              loginMethod: 'oauth_google',
+              isAdmin: existingUser.role === 'ADMIN',
+              isReviewer: existingUser.role === 'REVIEWER',
+              provider: 'google',
+              action: 'oauth_login_success',
+              entity: 'user_session'
             });
+
+            // Enviar email de alerta de login OAuth
+            try {
+              const location = await getLocationFromIP('unknown'); // IP não disponível em OAuth
+              await sendLoginAlert(
+                existingUser.name || 'Utilizador',
+                existingUser.email,
+                'unknown',
+                'Google OAuth Provider',
+                location,
+                existingUser.role === 'ADMIN' || existingUser.role === 'REVIEWER'
+              );
+              console.log('✅ Email de alerta de login OAuth enviado para:', existingUser.email);
+            } catch (emailError) {
+              console.error('❌ Erro ao enviar email de alerta OAuth:', emailError);
+              // Não falhar o login se o email falhar
+            }
+
+            // Log de segurança adicional para roles privilegiadas via OAuth
+            if (existingUser.role === 'ADMIN' || existingUser.role === 'REVIEWER') {
+              await createSecurityAlert('ADMIN_OAUTH_LOGIN', 'Login OAuth de administrador', {
+                userId: existingUser.id,
+                email: user.email,
+                role: existingUser.role,
+                provider: 'google'
+              }, 3);
+
+              // Trigger admin login alert
+              await triggerAdminLoginEvent(
+                'OAuth Login', 
+                'Unknown IP', 
+                'Google OAuth Provider', 
+                JSON.stringify({
+                  userId: existingUser.id,
+                  email: user.email,
+                  role: existingUser.role,
+                  provider: 'google',
+                  timestamp: new Date().toISOString()
+                })
+              );
+            }
           } else {
             // New user via Google OAuth
             await logGeneral('INFO', 'Novo utilizador criado via OAuth', 
-              'Nova conta criada através do Google', {
+              'Nova conta criada através do Google OAuth', {
               email: user.email,
               name: user.name,
-              action: 'oauth_new_user'
+              registrationMethod: 'oauth_google',
+              provider: 'google',
+              action: 'oauth_new_user',
+              entity: 'user'
             });
+
+            // Enviar email de boas-vindas para novo utilizador OAuth
+            try {
+              await sendWelcomeEmail(
+                user.name || 'Utilizador',
+                user.email || '',
+                'OAuth'
+              );
+              console.log('✅ Email de boas-vindas OAuth enviado para:', user.email);
+            } catch (emailError) {
+              console.error('❌ Erro ao enviar email de boas-vindas OAuth:', emailError);
+              // Não falhar o registo se o email falhar
+            }
           }
           
           return true;

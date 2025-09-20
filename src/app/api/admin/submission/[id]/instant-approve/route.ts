@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { supabase } from "@/lib/supabase-client";
 import { randomUUID } from 'crypto';
+import { formatTagsForPostgreSQL } from '@/lib/utils';
 
 export async function POST(
   req: NextRequest,
@@ -57,9 +58,7 @@ export async function POST(
 
     // Criar nova música baseada na submissão
     const songId = randomUUID();
-    const processedTags = Array.isArray(submission.tags) 
-      ? submission.tags.map((tag: any) => String(tag).toLowerCase().trim().replace(/['"]/g, '')).filter(Boolean)
-      : [];
+    const processedTags = formatTagsForPostgreSQL(submission.tags);
 
     console.log('Tags processing (instant-approve):', {
       original: submission.tags,

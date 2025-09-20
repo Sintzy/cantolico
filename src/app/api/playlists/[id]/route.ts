@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase-client';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
+import { logGeneral, logErrors } from '@/lib/logs';
 
 export async function GET(
   request: NextRequest,
@@ -194,14 +195,25 @@ export async function PUT(
     const body = await request.json();
     const { name, description, isPublic } = body;
 
+    // Obter informações de IP e User-Agent para logs
+    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || 'unknown';
+
     // Verificar se é o dono da playlist
     const { data: playlist, error: checkError } = await supabase
       .from('Playlist')
-      .select('userId')
+      .select('userId, name, description, isPublic')
       .eq('id', playlistId)
       .single();
 
     if (checkError || !playlist) {
+      await logGeneral('WARN', 'Tentativa de editar playlist inexistente', 'Utilizador tentou editar playlist que não existe', {
+        userId: session.user.id,
+        userEmail: session.user.email,
+        playlistId,
+        action: 'playlist_edit_not_found',
+        entity: 'playlist'
+      });
       return NextResponse.json(
         { error: 'Playlist not found' },
         { status: 404 }
@@ -209,13 +221,51 @@ export async function PUT(
     }
 
     if (playlist.userId !== session.user.id) {
+      await logGeneral('WARN', 'Tentativa de editar playlist sem permissão', 'Utilizador tentou editar playlist de outro utilizador', {
+        userId: session.user.id,
+        userEmail: session.user.email,
+        playlistId,
+        playlistOwnerId: playlist.userId,
+        action: 'playlist_edit_unauthorized',
+        entity: 'playlist'
+      });
       return NextResponse.json(
         { error: 'Access denied' },
         { status: 403 }
       );
     }
 
+    // Criar objeto com as mudanças
+    const changes = {
+      name: playlist.name !== name ? { from: playlist.name, to: name } : null,
+      description: playlist.description !== description ? { from: playlist.description, to: description } : null,
+      isPublic: playlist.isPublic !== !!isPublic ? { from: playlist.isPublic, to: !!isPublic } : null
+    };
+
+    // Filtrar apenas mudanças válidas
+    const actualChanges = Object.fromEntries(
+      Object.entries(changes).filter(([_, value]) => value !== null)
+    );
+
+    await logGeneral('INFO', 'Edição de playlist iniciada', 'Utilizador iniciou edição de playlist', {
+      userId: session.user.id,
+      userEmail: session.user.email,
+      playlistId,
+      changes: actualChanges,
+      ipAddress: ip,
+      userAgent: userAgent,
+      action: 'playlist_edit_attempt',
+      entity: 'playlist'
+    });
+
     if (!name?.trim()) {
+      await logGeneral('WARN', 'Tentativa de editar playlist sem nome', 'Nome da playlist é obrigatório mas não foi fornecido', {
+        userId: session.user.id,
+        userEmail: session.user.email,
+        playlistId,
+        action: 'playlist_edit_no_name',
+        entity: 'playlist'
+      });
       return NextResponse.json(
         { error: 'Nome da playlist é obrigatório' },
         { status: 400 }
@@ -247,8 +297,30 @@ export async function PUT(
       .single();
 
     if (updateError || !updatedPlaylist) {
+      await logErrors('ERROR', 'Erro ao editar playlist', 'Erro na base de dados ao editar playlist', {
+        userId: session.user.id,
+        userEmail: session.user.email,
+        playlistId,
+        error: updateError?.message,
+        action: 'playlist_edit_error'
+      });
       throw new Error(`Supabase error: ${updateError?.message}`);
     }
+
+    // Log de sucesso
+    await logGeneral('SUCCESS', 'Playlist editada com sucesso', 'Playlist foi editada pelo utilizador', {
+      userId: session.user.id,
+      userEmail: session.user.email,
+      playlistId: updatedPlaylist.id,
+      playlistName: updatedPlaylist.name,
+      changes: actualChanges,
+      wasPublic: changes.isPublic?.from,
+      isNowPublic: updatedPlaylist.isPublic,
+      ipAddress: ip,
+      userAgent: userAgent,
+      action: 'playlist_updated',
+      entity: 'playlist'
+    });
 
     // Buscar contagem de itens
     const { count: itemCount } = await supabase
@@ -293,14 +365,25 @@ export async function DELETE(
     const { id } = await params;
     const playlistId = id;
 
+    // Obter informações de IP e User-Agent para logs
+    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || 'unknown';
+
     // Verificar se é o dono da playlist
     const { data: playlist, error: checkError } = await supabase
       .from('Playlist')
-      .select('userId')
+      .select('userId, name, isPublic')
       .eq('id', playlistId)
       .single();
 
     if (checkError || !playlist) {
+      await logGeneral('WARN', 'Tentativa de eliminar playlist inexistente', 'Utilizador tentou eliminar playlist que não existe', {
+        userId: session.user.id,
+        userEmail: session.user.email,
+        playlistId,
+        action: 'playlist_delete_not_found',
+        entity: 'playlist'
+      });
       return NextResponse.json(
         { error: 'Playlist not found' },
         { status: 404 }
@@ -308,11 +391,31 @@ export async function DELETE(
     }
 
     if (playlist.userId !== session.user.id) {
+      await logGeneral('WARN', 'Tentativa de eliminar playlist sem permissão', 'Utilizador tentou eliminar playlist de outro utilizador', {
+        userId: session.user.id,
+        userEmail: session.user.email,
+        playlistId,
+        playlistOwnerId: playlist.userId,
+        action: 'playlist_delete_unauthorized',
+        entity: 'playlist'
+      });
       return NextResponse.json(
         { error: 'Access denied' },
         { status: 403 }
       );
     }
+
+    await logGeneral('INFO', 'Eliminação de playlist iniciada', 'Utilizador iniciou eliminação de playlist', {
+      userId: session.user.id,
+      userEmail: session.user.email,
+      playlistId,
+      playlistName: playlist.name,
+      wasPublic: playlist.isPublic,
+      ipAddress: ip,
+      userAgent: userAgent,
+      action: 'playlist_delete_attempt',
+      entity: 'playlist'
+    });
 
     const { error: deleteError } = await supabase
       .from('Playlist')
@@ -320,8 +423,29 @@ export async function DELETE(
       .eq('id', playlistId);
 
     if (deleteError) {
+      await logErrors('ERROR', 'Erro ao eliminar playlist', 'Erro na base de dados ao eliminar playlist', {
+        userId: session.user.id,
+        userEmail: session.user.email,
+        playlistId,
+        playlistName: playlist.name,
+        error: deleteError.message,
+        action: 'playlist_delete_error'
+      });
       throw new Error(`Supabase error: ${deleteError.message}`);
     }
+
+    // Log de sucesso
+    await logGeneral('SUCCESS', 'Playlist eliminada com sucesso', 'Playlist foi eliminada pelo utilizador', {
+      userId: session.user.id,
+      userEmail: session.user.email,
+      playlistId,
+      playlistName: playlist.name,
+      wasPublic: playlist.isPublic,
+      ipAddress: ip,
+      userAgent: userAgent,
+      action: 'playlist_deleted',
+      entity: 'playlist'
+    });
 
     return NextResponse.json({ success: true });
 

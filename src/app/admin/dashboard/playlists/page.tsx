@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { TableSkeleton } from '@/components/ui/skeleton';
+import { Spinner } from '@/components/ui/shadcn-io/spinner';
 import { 
   ListMusic, 
   Search, 
@@ -22,10 +24,12 @@ import {
   User,
   Calendar,
   Music,
-  AlertCircle
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { useDebounce, useStableData, useWindowFocus } from '@/hooks/useOptimization';
 
 interface Playlist {
   id: string;
@@ -52,53 +56,6 @@ interface PlaylistsResponse {
 }
 
 export default function PlaylistsManagement() {
-  // Hooks de estado para edição de playlist
-  const [editingPlaylist, setEditingPlaylist] = useState<Playlist | null>(null);
-  const [editName, setEditName] = useState('');
-  const [editDescription, setEditDescription] = useState('');
-  const [editIsPublic, setEditIsPublic] = useState(true);
-  const [savingEdit, setSavingEdit] = useState(false);
-
-
-      // Funções auxiliares de edição (após os hooks de estado)
-      function openEditDialog(playlist: Playlist) {
-        setEditingPlaylist(playlist);
-        setEditName(playlist.name);
-        setEditDescription(playlist.description || '');
-        setEditIsPublic(playlist.isPublic);
-      }
-
-      function closeEditDialog() {
-        setEditingPlaylist(null);
-        setEditName('');
-        setEditDescription('');
-        setEditIsPublic(true);
-      }
-
-      async function handleEditSave() {
-        if (!editingPlaylist) return;
-        setSavingEdit(true);
-        try {
-          const response = await fetch(`/api/admin/playlists/${editingPlaylist.id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name: editName,
-              description: editDescription,
-              isPublic: editIsPublic
-            })
-          });
-          if (!response.ok) throw new Error('Erro ao editar playlist');
-          const updated = await response.json();
-          setPlaylists(playlists.map((p: Playlist) => p.id === updated.id ? { ...p, ...updated } : p));
-          toast.success('Playlist atualizada!');
-          closeEditDialog();
-        } catch (e) {
-          toast.error('Erro ao editar playlist');
-        } finally {
-          setSavingEdit(false);
-        }
-      }
   const { data: session } = useSession();
   const router = useRouter();
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
@@ -110,45 +67,137 @@ export default function PlaylistsManagement() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [deletingPlaylist, setDeletingPlaylist] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Edit state
+  const [editingPlaylist, setEditingPlaylist] = useState<Playlist | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editIsPublic, setEditIsPublic] = useState(true);
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  // Use optimization hooks
+  const debouncedSearchTerm = useDebounce(searchTerm, 400);
+  
+  // Create a stable cache key for the current search params
+  const cacheKey = `playlists-${currentPage}-${debouncedSearchTerm}-${visibilityFilter}`;
+  
+  // Define the fetch function for useStableData
+  const fetchPlaylistsData = useCallback(async (): Promise<PlaylistsResponse> => {
+    const params = new URLSearchParams({
+      page: currentPage.toString(),
+      limit: '12',
+      search: debouncedSearchTerm,
+      visibility: visibilityFilter === 'all' ? '' : visibilityFilter
+    });
+
+    const response = await fetch(`/api/admin/playlists?${params}`);
+    
+    if (!response.ok) {
+      throw new Error('Erro ao carregar playlists');
+    }
+    
+    return response.json();
+  }, [currentPage, debouncedSearchTerm, visibilityFilter]);
+
+  const { data: cachedData, loading: dataLoading, error: dataError, refresh: refreshData } = useStableData<PlaylistsResponse>(
+    fetchPlaylistsData,
+    [currentPage, debouncedSearchTerm, visibilityFilter],
+    cacheKey
+  );
+  
+  // Get window focus state but don't use it for auto-refresh
+  const isWindowFocused = useWindowFocus();
 
   useEffect(() => {
     if (!session || session.user.role !== 'ADMIN') {
       router.push('/');
       return;
     }
-    fetchPlaylists();
-  }, [session, currentPage, searchTerm, visibilityFilter]);
 
-  const fetchPlaylists = async () => {
-    try {
+    // Update local state when cached data changes
+    if (cachedData) {
+      setPlaylists(cachedData.playlists);
+      setTotalPages(cachedData.totalPages);
+      setTotalCount(cachedData.totalCount);
+      setLoading(false);
+      setError(null);
+    }
+    
+    // Set loading and error states from the data hook
+    if (dataLoading && !cachedData) {
       setLoading(true);
+    } else {
+      setLoading(false);
+    }
+    
+    if (dataError) {
+      setError(dataError);
+    }
+  }, [session, cachedData, dataLoading, dataError]);
+
+  const fetchPlaylists = async (forceFetch = false) => {
+    try {
+      setIsRefreshing(true);
       setError(null);
       
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: '12',
-        search: searchTerm,
-        visibility: visibilityFilter === 'all' ? '' : visibilityFilter
-      });
-
-      const response = await fetch(`/api/admin/playlists?${params}`);
-      
-      if (!response.ok) {
-        throw new Error('Erro ao carregar playlists');
+      if (forceFetch) {
+        refreshData(); // This will trigger a fresh fetch
       }
-      
-      const data: PlaylistsResponse = await response.json();
-      setPlaylists(data.playlists);
-      setTotalPages(data.totalPages);
-      setTotalCount(data.totalCount);
     } catch (error) {
       console.error('Erro ao carregar playlists:', error);
       setError(error instanceof Error ? error.message : 'Erro desconhecido');
       toast.error('Erro ao carregar playlists');
     } finally {
-      setLoading(false);
+      setIsRefreshing(false);
     }
   };
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    refreshData(); // Use the refresh function from useStableData
+    setIsRefreshing(false);
+  };
+
+  // Edit functions
+  function openEditDialog(playlist: Playlist) {
+    setEditingPlaylist(playlist);
+    setEditName(playlist.name);
+    setEditDescription(playlist.description || '');
+    setEditIsPublic(playlist.isPublic);
+  }
+
+  function closeEditDialog() {
+    setEditingPlaylist(null);
+    setEditName('');
+    setEditDescription('');
+    setEditIsPublic(true);
+  }
+
+  async function handleEditSave() {
+    if (!editingPlaylist) return;
+    setSavingEdit(true);
+    try {
+      const response = await fetch(`/api/admin/playlists/${editingPlaylist.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editName,
+          description: editDescription,
+          isPublic: editIsPublic
+        })
+      });
+      if (!response.ok) throw new Error('Erro ao editar playlist');
+      const updated = await response.json();
+      setPlaylists(playlists.map((p: Playlist) => p.id === updated.id ? { ...p, ...updated } : p));
+      toast.success('Playlist atualizada!');
+      closeEditDialog();
+    } catch (e) {
+      toast.error('Erro ao editar playlist');
+    } finally {
+      setSavingEdit(false);
+    }
+  }
 
   const handleDeletePlaylist = async (playlistId: string, playlistName: string) => {
     if (!confirm(`Tem a certeza que pretende eliminar a playlist "${playlistName}"? Esta ação é irreversível.`)) {
@@ -211,10 +260,16 @@ export default function PlaylistsManagement() {
     setCurrentPage(1);
   };
 
-  if (loading) {
+  if (loading && !cachedData) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="container mx-auto px-4 py-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Gestão de Playlists</h1>
+            <p className="text-gray-600">A carregar playlists...</p>
+          </div>
+        </div>
+        <TableSkeleton rows={6} />
       </div>
     );
   }
@@ -225,7 +280,7 @@ export default function PlaylistsManagement() {
         <AlertCircle className="h-12 w-12 text-red-500" />
         <h2 className="text-xl font-semibold">Erro ao carregar playlists</h2>
         <p className="text-gray-600">{error}</p>
-        <Button onClick={fetchPlaylists} variant="outline">
+        <Button onClick={() => fetchPlaylists(true)} variant="outline">
           Tentar novamente
         </Button>
       </div>
@@ -245,7 +300,17 @@ export default function PlaylistsManagement() {
             Gerir playlists da comunidade ({totalCount} total)
           </p>
         </div>
-        <Button onClick={fetchPlaylists} variant="outline" size="sm">
+        <Button 
+          onClick={handleManualRefresh} 
+          variant="outline" 
+          size="sm"
+          disabled={isRefreshing}
+        >
+          {isRefreshing ? (
+            <Spinner variant="circle" size={16} className="text-black mr-2" />
+          ) : (
+            <RefreshCw className="h-4 w-4 mr-2" />
+          )}
           Atualizar
         </Button>
       </div>
@@ -288,7 +353,18 @@ export default function PlaylistsManagement() {
       </Card>
 
       {/* Playlists Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="relative">
+        {/* Loading overlay */}
+        {isRefreshing && (
+          <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center">
+            <div className="bg-white p-4 rounded-lg shadow-lg flex items-center gap-2">
+              <Spinner variant="circle" size={20} className="text-black" />
+              <span>A atualizar dados...</span>
+            </div>
+          </div>
+        )}
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {playlists.map((playlist) => (
           <Card key={playlist.id} className="hover:shadow-lg transition-shadow">
             <CardHeader className="pb-3">
@@ -450,6 +526,7 @@ export default function PlaylistsManagement() {
             </CardContent>
           </Card>
         ))}
+        </div>
       </div>
 
       {/* Empty State */}

@@ -12,6 +12,102 @@
   color: #1e293b !important;
 }
 
+/* Fix dropdown menus and dialogs - force solid white background */
+[data-slot="dropdown-menu-content"],
+[data-slot="dialog-content"],
+.dropdown-menu-content,
+.dialog-content {
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  border: 1px solid #e5e7eb !important;
+}
+
+/* Ensure popover components have solid backgrounds */
+[data-radix-popper-content-wrapper] > div,
+[data-radix-portal] > div[data-state="open"] {
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+}
+
+/* Additional fix for any transparent backgrounds in UI components */
+[data-radix-dropdown-menu-content],
+[data-radix-dialog-content],
+[role="dialog"],
+[role="menu"] {
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+}
+
+/* Override any Tailwind or other CSS that might cause transparency issues */
+.bg-popover,
+.bg-background,
+.bg-card {
+  background-color: #ffffff !important;
+}
+
+/* Specific fix for components on music pages */
+.bg-white\/80,
+.bg-white\/90 {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Additional fix for hover cards and review page components */
+.group:hover .opacity-0,
+.group-hover\:opacity-100 {
+  background-color: #ffffff !important;
+}
+
+/* Force solid backgrounds for all card components */
+[data-slot="card"],
+.card,
+[data-radix-hover-card-content],
+[data-radix-hover-card-trigger] {
+  background-color: #ffffff !important;
+  backdrop-filter: none !important;
+  border: 1px solid #e5e7eb !important;
+}
+
+/* Specific fixes for review page dialogs using attribute selectors */
+[class*="max-w-4xl"],
+[class*="max-w-2xl"] {
+  background-color: #ffffff !important;
+  backdrop-filter: none !important;
+}
+
+/* Global fix for any element that might have transparent background */
+.opacity-0:hover,
+.group:hover .opacity-0,
+.group-hover\:opacity-100:hover,
+*[class*="hover:opacity"]:hover {
+  background-color: #ffffff !important;
+}
+
+/* Force all dialogs, popovers, and cards to have solid white backgrounds */
+div[role="dialog"],
+div[data-state="open"],
+.group > div:hover,
+.group:hover > div {
+  background-color: #ffffff !important;
+  backdrop-filter: none !important;
+}
+
+/* Specific fix for UserHoverCard component */
+.group .absolute,
+.group .transform,
+.group .mt-2,
+.group-hover\:opacity-100 {
+  background-color: #ffffff !important;
+}
+
+/* Fix for all hover-triggered elements */
+.group:hover .absolute.top-full,
+.group:hover .w-64,
+.transition-opacity:hover {
+  background-color: #ffffff !important;
+  backdrop-filter: none !important;
+  border: 1px solid #e5e7eb !important;
+}
+
 /* Animações para o design moderno das playlists */
 @keyframes blob {
   0% {
