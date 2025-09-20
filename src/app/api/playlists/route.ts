@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { withApiProtection, withAuthApiProtection } from '@/lib/api-middleware';
 import { randomUUID } from 'crypto';
+import { logGeneral, logErrors } from '@/lib/logs';
 
 export const GET = withApiProtection(async (request: NextRequest) => {
   try {
@@ -123,7 +124,29 @@ export const POST = withAuthApiProtection(async (request: NextRequest) => {
     const body = await request.json();
     const { name, description, isPublic } = body;
 
+    // Obter informações de IP e User-Agent para logs
+    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || 'unknown';
+
+    await logGeneral('INFO', 'Criação de playlist iniciada', 'Utilizador iniciou criação de nova playlist', {
+      userId: session.user.id,
+      userEmail: session.user.email,
+      playlistName: name,
+      isPublic: !!isPublic,
+      hasDescription: !!description?.trim(),
+      ipAddress: ip,
+      userAgent: userAgent,
+      action: 'playlist_create_attempt',
+      entity: 'playlist'
+    });
+
     if (!name?.trim()) {
+      await logGeneral('WARN', 'Tentativa de criar playlist sem nome', 'Nome da playlist é obrigatório mas não foi fornecido', {
+        userId: session.user.id,
+        userEmail: session.user.email,
+        action: 'playlist_create_no_name',
+        entity: 'playlist'
+      });
       return NextResponse.json(
         { error: 'Nome da playlist é obrigatório' },
         { status: 400 }
@@ -157,8 +180,29 @@ export const POST = withAuthApiProtection(async (request: NextRequest) => {
       .single();
 
     if (error) {
+      await logErrors('ERROR', 'Erro ao criar playlist', 'Erro na base de dados ao criar playlist', {
+        userId: session.user.id,
+        userEmail: session.user.email,
+        playlistName: name,
+        error: error.message,
+        action: 'playlist_create_error'
+      });
       throw new Error(`Supabase error: ${error.message}`);
     }
+
+    // Log de sucesso
+    await logGeneral('SUCCESS', 'Playlist criada com sucesso', 'Nova playlist criada pelo utilizador', {
+      userId: session.user.id,
+      userEmail: session.user.email,
+      playlistId: playlist.id,
+      playlistName: playlist.name,
+      isPublic: playlist.isPublic,
+      hasDescription: !!playlist.description,
+      ipAddress: ip,
+      userAgent: userAgent,
+      action: 'playlist_created',
+      entity: 'playlist'
+    });
 
     // Reformatar dados para manter compatibilidade
     const formattedPlaylist = {

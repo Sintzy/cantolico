@@ -235,9 +235,20 @@ export async function POST(req: Request) {
 
     await logSubmissions('SUCCESS', 'Submissão criada com sucesso', 'Nova música submetida para revisão', {
       userId: user.id,
+      userEmail: user.email,
       submissionId: submission.id,
       submissionTitle: title,
-      action: 'submission_created'
+      mainInstrument: instrument,
+      songType: type,
+      liturgicalMoments: moments.length,
+      hasAudio: !!audioPath,
+      hasPdf: !!pdfPath,
+      hasMarkdown: !!markdown,
+      hasSpotifyLink: !!spotifyLink,
+      hasYoutubeLink: !!youtubeLink,
+      tagsCount: tags?.length || 0,
+      action: 'music_uploaded',
+      entity: 'song_submission'
     });
 
     console.log("Submissão criada com sucesso:", submission);

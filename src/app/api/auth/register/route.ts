@@ -13,10 +13,18 @@ export async function POST(req: NextRequest) {
     const password = requestData.password;
     name = requestData.name;
 
-    await logGeneral('INFO', 'Tentativa de registo de utilizador', 'Novo utilizador a tentar registar-se', {
+    // Obter informações de IP e User-Agent para logs
+    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    const userAgent = req.headers.get('user-agent') || 'unknown';
+    
+    await logGeneral('INFO', 'Tentativa de registo de utilizador', 'Novo utilizador a tentar registar-se via email/password', {
       email,
       name,
-      action: 'user_registration_attempt'
+      registrationMethod: 'email_password',
+      ipAddress: ip,
+      userAgent: userAgent,
+      action: 'user_registration_attempt',
+      entity: 'user'
     });
 
     // Teste de conectividade com Supabase
@@ -78,10 +86,13 @@ export async function POST(req: NextRequest) {
       throw new Error(`Supabase error: ${createError?.message || 'Unknown error'}`);
     }
 
-    await logGeneral('SUCCESS', 'Utilizador registado com sucesso', 'Novo utilizador criado no sistema', {
+    await logGeneral('SUCCESS', 'Utilizador registado com sucesso', 'Novo utilizador criado no sistema via email/password', {
       userId: user.id,
       email: user.email,
       name: user.name,
+      registrationMethod: 'email_password',
+      ipAddress: ip,
+      userAgent: userAgent,
       action: 'user_registered',
       entity: 'user'
     });

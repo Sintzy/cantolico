@@ -43,9 +43,11 @@ export const authOptions: AuthOptions = {
             userAgent: userAgent as string
           });
           
-          await logGeneral('WARN', 'Tentativa de login com credenciais incompletas', 'Email ou password em falta', {
+          await logGeneral('WARN', 'Tentativa de login com credenciais incompletas', 'Email ou password em falta para login email/password', {
             action: 'login_incomplete_credentials',
-            ip
+            loginMethod: 'email_password',
+            ipAddress: ip,
+            userAgent: userAgent
           });
           return null;
         }
@@ -212,12 +214,18 @@ export const authOptions: AuthOptions = {
             );
           }
 
-          await logGeneral('SUCCESS', 'Login realizado com sucesso', 'Utilizador autenticado', {
+          await logGeneral('SUCCESS', 'Login realizado com sucesso', 'Utilizador autenticado via email/password', {
             userId: user.id,
             email: user.email,
             name: user.name,
             role: user.role,
-            action: 'login_success'
+            loginMethod: 'email_password',
+            isAdmin: user.role === 'ADMIN',
+            isReviewer: user.role === 'REVIEWER',
+            ipAddress: ip,
+            userAgent: userAgent,
+            action: 'login_success',
+            entity: 'user_session'
           });
 
           const userResult = {
@@ -364,11 +372,17 @@ export const authOptions: AuthOptions = {
             }
 
             await logGeneral('SUCCESS', 'Login OAuth realizado com sucesso', 
-              'Utilizador existente autenticado via Google', {
+              'Utilizador existente autenticado via Google OAuth', {
               userId: existingUser.id,
               email: user.email,
               name: user.name,
-              action: 'oauth_login_success'
+              role: existingUser.role,
+              loginMethod: 'oauth_google',
+              isAdmin: existingUser.role === 'ADMIN',
+              isReviewer: existingUser.role === 'REVIEWER',
+              provider: 'google',
+              action: 'oauth_login_success',
+              entity: 'user_session'
             });
 
             // Log de segurança adicional para roles privilegiadas via OAuth
@@ -397,10 +411,13 @@ export const authOptions: AuthOptions = {
           } else {
             // New user via Google OAuth
             await logGeneral('INFO', 'Novo utilizador criado via OAuth', 
-              'Nova conta criada através do Google', {
+              'Nova conta criada através do Google OAuth', {
               email: user.email,
               name: user.name,
-              action: 'oauth_new_user'
+              registrationMethod: 'oauth_google',
+              provider: 'google',
+              action: 'oauth_new_user',
+              entity: 'user'
             });
           }
           

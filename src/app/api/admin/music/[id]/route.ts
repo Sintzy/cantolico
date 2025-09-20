@@ -146,12 +146,12 @@ export async function PUT(
         type,
         mainInstrument,
         moments,
-        tags: processedTags,
-        updatedAt: new Date().toISOString()
+        tags: processedTags
       })
       .eq('id', songId);
 
     if (updateSongError) {
+      console.error('Error updating song:', updateSongError);
       throw new Error(`Erro ao atualizar música: ${updateSongError.message}`);
     }
 

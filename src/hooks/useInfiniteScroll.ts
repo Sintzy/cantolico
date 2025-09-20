@@ -44,10 +44,6 @@ export function useInfiniteScroll<T>(
   const [initialLoad, setInitialLoad] = useState(true);
   
   const loadingRef = useRef<Element>(null);
-  const dependencyRef = useRef(dependencies);
-  
-  // Track if dependencies have changed
-  const dependenciesChanged = JSON.stringify(dependencies) !== JSON.stringify(dependencyRef.current);
   
   const loadMore = useCallback(async (reset = false) => {
     if (loading) return;
@@ -78,9 +74,7 @@ export function useInfiniteScroll<T>(
   }, [fetchFunction, loading, data.currentPage, data.hasMore, limit, dependencies]);
 
   // Reset and reload when dependencies change
-  useEffect(() => {
-    if (dependenciesChanged || initialLoad) {
-      dependencyRef.current = dependencies;
+    useEffect(() => {
       setData({
         items: [],
         totalCount: 0,
@@ -88,8 +82,8 @@ export function useInfiniteScroll<T>(
         hasMore: true
       });
       loadMore(true);
-    }
-  }, [dependenciesChanged, initialLoad, loadMore]);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [JSON.stringify(dependencies), initialLoad]);
 
   // Set up intersection observer for loading more
   useEffect(() => {

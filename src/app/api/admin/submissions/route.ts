@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
 
     // Apply filters only if they're not "all"
     if (q) {
-      query = query.or(`title.ilike.%${q}%,tags.cs.{${q}},mainInstrument.ilike.%${q}%`);
+      query = query.or(`title.ilike.%${q}%,tags.cs.{${q}}`);
     }
     
     if (status && status !== "all") {

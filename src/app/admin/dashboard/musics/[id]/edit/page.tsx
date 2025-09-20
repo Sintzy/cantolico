@@ -1,21 +1,112 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import "easymde/dist/easymde.min.css";
+import { useState, useEffect, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
+import dynamic from "next/dynamic";
+import MarkdownIt from "markdown-it";
+import chords from "markdown-it-chords";
+import { 
+  processChordHtml, 
+  detectChordFormat, 
+  processChords,
+  processMixedChords,
+  processSimpleInline,
+  ChordFormat 
+} from "@/lib/chord-processor";
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { parseTagsFromPostgreSQL, formatTagsForPostgreSQL } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Save, Music, Edit3, Tag, Clock } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ChordGuideButton } from "@/components/ChordGuidePopup";
+import { ArrowLeft, Save, Music, Edit3, Tag, Clock, Settings, Eye, Search as SearchIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { LiturgicalMoment, Instrument, SongType } from '@/lib/constants';
+
+const SimpleMDE = dynamic(() => import("react-simplemde-editor"), { ssr: false });
+
+// Estilos CSS para acordes - copiados do arquivo chords.css
+const chordsCSS = `
+.chord-container-inline .chord,
+.chord-container-inline .above-chord,
+.chord-container-inline .intro-chord {
+  position: relative;
+  display: inline-block;
+  margin-right: 4px;
+}
+
+.chord-container-inline .chord .inner,
+.chord-container-inline .above-chord .inner,
+.chord-container-inline .intro-chord .inner {
+  color: #1e293b !important;
+  background: transparent !important;
+  font-family: monospace !important;
+  font-weight: bold !important;
+  font-style: italic !important;
+  display: inline-block !important;
+  white-space: nowrap !important;
+  padding: 0 !important;
+}
+
+.chord-container-above .above-chord {
+  position: relative;
+  display: inline-block;
+  margin-right: 8px;
+  vertical-align: top;
+}
+
+.chord-container-above .above-chord .inner {
+  color: #1e293b !important;
+  background: transparent !important;
+  font-family: monospace !important;
+  font-weight: bold !important;
+  font-style: italic !important;
+  display: block !important;
+  white-space: nowrap !important;
+  padding: 0 !important;
+  margin-bottom: 2px !important;
+}
+`;
+
+// Função para gerar preview do markdown com background branco
+const generatePreview = (markdownText: string): string => {
+  if (!markdownText) return '';
+  
+  const originalFormat = detectChordFormat(markdownText);
+  let processedHtml: string;
+  let wrapperClass: string;
+  
+  if (originalFormat === 'inline') {
+    if (/^(Intro|Ponte|Solo|Bridge|Instrumental|Interlude):?\s*$/im.test(markdownText)) {
+      processedHtml = processMixedChords(markdownText);
+      wrapperClass = 'chord-container-inline';
+    } else {
+      processedHtml = processSimpleInline(markdownText);
+      wrapperClass = 'chord-container-inline';
+    }
+  } else {
+    processedHtml = processChords(markdownText, 'above');
+    wrapperClass = 'chord-container-above';
+  }
+  
+  return `<div class="${wrapperClass}" style="color: #000; background: #fff;">${processedHtml}</div>`;
+};
+
+const allInstruments = ["ORGAO", "GUITARRA", "PIANO", "CORO", "OUTRO"];
+const allMoments = [
+  "ENTRADA", "ATO_PENITENCIAL", "GLORIA", "SALMO", "ACLAMACAO", "OFERTORIO",
+  "SANTO", "COMUNHAO", "ACAO_DE_GRACAS", "FINAL", "ADORACAO", "ASPERSAO",
+  "BAPTISMO", "BENCAO_DAS_ALIANCAS", "CORDEIRO_DE_DEUS", "CRISMA",
+  "INTRODUCAO_DA_PALAVRA", "LOUVOR", "PAI_NOSSO", "REFLEXAO", "TERCO_MISTERIO",
+];
 
 interface SongData {
   id: string;
@@ -88,6 +179,22 @@ const songTypeLabels: Record<SongType, string> = {
 };
 
 export default function EditMusicPage() {
+  // O objeto options precisa ser estável para evitar perder o foco no SimpleMDE
+  const simpleMDEOptions = useMemo(() => ({
+    spellChecker: false,
+    placeholder: "Escreva a letra da música com acordes...",
+    toolbar: [
+      "bold",
+      "italic",
+      "|",
+      "unordered-list",
+      "ordered-list",
+      "|",
+      "preview",
+      "guide"
+    ] as const,
+  }), []);
+
   const { data: session, status } = useSession();
   const router = useRouter();
   const params = useParams();
@@ -97,6 +204,7 @@ export default function EditMusicPage() {
   const [isLoadingSong, setIsLoadingSong] = useState(true);
   const [songData, setSongData] = useState<SongData | null>(null);
   const [newTag, setNewTag] = useState('');
+  const [preview, setPreview] = useState("");
   const [form, setForm] = useState<EditForm>({
     title: '',
     type: SongType.ACORDES,
@@ -110,6 +218,11 @@ export default function EditMusicPage() {
     spotifyLink: '',
     youtubeLink: ''
   });
+
+  // Atualiza o preview quando o sourceText muda
+  useEffect(() => {
+    setPreview(generatePreview(form.sourceText));
+  }, [form.sourceText]);
 
   // Verificar autenticação
   useEffect(() => {
@@ -138,6 +251,10 @@ export default function EditMusicPage() {
         }
 
         const data: SongData = await response.json();
+        console.log('Raw tags from DB:', data.tags);
+        const parsedTags = parseTagsFromPostgreSQL(data.tags || []);
+        console.log('Parsed tags:', parsedTags);
+        
         setSongData(data);
         
         // Preencher formulário com dados atuais
@@ -146,7 +263,7 @@ export default function EditMusicPage() {
           type: data.type,
           mainInstrument: data.mainInstrument,
           moments: Array.isArray(data.moments) ? data.moments : [],
-          tags: Array.isArray(data.tags) ? data.tags : [],
+          tags: parsedTags,
           lyricsPlain: data.currentVersion?.lyricsPlain || '',
           sourceText: data.currentVersion?.sourceText || '',
           keyOriginal: data.currentVersion?.keyOriginal || '',
@@ -166,9 +283,7 @@ export default function EditMusicPage() {
     fetchSongData();
   }, [songId, router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleSubmit = async () => {
     if (!songData) return;
 
     if (!form.title.trim()) {
@@ -194,7 +309,7 @@ export default function EditMusicPage() {
           type: form.type,
           mainInstrument: form.mainInstrument,
           moments: form.moments,
-          tags: form.tags,
+          tags: formatTagsForPostgreSQL(form.tags),
           lyricsPlain: form.lyricsPlain.trim(),
           sourceText: form.sourceText.trim(),
           keyOriginal: form.keyOriginal.trim(),
@@ -225,6 +340,16 @@ export default function EditMusicPage() {
       moments: prev.moments.includes(moment)
         ? prev.moments.filter(m => m !== moment)
         : [...prev.moments, moment]
+    }));
+  };
+
+  const toggleMoment = (moment: string) => {
+    const momentEnum = moment as LiturgicalMoment;
+    setForm(prev => ({
+      ...prev,
+      moments: prev.moments.includes(momentEnum)
+        ? prev.moments.filter(m => m !== momentEnum)
+        : [...prev.moments, momentEnum]
     }));
   };
 
@@ -274,330 +399,409 @@ export default function EditMusicPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Header */}
-      <section className="relative bg-gradient-to-br from-blue-50 via-white to-purple-10">
-        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-          <div className="absolute left-1/2 top-0 -translate-x-1/2">
-            <div className="h-60 w-60 rounded-full bg-gradient-to-tr from-blue-500/20 to-purple-500/20 blur-[80px]" />
+    <div className="min-h-screen bg-gray-50">
+      <style dangerouslySetInnerHTML={{ __html: chordsCSS }} />
+      <div className="max-w-7xl mx-auto py-6 px-4 space-y-6">
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Editar Música</h1>
+              <p className="text-gray-600 mt-1">ID: {songId}</p>
+            </div>
+            <Badge variant="outline">EDITANDO</Badge>
           </div>
         </div>
-        
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="pb-8 pt-12 md:pb-12 md:pt-16 relative z-10">
-            {/* Navigation */}
-            <div className="mb-8">
-              <Button variant="outline" size="sm" asChild>
-                <Link href="/admin/dashboard/musics">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Voltar à Gestão de Músicas
-                </Link>
-              </Button>
-            </div>
 
-            {/* Header */}
-            <div className="text-center lg:text-left">
-              <div className="mb-4 border-y [border-image:linear-gradient(to_right,transparent,theme(colors.slate.300/.8),transparent)1]">
-                <div className="-mx-0.5 flex justify-center lg:justify-start -space-x-2 py-2">
-                  <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                    <Music className="text-white text-xs w-3 h-3" />
-                  </div>
-                  <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                    <Edit3 className="text-white text-xs w-3 h-3" />
-                  </div>
-                </div>
+        {/* Informações do Editor */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Music className="h-5 w-5" />
+              Informações do Editor
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-3 gap-4">
+              <div>
+                <Label className="text-sm font-medium text-gray-500">Nome</Label>
+                <p className="text-gray-900">{session?.user?.name || "Nome não disponível"}</p>
               </div>
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 border-y [border-image:linear-gradient(to_right,transparent,theme(colors.slate.300/.8),transparent)1] leading-tight">
-                Editar Música
-              </h1>
-              <p className="text-lg text-gray-700 max-w-2xl">
-                Edita todos os campos da música: título, acordes, letra, momentos litúrgicos e muito mais
-              </p>
+              <div>
+                <Label className="text-sm font-medium text-gray-500">Email</Label>
+                <p className="text-gray-900">{session?.user?.email || "Email não disponível"}</p>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-gray-500">Cargo</Label>
+                <Badge variant="outline">{session?.user?.role || "USER"}</Badge>
+              </div>
             </div>
-          </div>
-        </div>
-      </section>
+          </CardContent>
+        </Card>
 
-      {/* Main Content */}
-      <section className="bg-white py-8">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6">
-          <form onSubmit={handleSubmit} className="space-y-8">
-            
-            {/* Informações Básicas */}
-            <Card className="border-0 shadow-lg">
+        {/* Conteúdo Principal */}
+        <Tabs defaultValue="edit" className="space-y-6">
+          <TabsList className="bg-white border">
+            <TabsTrigger value="edit" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Editar
+            </TabsTrigger>
+            <TabsTrigger value="preview" className="flex items-center gap-2">
+              <Eye className="h-4 w-4" />
+              Preview
+            </TabsTrigger>
+            <TabsTrigger value="media" className="flex items-center gap-2">
+              <Music className="h-4 w-4" />
+              Mídia
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="edit" className="space-y-6">
+            <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Music className="h-5 w-5" />
-                  Informações Básicas
-                </CardTitle>
+                <CardTitle>Informações Básicas</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Título */}
-                <div className="space-y-2">
-                  <Label htmlFor="title" className="text-sm font-medium text-gray-900">
-                    Título da Música *
-                  </Label>
-                  <Input
-                    id="title"
-                    value={form.title}
-                    onChange={(e) => setForm({ ...form, title: e.target.value })}
-                    placeholder="Ex: Ave Maria"
-                    required
-                    className="h-11"
-                  />
+              <CardContent className="space-y-4">
+                <div>
+                  <Label className="flex items-center gap-2">Título</Label>
+                  <div className="flex gap-2 items-center">
+                    <Input
+                      value={form.title}
+                      onChange={(e) => setForm({ ...form, title: e.target.value })}
+                      placeholder="Nome da música..."
+                      className="bg-white flex-1"
+                    />
+                  </div>
                 </div>
 
-                {/* Tipo e Instrumento */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-gray-900">
-                      Tipo de Música *
-                    </Label>
-                    <Select value={form.type} onValueChange={(value: SongType) => setForm({ ...form, type: value })}>
-                      <SelectTrigger className="h-11">
-                        <SelectValue />
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div>
+                    <Label>Tipo</Label>
+                    <Select value={form.type} onValueChange={(value) => setForm({ ...form, type: value as SongType })}>
+                      <SelectTrigger className="bg-white">
+                        <SelectValue placeholder="Escolher tipo" />
                       </SelectTrigger>
                       <SelectContent>
                         {Object.values(SongType).map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {songTypeLabels[type]}
-                          </SelectItem>
+                          <SelectItem key={type} value={type}>{songTypeLabels[type]}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-gray-900">
-                      Instrumento Principal *
-                    </Label>
-                    <Select value={form.mainInstrument} onValueChange={(value: Instrument) => setForm({ ...form, mainInstrument: value })}>
-                      <SelectTrigger className="h-11">
-                        <SelectValue />
+                  <div>
+                    <Label>Instrumento Principal</Label>
+                    <Select value={form.mainInstrument} onValueChange={(value) => setForm({ ...form, mainInstrument: value as Instrument })}>
+                      <SelectTrigger className="bg-white">
+                        <SelectValue placeholder="Escolher instrumento" />
                       </SelectTrigger>
                       <SelectContent>
-                        {Object.values(Instrument).map((instrument) => (
-                          <SelectItem key={instrument} value={instrument}>
-                            {instrumentLabels[instrument]}
-                          </SelectItem>
+                        {Object.values(Instrument).map((i) => (
+                          <SelectItem key={i} value={i}>{instrumentLabels[i]}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
+
+                  <div>
+                    <Label>Tom Original</Label>
+                    <Input
+                      value={form.keyOriginal}
+                      onChange={(e) => setForm({ ...form, keyOriginal: e.target.value })}
+                      placeholder="Ex: C, Am, F#m"
+                      className="bg-white"
+                    />
+                  </div>
                 </div>
 
-                {/* Tom Original */}
-                <div className="space-y-2">
-                  <Label htmlFor="keyOriginal" className="text-sm font-medium text-gray-900">
-                    Tom Original
-                  </Label>
-                  <Input
-                    id="keyOriginal"
-                    value={form.keyOriginal}
-                    onChange={(e) => setForm({ ...form, keyOriginal: e.target.value })}
-                    placeholder="Ex: C, Am, F#m"
-                    className="h-11"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Momentos Litúrgicos */}
-            <Card className="border-0 shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  Momentos Litúrgicos *
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {Object.values(LiturgicalMoment).map((moment) => (
-                    <div key={moment} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={moment}
-                        checked={form.moments.includes(moment)}
-                        onCheckedChange={() => handleMomentToggle(moment)}
-                      />
-                      <Label
-                        htmlFor={moment}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                      >
-                        {liturgicalMomentLabels[moment]}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-                {form.moments.length === 0 && (
-                  <p className="text-sm text-red-600 mt-2">Seleciona pelo menos um momento litúrgico</p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Tags */}
-            <Card className="border-0 shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Tag className="h-5 w-5" />
-                  Tags
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex gap-2">
-                  <Input
-                    value={newTag}
-                    onChange={(e) => setNewTag(e.target.value)}
-                    placeholder="Adicionar nova tag..."
-                    className="h-11"
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddTag();
-                      }
-                    }}
-                  />
-                  <Button type="button" onClick={handleAddTag} variant="outline">
-                    Adicionar
-                  </Button>
-                </div>
-                
-                {Array.isArray(form.tags) && form.tags.length > 0 && (
+                <div>
+                  <Label>Tags (separadas por vírgula)</Label>
+                  <p className="text-xs text-gray-500 mb-2">
+                    Tags carregadas: {form.tags.length > 0 ? form.tags.join(', ') : 'Nenhuma tag encontrada'}
+                  </p>
+                  <div className="flex gap-2 mb-2">
+                    <Input
+                      value={newTag}
+                      onChange={(e) => setNewTag(e.target.value)}
+                      placeholder="Adicionar nova tag..."
+                      className="bg-white flex-1"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddTag();
+                        }
+                      }}
+                    />
+                    <Button type="button" onClick={handleAddTag} variant="outline">
+                      Adicionar
+                    </Button>
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     {form.tags.map((tag) => (
                       <Badge
                         key={tag}
                         variant="secondary"
-                        className="cursor-pointer hover:bg-red-100 hover:text-red-700 transition-colors"
+                        className="cursor-pointer hover:bg-red-100 hover:text-red-700"
                         onClick={() => handleRemoveTag(tag)}
                       >
                         {tag} ×
                       </Badge>
                     ))}
+                    {form.tags.length === 0 && (
+                      <p className="text-sm text-gray-500 italic">Nenhuma tag adicionada</p>
+                    )}
                   </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Conteúdo Musical */}
-            <Card className="border-0 shadow-lg">
-              <CardHeader>
-                <CardTitle>Conteúdo Musical</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Acordes */}
-                <div className="space-y-2">
-                  <Label htmlFor="sourceText" className="text-sm font-medium text-gray-900">
-                    Acordes e Cifras
-                  </Label>
-                  <Textarea
-                    id="sourceText"
-                    value={form.sourceText}
-                    onChange={(e) => setForm({ ...form, sourceText: e.target.value })}
-                    placeholder="Insere os acordes usando a notação de cifras: [C] [Am] [F] [G]..."
-                    className="min-h-48 font-mono text-sm"
-                  />
                 </div>
 
-                {/* Letra */}
-                <div className="space-y-2">
-                  <Label htmlFor="lyricsPlain" className="text-sm font-medium text-gray-900">
-                    Letra da Música
-                  </Label>
-                  <Textarea
-                    id="lyricsPlain"
-                    value={form.lyricsPlain}
-                    onChange={(e) => setForm({ ...form, lyricsPlain: e.target.value })}
-                    placeholder="Insere a letra da música..."
-                    className="min-h-48"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Links Multimídia */}
-            <Card className="border-0 shadow-lg">
-              <CardHeader>
-                <CardTitle>Links Multimídia</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="mediaUrl" className="text-sm font-medium text-gray-900">
-                      URL de Áudio/Vídeo
-                    </Label>
-                    <Input
-                      id="mediaUrl"
-                      value={form.mediaUrl}
-                      onChange={(e) => setForm({ ...form, mediaUrl: e.target.value })}
-                      placeholder="https://..."
-                      type="url"
-                      className="h-11"
-                    />
+                <div>
+                  <Label>Momentos Litúrgicos</Label>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {allMoments.map((moment) => (
+                      <button
+                        key={moment}
+                        type="button"
+                        className={`px-3 py-1 rounded-full border text-sm transition-colors duration-200 ${
+                          form.moments.includes(moment as LiturgicalMoment)
+                            ? "bg-blue-600 text-white border-blue-600"
+                            : "bg-white text-gray-700 border-gray-300 hover:border-gray-400"
+                        }`}
+                        onClick={() => toggleMoment(moment)}
+                      >
+                        {moment.replaceAll("_", " ")}
+                      </button>
+                    ))}
                   </div>
+                </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="spotifyLink" className="text-sm font-medium text-gray-900">
-                      Link do Spotify
-                    </Label>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Spotify Link</Label>
                     <Input
-                      id="spotifyLink"
                       value={form.spotifyLink}
                       onChange={(e) => setForm({ ...form, spotifyLink: e.target.value })}
                       placeholder="https://open.spotify.com/..."
-                      type="url"
-                      className="h-11"
+                      className="bg-white"
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="youtubeLink" className="text-sm font-medium text-gray-900">
-                      Link do YouTube
-                    </Label>
+                  <div>
+                    <Label>YouTube Link</Label>
                     <Input
-                      id="youtubeLink"
                       value={form.youtubeLink}
                       onChange={(e) => setForm({ ...form, youtubeLink: e.target.value })}
-                      placeholder="https://youtube.com/..."
-                      type="url"
-                      className="h-11"
+                      placeholder="https://www.youtube.com/..."
+                      className="bg-white"
                     />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Separator />
+            {/* Editor e Preview lado a lado */}
+            <div className="grid md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 justify-between w-full">
+                      <CardTitle>Editor de Letra e Acordes</CardTitle>
+                      <div className="flex items-center gap-2">
+                        <ChordGuideButton />
+                        {form.title && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="flex items-center gap-2 border-gray-300 hover:bg-gray-100"
+                            onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(form.title)}`, '_blank')}
+                            title="Pesquisar no Google"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="h-4 w-4" style={{marginRight: 4}}><g><path fill="#4285F4" d="M43.611 20.083H42V20H24v8h11.303C33.962 32.833 29.418 36 24 36c-6.627 0-12-5.373-12-12s5.373-12 12-12c2.803 0 5.377.99 7.409 2.627l6.162-6.162C34.583 6.162 29.583 4 24 4 12.954 4 4 12.954 4 24s8.954 20 20 20c9.941 0 18-8.059 18-18 0-1.209-.13-2.385-.389-3.517z"/><path fill="#34A853" d="M6.306 14.691l6.571 4.819C14.655 16.108 19.001 13 24 13c2.803 0 5.377.99 7.409 2.627l6.162-6.162C34.583 6.162 29.583 4 24 4c-7.732 0-14.41 4.388-17.694 10.691z"/><path fill="#FBBC05" d="M24 44c5.363 0 10.29-1.843 14.143-4.995l-6.518-5.348C29.418 36 24 36 24 36c-5.408 0-9.947-3.155-11.293-7.417l-6.563 5.062C9.568 39.612 16.246 44 24 44z"/><path fill="#EA4335" d="M43.611 20.083H42V20H24v8h11.303c-1.23 3.273-4.418 5.917-11.303 5.917-5.408 0-9.947-3.155-11.293-7.417l-6.563 5.062C9.568 39.612 16.246 44 24 44c5.363 0 10.29-1.843 14.143-4.995l-6.518-5.348C29.418 36 24 36 24 36c-5.408 0-9.947-3.155-11.293-7.417l-6.563 5.062C9.568 39.612 16.246 44 24 44c9.941 0 18-8.059 18-18 0-1.209-.13-2.385-.389-3.517z"/></g></svg>
+                            Google
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <CardDescription>
+                    Edite a letra da música com acordes usando markdown
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2 text-blue-900">Formatos de acordes suportados:</h4>
+                    <ul className="text-xs space-y-1 text-blue-800">
+                      <li><strong>Inline:</strong> <code>#mic#</code> seguido de <code>[C]Deus est[Am]á aqui</code></li>
+                      <li><strong>Acima da letra:</strong> <code>[C] [Am] [F]</code> numa linha e <code>Deus está aqui</code> na seguinte</li>
+                      <li><strong>Intro/Ponte:</strong> <code>Intro:</code> seguido de <code>[A] [G] [C]</code> na linha seguinte</li>
+                      <li><strong>Formato misto:</strong> Podes combinar inline com intro/ponte na mesma música!</li>
+                    </ul>
+                  </div>
+                  <div className="mb-2 p-2 bg-gray-50 border rounded-md text-xs">
+                    <strong>Formato detectado:</strong> {detectChordFormat(form.sourceText)}
+                    {detectChordFormat(form.sourceText) === 'inline' && form.sourceText.includes('#mic#') && (
+                      <span className="ml-2 text-green-600">✓ Tag #mic# encontrada</span>
+                    )}
+                    {/^(Intro|Ponte|Solo|Bridge|Instrumental|Interlude):?\s*$/im.test(form.sourceText) && (
+                      <span className="ml-2 text-blue-600">✓ Seções de intro/ponte detectadas</span>
+                    )}
+                  </div>
+                  <div className="border rounded-lg overflow-hidden bg-white">
+                    <SimpleMDE
+                      value={form.sourceText}
+                      onChange={(value) => setForm({ ...form, sourceText: value })}
+                      options={simpleMDEOptions}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Preview da Música</CardTitle>
+                  <CardDescription>
+                    Visualização de como a música será apresentada aos utilizadores
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="border rounded-lg p-6 bg-white min-h-[400px]">
+                    <div className="mb-4">
+                      <h2 className="text-2xl font-bold text-gray-900">{form.title || "Título da Música"}</h2>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {form.moments.map(moment => (
+                          <Badge key={moment} variant="outline">
+                            {moment.replaceAll("_", " ")}
+                          </Badge>
+                        ))}
+                        {form.tags.map(tag => (
+                          <Badge key={tag} variant="secondary" className="ml-1">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                    <div
+                      className="prose max-w-none font-mono text-sm leading-relaxed"
+                      style={{ 
+                        lineHeight: '1.8',
+                        color: '#000',
+                        background: '#fff'
+                      }}
+                      dangerouslySetInnerHTML={{ __html: preview }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
 
-            {/* Botões de Ação */}
-            <div className="flex gap-4 pt-4">
-              <Button
+          <TabsContent value="preview">
+            <Card>
+              <CardHeader>
+                <CardTitle>Preview da Música</CardTitle>
+                <CardDescription>
+                  Visualização de como a música será apresentada aos utilizadores
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="border rounded-lg p-6 bg-white min-h-[400px]">
+                  <div className="mb-4">
+                    <h2 className="text-2xl font-bold text-gray-900">{form.title || "Título da Música"}</h2>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {form.moments.map(moment => (
+                        <Badge key={moment} variant="outline">
+                          {moment.replaceAll("_", " ")}
+                        </Badge>
+                      ))}
+                      {form.tags.map(tag => (
+                        <Badge key={tag} variant="secondary" className="ml-1">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div
+                    className="prose max-w-none font-mono text-sm leading-relaxed"
+                    style={{ 
+                      lineHeight: '1.8',
+                      color: '#000',
+                      background: '#fff'
+                    }}
+                    dangerouslySetInnerHTML={{ __html: preview }}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="media" className="space-y-6">
+            {/* URL Sections */}
+            <Card>
+              <CardHeader>
+                <CardTitle>URLs de Mídia</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label>URL de Mídia/Áudio</Label>
+                  <Input
+                    value={form.mediaUrl}
+                    onChange={(e) => setForm({ ...form, mediaUrl: e.target.value })}
+                    placeholder="URL de áudio/vídeo..."
+                    className="bg-white"
+                  />
+                  {form.mediaUrl && (
+                    <div className="mt-2 p-4 bg-gray-50 border rounded-lg">
+                      <div className="text-sm text-gray-600 mb-2">Preview do Áudio:</div>
+                      <audio controls className="w-full">
+                        <source src={form.mediaUrl} type="audio/mpeg" />
+                        O seu browser não suporta áudio.
+                      </audio>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+
+        {/* Ações Finais */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Button 
                 type="button"
                 variant="outline"
-                size="lg"
-                className="flex-1"
                 onClick={() => router.back()}
+                className="flex-1"
+                size="lg"
               >
-                <ArrowLeft className="h-4 w-4 mr-2" />
+                <ArrowLeft className="h-5 w-5 mr-2" />
                 Cancelar
               </Button>
-
-              <Button
-                type="submit"
-                disabled={!form.title.trim() || form.moments.length === 0 || isLoading}
+              
+              <Button 
+                onClick={handleSubmit}
+                className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
                 size="lg"
-                className="flex-1"
+                disabled={isLoading || !form.title.trim() || form.moments.length === 0}
               >
                 {isLoading ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  <>
+                    <svg className="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                    </svg>
+                    Guardando...
+                  </>
                 ) : (
-                  <Save className="h-4 w-4 mr-2" />
+                  <>
+                    <Save className="h-5 w-5 mr-2" />
+                    Guardar Alterações
+                  </>
                 )}
-                Guardar Alterações
               </Button>
             </div>
-          </form>
-        </div>
-      </section>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
