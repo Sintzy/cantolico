@@ -5,6 +5,7 @@ import AuthSessionProvider from "@/components/SessionProvider";
 import Navbar from "@/components/Navbar";
 import { Toaster } from "@/components/ui/sonner"
 import Footer from "@/components/Footer";
+import AdminNotificationWrapper from "@/components/AdminNotificationWrapper";
 import { SITE_IMAGES, SITE_CONFIG } from "@/lib/site-images";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -124,6 +125,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </main>
           <Toaster />
+          <AdminNotificationWrapper />
           <Footer />
         </AuthSessionProvider>
       </body>

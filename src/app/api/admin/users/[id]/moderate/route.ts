@@ -99,6 +99,7 @@ export async function POST(
         moderatedAt: new Date().toISOString(),
         expiresAt,
         ipAddress,
+        updatedAt: new Date().toISOString()
       }, {
         onConflict: 'userId'
       });
@@ -129,6 +130,7 @@ export async function POST(
         moderatedById: session.user.id,
         moderatedAt: new Date().toISOString(),
         expiresAt,
+        updatedAt: new Date().toISOString()
       });
 
     if (historyError) {
@@ -253,7 +255,8 @@ export async function DELETE(
         moderatorNote: null,
         expiresAt: null,
         moderatedAt: new Date().toISOString(),
-        moderatedById: session.user.id
+        moderatedById: session.user.id,
+        updatedAt: new Date().toISOString()
       })
       .eq('userId', parseInt(userId));
 
@@ -274,6 +277,7 @@ export async function DELETE(
         moderatedById: session.user.id,
         moderatedAt: new Date().toISOString(),
         expiresAt: null,
+        updatedAt: new Date().toISOString()
       });
 
     if (historyError) {
