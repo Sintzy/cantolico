@@ -177,17 +177,21 @@ export async function POST(
               reason,
               session.user.name || 'Equipa de Moderação'
             );
-            subject = '⚠️ Advertência Recebida - Cantólico';
+            subject = 'Advertência Recebida - Cantólico';
             break;
             
           case 'SUSPENSION':
+            const suspensionDurationText = expiresAt 
+              ? `Até ${new Date(expiresAt).toLocaleDateString('pt-PT')} às ${new Date(expiresAt).toLocaleTimeString('pt-PT')}`
+              : 'Duração indeterminada';
+            
             emailTemplate = createSuspensionEmailTemplate(
               targetUser.name || 'Utilizador',
               reason,
-              expiresAt ? new Date(expiresAt) : undefined,
+              suspensionDurationText,
               session.user.name || 'Equipa de Moderação'
             );
-            subject = '⏸️ Conta Suspensa Temporariamente - Cantólico';
+            subject = 'Conta Suspensa Temporariamente - Cantólico';
             break;
             
           case 'BAN':

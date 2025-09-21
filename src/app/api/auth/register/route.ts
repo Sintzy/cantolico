@@ -111,9 +111,8 @@ export async function POST(req: NextRequest) {
     // Enviar email de boas-vindas
     try {
       await sendWelcomeEmail(
-        user.name || 'Utilizador',
         user.email || email,
-        'Email/Password'
+        user.name || 'Utilizador'
       );
       console.log('✅ Email de boas-vindas enviado para:', user.email);
     } catch (emailError) {

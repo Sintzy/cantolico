@@ -241,7 +241,7 @@ export async function POST(
         
         await sendEmail({
           to: user.email,
-          subject: '🎉 A tua música foi aprovada! - Cantólico',
+          subject: 'A tua música foi aprovada! - Cantólico',
           html: emailTemplate
         });
 

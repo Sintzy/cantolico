@@ -592,9 +592,8 @@ export const authOptions: AuthOptions = {
             // Enviar email de boas-vindas para novo utilizador OAuth
             try {
               await sendWelcomeEmail(
-                user.name || 'Utilizador',
                 user.email || '',
-                'OAuth'
+                user.name || 'Utilizador'
               );
               console.log('✅ Email de boas-vindas OAuth enviado para:', user.email);
             } catch (emailError) {
