@@ -7,7 +7,7 @@ import { Music } from "lucide-react";
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-white relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 relative overflow-hidden">
       {/* Background decoration */}
       <div className="pointer-events-none absolute inset-0" aria-hidden="true">
         <div className="absolute left-1/2 top-1/3 -translate-x-1/2">
@@ -32,15 +32,15 @@ export default function NotFound() {
             </div>
           </div>
           
-          <h1 className="text-8xl md:text-9xl font-bold text-gray-900 mb-4">
+          <h1 className="text-8xl md:text-9xl font-bold text-gray-900 mb-4 drop-shadow-lg">
             404
           </h1>
           
           <div className="max-w-2xl mx-auto">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 drop-shadow-lg">
               Página não encontrada
             </h2>
-            <p className="text-lg text-gray-800 mb-8 drop-shadow-sm">
+            <p className="text-lg text-gray-900 mb-8 drop-shadow-lg font-medium">
               Ooops... A página que procuras não existe ou foi movida. Confirma se o endereço está correto ou volta ao início para explorar mais cânticos.
             </p>
           </div>
