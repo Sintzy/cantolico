@@ -192,9 +192,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ 
       submissions, 
       totalPages,
+      totalItems: filteredTotal,
       total: filteredTotal,
       page,
-      limit
+      limit,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1
     });
 
   } catch (error) {
