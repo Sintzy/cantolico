@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { supabase } from "@/lib/supabase-client";
+import { adminSupabase as supabase } from "@/lib/supabase-admin";
 import { randomUUID } from 'crypto';
 import { logAdmin, logErrors } from '@/lib/logs';
 import { sendEmail, createApprovalEmailTemplate } from '@/lib/email';
@@ -19,28 +19,41 @@ export async function POST(
     }
 
     const { id } = await params;
-    const formData = await req.formData();
-
-    const title = formData.get('title') as string;
-    const markdown = formData.get('markdown') as string;
-    const spotifyLink = formData.get('spotifyLink') as string;
-    const youtubeLink = formData.get('youtubeLink') as string;
-    const instrument = formData.get('instrument') as string;
-    const moments = JSON.parse(formData.get('moments') as string || '[]');
     
-    const tagsString = formData.get('tags') as string;
+    // Try to parse as JSON first, fallback to FormData if needed
+    let body;
+    let title, markdown, spotifyLink, youtubeLink, instrument, moments, tags;
+    
+    try {
+      const contentType = req.headers.get('content-type');
+      
+      if (contentType?.includes('application/json')) {
+        // Handle JSON payload
+        body = await req.json();
+        ({ title, markdown, spotifyLink, youtubeLink, instrument, moments = [], tags = [] } = body);
+      } else {
+        // Handle FormData payload
+        const formData = await req.formData();
+        title = formData.get('title') as string;
+        markdown = formData.get('markdown') as string;
+        spotifyLink = formData.get('spotifyLink') as string;
+        youtubeLink = formData.get('youtubeLink') as string;
+        instrument = formData.get('instrument') as string;
+        moments = JSON.parse(formData.get('moments') as string || '[]');
+        
+        const tagsString = formData.get('tags') as string;
+        tags = tagsString?.split(',').map((t: string) => t.trim()).filter(Boolean) || [];
+      }
+    } catch (error) {
+      console.error('Error parsing request body:', error);
+      return NextResponse.json({ error: 'Invalid request format' }, { status: 400 });
+    }
+    
     // Processar tags usando a função utilitária
     const processedTags = formatTagsForPostgreSQL(
-      tagsString
-        ?.split(',')
-        .map((t: string) => t.trim())
-        .filter(Boolean) || []
+      Array.isArray(tags) ? tags : 
+      (typeof tags === 'string' ? tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [])
     );
-
-    console.log('Tags processing:', {
-      original: tagsString,
-      processed: processedTags
-    });
 
     // Validações
     if (!title?.trim()) {

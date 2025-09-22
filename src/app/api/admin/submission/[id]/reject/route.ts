@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { supabase } from "@/lib/supabase-client";
+import { adminSupabase as supabase } from "@/lib/supabase-admin";
 import { logAdmin, logErrors } from '@/lib/logs';
 import { sendEmail, createRejectionEmailTemplate } from '@/lib/email';
 

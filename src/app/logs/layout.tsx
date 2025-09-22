@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Sistema de Logs - Cantolico',
+  title: 'Sistema de Logs',
   description: 'Sistema completo de monitorização e análise de logs do Cantolico',
   robots: 'noindex, nofollow', // Não indexar páginas de admin
 };

@@ -86,22 +86,17 @@ export async function POST(
       entity: 'user_moderation'
     });
 
-    // Insert or update moderation record
+    // Use custom PostgreSQL function to avoid trigger issues
     const { error: moderationError } = await supabase
-      .from('UserModeration')
-      .upsert({
-        userId: parseInt(userId),
-        status,
-        type: action,
-        reason,
-        moderatorNote: moderatorNote || null,
-        moderatedById: session.user.id,
-        moderatedAt: new Date().toISOString(),
-        expiresAt,
-        ipAddress,
-        updatedAt: new Date().toISOString()
-      }, {
-        onConflict: 'userId'
+      .rpc('apply_user_moderation', {
+        user_id: parseInt(userId),
+        new_status: status,
+        new_type: action,
+        new_reason: reason,
+        new_moderator_note: moderatorNote || null,
+        admin_id: session.user.id,
+        expires_at: expiresAt,
+        ip_address: ipAddress
       });
 
     if (moderationError) {
@@ -118,7 +113,7 @@ export async function POST(
       return NextResponse.json({ error: 'Erro ao aplicar moderação' }, { status: 500 });
     }
 
-    // Also create a history record
+    // Create history record
     const { error: historyError } = await supabase
       .from('ModerationHistory')
       .insert({
@@ -129,8 +124,7 @@ export async function POST(
         moderatorNote: moderatorNote || null,
         moderatedById: session.user.id,
         moderatedAt: new Date().toISOString(),
-        expiresAt,
-        updatedAt: new Date().toISOString()
+        expiresAt
       });
 
     if (historyError) {
@@ -245,27 +239,19 @@ export async function DELETE(
 
   const { id: userId } = await params;
 
-    // Remove moderation (set status back to ACTIVE)
+    // Use custom PostgreSQL function with correct parameter order
     const { error } = await supabase
-      .from('UserModeration')
-      .update({
-        status: 'ACTIVE',
-        type: null,
-        reason: null,
-        moderatorNote: null,
-        expiresAt: null,
-        moderatedAt: new Date().toISOString(),
-        moderatedById: session.user.id,
-        updatedAt: new Date().toISOString()
-      })
-      .eq('userId', parseInt(userId));
+      .rpc('remove_user_moderation', {
+        user_id: parseInt(userId),
+        admin_id: session.user.id
+      });
 
     if (error) {
       console.error('Error removing moderation:', error);
       return NextResponse.json({ error: 'Erro ao remover moderação' }, { status: 500 });
     }
 
-    // Also create a history record for the removal
+    // Create history record for the removal
     const { error: historyError } = await supabase
       .from('ModerationHistory')
       .insert({
@@ -276,8 +262,7 @@ export async function DELETE(
         moderatorNote: 'Moderação removida',
         moderatedById: session.user.id,
         moderatedAt: new Date().toISOString(),
-        expiresAt: null,
-        updatedAt: new Date().toISOString()
+        expiresAt: null
       });
 
     if (historyError) {

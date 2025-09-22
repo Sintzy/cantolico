@@ -30,8 +30,8 @@ export function createMetadata(config: MetadataConfig = {}): Metadata {
     canonical
   } = config;
 
-  // Construir título completo
-  const fullTitle = title ? `${title} | ${SITE_CONFIG.name}` : SITE_CONFIG.name;
+  // O título será processado pelo template do layout raiz
+  const fullTitle = title || SITE_CONFIG.name;
   
   // Keywords padrão do site
   const defaultKeywords = [
@@ -158,12 +158,6 @@ export const PAGE_METADATA = {
     description: "Submete o teu cântico católico para a comunidade. Partilha música de qualidade para servir a liturgia.",
     keywords: ["submeter música", "nova música", "contribuir"],
     noIndex: true, // Não indexar formulários
-  }),
-
-  guide: (): Metadata => createMetadata({
-    title: "Guia de Utilização",
-    description: "Aprende a usar o sistema completo de acordes em markdown para submeter cânticos católicos. Suporte a múltiplos formatos e transposição automática.",
-    keywords: ["guia", "tutorial", "como usar", "markdown", "acordes"],
   }),
 
   login: (): Metadata => createMetadata({

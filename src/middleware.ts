@@ -16,15 +16,7 @@ export async function middleware(req: NextRequest) {
   if (pathname.startsWith('/admin')) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
     
-    console.log('🔍 [MIDDLEWARE] Verificando acesso admin:', { 
-      pathname, 
-      hasToken: !!token,
-      tokenRole: token?.role,
-      tokenSub: token?.sub
-    });
-    
     if (!token || !token.sub) {
-      console.log(`🚨 Acesso negado a ${pathname} - sem autenticação`);
       url.pathname = '/login';
       url.searchParams.set('callbackUrl', pathname);
       return NextResponse.redirect(url);
@@ -44,17 +36,13 @@ export async function middleware(req: NextRequest) {
           
         if (!error && user) {
           userRole = user.role;
-          console.log(`✅ [MIDDLEWARE] Role encontrado na BD: ${userRole}`);
-        } else {
-          console.log(`❌ [MIDDLEWARE] Erro ao buscar role na BD:`, error?.message);
         }
       } catch (error) {
-        console.log(`❌ [MIDDLEWARE] Erro de conexão com BD:`, error);
+        // Silently handle database errors
       }
     }
     
     if (userRole !== 'ADMIN') {
-      console.log(`🚨 Acesso negado a ${pathname} - nível insuficiente: ${userRole}`);
       url.pathname = '/';
       return NextResponse.redirect(url);
     }
