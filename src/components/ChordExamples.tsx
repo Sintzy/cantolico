@@ -9,58 +9,46 @@ import chords from "markdown-it-chords";
 const mdParser = new MarkdownIt({ breaks: true }).use(chords);
 
 const examples = {
-  inline: {
-    title: "Formato Inline (Acordes embutidos)",
-    description: "Usa #mic# no início e acordes diretamente no texto",
-    code: `#mic#
-[C]Deus está a[Am]qui, aleluia
-[F]Deus está a[G]qui, ale[C]luia
-[C]Eu creio que [Am]Jesus está aqui
-[F]Eu creio que [G]Jesus está a[C]qui`,
-    text: `#mic#
-[C]Deus está a[Am]qui, aleluia
-[F]Deus está a[G]qui, ale[C]luia
-[C]Eu creio que [Am]Jesus está aqui
-[F]Eu creio que [G]Jesus está a[C]qui`
-  },
   above: {
-    title: "Formato Above (Acordes acima da letra)",
-    description: "Acordes numa linha, letra na linha seguinte",
-    code: `[C] [Am] [F] [G]
-Deus está aqui, aleluia
-[C] [Am] [F] [G] [C]
-Eu creio que Jesus está aqui`,
-    text: `[C] [Am] [F] [G]
-Deus está aqui, aleluia
-[C] [Am] [F] [G] [C]
-Eu creio que Jesus está aqui`
+    title: "Cifras Above",
+    description: "Acordes acima da letra (recomendado)",
+    code: `[C][Am][F][G]
+Canto Aleluia ao senhor
+[D][A][F][G]
+Aleluia sim ao senhor sim`,
+    text: `[C][Am][F][G]
+Canto Aleluia ao senhor
+[D][A][F][G]
+Aleluia sim ao senhor sim`
   },
-  mixed: {
-    title: "Formato Misto (Inline + Intro/Ponte)",
-    description: "Combina intro/ponte com acordes inline",
+  sections: {
+    title: "Intro/Bridge/Ponte",
+    description: "Intro:, Bridge:, Ponte:, Solo:, Outro:",
     code: `Intro:
-[Am] [F] [C] [G]
+[A][Em][G][C]
 
-#mic#
-[C]Santo, [Am]santo, [F]santo é o Se[G]nhor
-[C]Hosana [Am]nas altu[F]ras[G]
+Bridge:
+[F][C][G][Am]
 
-Ponte:
-[F] [G] [Am] [C]`,
+[C][Am][F][G]
+Santo, santo, santo
+[G][Am][F][C]
+Hosana nas alturas`,
     text: `Intro:
-[Am] [F] [C] [G]
+[A][Em][G][C]
 
-#mic#
-[C]Santo, [Am]santo, [F]santo é o Se[G]nhor
-[C]Hosana [Am]nas altu[F]ras[G]
+Bridge:
+[F][C][G][Am]
 
-Ponte:
-[F] [G] [Am] [C]`
+[C][Am][F][G]
+Santo, santo, santo
+[G][Am][F][C]
+Hosana nas alturas`
   }
 };
 
 export function ChordExamples() {
-  const [activeExample, setActiveExample] = useState<keyof typeof examples>('inline');
+  const [activeExample, setActiveExample] = useState<keyof typeof examples>('above');
   const [preview, setPreview] = useState('');
 
   // Inicializa o preview quando o componente monta
@@ -71,26 +59,20 @@ export function ChordExamples() {
   const updatePreview = (exampleKey: keyof typeof examples) => {
     const example = examples[exampleKey];
     let processedHtml: string;
-    let wrapperClass: string;
     
-    if (exampleKey === 'inline') {
-      const cleanText = example.text.replace(/^#mic#\s*\n?/, '').trim();
-      const rawHtml = mdParser.render(cleanText);
-      processedHtml = processChordHtml(rawHtml);
-      wrapperClass = 'chord-container-inline';
-    } else if (exampleKey === 'mixed') {
-      processedHtml = processMixedChords(example.text);
-      // Processa também as partes inline
-      processedHtml = processedHtml.replace(/<p>([^<]*\[[A-G][#b]?[^\]]*\][^<]*)<\/p>/g, (match, content) => {
-        return processChordHtml(mdParser.render(content));
-      });
-      wrapperClass = 'chord-container-inline';
-    } else {
-      processedHtml = processChords(example.text, 'above');
-      wrapperClass = 'chord-container-above';
+    try {
+      // Processar o texto baseado no tipo de exemplo
+      if (exampleKey === 'above') {
+        processedHtml = processChords(example.text, 'above');
+      } else {
+        processedHtml = processMixedChords(example.text);
+      }
+      
+      setPreview(processedHtml);
+    } catch (error) {
+      console.error('Erro ao processar acordes:', error);
+      setPreview('<p>Erro ao processar acordes</p>');
     }
-    
-    setPreview(`<div class="${wrapperClass}">${processedHtml}</div>`);
   };
 
   const handleExampleChange = (exampleKey: keyof typeof examples) => {
@@ -99,63 +81,53 @@ export function ChordExamples() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-8">
-      <div>
-        <h2 className="text-2xl font-bold mb-4">Sistema de Acordes - Exemplos</h2>
-        <p className="text-gray-600 dark:text-gray-400">
-          O sistema suporta múltiplos formatos para inserir acordes nas suas músicas.
-        </p>
-      </div>
-
-      <div className="flex flex-wrap gap-2 mb-6">
+    <div className="space-y-6">
+      <div className="flex flex-wrap gap-2">
         {Object.entries(examples).map(([key, example]) => (
           <Button
             key={key}
             variant={activeExample === key ? "default" : "outline"}
+            size="sm"
             onClick={() => handleExampleChange(key as keyof typeof examples)}
+            className="text-xs"
           >
-            {key === 'mixed' ? 'Misto' : example.title.split(' ')[1]}
+            {example.title}
           </Button>
         ))}
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        <div>
-          <h3 className="text-lg font-semibold mb-2">
-            {examples[activeExample].title}
-          </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            {examples[activeExample].description}
-          </p>
-          
-          <div className="bg-gray-100 dark:bg-gray-800 rounded-md p-4">
-            <h4 className="text-sm font-medium mb-2">Código:</h4>
-            <pre className="text-xs font-mono overflow-x-auto whitespace-pre-wrap">
+      <div className="grid lg:grid-cols-2 gap-4">
+        {/* Código Fonte */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h4 className="font-medium text-sm">📝 Código:</h4>
+            <span className="text-xs text-muted-foreground">
+              {examples[activeExample].description}
+            </span>
+          </div>
+          <div className="bg-muted/50 p-3 rounded-md">
+            <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono">
               {examples[activeExample].code}
             </pre>
           </div>
         </div>
 
-        <div>
-          <h3 className="text-lg font-semibold mb-2">Preview</h3>
-
-          <div
-            className="border rounded-md p-4 bg-white dark:bg-neutral-900 overflow-auto max-h-[400px] font-mono text-sm"
-            style={{ lineHeight: '1.8' }}
-            dangerouslySetInnerHTML={{ __html: preview }}
-          />
+        {/* Preview */}
+        <div className="space-y-2">
+          <h4 className="font-medium text-sm">👁️ Resultado:</h4>
+          <div className="bg-white p-3 rounded-md border min-h-[100px]">
+            <div 
+              className="text-sm"
+              dangerouslySetInnerHTML={{ __html: preview }}
+            />
+          </div>
         </div>
       </div>
 
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-4">
-        <h3 className="text-lg font-semibold mb-3">Dicas de Uso</h3>
-        <ul className="space-y-2 text-sm">
-          <li><strong>Formato Inline:</strong> Melhor para acordes que mudam no meio das palavras</li>
-          <li><strong>Formato Above:</strong> Mais limpo para visualização, acordes ficam separados da letra</li>
-          <li><strong>Formato Misto:</strong> Combina o melhor dos dois mundos - intro/ponte + acordes inline</li>
-          <li><strong>Detecção Automática:</strong> O sistema detecta automaticamente o formato baseado no conteúdo</li>
-          <li><strong>Seções Especiais:</strong> Use Intro:, Ponte:, Solo:, Bridge: para seções instrumentais</li>
-        </ul>
+      <div className="bg-blue-50 p-3 rounded-md border border-blue-200">
+        <p className="text-xs text-blue-700">
+          💡 <strong>Dica:</strong> O formato "Above" é o mais recomendado para facilitar a leitura e organização dos acordes.
+        </p>
       </div>
     </div>
   );

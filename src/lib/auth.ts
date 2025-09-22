@@ -54,8 +54,6 @@ async function getLocationFromIP(ip: string): Promise<string> {
   // Tentar cada serviço sequencialmente
   for (const service of geoServices) {
     try {
-      console.log(`🌍 [GEOLOCATION] Tentando ${service.name} para IP: ${ip}`);
-      
       // Criar timeout manual para o fetch
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 segundos de timeout
@@ -75,11 +73,9 @@ async function getLocationFromIP(ip: string): Promise<string> {
       }
       
       const data = await response.json();
-      console.log(`📍 [GEOLOCATION] Resposta do ${service.name}:`, data);
       
       const location = service.parse(data);
       if (location) {
-        console.log(`✅ [GEOLOCATION] Localização obtida via ${service.name}: ${location}`);
         return location;
       }
     } catch (error) {
@@ -130,16 +126,16 @@ export const authOptions: AuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials, req) {
-        console.log('🔍 [AUTH] Iniciando processo de autorização:', { email: credentials?.email });
+
         
         // Obter IP do cliente usando a nova função utilitária
         const ip = getClientIP(req?.headers) || 'unknown';
         const userAgent = req?.headers?.['user-agent'] || 'unknown';
         
-        console.log(`🌐 [AUTH] IP detectado: ${ip}, User Agent: ${userAgent.substring(0, 50)}...`);
+
         
         if (!credentials?.email || !credentials?.password) {
-          console.log('❌ [AUTH] Credenciais incompletas');
+
           
           // Rastrear tentativa falhada
           await trackLoginAttempt({
@@ -161,7 +157,7 @@ export const authOptions: AuthOptions = {
 
         // Verificar se IP está bloqueado
         if (await isIPBlocked(ip as string)) {
-          console.log('🚫 [AUTH] IP bloqueado temporariamente');
+
           
           await createSecurityAlert('BLOCKED_IP_ATTEMPT', 'Tentativa de login de IP bloqueado', {
             email: credentials.email,
@@ -175,11 +171,11 @@ export const authOptions: AuthOptions = {
         // Verificar número de tentativas falhadas recentes
         const failedCount = await getFailedAttemptsCount(credentials.email, ip as string);
         if (failedCount >= 3) {
-          console.log(`⚠️ [AUTH] Múltiplas tentativas falhadas detectadas: ${failedCount}`);
+
         }
 
         try {
-          console.log('🔍 [AUTH] Buscando utilizador na base de dados:', credentials.email);
+
           
           // Primeiro buscar o utilizador
           const { data: user, error: userError } = await (supabase as any)
@@ -188,10 +184,10 @@ export const authOptions: AuthOptions = {
             .eq('email', credentials.email)
             .single();
 
-          console.log('🔍 [AUTH] Resultado da consulta do utilizador:', { user: user ? 'found' : 'not found', error: userError?.message });
+
 
           if (userError || !user) {
-            console.log('❌ [AUTH] Utilizador não encontrado');
+
             
             // Rastrear tentativa falhada
             await trackLoginAttempt({
@@ -217,27 +213,20 @@ export const authOptions: AuthOptions = {
             .eq('userId', user.id)
             .single();
 
-          console.log('🔍 [AUTH] Resultado da consulta de moderação:', { 
-            moderation: userModeration ? 'found' : 'not found', 
-            error: moderationError?.message 
-          });
-
-          console.log('🔍 [AUTH] Utilizador encontrado, verificando moderação');
-
           // Verificar se o utilizador está banido ou suspenso
           if (userModeration && (userModeration.status === 'BANNED' || userModeration.status === 'SUSPENDED')) {
-            console.log('⚠️ [AUTH] Utilizador com status de moderação:', userModeration.status);
+
             
             // Verificar se a suspensão expirou
             if (userModeration.status === 'SUSPENDED' && userModeration.expiresAt && new Date(userModeration.expiresAt) < new Date()) {
-              console.log('✅ [AUTH] Suspensão expirou, reativando utilizador');
+
               // Suspensão expirou, reativar utilizador
               await (supabase as any)
                 .from('UserModeration')
                 .update({ status: 'ACTIVE' })
                 .eq('userId', user.id);
             } else {
-              console.log('❌ [AUTH] Utilizador ainda está moderado');
+
               await logGeneral('WARN', 'Tentativa de login de utilizador moderado', `Utilizador ${userModeration.status.toLowerCase()} a tentar login`, {
                 userId: user.id,
                 email: credentials.email,
@@ -249,10 +238,9 @@ export const authOptions: AuthOptions = {
             }
           }
 
-          console.log('🔍 [AUTH] Verificando password');
+
           
           if (!user.passwordHash) {
-            console.log('❌ [AUTH] Utilizador não tem password hash (possivelmente OAuth)');
             await logGeneral('WARN', 'Tentativa de login com credenciais em conta OAuth', 'Utilizador sem password hash', {
               userId: user.id,
               email: credentials.email,
@@ -262,11 +250,8 @@ export const authOptions: AuthOptions = {
           }
 
           const passwordMatch = bcrypt.compareSync(credentials.password, user.passwordHash);
-          console.log('🔍 [AUTH] Password match:', passwordMatch);
 
           if (!passwordMatch) {
-            console.log('❌ [AUTH] Password incorreta');
-            
             // Rastrear tentativa falhada
             await trackLoginAttempt({
               email: credentials.email,
@@ -284,8 +269,6 @@ export const authOptions: AuthOptions = {
             });
             return null;
           }
-
-          console.log('✅ [AUTH] Password correta, autenticação bem-sucedida');
 
           // Rastrear tentativa bem-sucedida
           await trackLoginAttempt({
@@ -309,15 +292,16 @@ export const authOptions: AuthOptions = {
               email: user.email,
               role: user.role,
               provider: 'credentials',
-              ip: 'unknown' // será capturado pelo middleware
+              ip: ip || 'unknown',
+              userAgent: userAgent || 'unknown'
             }, user.role === 'ADMIN' ? 4 : 3);
 
             // Disparar alerta em tempo real com informações do contexto
             await triggerAdminLoginEvent(
               user.email,
-              'unknown', // IP será capturado pelo middleware  
-              'unknown', // User Agent será capturado pelo middleware
-              undefined // Localização opcional
+              ip as string,
+              userAgent as string,
+              undefined // Localização será buscada na função triggerAdminLoginEvent
             );
           }
 
@@ -346,7 +330,6 @@ export const authOptions: AuthOptions = {
               location,
               user.role === 'ADMIN' || user.role === 'REVIEWER'
             );
-            console.log('✅ Email de alerta de login enviado para:', user.email);
           } catch (emailError) {
             console.error('❌ Erro ao enviar email de alerta de login:', emailError);
             // Não falhar o login se o email falhar
@@ -360,8 +343,6 @@ export const authOptions: AuthOptions = {
             role: user.role,
           };
 
-          console.log('✅ [AUTH] Retornando utilizador:', { id: userResult.id, email: userResult.email });
-          
           return userResult;
         } catch (error) {
           console.error('❌ [AUTH] Erro durante processo de login:', error);
@@ -388,7 +369,7 @@ export const authOptions: AuthOptions = {
     async session({ session, token }) {
       try {
         if (token?.sub) {
-          const { data: user } = await (supabase as any)
+          const { data: user, error } = await (supabase as any)
             .from('User')
             .select('*')
             .eq('id', Number(token.sub))
@@ -397,24 +378,17 @@ export const authOptions: AuthOptions = {
           if (token?.picture) {
             session.user.image = token.picture;
           }
+          
           if (user && session.user) {
             (session.user as any).id = (user as any).id;
             (session.user as any).role = (user as any).role;
-            
-            // Log de criação de sessão para roles privilegiadas
-            if (user.role === 'ADMIN' || user.role === 'REVIEWER') {
-              await createSecurityLog('SESSION_CREATED', 'Sessão criada para utilizador privilegiado', {
-                userId: user.id,
-                email: user.email,
-                role: user.role,
-                sessionId: token.jti || 'unknown'
-              }, user);
-            }
           }
+        } else {
         }
+        
         return session;
       } catch (error) {
-        console.error('Erro no callback de sessão:', error);
+        console.error('❌ [SESSION] Erro no callback de sessão:', error);
         return session;
       }
     },
@@ -422,20 +396,14 @@ export const authOptions: AuthOptions = {
       if (user) {
         token.sub = String(user.id);
         token.role = user.role;
-        token.picture = user.image; 
+        token.picture = user.image;
       }
+      
       return token;
     },
     async signIn({ user, account, profile }) {
-      console.log('🔍 [AUTH] SignIn callback chamado:', { 
-        provider: account?.provider, 
-        userId: user?.id, 
-        email: user?.email 
-      });
-      
       // Allow all sign-ins for credentials and OAuth
       if (account?.provider === 'credentials') {
-        console.log('✅ [AUTH] Autenticação por credenciais aprovada');
         return true;
       }
       
@@ -520,7 +488,6 @@ export const authOptions: AuthOptions = {
                 location,
                 existingUser.role === 'ADMIN' || existingUser.role === 'REVIEWER'
               );
-              console.log('✅ Email de alerta de login OAuth enviado para:', existingUser.email);
             } catch (emailError) {
               console.error('❌ Erro ao enviar email de alerta OAuth:', emailError);
               // Não falhar o login se o email falhar
@@ -532,21 +499,17 @@ export const authOptions: AuthOptions = {
                 userId: existingUser.id,
                 email: user.email,
                 role: existingUser.role,
-                provider: 'google'
+                provider: 'google',
+                ip: 'OAuth',
+                userAgent: 'Google OAuth Provider'
               }, 3);
 
               // Trigger admin login alert
               await triggerAdminLoginEvent(
+                user.email || '',
                 'OAuth Login', 
-                'Unknown IP', 
                 'Google OAuth Provider', 
-                JSON.stringify({
-                  userId: existingUser.id,
-                  email: user.email,
-                  role: existingUser.role,
-                  provider: 'google',
-                  timestamp: new Date().toISOString()
-                })
+                `Admin OAuth login - User ID: ${existingUser.id}, Role: ${existingUser.role}`
               );
             }
           } else {
@@ -564,11 +527,9 @@ export const authOptions: AuthOptions = {
             // Enviar email de boas-vindas para novo utilizador OAuth
             try {
               await sendWelcomeEmail(
-                user.name || 'Utilizador',
                 user.email || '',
-                'OAuth'
+                user.name || 'Utilizador'
               );
-              console.log('✅ Email de boas-vindas OAuth enviado para:', user.email);
             } catch (emailError) {
               console.error('❌ Erro ao enviar email de boas-vindas OAuth:', emailError);
               // Não falhar o registo se o email falhar

@@ -251,9 +251,7 @@ export default function EditMusicPage() {
         }
 
         const data: SongData = await response.json();
-        console.log('Raw tags from DB:', data.tags);
         const parsedTags = parseTagsFromPostgreSQL(data.tags || []);
-        console.log('Parsed tags:', parsedTags);
         
         setSongData(data);
         

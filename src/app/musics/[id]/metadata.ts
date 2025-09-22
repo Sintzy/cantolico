@@ -55,7 +55,7 @@ export async function generateMetadata({ params }: MusicPageProps): Promise<Meta
       description: `${song.title} - Cântico católico para ${momentos}. ${tags ? `Tags: ${tags}.` : ""} Partilhado por ${autor} no Can♱ólico!`,
       keywords: [song.title, ...(Array.isArray(song.tags) ? song.tags : []), ...(Array.isArray(song.moments) ? song.moments : []), "cântico", "católico", "liturgia", song.mainInstrument],
       openGraph: {
-        title: `${song.title} | Can♱ólico!`,
+        title: song.title,
         description: `${song.title} - Cântico católico para ${momentos}. Descobre este e outros cânticos no Can♱ólico!`,
         type: "article",
         locale: "pt_PT",
@@ -70,7 +70,7 @@ export async function generateMetadata({ params }: MusicPageProps): Promise<Meta
       },
       twitter: {
         card: "summary_large_image",
-        title: `${song.title} | Can♱ólico!`,
+        title: song.title,
         description: `${song.title} - Cântico católico para ${momentos}`,
         images: [SITE_IMAGES.twitterImage],
       }

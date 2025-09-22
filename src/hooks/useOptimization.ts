@@ -17,67 +17,6 @@ export function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-// Hook para paginação infinita/lazy loading
-export function useInfiniteScroll<T>(
-  fetchFunction: (page: number, limit: number) => Promise<{
-    data: T[];
-    hasMore: boolean;
-    total?: number;
-  }>,
-  limit: number = 20
-) {
-  const [data, setData] = useState<T[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(true);
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState<number | undefined>(undefined);
-
-  const loadMore = useCallback(async () => {
-    if (loading || !hasMore) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const result = await fetchFunction(page, limit);
-      
-      setData(prev => page === 1 ? result.data : [...prev, ...result.data]);
-      setHasMore(result.hasMore);
-      setTotal(result.total);
-      setPage(prev => prev + 1);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro desconhecido');
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchFunction, page, limit, loading, hasMore]);
-
-  const refresh = useCallback(() => {
-    setData([]);
-    setPage(1);
-    setHasMore(true);
-    setError(null);
-    setTotal(undefined);
-  }, []);
-
-  const reset = useCallback(() => {
-    refresh();
-    loadMore();
-  }, [refresh, loadMore]);
-
-  return {
-    data,
-    loading,
-    error,
-    hasMore,
-    total,
-    loadMore,
-    refresh,
-    reset
-  };
-}
-
 // Hook para detectar quando o usuário chega ao final da página
 export function useIntersectionObserver(
   targetRef: React.RefObject<Element>,

@@ -13,6 +13,7 @@ import MarkdownIt from "markdown-it";
 import chords from "markdown-it-chords";
 // Importação dinâmica será usada no preview para garantir consistência com a página de visualização
 import { ChordGuideButton } from "@/components/ChordGuidePopup";
+import BannerDisplay from "@/components/BannerDisplay";
 
 import { Instrument, LiturgicalMoment, SongType } from "@/lib/constants";
 
@@ -20,10 +21,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Music, FileText, Upload, Youtube, ChevronRight, ChevronLeft, Info, Clock, User, Upload as UploadIcon } from "lucide-react";
+import { Plus, Music, FileText, Upload, Youtube, ChevronRight, ChevronLeft, Info, Clock, User, Upload as UploadIcon, Eye, Check, AlertCircle, Search, Filter } from "lucide-react";
 import { FaSpotify } from "react-icons/fa";
 
 const SimpleMDE = dynamic(() => import("react-simplemde-editor"), { ssr: false });
@@ -95,7 +97,7 @@ export default function CreateNewMusicPage() {
     moments: [] as LiturgicalMoment[],
     tags: [] as string[],
     tagsInput: "",
-    type: "" as SongType,
+    type: "ACORDES" as SongType, // Sempre definido como ACORDES
     instrument: "" as Instrument,
     markdown: "",
     pdfFile: null as File | null,
@@ -162,8 +164,16 @@ export default function CreateNewMusicPage() {
 
   const handleAddTag = () => {
     const trimmed = form.tagsInput.trim();
-    if (trimmed && !form.tags.includes(trimmed)) {
-      setForm({ ...form, tags: [...form.tags, trimmed], tagsInput: "" });
+    if (!trimmed) return;
+    
+    // Dividir por vírgula e processar múltiplas tags
+    const newTags = trimmed
+      .split(',')
+      .map(tag => tag.trim())
+      .filter(tag => tag && !form.tags.includes(tag));
+    
+    if (newTags.length > 0) {
+      setForm({ ...form, tags: [...form.tags, ...newTags], tagsInput: "" });
     }
   };
 
@@ -184,7 +194,7 @@ export default function CreateNewMusicPage() {
   const isStepComplete = (step: number) => {
     switch (step) {
       case 1:
-        return form.title.trim() && form.type && form.instrument;
+        return form.title.trim() && form.instrument; // Removido form.type pois é sempre ACORDES
       case 2:
         return form.moments.length > 0;
       case 3:
@@ -324,15 +334,18 @@ export default function CreateNewMusicPage() {
       {/* Conteúdo principal - só mostra após verificação */}
       {!isCheckingModeration && (
         <>
-          {/* Hero Section com estilo igual ao /musics */}
-          <section className="relative bg-gradient-to-br from-blue-50 via-white to-purple-10">
+          {/* Banners */}
+          <BannerDisplay page="MUSICS" />
+          
+          {/* Hero Section com estilo da landing page */}
+          <section className="relative bg-white">
             {/* Background decoration */}
             <div className="pointer-events-none absolute inset-0" aria-hidden="true">
               <div className="absolute left-1/2 top-0 -translate-x-1/2">
                 <div className="h-60 w-60 rounded-full bg-gradient-to-br from-blue-50 via-white to-purple-50" />
               </div>
             </div>
-        
+            
             <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 md:py-12 relative z-10">
               <div className="text-center mb-6 sm:mb-8 md:mb-12">
                 {/* Decorative border */}
@@ -345,172 +358,153 @@ export default function CreateNewMusicPage() {
                       <FileText className="text-white text-xs w-3 h-3" />
                     </div>
                     <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                      <Plus className="text-white text-xs w-3 h-3" />
+                      <Upload className="text-white text-xs w-3 h-3" />
                     </div>
                   </div>
                 </div>
                 
                 <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 sm:mb-4 border-y [border-image:linear-gradient(to_right,transparent,theme(colors.slate.300/.8),transparent)1] leading-tight">
-                  Submeter Nova Música
+                  Criar Nova Música
                 </h1>
                 <p className="text-base sm:text-lg text-gray-700 max-w-2xl mx-auto px-4">
-                  Partilha um novo cântico com a comunidade através de 4 passos simples
+                  Adiciona uma nova música ao catálogo. Preenche os campos obrigatórios e submete para revisão.
                 </p>
+                
+                {/* Progress */}
+                <div className="flex items-center justify-center space-x-2 pt-8 overflow-x-auto">
+                  {steps.map((step, index) => {
+                    const Icon = step.icon;
+                    const isActive = currentStep === step.number;
+                    const isCompleted = currentStep > step.number;
+                    
+                    return (
+                      <div key={step.number} className="flex items-center flex-shrink-0">
+                        <div className="flex items-center space-x-2">
+                          <div
+                            className={`flex h-8 w-8 items-center justify-center rounded-full border-2 ${
+                              isCompleted
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : isActive
+                                ? "border-primary bg-background text-primary"
+                                : "border-muted-foreground/25 bg-background text-muted-foreground"
+                            }`}
+                          >
+                            <Icon className="h-4 w-4" />
+                          </div>
+                          <span className={`text-sm font-medium hidden sm:block ${
+                            isActive || isCompleted ? "text-foreground" : "text-muted-foreground"
+                          }`}>
+                            {step.title}
+                          </span>
+                        </div>
+                        {index < steps.length - 1 && (
+                          <div className={`mx-2 sm:mx-4 h-px w-4 sm:w-8 ${
+                            isCompleted ? "bg-primary" : "bg-muted-foreground/25"
+                          }`} />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </section>
 
-      {/* Progress Indicator */}
-      <section className="bg-white py-6 sm:py-8">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-center space-x-4 sm:space-x-8 overflow-x-auto pb-2">
-            {steps.map((step, index) => {
-              const Icon = step.icon;
-              const isActive = currentStep === step.number;
-              const isCompleted = currentStep > step.number;
-              
-              return (
-                <div key={step.number} className="flex items-center flex-shrink-0">
-                  <div className="flex flex-col items-center space-y-2">
-                    <div
-                      className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center border-2 transition-colors ${
-                        isCompleted
-                          ? "bg-primary border-primary text-primary-foreground"
-                          : isActive
-                          ? "bg-background border-primary text-primary"
-                          : "bg-background border-border text-muted-foreground"
-                      }`}
-                    >
-                      <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
-                    </div>
-                    <div className="text-center">
-                      <div className={`text-xs sm:text-sm font-medium ${isActive || isCompleted ? "text-foreground" : "text-muted-foreground"}`}>
-                        Passo {step.number}
-                      </div>
-                      <div className={`text-xs hidden sm:block ${isActive || isCompleted ? "text-muted-foreground" : "text-muted-foreground/60"}`}>
-                        {step.title}
-                      </div>
-                    </div>
-                  </div>
-                  {index < steps.length - 1 && (
-                    <div className={`w-8 sm:w-16 h-0.5 mx-2 sm:mx-4 ${isCompleted ? "bg-primary" : "bg-border"}`} />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
       {/* Passo 1: Informações Básicas */}
       {currentStep === 1 && (
-        <section className="bg-white py-6 sm:py-8 lg:py-12">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6">
-            <div className="text-center space-y-2 mb-6 sm:mb-8">
-              <h2 className="text-xl sm:text-2xl font-bold text-foreground">Informações Básicas</h2>
-              <p className="text-sm sm:text-base text-muted-foreground">Título, tipo e instrumento principal da música</p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="space-y-8">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">Informações Básicas</h2>
+              <p className="text-muted-foreground">
+                Título, tipo e instrumento principal da música
+              </p>
             </div>
 
-            <Card className="max-w-3xl mx-auto border border-border shadow-sm bg-card">
-              <CardHeader className="border-b border-border">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Info className="h-5 w-5 text-primary" />
-                  Dados da Música
-                </CardTitle>
+            <Card>
+              <CardHeader>
+                <CardTitle>Dados da Música</CardTitle>
                 <CardDescription>
                   Preenche as informações essenciais sobre a música
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6 pt-6">
+              <CardContent className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="title" className="text-base font-medium">
-                    Título *
-                  </Label>
+                  <Label htmlFor="title">Título *</Label>
                   <Input
                     id="title"
                     value={form.title}
                     onChange={(e) => setForm({ ...form, title: e.target.value })}
                     placeholder="Nome da música"
-                    className="h-10 sm:h-12"
                   />
                 </div>
 
-                <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="type" className="text-base font-medium">
-                      Tipo *
-                    </Label>
-                    <select
-                      id="type"
-                      className="w-full h-10 sm:h-12 px-3 py-2 border border-input rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
-                      value={form.type}
-                      onChange={(e) => setForm({ ...form, type: e.target.value as SongType })}
-                    >
-                      <option value="">Selecionar...</option>
-                      {Object.values(SongType).map((t) => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
-                    </select>
+                    <Label>Tipo</Label>
+                    <div className="h-10 px-3 py-2 border border-input rounded-md bg-muted text-muted-foreground flex items-center">
+                      ACORDES (Fixo)
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Todas as músicas são do tipo acordes por padrão
+                    </p>
                   </div>
+                  
                   <div className="space-y-2">
-                    <Label htmlFor="instrument" className="text-base font-medium">
-                      Instrumento Principal *
-                    </Label>
-                    <select
-                      id="instrument"
-                      className="w-full h-10 sm:h-12 px-3 py-2 border border-input rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+                    <Label htmlFor="instrument">Instrumento Principal *</Label>
+                    <Select
                       value={form.instrument}
-                      onChange={(e) => setForm({ ...form, instrument: e.target.value as Instrument })}
+                      onValueChange={(value) => setForm({ ...form, instrument: value as Instrument })}
                     >
-                      <option value="">Selecionar...</option>
-                      {Object.values(Instrument).map((i) => (
-                        <option key={i} value={i}>{i}</option>
-                      ))}
-                    </select>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecionar instrumento..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.values(Instrument).map((i) => (
+                          <SelectItem key={i} value={i}>{i}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                </div>
-
-                <div className="flex justify-end pt-4">
-                  <Button
-                    onClick={handleNext}
-                    disabled={!isStepComplete(1)}
-                    className="flex items-center gap-2 px-6 sm:px-8"
-                  >
-                    Próximo
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
                 </div>
               </CardContent>
+              <CardFooter className="flex justify-end">
+                <Button
+                  onClick={handleNext}
+                  disabled={!isStepComplete(1)}
+                  className="flex items-center gap-2"
+                >
+                  Próximo
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </CardFooter>
             </Card>
           </div>
-        </section>
+        </div>
       )}
 
-      {/* Passo 2: Momentos e Tags */}
+      {/* Passo 2: Momentos Litúrgicos e Tags */}
       {currentStep === 2 && (
-        <section className="bg-muted/30 py-6 sm:py-8 lg:py-12">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6">
-            <div className="text-center space-y-2 mb-6 sm:mb-8">
-              <h2 className="text-xl sm:text-2xl font-bold text-foreground">Momentos Litúrgicos e Tags</h2>
-              <p className="text-sm sm:text-base text-muted-foreground">Escolhe os momentos da celebração onde a música é adequada</p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="space-y-8">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">Momentos Litúrgicos e Tags</h2>
+              <p className="text-muted-foreground">
+                Escolhe os momentos da celebração onde a música é adequada
+              </p>
             </div>
 
-            <Card className="max-w-4xl mx-auto border border-border shadow-sm bg-card">
-              <CardHeader className="border-b border-border">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Clock className="h-5 w-5 text-primary" />
-                  Categorização da Música
-                </CardTitle>
+            <Card>
+              <CardHeader>
+                <CardTitle>Categorização da Música</CardTitle>
                 <CardDescription>
                   Seleciona os momentos litúrgicos apropriados e adiciona tags opcionais
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6 sm:space-y-8 pt-6">
+              <CardContent className="space-y-6">
                 <div className="space-y-4">
-                  <Label className="text-base font-medium">
-                    Momentos Litúrgicos *
-                  </Label>
-                  <div className="flex flex-wrap gap-2 sm:gap-3">
+                  <Label>Momentos Litúrgicos *</Label>
+                  <div className="flex flex-wrap gap-2">
                     {Object.values(LiturgicalMoment).map((m) => (
                       <Button
                         key={m}
@@ -518,17 +512,17 @@ export default function CreateNewMusicPage() {
                         variant={form.moments.includes(m) ? "default" : "outline"}
                         onClick={() => toggleMoment(m)}
                         size="sm"
-                        className={`h-8 sm:h-10 text-xs sm:text-sm ${
+                        className={`transition-all duration-200 ${
                           form.moments.includes(m) 
-                            ? "bg-primary hover:bg-primary/90 text-primary-foreground border-primary" 
-                            : "hover:bg-accent hover:text-accent-foreground"
+                            ? "bg-primary hover:bg-primary/90 text-primary-foreground border-primary shadow-md" 
+                            : "hover:bg-primary/10 hover:text-primary hover:border-primary/50"
                         }`}
                       >
                         {m.replaceAll("_", " ")}
                       </Button>
                     ))}
                   </div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     {form.moments.length > 0 
                       ? `${form.moments.length} momento(s) selecionado(s)`
                       : "Seleciona pelo menos um momento litúrgico"
@@ -539,30 +533,35 @@ export default function CreateNewMusicPage() {
                 <Separator />
 
                 <div className="space-y-4">
-                  <Label htmlFor="tags" className="text-base font-medium">
-                    Tags (opcional)
-                  </Label>
-                  <div className="flex flex-col sm:flex-row gap-3">
+                  <Label htmlFor="tags">Tags (opcional)</Label>
+                  <div className="flex gap-3">
                     <Input
                       id="tags"
-                      placeholder="Nova tag"
+                      placeholder="Digite tags separadas por vírgula (ex: louvor, adoração, comunhão)"
                       value={form.tagsInput}
                       onChange={(e) => setForm({ ...form, tagsInput: e.target.value })}
                       onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddTag())}
-                      className="h-10 sm:h-12 flex-1"
+                      className="flex-1"
                     />
-                    <Button type="button" onClick={handleAddTag} variant="outline" className="h-10 sm:h-12 px-4 sm:px-6 w-full sm:w-auto">
+                    <Button 
+                      type="button" 
+                      onClick={handleAddTag} 
+                      variant="outline"
+                    >
                       <Plus className="w-4 h-4 mr-2" /> 
                       Adicionar
                     </Button>
                   </div>
+                  <p className="text-sm text-muted-foreground">
+                    💡 Dica: Pode escrever várias tags separadas por vírgula e clicar "Adicionar" uma só vez
+                  </p>
                   {form.tags.length > 0 && (
                     <div className="flex gap-2 flex-wrap">
                       {form.tags.map((tag, tagIndex) => (
                         <Badge 
                           key={`create-tag-${tagIndex}`} 
                           onClick={() => handleRemoveTag(tag)} 
-                          className="cursor-pointer px-3 py-1 hover:bg-destructive hover:text-destructive-foreground text-xs sm:text-sm"
+                          className="cursor-pointer hover:bg-destructive hover:text-destructive-foreground"
                           variant="secondary"
                         >
                           {tag} ✕
@@ -571,73 +570,84 @@ export default function CreateNewMusicPage() {
                     </div>
                   )}
                 </div>
-
-                <div className="flex flex-col sm:flex-row justify-between gap-4 pt-4">
-                  <Button
-                    onClick={handlePrevious}
-                    variant="outline"
-                    className="flex items-center gap-2 px-6 sm:px-8 w-full sm:w-auto"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    Anterior
-                  </Button>
-                  <Button
-                    onClick={handleNext}
-                    disabled={!isStepComplete(2)}
-                    className="flex items-center gap-2 px-6 sm:px-8 w-full sm:w-auto"
-                  >
-                    Próximo
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
               </CardContent>
+              <CardFooter className="flex justify-between">
+                <Button
+                  onClick={handlePrevious}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Anterior
+                </Button>
+                <Button
+                  onClick={handleNext}
+                  disabled={!isStepComplete(2)}
+                  className="flex items-center gap-2"
+                >
+                  Próximo
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </CardFooter>
             </Card>
           </div>
-        </section>
+        </div>
       )}
 
       {/* Passo 3: Letra e Acordes */}
       {currentStep === 3 && (
-        <section className="bg-white py-6 sm:py-8 lg:py-12">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6">
-            <div className="text-center space-y-2 mb-6 sm:mb-8">
-              <h2 className="text-xl sm:text-2xl font-bold text-foreground">Letra e Acordes</h2>
-              <p className="text-sm sm:text-base text-muted-foreground">Escreve a letra da música com os acordes em formato Markdown</p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="space-y-8">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">Letra e Acordes</h2>
+              <p className="text-muted-foreground">
+                Escreve a letra da música com os acordes em formato Markdown
+              </p>
             </div>
 
-            <Card className="border border-border shadow-sm bg-card">
-              <CardHeader className="border-b border-border">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <FileText className="h-5 w-5 text-primary" />
-                  Conteúdo Musical
-                </CardTitle>
+            <Card>
+              <CardHeader>
+                <CardTitle>Conteúdo Musical</CardTitle>
                 <CardDescription>
                   Usa o editor Markdown para escrever a letra com acordes
                 </CardDescription>
               </CardHeader>
-              <CardContent className="pt-6">
-                <div className="grid gap-6 lg:gap-8 lg:grid-cols-2">
+              <CardContent className="space-y-6">
+                <div className="grid gap-6 lg:grid-cols-2">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="markdown" className="text-base font-medium">
-                        Editor Markdown *
-                      </Label>
+                      <Label htmlFor="markdown">Editor Markdown *</Label>
                       <ChordGuideButton />
                     </div>
                     
-                    <div className="text-xs sm:text-sm text-muted-foreground space-y-3">
-                      <p>
-                        <a href="/guide" className="hover:underline text-primary font-medium">
-                          Aprende a usar o sistema Markdown
-                        </a>
-                      </p>
-                      <Card className="p-3 sm:p-4 bg-muted/50">
-                        <h4 className="font-medium mb-2 text-sm">Formatos suportados:</h4>
-                        <ul className="text-xs space-y-1">
-                          <li><strong>Inline:</strong> <code className="bg-background px-1 rounded text-xs">#mic#</code> seguido de <code className="bg-background px-1 rounded text-xs">[C]Deus est[Am]á aqui</code></li>
-                          <li><strong>Acima:</strong> <code className="bg-background px-1 rounded text-xs">[C] [Am] [F]</code> numa linha e <code className="bg-background px-1 rounded text-xs">Deus está aqui</code> na seguinte</li>
-                          <li><strong>Intro/Ponte:</strong> <code className="bg-background px-1 rounded text-xs">Intro:</code> seguido de <code className="bg-background px-1 rounded text-xs">[A] [G] [C]</code></li>
+                    <div className="text-sm text-muted-foreground space-y-3">
+                      <Card className="p-3 bg-muted/50">
+                        <h4 className="font-medium mb-3 text-sm flex items-center gap-2">
+                          🎵 Formatos suportados:
+                        </h4>
+                        <ul className="text-xs space-y-2">
+                          <li className="flex items-start gap-2">
+                            <span className="font-semibold text-primary">Acordes:</span> 
+                            <div>
+                              <code className="bg-background px-1.5 py-0.5 rounded text-xs border">[C][Am][F][G]</code> numa linha e <code className="bg-background px-1.5 py-0.5 rounded text-xs border">Canto Aleluia ao senhor</code> na seguinte
+                            </div>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="font-semibold text-primary">Intro/Bridge:</span>
+                            <div>
+                              <code className="bg-background px-1.5 py-0.5 rounded text-xs border">Intro:</code> seguido de <code className="bg-background px-1.5 py-0.5 rounded text-xs border">[A][Em][G][C]</code> na linha seguinte
+                            </div>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="font-semibold text-primary">Exemplo:</span>
+                            <div>
+                              <code className="bg-background px-1.5 py-0.5 rounded text-xs border">[D][A][F][G]</code> numa linha, <code className="bg-background px-1.5 py-0.5 rounded text-xs border">Aleluia sim ao senhor</code> na próxima
+                            </div>
+                          </li>
                         </ul>
+                        <div className="mt-3 p-2 bg-primary/10 rounded border border-primary/20">
+                          <p className="text-xs text-primary font-medium">💡 Dica: Usa o preview em tempo real para ver como fica o resultado!</p>
+                        </div>
                       </Card>
                     </div>
 
@@ -652,54 +662,66 @@ export default function CreateNewMusicPage() {
                   </div>
 
                   <div className="space-y-4">
-                    <Label className="text-base font-medium">Preview</Label>
-                    <Card className="p-4 overflow-auto max-h-[400px] sm:max-h-[500px] bg-background border-border">
-                      <div
-                        className="font-mono text-xs sm:text-sm"
-                        style={{ lineHeight: '1.8' }}
-                        dangerouslySetInnerHTML={{ __html: preview }}
-                      />
+                    <Label className="flex items-center gap-2">
+                      <Eye className="w-4 h-4 text-primary" />
+                      Preview em Tempo Real
+                    </Label>
+                    <Card className="p-4 overflow-auto max-h-[500px]">
+                      {form.markdown.trim() ? (
+                        <div
+                          className="font-mono text-sm"
+                          style={{ lineHeight: '1.8' }}
+                          dangerouslySetInnerHTML={{ __html: preview }}
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+                          <Music className="w-12 h-12 mb-3 opacity-50" />
+                          <p className="text-sm">O preview aparecerá aqui conforme escreves</p>
+                          <p className="text-xs mt-1">Começa a escrever no editor para ver o resultado</p>
+                        </div>
+                      )}
                     </Card>
                   </div>
                 </div>
-
-                <div className="flex flex-col sm:flex-row justify-between gap-4 pt-6 sm:pt-8">
-                  <Button
-                    onClick={handlePrevious}
-                    variant="outline"
-                    className="flex items-center gap-2 px-6 sm:px-8 w-full sm:w-auto"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    Anterior
-                  </Button>
-                  <Button
-                    onClick={handleNext}
-                    disabled={!isStepComplete(3)}
-                    className="flex items-center gap-2 px-6 sm:px-8 w-full sm:w-auto"
-                  >
-                    Próximo
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
               </CardContent>
+              <CardFooter className="flex justify-between">
+                <Button
+                  onClick={handlePrevious}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Anterior
+                </Button>
+                <Button
+                  onClick={handleNext}
+                  disabled={!isStepComplete(3)}
+                  className="flex items-center gap-2"
+                >
+                  Próximo
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </CardFooter>
             </Card>
           </div>
-        </section>
+        </div>
       )}
 
       {/* Passo 4: Finalização */}
       {currentStep === 4 && (
-        <section className="bg-muted/30 py-6 sm:py-8 lg:py-12">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6">
-            <div className="text-center space-y-2 mb-6 sm:mb-8">
-              <h2 className="text-xl sm:text-2xl font-bold text-foreground">Anexos e Finalização</h2>
-              <p className="text-sm sm:text-base text-muted-foreground">Adiciona ficheiros opcionais e submete a música</p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="space-y-8">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">Anexos e Finalização</h2>
+              <p className="text-muted-foreground">
+                Adiciona ficheiros opcionais e submete a música
+              </p>
             </div>
 
-            <div className="space-y-4 sm:space-y-6">
+            <div className="space-y-6">
               {/* Anexos */}
-              <Card className="border border-border shadow-sm bg-card">
-                <CardHeader className="border-b border-border">
+              <Card className="border border-border/50 shadow-lg bg-card/80 backdrop-blur-sm">
+                <CardHeader className="border-b border-border/50 bg-gradient-to-r from-primary/5 to-transparent">
                   <CardTitle className="flex items-center gap-2 text-lg">
                     <UploadIcon className="h-5 w-5 text-primary" />
                     Anexos Opcionais
@@ -710,9 +732,9 @@ export default function CreateNewMusicPage() {
                 </CardHeader>
                 <CardContent className="space-y-4 sm:space-y-6 pt-6">
                   <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <Label htmlFor="pdf" className="text-base font-medium flex items-center gap-2">
-                        <FileText className="w-4 h-4" />
+                        <FileText className="w-4 h-4 text-primary" />
                         PDF (opcional)
                       </Label>
                       <Input 
@@ -720,18 +742,19 @@ export default function CreateNewMusicPage() {
                         type="file" 
                         accept="application/pdf" 
                         onChange={(e) => setForm({ ...form, pdfFile: e.target.files?.[0] || null })}
-                        className="h-10 sm:h-12"
+                        className="h-10 sm:h-12 border-dashed border-2 hover:border-primary/50 transition-colors"
                       />
                       {form.pdfFile && (
-                        <p className="text-xs sm:text-sm text-muted-foreground">
-                          Ficheiro: {form.pdfFile.name}
-                        </p>
+                        <div className="flex items-center gap-2 p-2 bg-primary/10 rounded text-xs sm:text-sm">
+                          <FileText className="w-4 h-4 text-primary flex-shrink-0" />
+                          <span className="truncate">{form.pdfFile.name}</span>
+                        </div>
                       )}
                     </div>
                     
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <Label htmlFor="mp3" className="text-base font-medium flex items-center gap-2">
-                        <Music className="w-4 h-4" />
+                        <Music className="w-4 h-4 text-primary" />
                         MP3 (opcional)
                       </Label>
                       <Input 
@@ -739,12 +762,13 @@ export default function CreateNewMusicPage() {
                         type="file" 
                         accept="audio/mpeg" 
                         onChange={(e) => setForm({ ...form, mp3File: e.target.files?.[0] || null })}
-                        className="h-10 sm:h-12"
+                        className="h-10 sm:h-12 border-dashed border-2 hover:border-primary/50 transition-colors"
                       />
                       {form.mp3File && (
-                        <p className="text-xs sm:text-sm text-muted-foreground">
-                          Ficheiro: {form.mp3File.name}
-                        </p>
+                        <div className="flex items-center gap-2 p-2 bg-primary/10 rounded text-xs sm:text-sm">
+                          <Music className="w-4 h-4 text-primary flex-shrink-0" />
+                          <span className="truncate">{form.mp3File.name}</span>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -752,9 +776,9 @@ export default function CreateNewMusicPage() {
                   <Separator />
 
                   <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <Label htmlFor="youtube" className="text-base font-medium flex items-center gap-2">
-                        <Youtube className="w-4 h-4" />
+                        <Youtube className="w-4 h-4 text-primary" />
                         Link do YouTube (opcional)
                       </Label>
                       <Input 
@@ -765,11 +789,16 @@ export default function CreateNewMusicPage() {
                         placeholder="https://youtube.com/watch?v=..."
                         className="h-10 sm:h-12"
                       />
+                      {form.youtubeLink && (
+                        <p className="text-xs text-primary flex items-center gap-1">
+                          ✓ Link válido adicionado
+                        </p>
+                      )}
                     </div>
                     
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <Label htmlFor="spotify" className="text-base font-medium flex items-center gap-2">
-                        <FaSpotify className="w-4 h-4" />
+                        <FaSpotify className="w-4 h-4 text-primary" />
                         Link do Spotify (opcional)
                       </Label>
                       <Input 
@@ -780,14 +809,19 @@ export default function CreateNewMusicPage() {
                         placeholder="https://open.spotify.com/track/..."
                         className="h-10 sm:h-12"
                       />
+                      {form.spotifyLink && (
+                        <p className="text-xs text-primary flex items-center gap-1">
+                          ✓ Link válido adicionado
+                        </p>
+                      )}
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               {/* Resumo */}
-              <Card className="border border-border shadow-sm bg-card">
-                <CardHeader className="border-b border-border">
+              <Card className="border border-border/50 shadow-lg bg-card/80 backdrop-blur-sm">
+                <CardHeader className="border-b border-border/50 bg-gradient-to-r from-primary/5 to-transparent">
                   <CardTitle className="text-lg">Resumo da Música</CardTitle>
                   <CardDescription>
                     Revê os dados antes de submeter
@@ -795,41 +829,121 @@ export default function CreateNewMusicPage() {
                 </CardHeader>
                 <CardContent className="pt-6">
                   <div className="grid gap-4 sm:gap-6 md:grid-cols-2 text-sm">
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-start">
-                        <span className="font-medium text-muted-foreground">Título:</span>
-                        <span className="text-foreground text-right max-w-[60%] break-words">{form.title || "Não definido"}</span>
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-start gap-4">
+                        <span className="font-medium text-muted-foreground flex items-center gap-2">
+                          <FileText className="w-4 h-4" />
+                          Título:
+                        </span>
+                        <span className="text-foreground text-right max-w-[60%] break-words font-medium">
+                          {form.title || "❌ Não definido"}
+                        </span>
                       </div>
-                      <div className="flex justify-between items-start">
-                        <span className="font-medium text-muted-foreground">Tipo:</span>
-                        <span className="text-foreground text-right">{form.type || "Não definido"}</span>
+                      <div className="flex justify-between items-start gap-4">
+                        <span className="font-medium text-muted-foreground flex items-center gap-2">
+                          <Music className="w-4 h-4" />
+                          Instrumento:
+                        </span>
+                        <span className="text-foreground text-right">
+                          {form.instrument || "❌ Não definido"}
+                        </span>
                       </div>
-                      <div className="flex justify-between items-start">
-                        <span className="font-medium text-muted-foreground">Instrumento:</span>
-                        <span className="text-foreground text-right">{form.instrument || "Não definido"}</span>
+                      <div className="flex justify-between items-start gap-4">
+                        <span className="font-medium text-muted-foreground flex items-center gap-2">
+                          <Clock className="w-4 h-4" />
+                          Momentos:
+                        </span>
+                        <span className="text-foreground text-right flex items-center gap-1">
+                          {form.moments.length > 0 ? (
+                            <>
+                              <span className="text-primary">✓</span>
+                              {form.moments.length} selecionado{form.moments.length > 1 ? 's' : ''}
+                            </>
+                          ) : (
+                            "❌ Nenhum selecionado"
+                          )}
+                        </span>
                       </div>
                     </div>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-start">
-                        <span className="font-medium text-muted-foreground">Momentos:</span>
-                        <span className="text-foreground text-right">{form.moments.length}</span>
-                      </div>
-                      <div className="flex justify-between items-start">
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-start gap-4">
                         <span className="font-medium text-muted-foreground">Tags:</span>
-                        <span className="text-foreground text-right">{form.tags.length}</span>
+                        <span className="text-foreground text-right flex items-center gap-1">
+                          {form.tags.length > 0 ? (
+                            <>
+                              <span className="text-primary">✓</span>
+                              {form.tags.length} adicionada{form.tags.length > 1 ? 's' : ''}
+                            </>
+                          ) : (
+                            "📝 Opcional"
+                          )}
+                        </span>
                       </div>
-                      <div className="flex justify-between items-start">
+                      <div className="flex justify-between items-start gap-4">
                         <span className="font-medium text-muted-foreground">Letra:</span>
-                        <span className="text-foreground text-right">{form.markdown.trim() ? "Definida" : "Não definida"}</span>
+                        <span className="text-foreground text-right flex items-center gap-1">
+                          {form.markdown.trim() ? (
+                            <>
+                              <span className="text-primary">✓</span>
+                              Definida
+                            </>
+                          ) : (
+                            "❌ Não definida"
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-start gap-4">
+                        <span className="font-medium text-muted-foreground">Anexos:</span>
+                        <span className="text-foreground text-right flex items-center gap-1">
+                          {(form.pdfFile || form.mp3File || form.youtubeLink || form.spotifyLink) ? (
+                            <>
+                              <span className="text-primary">✓</span>
+                              Adicionados
+                            </>
+                          ) : (
+                            "📎 Opcional"
+                          )}
+                        </span>
                       </div>
                     </div>
                   </div>
+                  
+                  {/* Mostrar resumo dos momentos selecionados */}
+                  {form.moments.length > 0 && (
+                    <div className="mt-6 p-4 bg-primary/5 rounded-lg border border-primary/20">
+                      <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-primary" />
+                        Momentos Litúrgicos Selecionados:
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {form.moments.map((moment) => (
+                          <Badge key={moment} variant="secondary" className="text-xs">
+                            {moment.replaceAll("_", " ")}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Mostrar tags se existirem */}
+                  {form.tags.length > 0 && (
+                    <div className="mt-4 p-4 bg-muted/50 rounded-lg border">
+                      <h4 className="font-medium text-sm mb-2">Tags:</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {form.tags.map((tag, index) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
               {/* Captcha */}
-              <Card className="border border-border shadow-sm bg-card">
-                <CardHeader className="border-b border-border">
+              <Card className="border border-border/50 shadow-lg bg-card/80 backdrop-blur-sm">
+                <CardHeader className="border-b border-border/50 bg-gradient-to-r from-primary/5 to-transparent">
                   <CardTitle className="text-lg">Verificação de Segurança</CardTitle>
                   <CardDescription>
                     Complete a verificação antes de submeter
@@ -849,15 +963,15 @@ export default function CreateNewMusicPage() {
                 <Button
                   onClick={handlePrevious}
                   variant="outline"
-                  className="flex items-center gap-2 px-6 sm:px-8 w-full sm:w-auto"
+                  className="flex items-center gap-2 px-6 sm:px-8 w-full sm:w-auto border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-200 hover:scale-105 hover:shadow-md"
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-1" />
                   Anterior
                 </Button>
                 <Button 
                   onClick={handleSubmit} 
                   disabled={!isStepComplete(4) || isSubmitting}
-                  className="flex items-center gap-2 px-6 sm:px-8 w-full sm:w-auto"
+                  className="flex items-center gap-2 px-6 sm:px-8 w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-50 transition-all duration-200 hover:scale-105 hover:shadow-lg disabled:hover:scale-100 disabled:hover:shadow-none"
                   size="lg"
                 >
                   {isSubmitting ? (
@@ -875,7 +989,7 @@ export default function CreateNewMusicPage() {
               </div>
             </div>
           </div>
-        </section>
+        </div>
       )}
       </>
     )}

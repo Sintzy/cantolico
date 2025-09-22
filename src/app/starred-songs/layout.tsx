@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Músicas Favoritas - Cantólico',
+  title: 'Músicas Favoritas',
   description: 'As tuas músicas favoritas no Cantólico',
 };
 

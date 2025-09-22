@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-// import RealTimeMonitoringDashboard from '@/components/RealTimeMonitoringDashboard';
 
 export default function RealTimeMonitoringPage() {
   return (

@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { NextResponse, NextRequest } from "next/server";
+import { withUserProtection, logMusicAction } from "@/lib/enhanced-api-protection";
+import { logFileOperation, logSystemEvent } from "@/lib/enhanced-logging";
 import { supabase } from "@/lib/supabase-client";
 import { randomUUID } from "crypto";
 import {
@@ -49,39 +49,29 @@ async function validateTurnstileToken(token: string): Promise<boolean> {
   }
 }
 
-export async function POST(req: Request) {
-  try {
-    
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) {
-      await logSubmissions('WARN', 'Tentativa de submissão sem autenticação', 'Utilizador não autenticado tentou submeter música', {
-        action: 'submission_unauthorized'
-      });
-      console.error("Erro: Utilizador não autenticado.");
-      return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+export const POST = withUserProtection<any>(async (req: NextRequest, session: any) => {
+  console.log('🎵 Nova submissão de música iniciada');
 
-    }
+  const { data: user, error: userError } = await supabase
+    .from('User')
+    .select('id, email')
+    .eq('email', session.user.email)
+    .single();
 
-    const { data: user, error: userError } = await supabase
-      .from('User')
-      .select('id, email')
-      .eq('email', session.user.email)
-      .single();
-
-    if (userError || !user) {
-      await logSubmissions('WARN', 'Utilizador não encontrado para submissão', 'Email não corresponde a nenhum utilizador', {
-        email: session.user.email,
-        action: 'submission_user_not_found'
-      });
-      console.error("Erro: Utilizador não encontrado.");
-      return NextResponse.json({ error: "Utilizador não encontrado" }, { status: 404 });
-    }
-
-    await logSubmissions('INFO', 'Nova submissão de música iniciada', 'Utilizador iniciou processo de submissão', {
-      userId: user.id,
-      userEmail: user.email,
-      action: 'submission_started'
+  if (userError || !user) {
+    await logSubmissions('WARN', 'Utilizador não encontrado para submissão', 'Email não corresponde a nenhum utilizador', {
+      email: session.user.email,
+      action: 'submission_user_not_found'
     });
+    console.error("Erro: Utilizador não encontrado.");
+    return NextResponse.json({ error: "Utilizador não encontrado" }, { status: 404 });
+  }
+
+  await logSubmissions('INFO', 'Nova submissão de música iniciada', 'Utilizador iniciou processo de submissão', {
+    userId: user.id,
+    userEmail: user.email,
+    action: 'submission_started'
+  });
 
     const formData = await req.formData();
     console.log("FormData recebido:", formData);
@@ -164,35 +154,81 @@ export async function POST(req: Request) {
       submissionId,
     });
 
-    if (pdfFile) {
-      const buffer = Buffer.from(await pdfFile.arrayBuffer());
-      const path = `songs/${submissionId}/sheet.pdf`; 
-      pdfPath = await uploadToSupabase(path, buffer, "application/pdf");
-      if (!pdfPath) {
-        await logSubmissions('ERROR', 'Erro no upload do PDF', 'Falha ao enviar ficheiro PDF para Supabase', {
+  if (pdfFile) {
+    const buffer = Buffer.from(await pdfFile.arrayBuffer());
+    const path = `songs/${submissionId}/sheet.pdf`; 
+    
+    // Log da operação de upload do PDF
+    await logFileOperation(
+      'upload',
+      `sheet.pdf`,
+      pdfFile.size,
+      'application/pdf',
+      session,
+      req,
+      {
+        submissionId,
+        musicTitle: title,
+        storagePath: path
+      }
+    );
+    
+    pdfPath = await uploadToSupabase(path, buffer, "application/pdf");
+    if (!pdfPath) {
+      await logSystemEvent(
+        'file_upload_error',
+        'Erro no upload do PDF',
+        {
           userId: user.id,
           submissionId,
-          action: 'pdf_upload_error'
-        });
-        console.error("Erro ao enviar PDF.");
-        return NextResponse.json({ error: "Erro ao enviar PDF" }, { status: 500 });
-      }
+          fileName: 'sheet.pdf',
+          fileSize: pdfFile.size,
+          error: 'Supabase upload failed'
+        },
+        'ERROR'
+      );
+      console.error("Erro ao enviar PDF.");
+      return NextResponse.json({ error: "Erro ao enviar PDF" }, { status: 500 });
     }
+  }
 
-    if (audioFile) {
-      const buffer = Buffer.from(await audioFile.arrayBuffer());
-      const path = `songs/${submissionId}/audio.mp3`; 
-      audioPath = await uploadToSupabase(path, buffer, "audio/mpeg");
-      if (!audioPath) {
-        await logSubmissions('ERROR', 'Erro no upload do áudio', 'Falha ao enviar ficheiro de áudio para Supabase', {
+  if (audioFile) {
+    const buffer = Buffer.from(await audioFile.arrayBuffer());
+    const path = `songs/${submissionId}/audio.mp3`; 
+    
+    // Log da operação de upload do áudio
+    await logFileOperation(
+      'upload',
+      `audio.mp3`,
+      audioFile.size,
+      'audio/mpeg',
+      session,
+      req,
+      {
+        submissionId,
+        musicTitle: title,
+        storagePath: path
+      }
+    );
+    
+    audioPath = await uploadToSupabase(path, buffer, "audio/mpeg");
+    if (!audioPath) {
+      await logSystemEvent(
+        'file_upload_error',
+        'Erro no upload do áudio',
+        {
           userId: user.id,
           submissionId,
-          action: 'audio_upload_error'
-        });
-        console.error("Erro ao enviar áudio.");
-        return NextResponse.json({ error: "Erro ao enviar áudio" }, { status: 500 });
-      }
+          fileName: 'audio.mp3',
+          fileSize: audioFile.size,
+          error: 'Supabase upload failed'
+        },
+        'ERROR'
+      );
+      console.error("Erro ao enviar áudio.");
+      return NextResponse.json({ error: "Erro ao enviar áudio" }, { status: 500 });
     }
+  }
 
     if (markdown) {
       const path = `songs/${submissionId}/${submissionId}.md`; 
@@ -208,36 +244,40 @@ export async function POST(req: Request) {
       }
     }
 
-    const { data: submission, error: submissionError } = await supabase
-      .from('SongSubmission')
-      .insert({
-        id: submissionId,
-        title,
-        moment: moments,
-        type,
-        mainInstrument: instrument,
-        tags,
-        submitterId: uploaderId,
-        status: "PENDING",
-        tempSourceType: markdown ? "MARKDOWN" : "PDF",
-        tempPdfKey: pdfPath || null,
-        tempText: markdown || null,
-        mediaUrl: audioPath || null,
-        spotifyLink,
-        youtubeLink,
-      })
-      .select()
-      .single();
+  const { data: submission, error: submissionError } = await supabase
+    .from('SongSubmission')
+    .insert({
+      id: submissionId,
+      title,
+      moment: moments,
+      type,
+      mainInstrument: instrument,
+      tags,
+      submitterId: uploaderId,
+      status: "PENDING",
+      tempSourceType: markdown ? "MARKDOWN" : "PDF",
+      tempPdfKey: pdfPath || null,
+      tempText: markdown || null,
+      mediaUrl: audioPath || null,
+      spotifyLink,
+      youtubeLink,
+    })
+    .select()
+    .single();
 
-    if (submissionError || !submission) {
-      throw new Error(`Supabase error: ${submissionError?.message}`);
-    }
+  if (submissionError || !submission) {
+    throw new Error(`Supabase error: ${submissionError?.message}`);
+  }
 
-    await logSubmissions('SUCCESS', 'Submissão criada com sucesso', 'Nova música submetida para revisão', {
-      userId: user.id,
-      userEmail: user.email,
+  // Log da ação crítica de submissão
+  await logMusicAction(
+    'create',
+    submission.id,
+    title,
+    session,
+    req,
+    {
       submissionId: submission.id,
-      submissionTitle: title,
       mainInstrument: instrument,
       songType: type,
       liturgicalMoments: moments.length,
@@ -246,20 +286,27 @@ export async function POST(req: Request) {
       hasMarkdown: !!markdown,
       hasSpotifyLink: !!spotifyLink,
       hasYoutubeLink: !!youtubeLink,
-      tagsCount: tags?.length || 0,
-      action: 'music_uploaded',
-      entity: 'song_submission'
-    });
+      tagsCount: tags?.length || 0
+    }
+  );
 
-    console.log("Submissão criada com sucesso:", submission);
+  // Log de sistema para auditoria
+  await logSystemEvent(
+    'music_submission_created',
+    `Nova submissão criada: ${title}`,
+    {
+      submissionId: submission.id,
+      userId: user.id,
+      userEmail: user.email,
+      title: title,
+      status: 'PENDING'
+    }
+  );
 
-    return NextResponse.json({ success: true, submissionId });
-  } catch (error) {
-    await logErrors('ERROR', 'Erro na criação de submissão', 'Erro interno durante o processo de submissão', {
-      error: error instanceof Error ? error.message : 'Erro desconhecido',
-      action: 'submission_creation_error'
-    });
-    console.error("Erro inesperado:", error);
-    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 });
-  }
-}
+  console.log("Submissão criada com sucesso:", submission);
+
+  return NextResponse.json({ success: true, submissionId });
+}, {
+  logAction: 'music_submission_create',
+  actionDescription: 'Criação de nova submissão musical'
+});

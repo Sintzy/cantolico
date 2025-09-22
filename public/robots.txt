@@ -10,7 +10,7 @@ Disallow: /api/
 
 # Allow important pages
 Allow: /musics/
-Allow: /guide/
+
 Allow: /terms/
 Allow: /login/
 Allow: /register/

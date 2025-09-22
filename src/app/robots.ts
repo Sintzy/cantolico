@@ -10,7 +10,7 @@ export default function robots(): MetadataRoute.Robots {
       },
       {
         userAgent: 'Googlebot',
-        allow: ['/musics/', '/guide/', '/terms/', '/'],
+        allow: ['/musics/', '/terms/', '/'],
         disallow: ['/admin/', '/api/'],
       },
     ],

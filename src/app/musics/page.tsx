@@ -240,7 +240,7 @@ export default function MusicsPage() {
       <BannerDisplay page="MUSICS" />
       
       {/* Hero Section com estilo da landing page */}
-      <section className="relative bg-gradient-to-br from-blue-50 via-white to-purple-10">
+      <section className="relative bg-white">
         {/* Background decoration */}
         <div className="pointer-events-none absolute inset-0" aria-hidden="true">
           <div className="absolute left-1/2 top-0 -translate-x-1/2">

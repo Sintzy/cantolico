@@ -323,7 +323,7 @@ async function createSecurityLog(eventType: string, message: string, details: an
 async function createSecurityAlert(alertType: string, title: string, details: any, severity: number = 3) {
   try {
     // Inserir log primeiro
-    const { data: logData } = await supabase.from('logs').insert([{
+    const { data: logData, error: logError } = await supabase.from('logs').insert([{
       level: 'SECURITY',
       category: 'SECURITY',
       message: title,
@@ -331,9 +331,14 @@ async function createSecurityAlert(alertType: string, title: string, details: an
       ip_address: details.ip
     }]).select().single();
 
+    if (logError) {
+      console.error('❌ [SECURITY ALERT] Erro ao inserir log:', logError);
+      return;
+    }
+
     if (logData) {
       // Criar alerta
-      await supabase.from('security_alerts').insert([{
+      const { data: alertData, error: alertError } = await supabase.from('security_alerts').insert([{
         log_id: logData.id,
         alert_type: alertType,
         severity,
@@ -342,26 +347,24 @@ async function createSecurityAlert(alertType: string, title: string, details: an
         email_recipients: ['sintzyy@gmail.com']
       }]);
 
+      if (alertError) {
+        console.error('❌ [SECURITY ALERT] Erro ao criar alerta:', alertError);
+      }
+
       // Enviar email se severidade >= 3
       if (severity >= 3) {
         try {
-          await fetch('/api/logs/security-email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              to: 'sintzyy@gmail.com',
-              subject: `🚨 ALERTA AUTOMÁTICO: ${title}`,
-              alert: {
-                alertType,
-                severity,
-                title,
-                description: `Evento detectado automaticamente pelo sistema de segurança`,
-                details
-              }
-            })
-          });
+          // Importar função de email dinamicamente para evitar dependências circulares
+          const { sendSecurityAlert } = await import('@/lib/email');
+          
+          await sendSecurityAlert(
+            alertType,
+            severity,
+            title,
+            details
+          );
         } catch (emailError) {
-          console.error('Erro ao enviar email de alerta:', emailError);
+          console.error('❌ [SECURITY ALERT] Erro ao enviar email:', emailError);
         }
       }
     }

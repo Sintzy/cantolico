@@ -19,6 +19,55 @@
 	color: var(--text-color) !important;
 }
 
+/* ===============================
+   RESPONSIVIDADE MOBILE - SIMPLEMDE E FORMS
+   =============================== */
+
+/* SimpleMDE responsivo */
+@media (max-width: 768px) {
+	.EasyMDEContainer {
+		font-size: 14px !important;
+	}
+	
+	.EasyMDEContainer .CodeMirror {
+		min-height: 200px !important;
+		font-size: 14px !important;
+	}
+	
+	.EasyMDEContainer .editor-toolbar {
+		border-top: 1px solid #e5e7eb !important;
+		border-bottom: 1px solid #e5e7eb !important;
+		background: #f9fafb !important;
+		padding: 8px !important;
+		overflow-x: auto !important;
+		white-space: nowrap !important;
+	}
+	
+	.EasyMDEContainer .editor-toolbar button {
+		min-width: 32px !important;
+		height: 32px !important;
+		margin: 0 2px !important;
+		padding: 6px !important;
+		font-size: 14px !important;
+	}
+	
+	.EasyMDEContainer .CodeMirror-wrap {
+		padding: 12px !important;
+	}
+	
+	.EasyMDEContainer .CodeMirror-scroll {
+		min-height: 200px !important;
+	}
+}
+
+/* Mobile-first para cards de exemplo */
+@media (max-width: 640px) {
+	.chord-examples-container .grid {
+		grid-template-columns: 1fr !important;
+		gap: 1rem !important;
+	}
+}
+
 [class*="chord-container"] p {
 	margin: 0.3em 0 !important;
 	padding: 0 !important;

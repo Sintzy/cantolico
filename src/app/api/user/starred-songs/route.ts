@@ -23,7 +23,7 @@ export const GET = withAuthApiProtection(async (request: NextRequest) => {
     const limit = parseInt(searchParams.get('limit') || '20');
     const offset = (page - 1) * limit;
 
-    console.log('Debug: Fetching starred songs for user:', userId);
+
 
     // Primeiro, vamos tentar uma query mais simples
     const { data: starData, error: starError } = await supabase
@@ -49,7 +49,7 @@ export const GET = withAuthApiProtection(async (request: NextRequest) => {
     }
 
     if (!starData || starData.length === 0) {
-      console.log('Debug: No starred songs found for user');
+
       return NextResponse.json({
         songs: [],
         pagination: {
@@ -61,7 +61,7 @@ export const GET = withAuthApiProtection(async (request: NextRequest) => {
       });
     }
 
-    console.log('Debug: Found', starData.length, 'starred songs');
+
 
     // Buscar detalhes das músicas (sem relacionamento com User)
     const songIds = starData.map(star => star.songId);
@@ -147,7 +147,7 @@ export const GET = withAuthApiProtection(async (request: NextRequest) => {
       };
     }).filter(Boolean);
 
-    console.log('Debug: Returning', songs.length, 'songs');
+
 
     await logGeneral('INFO', 'Músicas favoritas listadas', 'Utilizador visualizou suas músicas favoritas', {
       userId,

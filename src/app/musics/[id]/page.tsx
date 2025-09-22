@@ -1,24 +1,16 @@
 'use client';
-'use client';
 import "../../../../public/styles/chords.css";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { Guitar, ChevronDown, FileText, Music, Youtube } from 'lucide-react';
+import { Guitar, ChevronDown, FileText, Music, Youtube, Download } from 'lucide-react';
 import YouTube from 'react-youtube';
-
-
 import * as React from "react";
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-// import { supabase } from '@/lib/supabase';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Spinner, type SpinnerProps } from '@/components/ui/shadcn-io/spinner';
 import StarButton from '@/components/StarButton';
 import AddToPlaylistButton from '@/components/AddToPlaylistButton';
-import { Download } from 'lucide-react';
-
-
-
 
 type SongData = {
   id: string;
@@ -85,17 +77,11 @@ export default function SongPage() {
         const data = await res.json();
 
         if (!data || data.error) {
-          document.title = "Erro ao carregar música";
           console.error('Erro ao carregar música:', data.error || 'Dados inválidos');
           return;
         }
 
         setSong(data);
-
-        // Atualiza o título da página com o nome da música
-        if (data.title) {
-          document.title = data.title;
-        }
 
         if (data.currentVersion?.sourcePdfKey) {
           const { data: signedPdfUrlData, error: pdfError } = await supabase
@@ -115,7 +101,6 @@ export default function SongPage() {
           if (!audioError) setAudioUrl(signedAudioUrlData?.signedUrl || null);
         }
       } catch (err) {
-        document.title = "Erro ao carregar música";
         console.error('erro ao procurar a música:', err);
       } finally {
         setLoading(false);

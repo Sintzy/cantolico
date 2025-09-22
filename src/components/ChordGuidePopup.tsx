@@ -24,48 +24,33 @@ export function ChordGuidePopup({ onClose }: ChordGuidePopupProps) {
         </div>
 
   <div className="p-6 space-y-6 bg-white">
-          <div className="grid md:grid-cols-3 gap-4">
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-              <h3 className="font-semibold text-blue-800 mb-2">
-                🎯 Formato Inline
-              </h3>
-              <div className="text-sm space-y-2">
-                <p className="text-gray-600">
-                  Para acordes embutidos no texto. Inicia com <code className="bg-blue-100 px-1 rounded">#mic#</code>
-                </p>
-                <div className="bg-white p-2 rounded text-xs font-mono border border-blue-100">
-                  #mic#<br />
-                  [C]Deus est[Am]á aqui
-                </div>
-              </div>
-            </div>
-
+          <div className="grid md:grid-cols-2 gap-4">
             <div className="bg-green-50 p-4 rounded-lg border border-green-200">
               <h3 className="font-semibold text-green-800 mb-2">
-                📝 Formato Above
+                📝 Formato Above (Recomendado)
               </h3>
               <div className="text-sm space-y-2">
                 <p className="text-gray-600">
                   Acordes numa linha, letra na seguinte
                 </p>
                 <div className="bg-white p-2 rounded text-xs font-mono border border-green-100">
-                  [C] [Am] [F] [G]<br />
-                  Deus está aqui
+                  [C][Am][F][G]<br />
+                  Canto Aleluia ao senhor
                 </div>
               </div>
             </div>
 
             <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
               <h3 className="font-semibold text-purple-800 mb-2">
-                🎼 Intro/Ponte
+                🎼 Seções Especiais
               </h3>
               <div className="text-sm space-y-2">
                 <p className="text-gray-600">
-                  Seções instrumentais especiais
+                  Intro, Bridge, Ponte, Solo, etc.
                 </p>
                 <div className="bg-white p-2 rounded text-xs font-mono border border-purple-100">
                   Intro:<br />
-                  [A] [G] [C]
+                  [A][Em][G][C]
                 </div>
               </div>
             </div>
@@ -80,7 +65,7 @@ export function ChordGuidePopup({ onClose }: ChordGuidePopupProps) {
                 <li>• <strong>Acordes suportados:</strong> C, Am, F#, Cmaj7, D/F#, etc.</li>
               </ul>
               <ul className="space-y-1">
-                <li>• <strong>Seções especiais:</strong> Intro:, Ponte:, Solo:, Bridge:</li>
+                <li>• <strong>Seções especiais:</strong> Intro:, Bridge:, Ponte:, Solo:, Outro:</li>
                 <li>• <strong>Visual limpo:</strong> Acordes destacados sem sobreposição</li>
                 <li>• <strong>Responsivo:</strong> Funciona bem em mobile e desktop</li>
               </ul>
@@ -91,14 +76,15 @@ export function ChordGuidePopup({ onClose }: ChordGuidePopupProps) {
             <h3 className="font-semibold text-amber-800 mb-2">💡 Exemplo Completo</h3>
             <div className="bg-white p-3 rounded text-xs font-mono border border-amber-100">
               <pre>{`Intro:
-[Am] [F] [C] [G]
+[A][Em][G][C]
 
-#mic#
-[Am]Santo, [F]santo, [C]santo é o Se[G]nhor
-[Am]Hosana [F]nas altu[C]ras[G]
+Bridge:
+[F][C][G][Am]
 
-Ponte:
-[F] [G] [Am] [C]`}</pre>
+[C][Am][F][G]
+Santo, santo, santo
+[G][Am][F][C]
+Hosana nas alturas`}</pre>
             </div>
           </div>
 
@@ -107,12 +93,6 @@ Ponte:
               Podes combinar todos os formatos na mesma música!
             </div>
             <div className="flex gap-2">
-              <Link href="/guide">
-                <Button variant="outline" size="sm">
-                  <FileText className="w-4 h-4 mr-1" />
-                  Guia Completo
-                </Button>
-              </Link>
               <Button onClick={onClose}>
                 Começar a Escrever
               </Button>

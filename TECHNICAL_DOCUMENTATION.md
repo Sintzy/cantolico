@@ -315,11 +315,7 @@ CREATE TYPE "SubmissionStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
 
 ### **Documentação**
 
-#### 📚 **Guia de Utilização** (`/guide`)
-- **Componente:** `src/app/(docs)/guide/page.tsx`
-- **Funcionalidade:** Manual de utilização da plataforma
-
-#### 📜 **Termos de Serviço** (`/terms`)
+####  **Termos de Serviço** (`/terms`)
 - **Componente:** `src/app/(docs)/terms/page.tsx`
 
 #### 🔒 **Política de Privacidade** (`/privacy-policy`)
