@@ -23,7 +23,17 @@ import {
   Loader2,
   RefreshCw,
   TrendingUp,
-  BarChart3
+  BarChart3,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Filter,
+  Calendar,
+  Tag
 } from "lucide-react";
 
 type Submission = {
@@ -50,11 +60,18 @@ export default function AdminReviewPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [instrumentFilter, setInstrumentFilter] = useState<string>("all");
+  const [dateFilter, setDateFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("createdAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [itemsPerPage, setItemsPerPage] = useState<number>(20);
   const [loadingActions, setLoadingActions] = useState<Record<string, boolean>>({});
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [submissionToReject, setSubmissionToReject] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [jumpToPage, setJumpToPage] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [stats, setStats] = useState({
     pending: 0,
@@ -68,14 +85,19 @@ export default function AdminReviewPage() {
     page?: number; 
     q?: string; 
     status?: string;
+    instrument?: string;
+    dateFilter?: string;
+    sortBy?: string;
+    sortOrder?: "asc" | "desc";
+    limit?: number;
   }) => {
     try {
       setLoading(true);
       const url = new URL("/api/admin/submissions", window.location.origin);
       url.searchParams.set("page", String(params?.page ?? page));
-      url.searchParams.set("limit", "20");
-      url.searchParams.set("sortBy", "createdAt");
-      url.searchParams.set("sortOrder", "desc");
+      url.searchParams.set("limit", String(params?.limit ?? itemsPerPage));
+      url.searchParams.set("sortBy", params?.sortBy ?? sortBy);
+      url.searchParams.set("sortOrder", params?.sortOrder ?? sortOrder);
       
       if (params?.q !== undefined) url.searchParams.set("q", params.q);
       else if (debouncedSearch) url.searchParams.set("q", debouncedSearch);
@@ -85,6 +107,18 @@ export default function AdminReviewPage() {
       } else if (statusFilter !== "all") {
         url.searchParams.set("status", statusFilter);
       }
+
+      if (params?.instrument !== undefined && params.instrument !== "all") {
+        url.searchParams.set("instrument", params.instrument);
+      } else if (instrumentFilter !== "all") {
+        url.searchParams.set("instrument", instrumentFilter);
+      }
+
+      if (params?.dateFilter !== undefined && params.dateFilter !== "all") {
+        url.searchParams.set("dateFilter", params.dateFilter);
+      } else if (dateFilter !== "all") {
+        url.searchParams.set("dateFilter", dateFilter);
+      }
       
       const res = await fetch(url.toString());
       if (res.ok) {
@@ -92,6 +126,7 @@ export default function AdminReviewPage() {
         const fetchedSubmissions = Array.isArray(data.submissions) ? data.submissions : [];
         setSubmissions(fetchedSubmissions);
         setTotalPages(data.totalPages || 1);
+        setTotalItems(data.totalItems || data.total || 0);
         
         // Atualizar estatísticas se disponíveis
         if (data.stats) {
@@ -157,8 +192,13 @@ export default function AdminReviewPage() {
       page,
       q: debouncedSearch,
       status: statusFilter,
+      instrument: instrumentFilter,
+      dateFilter: dateFilter,
+      sortBy: sortBy,
+      sortOrder: sortOrder,
+      limit: itemsPerPage
     });
-  }, [debouncedSearch, page, statusFilter]);
+  }, [debouncedSearch, page, statusFilter, instrumentFilter, dateFilter, sortBy, sortOrder, itemsPerPage]);
 
   const handleApprove = async (submissionId: string) => {
     setLoadingActions(prev => ({ ...prev, [submissionId]: true }));
@@ -208,6 +248,44 @@ export default function AdminReviewPage() {
   const openRejectDialog = (submissionId: string) => {
     setSubmissionToReject(submissionId);
     setShowRejectDialog(true);
+  };
+
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(field);
+      setSortOrder("desc");
+    }
+    setPage(1);
+  };
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setStatusFilter("all");
+    setInstrumentFilter("all");
+    setDateFilter("all");
+    setSortBy("createdAt");
+    setSortOrder("desc");
+    setPage(1);
+  };
+
+  const goToPage = (pageNumber: number) => {
+    setPage(Math.max(1, Math.min(totalPages, pageNumber)));
+  };
+
+  const handleJumpToPage = () => {
+    const pageNum = parseInt(jumpToPage);
+    if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
+      setPage(pageNum);
+      setJumpToPage("");
+    }
+  };
+
+  const handleJumpInputKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleJumpToPage();
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -292,28 +370,118 @@ export default function AdminReviewPage() {
         </Card>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-          <Input
-            placeholder="Pesquisar submissões..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+      {/* Enhanced Filters */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              placeholder="Pesquisar submissões..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Button
+            variant="outline"
+            onClick={clearFilters}
+            className="whitespace-nowrap"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Limpar Filtros
+          </Button>
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filtrar por status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os status</SelectItem>
-            <SelectItem value="PENDING">Pendente</SelectItem>
-            <SelectItem value="APPROVED">Aprovada</SelectItem>
-            <SelectItem value="REJECTED">Rejeitada</SelectItem>
-          </SelectContent>
-        </Select>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <Select value={statusFilter} onValueChange={(value) => { setStatusFilter(value); setPage(1); }}>
+            <SelectTrigger>
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os status</SelectItem>
+              <SelectItem value="PENDING">Pendente</SelectItem>
+              <SelectItem value="APPROVED">Aprovada</SelectItem>
+              <SelectItem value="REJECTED">Rejeitada</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={instrumentFilter} onValueChange={(value) => { setInstrumentFilter(value); setPage(1); }}>
+            <SelectTrigger>
+              <SelectValue placeholder="Instrumento" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos instrumentos</SelectItem>
+              <SelectItem value="Violão">Violão</SelectItem>
+              <SelectItem value="Piano">Piano</SelectItem>
+              <SelectItem value="Guitarra">Guitarra</SelectItem>
+              <SelectItem value="Órgão">Órgão</SelectItem>
+              <SelectItem value="Outros">Outros</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={dateFilter} onValueChange={(value) => { setDateFilter(value); setPage(1); }}>
+            <SelectTrigger>
+              <SelectValue placeholder="Data" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as datas</SelectItem>
+              <SelectItem value="today">Hoje</SelectItem>
+              <SelectItem value="week">Esta semana</SelectItem>
+              <SelectItem value="month">Este mês</SelectItem>
+              <SelectItem value="quarter">Últimos 3 meses</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={sortBy} onValueChange={(value) => { setSortBy(value); setPage(1); }}>
+            <SelectTrigger>
+              <SelectValue placeholder="Ordenar por" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="createdAt">Data de criação</SelectItem>
+              <SelectItem value="title">Título</SelectItem>
+              <SelectItem value="submitter.name">Autor</SelectItem>
+              <SelectItem value="status">Status</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={sortOrder} onValueChange={(value: "asc" | "desc") => { setSortOrder(value); setPage(1); }}>
+            <SelectTrigger>
+              <SelectValue placeholder="Ordem" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="desc">
+                <div className="flex items-center">
+                  <ArrowDown className="w-4 h-4 mr-2" />
+                  Decrescente
+                </div>
+              </SelectItem>
+              <SelectItem value="asc">
+                <div className="flex items-center">
+                  <ArrowUp className="w-4 h-4 mr-2" />
+                  Crescente
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Results info */}
+        <div className="flex justify-between items-center text-sm text-muted-foreground">
+          <span>
+            Mostrando {submissions.length === 0 ? 0 : ((page - 1) * itemsPerPage) + 1} a {Math.min(page * itemsPerPage, totalItems)} de {totalItems} submissões
+          </span>
+          <Select value={String(itemsPerPage)} onValueChange={(value) => { setItemsPerPage(Number(value)); setPage(1); }}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10 por página</SelectItem>
+              <SelectItem value="20">20 por página</SelectItem>
+              <SelectItem value="50">50 por página</SelectItem>
+              <SelectItem value="100">100 por página</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Loading */}
@@ -424,26 +592,141 @@ export default function AdminReviewPage() {
         </div>
       )}
 
-      {/* Pagination */}
-      {!loading && submissions.length > 0 && totalPages > 1 && (
-        <div className="flex justify-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={page === 1}
-          >
-            Anterior
-          </Button>
-          <span className="flex items-center px-4 py-2 text-sm">
-            Página {page} de {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-          >
-            Próxima
-          </Button>
+      {/* Enhanced Pagination */}
+      {!loading && totalPages > 0 && (
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-4 bg-muted/50 p-4 rounded-lg">
+          <div className="text-sm text-muted-foreground">
+            {submissions.length === 0 ? (
+              "Nenhuma submissão encontrada"
+            ) : (
+              <>
+                Mostrando <span className="font-medium">{((page - 1) * itemsPerPage) + 1}</span> a{" "}
+                <span className="font-medium">{Math.min(page * itemsPerPage, totalItems)}</span> de{" "}
+                <span className="font-medium">{totalItems}</span> submissões
+              </>
+            )}
+          </div>
+          
+          {totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              {/* Jump to page */}
+              <div className="flex items-center gap-2 text-sm">
+                <span>Ir para página:</span>
+                <Input
+                  type="number"
+                  min="1"
+                  max={totalPages}
+                  value={jumpToPage}
+                  onChange={(e) => setJumpToPage(e.target.value)}
+                  onKeyPress={handleJumpInputKeyPress}
+                  className="w-16 h-8 text-center"
+                  placeholder={String(page)}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleJumpToPage}
+                  disabled={!jumpToPage || isNaN(parseInt(jumpToPage))}
+                >
+                  Ir
+                </Button>
+              </div>
+
+              {/* Page navigation */}
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => goToPage(1)}
+                  disabled={page === 1}
+                  title="Primeira página"
+                >
+                  <ChevronsLeft className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => goToPage(page - 1)}
+                  disabled={page === 1}
+                  title="Página anterior"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                
+                <div className="flex items-center gap-1 mx-2">
+                  {/* Show page numbers with smart logic */}
+                  {(() => {
+                    const getPageNumbers = () => {
+                      const delta = 2;
+                      const range = [];
+                      const rangeWithDots = [];
+
+                      for (let i = Math.max(2, page - delta); i <= Math.min(totalPages - 1, page + delta); i++) {
+                        range.push(i);
+                      }
+
+                      if (page - delta > 2) {
+                        rangeWithDots.push(1, '...');
+                      } else {
+                        rangeWithDots.push(1);
+                      }
+
+                      rangeWithDots.push(...range);
+
+                      if (page + delta < totalPages - 1) {
+                        rangeWithDots.push('...', totalPages);
+                      } else if (totalPages > 1) {
+                        rangeWithDots.push(totalPages);
+                      }
+
+                      return rangeWithDots;
+                    };
+
+                    return getPageNumbers().map((pageNum, index) => {
+                      if (pageNum === '...') {
+                        return (
+                          <span key={`ellipsis-${index}`} className="px-2 text-muted-foreground">
+                            ...
+                          </span>
+                        );
+                      }
+                      
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={page === pageNum ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => goToPage(Number(pageNum))}
+                          className="w-10"
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    });
+                  })()}
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => goToPage(page + 1)}
+                  disabled={page === totalPages}
+                  title="Próxima página"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => goToPage(totalPages)}
+                  disabled={page === totalPages}
+                  title="Última página"
+                >
+                  <ChevronsRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
