@@ -5,13 +5,16 @@ export function SupabaseAdapter(): Adapter {
   return {
     async createUser(user: Omit<AdapterUser, "id">): Promise<AdapterUser> {
       try {
+        // Para OAuth (Google), marcar email como verificado automaticamente
+        const emailVerified = user.emailVerified || new Date();
+        
         const { data, error } = await (supabase as any)
           .from('User')
           .insert({
             name: user.name,
             email: user.email,
             image: user.image,
-            emailVerified: user.emailVerified?.toISOString() || null,
+            emailVerified: emailVerified.toISOString(),
             role: 'USER'
           })
           .select()
@@ -27,7 +30,7 @@ export function SupabaseAdapter(): Adapter {
           name: (data as any).name,
           email: (data as any).email,
           image: (data as any).image,
-          emailVerified: (data as any).emailVerified ? new Date((data as any).emailVerified) : null,
+          emailVerified: new Date((data as any).emailVerified),
         } as AdapterUser;
       } catch (error) {
         console.error('Supabase createUser error:', error);

@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import { Toaster } from "@/components/ui/sonner"
 import Footer from "@/components/Footer";
 import AdminNotificationWrapper from "@/components/AdminNotificationWrapper";
+import EmailVerificationBanner from "@/components/EmailVerificationBanner";
 import { SITE_IMAGES, SITE_CONFIG } from "@/lib/site-images";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -121,6 +122,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={inter.className + " flex flex-col min-h-screen"}>
         <AuthSessionProvider>
           <Navbar />
+          <EmailVerificationBanner />
           <main className="flex-1">
             {children}
           </main>

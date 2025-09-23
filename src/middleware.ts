@@ -12,6 +12,21 @@ export async function middleware(req: NextRequest) {
   const url = req.nextUrl.clone();
   const pathname = url.pathname;
   
+  // Páginas que não precisam de verificação de email
+  const emailVerificationExemptPaths = [
+    '/login',
+    '/register', 
+    '/auth/confirm-email',
+    '/privacy-policy',
+    '/terms',
+    '/banned'
+  ];
+  
+  // Verificar se o path está isento da verificação de email
+  const isExemptFromEmailVerification = emailVerificationExemptPaths.some(path => 
+    pathname.startsWith(path)
+  );
+  
   // Verificar acesso a áreas protegidas
   if (pathname.startsWith('/admin')) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
@@ -24,21 +39,63 @@ export async function middleware(req: NextRequest) {
     
     // Se token não tem role, buscar na BD
     let userRole = token.role;
-    if (!userRole && token.sub) {
-      console.log('🔄 [MIDDLEWARE] Token sem role, buscando na BD...');
+    let emailVerified = token.emailVerified;
+    
+    if ((!userRole || emailVerified === undefined) && token.sub) {
+      console.log('🔄 [MIDDLEWARE] Token sem role/emailVerified, buscando na BD...');
       
       try {
         const { data: user, error } = await supabase
           .from('User')
-          .select('role')
+          .select('role, emailVerified')
           .eq('id', Number(token.sub))
           .single();
           
         if (!error && user) {
           userRole = user.role;
+          emailVerified = user.emailVerified;
         }
       } catch (error) {
         // Silently handle database errors
+      }
+    }
+    
+    // Verificar se email está verificado (exceto para logout)
+    if (!emailVerified && !pathname.includes('/api/auth/signout')) {
+      // Verificar se é conta OAuth e corrigir automaticamente
+      try {
+        const { data: oauthAccount, error: accountError } = await supabase
+          .from('Account')
+          .select('provider')
+          .eq('userId', Number(token.sub))
+          .eq('provider', 'google')
+          .single();
+        
+        if (!accountError && oauthAccount) {
+          console.log(`� [MIDDLEWARE] Auto-corrigindo conta OAuth admin para utilizador ${token.sub}...`);
+          
+          // Corrigir emailVerified automaticamente
+          const { error: updateError } = await supabase
+            .from('User')
+            .update({
+              emailVerified: new Date().toISOString()
+            })
+            .eq('id', Number(token.sub));
+          
+          if (!updateError) {
+            console.log(`✅ [MIDDLEWARE] Email auto-verificado para admin OAuth ${token.sub}`);
+            emailVerified = true; // Permitir acesso imediato
+          }
+        }
+      } catch (error) {
+        console.log(`❌ [MIDDLEWARE] Erro ao corrigir OAuth admin:`, error);
+      }
+      
+      if (!emailVerified) {
+        console.log(`�🚨 [MIDDLEWARE] Acesso admin negado - email não verificado: ${pathname}`);
+        url.pathname = '/';
+        url.searchParams.set('message', 'email-verification-required');
+        return NextResponse.redirect(url);
       }
     }
     
@@ -48,6 +105,90 @@ export async function middleware(req: NextRequest) {
     }
     
     console.log(`✅ [MIDDLEWARE] Acesso admin autorizado para: ${pathname}`);
+  }
+  
+  // Verificar acesso a páginas que requerem conta verificada
+  const protectedPaths = [
+    '/musics/create',
+    '/musics/edit',
+    '/playlists/create',
+    '/playlists/edit',
+    '/starred-songs',
+    '/users/edit',
+    '/users/profile'
+  ];
+  
+  const requiresEmailVerification = protectedPaths.some(path => 
+    pathname.startsWith(path)
+  ) || (pathname.startsWith('/users/') && !pathname.includes('/users/['));
+  
+  // Verificar se precisa de verificação de email para paths protegidos
+  if (requiresEmailVerification && !isExemptFromEmailVerification) {
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    
+    if (!token || !token.sub) {
+      url.pathname = '/login';
+      url.searchParams.set('callbackUrl', pathname);
+      return NextResponse.redirect(url);
+    }
+    
+    // Verificar se email está verificado
+    let emailVerified = token.emailVerified;
+    
+    if (emailVerified === undefined && token.sub) {
+      try {
+        const { data: user, error } = await supabase
+          .from('User')
+          .select('emailVerified')
+          .eq('id', Number(token.sub))
+          .single();
+          
+        if (!error && user) {
+          emailVerified = user.emailVerified;
+        }
+      } catch (error) {
+        console.log(`❌ [MIDDLEWARE] Erro ao verificar emailVerified:`, error);
+      }
+    }
+    
+    // Se email não verificado, verificar se é conta OAuth e corrigir automaticamente
+    if (!emailVerified && token.sub) {
+      try {
+        // Verificar se tem conta OAuth (Google)
+        const { data: oauthAccount, error: accountError } = await supabase
+          .from('Account')
+          .select('provider')
+          .eq('userId', Number(token.sub))
+          .eq('provider', 'google')
+          .single();
+        
+        if (!accountError && oauthAccount) {
+          console.log(`🔧 [MIDDLEWARE] Auto-corrigindo conta OAuth para utilizador ${token.sub}...`);
+          
+          // Corrigir emailVerified automaticamente
+          const { error: updateError } = await supabase
+            .from('User')
+            .update({
+              emailVerified: new Date().toISOString()
+            })
+            .eq('id', Number(token.sub));
+          
+          if (!updateError) {
+            console.log(`✅ [MIDDLEWARE] Email auto-verificado para conta OAuth ${token.sub}`);
+            emailVerified = true; // Permitir acesso imediato
+          }
+        }
+      } catch (error) {
+        console.log(`❌ [MIDDLEWARE] Erro ao corrigir OAuth:`, error);
+      }
+    }
+
+    if (!emailVerified) {
+      console.log(`🚨 [MIDDLEWARE] Acesso negado - email não verificado: ${pathname}`);
+      url.pathname = '/';
+      url.searchParams.set('message', 'email-verification-required');
+      return NextResponse.redirect(url);
+    }
   }
 
   // Verificar acesso a logs (apenas admin)
@@ -63,20 +204,31 @@ export async function middleware(req: NextRequest) {
     
     // Se token não tem role, buscar na BD
     let userRole = token.role;
-    if (!userRole && token.sub) {
+    let emailVerified = token.emailVerified;
+    
+    if ((!userRole || emailVerified === undefined) && token.sub) {
       try {
         const { data: user, error } = await supabase
           .from('User')
-          .select('role')
+          .select('role, emailVerified')
           .eq('id', Number(token.sub))
           .single();
           
         if (!error && user) {
           userRole = user.role;
+          emailVerified = user.emailVerified;
         }
       } catch (error) {
         console.log(`❌ [MIDDLEWARE] Erro ao verificar role para logs:`, error);
       }
+    }
+    
+    // Verificar se email está verificado
+    if (!emailVerified) {
+      console.log(`🚨 [MIDDLEWARE] Acesso a logs negado - email não verificado: ${pathname}`);
+      url.pathname = '/';
+      url.searchParams.set('message', 'email-verification-required');
+      return NextResponse.redirect(url);
     }
     
     if (userRole !== 'ADMIN') {
@@ -101,7 +253,8 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - login, register (auth pages)
+     * - auth/confirm-email (email verification page)
      */
-    "/((?!api/auth|api/banners|api/musics|api/playlists|_next/static|_next/image|favicon.ico|login|register).*)",
+    "/((?!api/auth|api/banners|api/musics|api/playlists|_next/static|_next/image|favicon.ico|login|register|auth/confirm-email).*)",
   ],
 };

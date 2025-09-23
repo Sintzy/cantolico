@@ -341,6 +341,7 @@ export const authOptions: AuthOptions = {
             email: user.email,
             image: user.image,
             role: user.role,
+            emailVerified: user.emailVerified,
           };
 
           return userResult;
@@ -382,6 +383,7 @@ export const authOptions: AuthOptions = {
           if (user && session.user) {
             (session.user as any).id = (user as any).id;
             (session.user as any).role = (user as any).role;
+            (session.user as any).emailVerified = (user as any).emailVerified !== null;
           }
         } else {
         }
@@ -397,6 +399,7 @@ export const authOptions: AuthOptions = {
         token.sub = String(user.id);
         token.role = user.role;
         token.picture = user.image;
+        token.emailVerified = user.emailVerified !== null;
       }
       
       return token;
@@ -451,17 +454,19 @@ export const authOptions: AuthOptions = {
               }
             }
 
-            // Update user info from Google if needed
-            if (existingUser.name !== user.name || existingUser.image !== user.image) {
-              await (supabase as any)
-                .from('User')
-                .update({
-                  name: user.name,
-                  image: user.image,
-                  emailVerified: existingUser.emailVerified || new Date().toISOString()
-                })
-                .eq('id', existingUser.id);
-            }
+            // Update user info from Google if needed AND sempre garantir emailVerified para OAuth
+            const updateData: any = {
+              name: user.name,
+              image: user.image,
+              emailVerified: new Date().toISOString() // SEMPRE verificado para OAuth
+            };
+
+            await (supabase as any)
+              .from('User')
+              .update(updateData)
+              .eq('id', existingUser.id);
+
+            console.log(`✅ [OAUTH] Email auto-verificado para ${user.email}`);
 
             await logGeneral('SUCCESS', 'Login OAuth realizado com sucesso', 
               'Utilizador existente autenticado via Google OAuth', {
@@ -500,14 +505,14 @@ export const authOptions: AuthOptions = {
                 email: user.email,
                 role: existingUser.role,
                 provider: 'google',
-                ip: 'OAuth',
+                ip: '127.0.0.1', // IP padrão para OAuth (não disponível)
                 userAgent: 'Google OAuth Provider'
               }, 3);
 
               // Trigger admin login alert
               await triggerAdminLoginEvent(
                 user.email || '',
-                'OAuth Login', 
+                '127.0.0.1', // IP padrão para OAuth 
                 'Google OAuth Provider', 
                 `Admin OAuth login - User ID: ${existingUser.id}, Role: ${existingUser.role}`
               );

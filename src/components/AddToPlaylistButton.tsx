@@ -78,6 +78,21 @@ export default function AddToPlaylistButton({
       return;
     }
 
+    // Verificar se o email está verificado
+    try {
+      const verificationResponse = await fetch('/api/user/email-verification-status');
+      const verificationData = await verificationResponse.json();
+      
+      if (verificationData.success && !verificationData.emailVerified) {
+        toast.error('Precisas de verificar o teu email antes de criar playlists');
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking email verification:', error);
+      toast.error('Erro ao verificar status da conta');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const response = await fetch('/api/playlists', {
@@ -116,6 +131,21 @@ export default function AddToPlaylistButton({
   const handleAddToPlaylist = async () => {
     if (!selectedPlaylist) {
       toast.error('Selecione uma playlist');
+      return;
+    }
+
+    // Verificar se o email está verificado
+    try {
+      const verificationResponse = await fetch('/api/user/email-verification-status');
+      const verificationData = await verificationResponse.json();
+      
+      if (verificationData.success && !verificationData.emailVerified) {
+        toast.error('Precisas de verificar o teu email antes de adicionar músicas às playlists');
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking email verification:', error);
+      toast.error('Erro ao verificar status da conta');
       return;
     }
 

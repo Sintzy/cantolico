@@ -13,8 +13,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Pencil, Music2, Mail, CalendarDays, Star, User, Camera, Clock, Upload } from "lucide-react";
+import { Pencil, Music2, Mail, CalendarDays, Star, User, Camera, Clock, Upload, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import DeleteAccountModal from "@/components/DeleteAccountModal";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -116,6 +117,7 @@ function getRoleBadgeVariant(role: string): "default" | "secondary" | "destructi
 export default function ProfileView({ user, isOwner }: ProfileViewProps) {
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [form, setForm] = useState({
     name: user.name ?? "",
     bio: user.bio ?? "",
@@ -329,10 +331,20 @@ export default function ProfileView({ user, isOwner }: ProfileViewProps) {
                         </Button>
                       </>
                     ) : (
-                      <Button onClick={() => setEditMode(true)} variant="outline">
-                        <Pencil className="w-4 h-4 mr-2" />
-                        Editar perfil
-                      </Button>
+                      <>
+                        <Button onClick={() => setEditMode(true)} variant="outline">
+                          <Pencil className="w-4 h-4 mr-2" />
+                          Editar perfil
+                        </Button>
+                        <Button 
+                          onClick={() => setShowDeleteModal(true)} 
+                          variant="destructive"
+                          className="bg-red-600 hover:bg-red-700"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Eliminar conta
+                        </Button>
+                      </>
                     )}
                   </div>
                 )}
@@ -505,6 +517,13 @@ export default function ProfileView({ user, isOwner }: ProfileViewProps) {
           </Card>
         </div>
       </section>
+
+      {/* Delete Account Modal */}
+      <DeleteAccountModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        isAdminAction={false}
+      />
     </main>
   );
 }
