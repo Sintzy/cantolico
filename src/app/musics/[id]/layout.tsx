@@ -1,7 +1,7 @@
-import { Metadata } from "next";
-import { supabase } from "@/lib/supabase-client";
-import { findSongBySlug } from "@/lib/slugs";
-import { createMusicMetadata } from "@/lib/metadata";
+import { Metadata } from 'next';
+import { supabase } from '@/lib/supabase-client';
+import { findSongBySlug } from '@/lib/slugs';
+import { createMusicMetadata } from '@/lib/metadata';
 
 interface MusicLayoutProps {
   children: React.ReactNode;
@@ -12,7 +12,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   
   try {
-    // Tentar encontrar por ID primeiro, depois por slug
+    // Primeiro tentar por ID
     let { data: song } = await supabase
       .from('Song')
       .select(`
@@ -34,41 +34,33 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     if (!song) {
       const songBySlug = await findSongBySlug(id);
       if (songBySlug) {
-        song = {    
-          id: (songBySlug as any).id,
-          title: (songBySlug as any).title,
-          slug: (songBySlug as any).slug,
-          tags: (songBySlug as any).tags,
-          moments: (songBySlug as any).moments,
-          mainInstrument: (songBySlug as any).mainInstrument,
-          currentVersion: (songBySlug as any).currentVersion ? {
-            sourceText: (songBySlug as any).currentVersion.sourceText,
-            createdBy: (songBySlug as any).currentVersion.createdBy
-          } : null
-        } as any;
+        song = songBySlug as any;
       }
     }
 
     if (!song) {
       return {
-        title: "Música não encontrada",
-        description: "Esta música não existe no nosso cancioneiro.",
+        title: 'Música não encontrada | Cantolico',
+        description: 'A música que você está procurando não foi encontrada.',
       };
     }
 
-    const autor = (song as any)?.currentVersion?.createdBy?.name;
+    // Sempre usar slug para URL canônica se disponível
+    const canonicalSlug = song.slug || id;
     
     return createMusicMetadata({
-      title: (song as any)?.title,
-      moments: (song as any)?.moments,
-      tags: (song as any)?.tags,
-      slug: (song as any)?.slug,
-      author: autor || undefined,
+      title: song.title,
+      tags: song.tags || [],
+      moments: song.moments || [],
+      author: (song.currentVersion as any)?.createdBy?.name,
+      slug: canonicalSlug, // Usar slug para canonical
     });
+    
   } catch (error) {
+    console.error('Erro ao gerar metadata:', error);
     return {
-      title: "Erro ao carregar música",
-      description: "Ocorreu um erro ao carregar esta música.",
+      title: 'Erro | Cantolico',
+      description: 'Ocorreu um erro ao carregar a música.',
     };
   }
 }

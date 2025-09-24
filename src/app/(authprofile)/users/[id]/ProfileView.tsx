@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Pencil, Music2, Mail, CalendarDays, Star, User, Camera, Clock, Upload, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import DeleteAccountModal from "@/components/DeleteAccountModal";
+import { formatDate } from "@/lib/date-utils";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -237,9 +238,9 @@ export default function ProfileView({ user, isOwner }: ProfileViewProps) {
   const badgeUrl = `/badges/${user.role.toLowerCase()}.png`;
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-white">
       {/* Header Section */}
-      <section className="bg-white border-b">
+      <section className="bg-white">
         <div className="max-w-6xl mx-auto px-6 py-8">
           <div className="flex flex-col lg:flex-row gap-8">
             {/* Avatar */}
@@ -358,7 +359,7 @@ export default function ProfileView({ user, isOwner }: ProfileViewProps) {
                 </div>
                 <div className="flex items-center gap-2">
                   <CalendarDays className="w-4 h-4" />
-                  <span>Membro desde {new Date(user.createdAt).toLocaleDateString()}</span>
+                  <span>Membro desde {formatDate(user.createdAt)}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Star className="w-4 h-4" />
