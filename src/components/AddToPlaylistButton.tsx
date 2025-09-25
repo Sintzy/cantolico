@@ -212,7 +212,7 @@ export default function AddToPlaylistButton({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-[450px]">
+  <DialogContent className="sm:max-w-[450px] playlist-dialog-blur">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ListMusic className="h-5 w-5" />
@@ -300,9 +300,9 @@ export default function AddToPlaylistButton({
                   
                   <div className="flex gap-3">
                     <Button
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                       onClick={handleAddToPlaylist}
                       disabled={!selectedPlaylist || isLoading}
-                      className="flex-1"
                     >
                       {isLoading ? (
                         <>

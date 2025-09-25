@@ -12,6 +12,44 @@ export async function middleware(req: NextRequest) {
   const url = req.nextUrl.clone();
   const pathname = url.pathname;
   
+  // ==========================================
+  // REDIRECIONAMENTO SEO - MÚSICAS PARA SLUG
+  // ==========================================
+  // Redirecionar /musics/[uuid] para /musics/[slug] se slug existir
+  // Isto evita conteúdo duplicado e melhora SEO
+  if (pathname.startsWith('/musics/') && !pathname.includes('/create')) {
+    const musicId = pathname.split('/musics/')[1];
+    
+    // Verificar se parece com um UUID (36 caracteres com hífens)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const cuidRegex = /^c[a-z0-9]{24}$/; // CUID format
+    
+    if (uuidRegex.test(musicId) || cuidRegex.test(musicId)) {
+      try {
+        console.log(`🔄 [SEO] Verificando slug para música ID: ${musicId.substring(0, 8)}...`);
+        
+        const { data: song, error } = await supabase
+          .from('Song')
+          .select('id, slug')
+          .eq('id', musicId)
+          .single();
+          
+        if (!error && song && song.slug) {
+          console.log(`✅ [SEO] Redirecionando ${musicId.substring(0, 8)}... → ${song.slug}`);
+          url.pathname = `/musics/${song.slug}`;
+          return NextResponse.redirect(url, 301); // Redirect permanente para SEO
+        }
+      } catch (error) {
+        console.log(`❌ [SEO] Erro ao buscar slug para ${musicId.substring(0, 8)}...:`, error);
+        // Continuar sem redirecionar em caso de erro
+      }
+    }
+  }
+  
+  // ==========================================
+  // VERIFICAÇÕES DE AUTENTICAÇÃO
+  // ==========================================
+  
   // Páginas que não precisam de verificação de email
   const emailVerificationExemptPaths = [
     '/login',
