@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase-client";
 import bcrypt from "bcryptjs";
 import { logGeneral, logErrors } from "@/lib/logs";
 import { logSystemEvent, logDatabaseError } from "@/lib/enhanced-logging";
-import { sendWelcomeEmail } from "@/lib/email";
+import { sendWelcomeEmail, sendEmailConfirmation, generateEmailVerificationToken, createEmailVerificationData } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   let email: string = '';
@@ -69,9 +69,15 @@ export async function POST(req: NextRequest) {
 
     const passwordHash = bcrypt.hashSync(password, 10);
     
+    // Criar conta sem email verificado (emailVerified = null)
     const { data: user, error: createError } = await supabase
       .from('User')
-      .insert({ email, name, passwordHash })
+      .insert({ 
+        email, 
+        name, 
+        passwordHash,
+        emailVerified: null // Conta não verificada inicialmente
+      })
       .select('id, email, name')
       .single();
 
@@ -94,6 +100,29 @@ export async function POST(req: NextRequest) {
       throw new Error(`Supabase error: ${createError?.message || 'Unknown error'}`);
     }
 
+    // Gerar token de verificação de email
+    const verificationToken = generateEmailVerificationToken();
+    const verificationData = createEmailVerificationData(user.email, verificationToken);
+    
+    // Armazenar token na base de dados
+    const { error: tokenError } = await supabase
+      .from('VerificationToken')
+      .insert({
+        identifier: user.email,
+        token: verificationToken,
+        expires: verificationData.expiresAt
+      });
+    
+    if (tokenError) {
+      console.error('Erro ao criar token de verificação:', tokenError);
+      // Não falhar o registro, mas logar o erro
+      await logErrors('ERROR', 'Erro ao criar token de verificação', 'Falha ao armazenar token de verificação de email', {
+        userId: user.id,
+        email: user.email,
+        error: tokenError.message
+      });
+    }
+
     // Log de evento crítico do sistema
     await logSystemEvent(
       'user_registered',
@@ -103,24 +132,35 @@ export async function POST(req: NextRequest) {
         email: user.email,
         name: user.name,
         registrationMethod: 'email_password',
+        emailVerified: false,
         ip,
         userAgent
       }
     );
 
-    // Enviar email de boas-vindas
+    // Enviar email de verificação
     try {
-      await sendWelcomeEmail(
+      await sendEmailConfirmation(
         user.email || email,
-        user.name || 'Utilizador'
+        user.name || 'Utilizador',
+        verificationToken
       );
-      console.log('✅ Email de boas-vindas enviado para:', user.email);
+      console.log('✅ Email de verificação enviado para:', user.email);
     } catch (emailError) {
-      console.error('❌ Erro ao enviar email de boas-vindas:', emailError);
+      console.error('❌ Erro ao enviar email de verificação:', emailError);
       // Não falhar o registo se o email falhar
+      await logErrors('ERROR', 'Erro ao enviar email de verificação', 'Falha no envio do email de verificação', {
+        userId: user.id,
+        email: user.email,
+        error: emailError instanceof Error ? emailError.message : 'Erro desconhecido'
+      });
     }
 
-    return NextResponse.json({ success: true, userId: user.id });
+    return NextResponse.json({ 
+      success: true, 
+      userId: user.id,
+      message: 'Conta criada com sucesso! Verifica o teu email para ativar a conta.'
+    });
   } catch (error) {
     console.error('Registration error details:', error);
     

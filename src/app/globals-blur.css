@@ -1,0 +1,6 @@
+/* Classe utilitária para blur global no fundo da página */
+.blur-bg-global {
+  /* Aplica blur ao conteúdo atrás do modal */
+  filter: blur(8px) !important;
+  transition: filter 0.2s;
+}

@@ -120,9 +120,6 @@ export async function PATCH(
       );
     }
 
-    // Adicionar timestamp de atualização
-    filteredUpdates.updated_at = new Date().toISOString();
-
     // Atualizar log
     const { data, error } = await supabase
       .from('logs')

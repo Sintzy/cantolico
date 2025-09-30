@@ -7,14 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "git-info": "node scripts/git-info.js",
-    "test-auth": "tsx scripts/test-auth.ts",
-    "create-schema": "tsx scripts/create-schema.ts",
-    "verify-schema": "tsx scripts/verify-schema.ts",
-    "reset-schema": "tsx scripts/reset-and-recreate-schema.ts",
-    "test-env": "tsx scripts/test-env.ts",
-    "test-migration": "tsx scripts/test-migration.ts",
-    "migrate-to-supabase": "tsx scripts/migrate-to-supabase.ts"
+    "git-info": "node scripts/git-info.js"
   },
   "dependencies": {
     "@marsidev/react-turnstile": "^1.1.0",

@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { withUserProtection, withPublicMonitoring, logPlaylistAction } from '@/lib/enhanced-api-protection';
 import { randomUUID } from 'crypto';
 import { logGeneral, logErrors } from '@/lib/logs';
+import { requireEmailVerification } from '@/lib/email';
 
 export const GET = withPublicMonitoring<any>(async (request: NextRequest) => {
   try {
@@ -113,6 +114,15 @@ export const GET = withPublicMonitoring<any>(async (request: NextRequest) => {
 export const POST = withUserProtection<any>(async (request: NextRequest, session: any) => {
   const body = await request.json();
   const { name, description, isPublic } = body;
+
+  // Verificar se email está verificado
+  const emailVerificationResult = await requireEmailVerification(session.user.id);
+  if (!emailVerificationResult.success) {
+    return NextResponse.json(
+      { error: emailVerificationResult.error },
+      { status: 403 }
+    );
+  }
 
   // Obter informações de IP e User-Agent para logs
   const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';

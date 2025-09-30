@@ -137,8 +137,7 @@ async function logResponseData(data: any) {
       .update({
         status_code: data.statusCode,
         response_time_ms: data.duration,
-        status: data.statusCode >= 400 ? 'FAILED' : 'SUCCESS',
-        updated_at: new Date().toISOString()
+        status: data.statusCode >= 400 ? 'FAILED' : 'SUCCESS'
       })
       .eq('request_id', data.requestId);
   } catch (error) {

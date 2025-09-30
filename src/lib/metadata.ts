@@ -157,6 +157,7 @@ export const PAGE_METADATA = {
     title: "Submeter Nova Música",
     description: "Submete o teu cântico católico para a comunidade. Partilha música de qualidade para servir a liturgia.",
     keywords: ["submeter música", "nova música", "contribuir"],
+    canonical: "https://cantolico.pt/musics/create",
     noIndex: true, // Não indexar formulários
   }),
 
@@ -169,6 +170,7 @@ export const PAGE_METADATA = {
   register: (): Metadata => createMetadata({
     title: "Criar Conta",
     description: "Junta-te à comunidade do Cantólico! e contribui para o maior cancioneiro católico colaborativo.",
+    canonical: "https://cantolico.pt/register",
     noIndex: true,
   }),
 
@@ -208,11 +210,16 @@ export function createMusicMetadata(song: {
   moments: string[];
   tags: string[];
   slug?: string;
+  id?: string;
   author?: string;
 }): Metadata {
-  const { title, moments, tags, slug, author } = song;
+  const { title, moments, tags, slug, id, author } = song;
   const momentos = moments.join(", ");
-  const urlPath = slug || title.toLowerCase().replace(/\s+/g, "-");
+  
+  // Sempre usar slug para URL canonical se disponível, senão usar ID
+  // Isto garante consistência e evita conteúdo duplicado
+  const canonicalPath = slug || id || title.toLowerCase().replace(/\s+/g, "-");
+  const canonicalUrl = `https://cantolico.pt/musics/${canonicalPath}`;
   
   return createMetadata({
     title,
@@ -220,7 +227,7 @@ export function createMusicMetadata(song: {
     keywords: [title, ...tags, ...moments, "letra", "acordes", "partitura"],
     author,
     type: "article",
-    url: `https://cantolico.pt/musics/${urlPath}`,
-    canonical: `https://cantolico.pt/musics/${urlPath}`,
+    url: canonicalUrl,
+    canonical: canonicalUrl,
   });
 }

@@ -424,7 +424,7 @@ export default function SongPage() {
             <SidebarTitle>Informações</SidebarTitle>
             <div className="flex items-center gap-2 text-sm text-blue-900/80">
               <FileText className="h-4 w-4 mr-1" />
-              <span className="font-medium">Autor(a):</span> {currentVersion?.createdBy?.name || 'Desconhecido'}
+              <span className="font-medium">Enviado por:</span> {currentVersion?.createdBy?.name || 'Desconhecido'}
             </div>
             <div className="flex items-center gap-2 text-sm text-blue-900/80">
               <Music className="h-4 w-4 mr-1" />
@@ -526,12 +526,17 @@ export default function SongPage() {
             <p className="text-xs text-gray-400">ID: {song.id}</p>
           </div>
         </main>
+        {/* Botão para ir ao topo da página */}
+        <ScrollToTopButton />
       </div>
     </div>
   );
 }
 
-/* ----------------- Pequenos componentes para títulos com “linha azul” ----------------- */
+// ----------------- Pequenos componentes para títulos com “linha azul” -----------------
+// Importação dinâmica para evitar SSR issues
+import dynamic from "next/dynamic";
+const ScrollToTopButton = dynamic(() => import("@/components/ScrollToTopButton"), { ssr: false });
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (

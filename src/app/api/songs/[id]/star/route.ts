@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { withAuthApiProtection, withApiProtection } from '@/lib/api-middleware';
 import { logGeneral, logErrors } from '@/lib/logs';
+import { requireEmailVerification } from '@/lib/email';
 
 export const POST = withAuthApiProtection(async (
   request: NextRequest,
@@ -22,6 +23,15 @@ export const POST = withAuthApiProtection(async (
     const { id } = await params;
     const songIdOrSlug = id;
     const userId = session.user.id;
+
+    // Verificar se email está verificado
+    const emailVerificationResult = await requireEmailVerification(userId);
+    if (!emailVerificationResult.success) {
+      return NextResponse.json(
+        { error: emailVerificationResult.error },
+        { status: 403 }
+      );
+    }
 
     // Buscar música por ID ou slug
     const { data: songs, error: songError } = await supabase
@@ -148,6 +158,15 @@ export const DELETE = withAuthApiProtection(async (
     const { id } = await params;
     const songIdOrSlug = id;
     const userId = session.user.id;
+
+    // Verificar se email está verificado
+    const emailVerificationResult = await requireEmailVerification(userId);
+    if (!emailVerificationResult.success) {
+      return NextResponse.json(
+        { error: emailVerificationResult.error },
+        { status: 403 }
+      );
+    }
 
     // Buscar música por ID ou slug
     const { data: songs, error: songError } = await supabase

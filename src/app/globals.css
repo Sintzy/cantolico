@@ -13,14 +13,14 @@
 }
 
 /* Fix dropdown menus and dialogs - force solid white background */
+
 [data-slot="dropdown-menu-content"],
-[data-slot="dialog-content"],
-.dropdown-menu-content,
-.dialog-content {
+.dropdown-menu-content {
   background: #ffffff !important;
-  backdrop-filter: none !important;
   border: 1px solid #e5e7eb !important;
 }
+
+/* NÃO forçar background nem remover blur do dialog-content por padrão! */
 
 /* Ensure popover components have solid backgrounds */
 [data-radix-popper-content-wrapper] > div,
@@ -31,12 +31,12 @@
 
 /* Additional fix for any transparent backgrounds in UI components */
 [data-radix-dropdown-menu-content],
-[data-radix-dialog-content],
-[role="dialog"],
 [role="menu"] {
   background: #ffffff !important;
   backdrop-filter: none !important;
 }
+
+/* NÃO forçar background nem remover blur do dialog-content/dialog por padrão! */
 
 /* Override any Tailwind or other CSS that might cause transparency issues */
 .bg-popover,
@@ -83,13 +83,7 @@
 }
 
 /* Force all dialogs, popovers, and cards to have solid white backgrounds */
-div[role="dialog"],
-div[data-state="open"],
-.group > div:hover,
-.group:hover > div {
-  background-color: #ffffff !important;
-  backdrop-filter: none !important;
-}
+
 
 /* Specific fix for UserHoverCard component */
 .group .absolute,
@@ -249,4 +243,19 @@ body {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 1;
   line-clamp: 1;
+}
+
+[data-slot="dialog-content"].playlist-dialog-blur {
+  background: #fff;
+  backdrop-filter: blur(16px);
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 16px 0 rgb(0 0 0 / 0.10), 0 1.5px 4px 0 rgb(0 0 0 / 0.04);
+}
+
+/* Playlist item sleek border (shadcn style) */
+[data-slot="dialog-content"].playlist-dialog-blur .border {
+  border: 1px solid #e5e7eb !important;
+}
+[data-slot="dialog-content"].playlist-dialog-blur .rounded-lg {
+  border-radius: 0.5rem !important;
 }

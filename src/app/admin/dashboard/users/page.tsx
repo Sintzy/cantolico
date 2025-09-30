@@ -40,6 +40,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import UserAvatar from '@/components/ui/user-avatar';
+import DeleteAccountModal from '@/components/DeleteAccountModal';
 import { useDebounce, useStableData, useWindowFocus } from '@/hooks/useOptimization';
 
 interface User {
@@ -140,6 +141,8 @@ export default function UsersManagement() {
   const [totalCount, setTotalCount] = useState(0);
   const [changingRole, setChangingRole] = useState<string | null>(null);
   const [deletingUser, setDeletingUser] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTargetUser, setDeleteTargetUser] = useState<{ id: string; name: string } | null>(null);
   const [moderateDialogOpen, setModerateDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
@@ -269,36 +272,27 @@ export default function UsersManagement() {
   };
 
   const handleDeleteUser = async (userId: string, userName: string) => {
-    if (!confirm(`Tem a certeza que pretende eliminar o utilizador "${userName}"? Esta ação é irreversível.`)) {
-      return;
-    }
+    // Abrir modal de confirmação em vez de confirm nativo
+    setDeleteTargetUser({ id: userId, name: userName });
+    setShowDeleteModal(true);
+  };
 
-    try {
-      setDeletingUser(userId);
-      
-      const response = await fetch('/api/admin/users', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userId }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Erro ao eliminar utilizador');
-      }
-
-      // Remove user from local state
-      setUsers(users.filter(user => user.id !== userId));
-
-      toast.success(`Utilizador "${userName}" foi eliminado com sucesso!`);
-    } catch (error) {
-      console.error('Erro ao eliminar utilizador:', error);
-      toast.error(error instanceof Error ? error.message : 'Erro ao eliminar utilizador');
-    } finally {
-      setDeletingUser(null);
-    }
+  const handleDeleteSuccess = () => {
+    // Refresh da lista de utilizadores após eliminação bem-sucedida
+    fetchUsersData().then(data => {
+      setUsers(data.users);
+      setTotalPages(data.totalPages);
+      setTotalCount(data.totalCount);
+    }).catch(error => {
+      console.error('Erro ao recarregar utilizadores:', error);
+      toast.error('Erro ao recarregar a lista de utilizadores');
+    });
+    
+    // Fechar modal
+    setShowDeleteModal(false);
+    setDeleteTargetUser(null);
+    
+    toast.success(`Utilizador eliminado com sucesso!`);
   };
 
   const fetchModerationHistory = async (userId: number) => {
@@ -1128,6 +1122,19 @@ export default function UsersManagement() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Account Modal */}
+      <DeleteAccountModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setDeleteTargetUser(null);
+        }}
+        targetUserId={deleteTargetUser?.id}
+        targetUserName={deleteTargetUser?.name}
+        isAdminAction={true}
+        onSuccess={handleDeleteSuccess}
+      />
     </div>
   );
 }

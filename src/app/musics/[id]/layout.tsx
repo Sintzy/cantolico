@@ -63,6 +63,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       moments: (song as any)?.moments,
       tags: (song as any)?.tags,
       slug: (song as any)?.slug,
+      id: (song as any)?.id,
       author: autor || undefined,
     });
   } catch (error) {

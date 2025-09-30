@@ -78,6 +78,21 @@ export default function AddToPlaylistButton({
       return;
     }
 
+    // Verificar se o email está verificado
+    try {
+      const verificationResponse = await fetch('/api/user/email-verification-status');
+      const verificationData = await verificationResponse.json();
+      
+      if (verificationData.success && !verificationData.emailVerified) {
+        toast.error('Precisas de verificar o teu email antes de criar playlists');
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking email verification:', error);
+      toast.error('Erro ao verificar status da conta');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const response = await fetch('/api/playlists', {
@@ -116,6 +131,21 @@ export default function AddToPlaylistButton({
   const handleAddToPlaylist = async () => {
     if (!selectedPlaylist) {
       toast.error('Selecione uma playlist');
+      return;
+    }
+
+    // Verificar se o email está verificado
+    try {
+      const verificationResponse = await fetch('/api/user/email-verification-status');
+      const verificationData = await verificationResponse.json();
+      
+      if (verificationData.success && !verificationData.emailVerified) {
+        toast.error('Precisas de verificar o teu email antes de adicionar músicas às playlists');
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking email verification:', error);
+      toast.error('Erro ao verificar status da conta');
       return;
     }
 
@@ -182,7 +212,7 @@ export default function AddToPlaylistButton({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-[450px]">
+  <DialogContent className="sm:max-w-[450px] playlist-dialog-blur">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ListMusic className="h-5 w-5" />
@@ -270,9 +300,9 @@ export default function AddToPlaylistButton({
                   
                   <div className="flex gap-3">
                     <Button
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                       onClick={handleAddToPlaylist}
                       disabled={!selectedPlaylist || isLoading}
-                      className="flex-1"
                     >
                       {isLoading ? (
                         <>
