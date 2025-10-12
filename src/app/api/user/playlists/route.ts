@@ -12,34 +12,134 @@ export const GET = withAuthApiProtection(async (request: NextRequest) => {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    const { data: playlists } = await supabase
+    console.log('Fetching playlists for user:', session.user.id);
+    console.log('Session user object:', JSON.stringify(session.user, null, 2));
+
+    // Primeiro, fazer uma query simples para debug
+    const { data: testPlaylists, error: testError } = await supabase
+      .from('Playlist')
+      .select('*')
+      .eq('userId', session.user.id);
+    
+    console.log('Simple query result:', testPlaylists?.length, testError);
+
+    // 1. Buscar playlists próprias
+    const { data: ownPlaylists, error: ownPlaylistsError } = await supabase
       .from('Playlist')
       .select(`
         *,
         User:userId (
           id,
-          name
+          name,
+          email,
+          image
         )
       `)
       .eq('userId', session.user.id)
       .order('updatedAt', { ascending: false });
 
-    // Buscar contagem de itens para cada playlist
+    if (ownPlaylistsError) {
+      console.error('Error fetching own playlists:', ownPlaylistsError);
+      return NextResponse.json({ error: 'Erro ao buscar playlists próprias' }, { status: 500 });
+    }
+
+    // 2. Buscar playlists onde é membro aceito
+    const { data: membershipData, error: membershipError } = await supabase
+      .from('PlaylistMember')
+      .select(`
+        id,
+        role,
+        status,
+        acceptedAt,
+        Playlist (
+          *,
+          User:userId (
+            id,
+            name,
+            email,
+            image
+          )
+        )
+      `)
+      .eq('userEmail', session.user.email)
+      .eq('status', 'ACCEPTED')
+      .order('acceptedAt', { ascending: false });
+
+    if (membershipError) {
+      console.error('Error fetching member playlists:', membershipError);
+      return NextResponse.json({ error: 'Erro ao buscar playlists de membro' }, { status: 500 });
+    }
+
+    // 3. Combinar playlists próprias e de membro
+    const allPlaylists = [
+      ...(ownPlaylists || []).map(playlist => ({ 
+        ...playlist, 
+        userRole: 'owner',
+        isOwner: true 
+      })),
+      ...(membershipData || []).map(member => ({
+        ...member.Playlist,
+        userRole: 'editor',
+        isOwner: false
+      }))
+    ];
+
+    // 4. Remover duplicatas (caso seja dono e membro)
+    const uniquePlaylistsMap = new Map();
+    allPlaylists.forEach(playlist => {
+      if (!uniquePlaylistsMap.has(playlist.id) || playlist.isOwner) {
+        uniquePlaylistsMap.set(playlist.id, playlist);
+      }
+    });
+    
+    const playlists = Array.from(uniquePlaylistsMap.values());
+
+    console.log('Total playlists found:', playlists.length);
+    console.log('Own playlists:', (ownPlaylists || []).length);
+    console.log('Member playlists:', (membershipData || []).length);
+
+    // Buscar contagem de itens e membros para cada playlist
     const playlistsWithCount = await Promise.all(
-      (playlists || []).map(async (playlist) => {
+      playlists.map(async (playlist) => {
+        // Buscar contagem de itens
         const { count } = await supabase
           .from('PlaylistItem')
           .select('*', { count: 'exact', head: true })
           .eq('playlistId', playlist.id);
 
+        // Buscar membros da playlist
+        const { data: members } = await supabase
+          .from('PlaylistMember')
+          .select(`
+            id,
+            userEmail,
+            role,
+            status
+          `)
+          .eq('playlistId', playlist.id);
+
         return {
-          ...playlist,
-          user: playlist.User,
-          _count: { items: count || 0 }
+          id: playlist.id,
+          name: playlist.name,
+          description: playlist.description,
+          isPublic: playlist.isPublic,
+          createdAt: playlist.createdAt,
+          updatedAt: playlist.updatedAt,
+          userRole: playlist.userRole,
+          songsCount: count || 0,
+          members: (members || []).map(member => ({
+            id: member.id,
+            role: member.role === 'EDITOR' ? 'editor' : 'viewer',
+            status: member.status.toLowerCase(),
+            user: {
+              email: member.userEmail
+            }
+          }))
         };
       })
     );
 
+    console.log('Returning playlists:', playlistsWithCount.length);
     return NextResponse.json(playlistsWithCount)
   } catch (error) {
     console.error('Erro ao buscar playlists do usuário:', error)

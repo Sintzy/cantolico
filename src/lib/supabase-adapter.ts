@@ -5,6 +5,8 @@ export function SupabaseAdapter(): Adapter {
   return {
     async createUser(user: Omit<AdapterUser, "id">): Promise<AdapterUser> {
       try {
+        console.log(`🆕 [ADAPTER] Creating new user: ${user.email}`);
+        
         // Para OAuth (Google), marcar email como verificado automaticamente
         const emailVerified = user.emailVerified || new Date();
         
@@ -21,8 +23,22 @@ export function SupabaseAdapter(): Adapter {
           .single();
 
         if (error) {
-          console.error('Error creating user:', error);
+          console.error('❌ [ADAPTER] Error creating user:', error);
           throw error;
+        }
+        
+        console.log(`✅ [ADAPTER] User created successfully: ID ${data.id}`);
+
+        // Enviar email de boas-vindas para novos utilizadores OAuth (não bloquear se falhar)
+        if (user.email) {
+          try {
+            const { sendWelcomeEmail } = await import('@/lib/email');
+            await sendWelcomeEmail(user.email, user.name || 'Utilizador');
+            console.log(`📧 [ADAPTER] Welcome email sent to ${user.email}`);
+          } catch (emailError) {
+            console.error('❌ [ADAPTER] Error sending welcome email:', emailError);
+            // Não falhar a criação do utilizador se o email falhar
+          }
         }
         
         return {
@@ -33,7 +49,7 @@ export function SupabaseAdapter(): Adapter {
           emailVerified: new Date((data as any).emailVerified),
         } as AdapterUser;
       } catch (error) {
-        console.error('Supabase createUser error:', error);
+        console.error('❌ [ADAPTER] Supabase createUser error:', error);
         throw error;
       }
     },

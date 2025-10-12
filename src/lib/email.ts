@@ -801,6 +801,55 @@ export function createAdminLoginAlertTemplate(
   );
 }
 
+export function createPlaylistInviteEmailTemplate(
+  invitedUserName: string,
+  playlistName: string,
+  playlistDescription: string | null,
+  inviterName: string,
+  inviteToken: string,
+  playlistId: string
+): string {
+  const content = `
+    <p style="margin:0;Margin:0;font-family:Poppins,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif;line-height:22px;font-weight:500;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#333333;text-align:left;mso-line-height-rule:exactly;mso-text-raise:2px;">Olá <strong>${invitedUserName}</strong>,</p>
+    
+    <p style="margin:16px 0 8px 0;Margin:16px 0 8px 0;font-family:Poppins,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif;line-height:22px;font-weight:400;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#333333;text-align:left;mso-line-height-rule:exactly;mso-text-raise:2px;">Tens um convite especial esperando por ti! <strong>${inviterName}</strong> convidou-te para colaborares na playlist <strong>"${playlistName}"</strong> no Cantólico.</p>
+    
+    ${createDetailsBox('Detalhes do Convite', [
+      {label: '🎵 Playlist', value: playlistName},
+      {label: '👤 Convidado por', value: inviterName},
+      {label: '🎯 Papel', value: 'Editor - Podes adicionar e organizar músicas'},
+      ...(playlistDescription ? [{label: '📝 Descrição', value: playlistDescription}] : []),
+      {label: '⏰ Validade', value: '7 dias'}
+    ])}
+    
+    <p style="margin:20px 0 8px 0;Margin:20px 0 8px 0;font-family:Poppins,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif;line-height:22px;font-weight:500;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#333333;text-align:left;mso-line-height-rule:exactly;mso-text-raise:2px;">🎼 Como Editor, poderás:</p>
+    ${createSimpleList([
+      'Adicionar novas músicas à playlist',
+      'Remover músicas existentes',
+      'Reorganizar a ordem das músicas',
+      'Ver estatísticas da playlist',
+      'Colaborar com outros editores'
+    ])}
+    
+    <p style="margin:16px 0 8px 0;Margin:16px 0 8px 0;font-family:Poppins,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif;line-height:22px;font-weight:400;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#333333;text-align:left;mso-line-height-rule:exactly;mso-text-raise:2px;">Este convite é uma oportunidade única para partilhares o teu gosto musical e criares algo incrível em colaboração!</p>
+  `;
+
+  return createModernEmailTemplate(
+    '🎵 Convite para Colaborar numa Playlist',
+    content,
+    {
+      text: 'Aceitar Convite',
+      url: `https://cantolico.pt/playlists/invite/accept?token=${inviteToken}`,
+      color: '#28a745'
+    },
+    {
+      text: 'Ver Playlist',
+      url: `https://cantolico.pt/playlists/${playlistId}`,
+      color: '#17a2b8'
+    }
+  );
+}
+
 export function createWelcomeEmailTemplate(userName: string): string {
   const content = `
     <p style="margin:0;Margin:0;font-family:Poppins,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif;line-height:22px;font-weight:500;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#333333;text-align:left;mso-line-height-rule:exactly;mso-text-raise:2px;">Olá <strong>${userName}</strong>,</p>

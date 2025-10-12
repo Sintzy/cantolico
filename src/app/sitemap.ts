@@ -6,45 +6,51 @@ export const revalidate = 3600; // Cache por 1 hora
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://cantolico.pt'
 
-  // Static pages com prioridades otimizadas
-  // NOTA: Google ignora lastModified desde junho 2023, mas mantemos para outros crawlers
+  // Static pages com prioridades MÁXIMAS para SEO agressivo
   const staticPages = [
     {
       url: baseUrl,
       lastModified: new Date(),
-      changeFrequency: 'weekly' as const,
-      priority: 1,
+      changeFrequency: 'daily' as const,
+      priority: 1.0, // MÁXIMA prioridade para homepage
     },
     {
       url: `${baseUrl}/musics`,
       lastModified: new Date(),
-      changeFrequency: 'daily' as const,
-      priority: 0.9,
+      changeFrequency: 'daily' as const,  
+      priority: 0.95, // QUASE máxima para página de cânticos
+    },
+    {
+      url: `${baseUrl}/playlists`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly' as const,
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/playlists/explore`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly' as const,
+      priority: 0.7,
     },
     {
       url: `${baseUrl}/musics/create`,
       lastModified: new Date(),
       changeFrequency: 'monthly' as const,
-      priority: 0.7,
+      priority: 0.6,
     },
     {
       url: `${baseUrl}/terms`,
       lastModified: new Date(),
       changeFrequency: 'yearly' as const,
-      priority: 0.5,
+      priority: 0.4,
     },
     {
-      url: `${baseUrl}/login`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly' as const,
-      priority: 0.3,
-    },
-    {
-      url: `${baseUrl}/register`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly' as const,
-      priority: 0.3,
-    },
+      url: `${baseUrl}/privacy-policy`,
+      lastModified: new Date(), 
+      changeFrequency: 'yearly' as const,
+      priority: 0.4,
+    }
+    // Removido login/register do sitemap - não precisam ser indexados
   ]
 
   try {
@@ -62,23 +68,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     console.log(`📄 Sitemap: ${songs?.length || 0} músicas encontradas`);
 
-    // Dynamic music pages
-    // Prioridade baseada em recência e popularidade potencial
+    // Dynamic music pages - PRIORIDADE MÁXIMA para SEO agressivo
     const musicPages = (songs || []).map((song: any, index: number) => {
       const url = `${baseUrl}/musics/${song.slug || song.id}`;
       const isRecent = (Date.now() - new Date(song.createdAt).getTime()) < (30 * 24 * 60 * 60 * 1000); // 30 dias
       const isVeryRecent = (Date.now() - new Date(song.createdAt).getTime()) < (7 * 24 * 60 * 60 * 1000); // 7 dias
       
-      // Prioridade decrescente por posição, com boost para conteúdo recente
-      let priority = Math.max(0.5, 0.9 - (index * 0.01)); // Decresce gradualmente
-      if (isVeryRecent) priority = Math.min(0.95, priority + 0.2);
-      else if (isRecent) priority = Math.min(0.9, priority + 0.1);
+      // PRIORIDADE AGRESSIVA - todas as músicas são importantes!
+      let priority = Math.max(0.7, 0.9 - (index * 0.005)); // Decresce muito lentamente
+      if (isVeryRecent) priority = Math.min(0.99, priority + 0.25); // Boost grande para novo conteúdo
+      else if (isRecent) priority = Math.min(0.95, priority + 0.15);
+      
+      // Cânticos populares com prioridade extra (detectar por título)
+      const title = song.title?.toLowerCase() || '';
+      const isPopularCantico = [
+        'deus está aqui', 'deus esta aqui', 'ave maria', 'santo', 'gloria', 
+        'aleluia', 'cordeiro', 'salve rainha', 'anjos de deus'
+      ].some(popular => title.includes(popular));
+      
+      if (isPopularCantico) priority = Math.min(0.99, priority + 0.1);
       
       return {
         url,
-        lastModified: new Date(song.updatedAt), // Mantido para compatibilidade
-        changeFrequency: isRecent ? 'weekly' as const : 'monthly' as const,
-        priority: Math.round(priority * 100) / 100, // Arredonda para 2 casas
+        lastModified: new Date(song.updatedAt),
+        changeFrequency: isVeryRecent ? 'daily' as const : (isRecent ? 'weekly' as const : 'monthly' as const),
+        priority: Math.round(priority * 100) / 100,
       };
     });
 

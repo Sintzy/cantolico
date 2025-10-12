@@ -295,7 +295,7 @@ export default function SongPage() {
     let leftSections = sections.slice(0, midPoint);
     let rightSections = sections.slice(midPoint);
     
-    // Ajuste para evitar dividir intro/refrão ao meio
+
     const lastLeftSection = leftSections[leftSections.length - 1];
     const firstRightSection = rightSections[0];
     

@@ -40,7 +40,7 @@ export default function NotFound() {
             <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 drop-shadow-lg">
               Página não encontrada
             </h2>
-            <p className="text-lg text-gray-900 mb-8 drop-shadow-lg font-medium">
+            <p className="text-lg text-gray-900 mb-8 drop-shadow-lg font-medium bg-transparent">
               Ooops... A página que procuras não existe ou foi movida. Confirma se o endereço está correto ou volta ao início para explorar mais cânticos.
             </p>
           </div>

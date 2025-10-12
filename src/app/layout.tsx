@@ -6,7 +6,7 @@ import AuthSessionProvider from "@/components/SessionProvider";
 import Navbar from "@/components/Navbar";
 import { Toaster } from "@/components/ui/sonner"
 import Footer from "@/components/Footer";
-import AdminNotificationWrapper from "@/components/AdminNotificationWrapper";
+
 import EmailVerificationBanner from "@/components/EmailVerificationBanner";
 import { SITE_IMAGES, SITE_CONFIG } from "@/lib/site-images";
 
@@ -14,14 +14,42 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: {
-    default: SITE_CONFIG.name,
-    template: `%s | ${SITE_CONFIG.name}`
+    default: "Cantólico! - Cânticos Católicos | Letras, Acordes e Partituras Grátis",
+    template: `%s | Cantólico - Cânticos Católicos`
   },
-  description: SITE_CONFIG.description,
-  keywords: ["cânticos", "católicos", "liturgia", "música", "igreja", "cancioneiro", "acordes", "partituras", "missa", "oração"],
-  authors: [{ name: SITE_CONFIG.name }],
-  creator: SITE_CONFIG.name,
-  publisher: SITE_CONFIG.name,
+  description: "🎵 A maior biblioteca de cânticos católicos online! Encontra qualquer cântico católico com letras, acordes e partituras. Melhor que MusiCristo e VitaminaC. Grátis para sempre!",
+  keywords: [
+    // Cânticos principais
+    "cânticos católicos", "canticos catolicos", "cancioneiro católico", "cancioneiro catolico",
+    "música católica", "musica catolica", "música liturgica", "musica liturgica",
+    "letras cânticos católicos", "letras canticos catolicos", "acordes cânticos",
+    
+    // Cânticos específicos populares
+    "Deus está aqui", "Deus esta aqui", "deus esta aqui cantico", "deus está aqui letra",
+    "Aleluia", "aleluia cantico", "Gloria a Deus", "gloria a deus cantico",
+    "Santo", "santo cantico", "Cordeiro de Deus", "cordeiro de deus cantico",
+    "Ave Maria", "ave maria cantico", "Salve Rainha", "salve rainha cantico",
+    
+    // Competidores
+    "musicristo", "musicristo canticos", "vitamina c canticos", "vitaminac",
+    "melhor que musicristo", "alternativa musicristo", "melhor site canticos",
+    
+    // Termos gerais
+    "cânticos missa", "canticos missa", "música igreja", "musica igreja",
+    "partituras católicas", "partituras catolicas", "acordes igreja",
+    "liturgia", "cancioneiro", "hinário", "hinario católico", "hinario catolico",
+    
+    // Eventos religiosos
+    "cânticos natal", "canticos natal", "cânticos páscoa", "canticos pascoa",
+    "cânticos quaresma", "canticos quaresma", "cânticos domingo",
+    
+    // Variações
+    "cantolico", "cantólico", "cantolico.pt", "site cânticos grátis",
+    "cânticos pdf", "canticos pdf", "cifras católicas", "cifras catolicas"
+  ],
+  authors: [{ name: "Cantólico - Cânticos Católicos" }],
+  creator: "Cantólico - A maior biblioteca de cânticos católicos",
+  publisher: "Cantólico - Cânticos Católicos Online",
   
   // Favicon e ícones
   icons: {
@@ -57,25 +85,25 @@ export const metadata: Metadata = {
     google: 'google-site-verification-code-here', // Substituir pelo código real
   },
   openGraph: {
-    title: SITE_CONFIG.name,
-    description: SITE_CONFIG.description,
+    title: "Cantólico! - A Maior Biblioteca de Cânticos Católicos Online",
+    description: "🎵 Encontra qualquer cântico católico! Letras, acordes, partituras grátis. Melhor que MusiCristo e VitaminaC. + de 1000 cânticos disponíveis!",
     type: "website",
     locale: "pt_PT",
     url: "https://cantolico.pt",
-    siteName: SITE_CONFIG.name,
+    siteName: "Cantólico - Cânticos Católicos",
     images: [
       {
         url: SITE_IMAGES.ogImage,
         width: 1200,
         height: 630,
-        alt: SITE_CONFIG.description,
+        alt: "Cantólico - A maior biblioteca de cânticos católicos com letras, acordes e partituras grátis",
       }
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: SITE_CONFIG.name,
-    description: SITE_CONFIG.description,
+    title: "Cantólico! - Cânticos Católicos Grátis",
+    description: "🎵 A maior biblioteca de cânticos católicos! Letras, acordes, partituras. Melhor que MusiCristo!",
     creator: "@cantolico",
     images: [SITE_IMAGES.twitterImage],
   },
@@ -96,26 +124,61 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
     <html lang="pt">
       <head>
+        {/* Ezoic Privacy Scripts - MUST load first for compliance */}
+        <script src="https://cmp.gatekeeperconsent.com/min.js" data-cfasync="false"></script>
+        <script src="https://the.gatekeeperconsent.com/cmp.min.js" data-cfasync="false"></script>
+        
+        {/* Ezoic Header Script - Main ad system initialization */}
+        <script async src="//www.ezojs.com/ezoic/sa.min.js"></script>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.ezstandalone = window.ezstandalone || {};
+              ezstandalone.cmd = ezstandalone.cmd || [];
+            `
+          }}
+        />
+        
+        {/* Other scripts */}
         <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
-              "@type": "WebSite",
-              "name": "Cantólico!",
-              "description": "Encontra, submete e partilha cânticos católicos. Um projeto aberto para servir a liturgia com música de qualidade.",
+              "@type": ["WebSite", "MusicGroup", "Organization"],
+              "name": "Cantólico - Cânticos Católicos",
+              "alternateName": ["Cantolico", "Cantólico!", "Canticos Catolicos", "Cânticos Católicos Online"],
+              "description": "A maior biblioteca de cânticos católicos online com letras, acordes e partituras grátis. Melhor que MusiCristo e VitaminaC.",
               "url": "https://cantolico.pt",
-              "potentialAction": {
-                "@type": "SearchAction",
-                "target": "https://cantolico.pt/musics?search={search_term_string}",
-                "query-input": "required name=search_term_string"
-              },
+              "sameAs": [
+                "https://instagram.com/cantolico",
+                "https://github.com/sintzy/cantolico"
+              ],
+              "potentialAction": [
+                {
+                  "@type": "SearchAction",
+                  "target": "https://cantolico.pt/musics?search={search_term_string}",
+                  "query-input": "required name=search_term_string"
+                }
+              ],
               "publisher": {
                 "@type": "Organization",
-                "name": "Cantólico!",
-                "url": "https://cantolico.pt"
-              }
+                "name": "Cantólico - Cânticos Católicos",
+                "url": "https://cantolico.pt",
+                "logo": "https://cantolico.pt/cantolicoemail.png"
+              },
+              "mainEntity": {
+                "@type": "ItemList",
+                "name": "Cânticos Católicos",
+                "description": "Biblioteca completa de cânticos católicos com letras, acordes e partituras",
+                "numberOfItems": "1000+"
+              },
+              "audience": {
+                "@type": "Audience",
+                "audienceType": ["Catholics", "Musicians", "Church Musicians", "Liturgy Teams", "Catolicos", "Musicos Igreja"]
+              },
+              "keywords": "cânticos católicos, canticos catolicos, música católica, letras cânticos, acordes igreja, partituras católicas, cancioneiro católico, liturgia, missa, Deus está aqui, Ave Maria, Santo, Gloria, Aleluia, musicristo alternativa, vitamina c alternativa"
             })
           }}
         />
@@ -128,7 +191,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </main>
           <Toaster />
-          <AdminNotificationWrapper />
           <Footer />
         </AuthSessionProvider>
       </body>

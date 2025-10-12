@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { Mail, Github, Music, Instagram } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -9,8 +10,56 @@ export default function Footer() {
   // Vercel provides these automatically, fallback to custom env vars for local dev
   const commit = process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || 
                  process.env.NEXT_PUBLIC_COMMIT_SHA?.slice(0, 7) || "dev";
+  const fullCommit = process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA || 
+                     process.env.NEXT_PUBLIC_COMMIT_SHA || "";
   const branch = process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_REF || 
                  process.env.NEXT_PUBLIC_BRANCH || "local";
+
+  // Get commit/build time with React state for client-side rendering
+  const [timeAgo, setTimeAgo] = React.useState('');
+
+  React.useEffect(() => {
+    const calculateTimeAgo = () => {
+      let referenceTime: Date;
+      
+      // On Vercel, commits trigger immediate builds, so we can use a reasonable approximation
+      if (process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA) {
+        // For Vercel deployments, assume commit was recent (builds are triggered immediately)
+        // We could fetch from GitHub API here for exact timestamp, but for simplicity:
+        const buildTime = Date.now() - (2 * 60 * 1000); // Assume commit was ~2min ago
+        referenceTime = new Date(buildTime);
+      } else {
+        // Local development - use our custom build time
+        const buildTimeStr = process.env.NEXT_PUBLIC_BUILD_TIME;
+        if (!buildTimeStr) {
+          setTimeAgo('tempo desconhecido');
+          return;
+        }
+        referenceTime = new Date(buildTimeStr);
+      }
+      
+      const now = new Date();
+      const diffMs = now.getTime() - referenceTime.getTime();
+      const diffMinutes = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+      const diffMonths = Math.floor(diffDays / 30);
+      
+      let result: string;
+      if (diffMs < 60000) result = ' 1 min ago';
+      else if (diffMinutes < 60) result = `${diffMinutes} min ago`;
+      else if (diffHours < 24) result = `${diffHours} h ago`;
+      else if (diffDays < 30) result = `${diffDays} d ago`;
+      else result = `${diffMonths} month${diffMonths > 1 ? 's' : ''} ago`;
+
+      setTimeAgo(result);
+    };
+
+    calculateTimeAgo();
+    // Update every minute
+    const interval = setInterval(calculateTimeAgo, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <footer className="border-t border-gray-200 bg-white mt-16">
@@ -56,7 +105,16 @@ export default function Footer() {
             
           </div>
           <p className="text-xs text-gray-500 mt-4">
-            commit <span className="font-mono">{commit}</span> on branch <span className="font-mono">{branch}</span>
+            commit{' '}
+            <a 
+              href={`https://github.com/sintzy/cantolico/commit/${fullCommit}`}
+              target="_blank"
+              rel="noreferrer"
+              className="font-mono hover:text-blue-600 hover:underline cursor-pointer"
+            >
+              {commit}
+            </a>
+            {' '}on branch <span className="font-mono">{branch}</span> from about {timeAgo}
           </p>
         </div>
       </div>

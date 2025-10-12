@@ -1,35 +1,32 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { notFound } from 'next/navigation';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { 
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import StarButton from "@/components/StarButton";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { 
-  ListMusic, 
-  Clock, 
-  User, 
-  Globe, 
+} from "@/components/ui/dropdown-menu";
+import {
+  Globe,
   Lock,
-  Play,
-  ExternalLink,
+  EyeOff,
   MoreVertical,
   Trash2,
-  Edit
-} from 'lucide-react';
-import StarButton from '@/components/StarButton';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { toast } from 'sonner';
+  Edit,
+  Music,
+  Play,
+  ArrowLeft,
+} from "lucide-react";
+import { toast } from "sonner";
+import PlaylistEditModal from "@/components/PlaylistEditModal";
 
 interface PlaylistPageProps {
   params: Promise<{
@@ -42,79 +39,110 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
   const router = useRouter();
   const [playlist, setPlaylist] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [editModalOpen, setEditModalOpen] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
       const { id } = await params;
       await fetchPlaylist(id);
     };
+    
     loadData();
   }, [params]);
 
   const fetchPlaylist = async (id: string) => {
     try {
-      setLoading(true);
       const response = await fetch(`/api/playlists/${id}`);
-      
+      if (response.status === 404) {
+        notFound();
+      }
+      if (response.status === 403) {
+        toast.error('Esta playlist é privada');
+        notFound();
+      }
       if (!response.ok) {
-        if (response.status === 404) {
-          notFound();
-        }
-        if (response.status === 403) {
-          toast.error('Não tens permissão para ver esta playlist');
-          router.push('/playlists');
-          return;
-        }
         throw new Error('Erro ao carregar playlist');
       }
-      
       const data = await response.json();
       setPlaylist(data);
     } catch (error) {
-      console.error('Error fetching playlist:', error);
+      console.error('Erro ao buscar playlist:', error);
       toast.error('Erro ao carregar playlist');
-      router.push('/playlists');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRemoveSong = async (songId: number) => {
-    if (!playlist) return;
+  const handleDeletePlaylist = async () => {
+    if (!playlist?.id) return;
     
-    const confirmed = confirm('Tens a certeza que queres remover esta música da playlist?');
-    if (!confirmed) return;
+    const confirmDelete = confirm('Tem certeza que deseja excluir esta playlist? Esta ação não pode ser desfeita.');
+    
+    if (!confirmDelete) return;
 
     try {
-      const response = await fetch(`/api/playlists/${playlist.id}/songs/${songId}`, {
+      const response = await fetch(`/api/playlists/${playlist.id}`, {
         method: 'DELETE',
       });
 
       if (response.ok) {
-        toast.success('Música removida da playlist com sucesso');
-        setPlaylist({
-          ...playlist,
-          items: playlist.items.filter((item: any) => item.song.id !== songId)
-        });
+        toast.success('Playlist excluída com sucesso');
+        router.push('/playlists');
       } else {
-        const error = await response.json();
-        toast.error(error.error || 'Erro ao remover música');
+        toast.error('Erro ao excluir playlist');
       }
     } catch (error) {
-      console.error('Error removing song:', error);
-      toast.error('Erro de conexão ao remover música');
+      console.error('Erro ao excluir playlist:', error);
+      toast.error('Erro ao excluir playlist');
+    }
+  };
+
+  const getVisibilityIcon = (visibility: string) => {
+    switch (visibility) {
+      case 'PUBLIC':
+        return <Globe className="w-4 h-4" />;
+      case 'PRIVATE':
+        return <Lock className="w-4 h-4" />;
+      case 'NOT_LISTED':
+        return <EyeOff className="w-4 h-4" />;
+      default:
+        return <Lock className="w-4 h-4" />;
+    }
+  };
+
+  const getVisibilityLabel = (visibility: string) => {
+    switch (visibility) {
+      case 'PUBLIC':
+        return 'Pública';
+      case 'PRIVATE':
+        return 'Privada';
+      case 'NOT_LISTED':
+        return 'Não listada';
+      default:
+        return 'Privada';
+    }
+  };
+
+  const handlePlaylistUpdate = () => {
+    setEditModalOpen(false);
+    // Refresh the playlist data to get the latest version
+    if (playlist?.id) {
+      fetchPlaylist(playlist.id);
     }
   };
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-32 bg-gray rounded-lg"></div>
-          <div className="space-y-2">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-16 bg-white rounded"></div>
-            ))}
+      <div className="min-h-screen bg-white">
+        <div className="container mx-auto px-4 py-8">
+          <div className="animate-pulse space-y-6">
+            <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+            <div className="space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-16 bg-gray-200 rounded"></div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -129,204 +157,202 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Hero Section com estilo da landing page */}
-      <section className="relative bg-gradient-to-br from-blue-50 via-white to-purple-50">
-        {/* Background decoration */}
-        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-          <div className="absolute left-1/2 top-0 -translate-x-1/2">
-            <div className="h-60 w-60 rounded-full bg-gradient-to-tr from-blue-500/20 to-purple-500/20 blur-[80px]" />
-          </div>
+      {/* Hero Section with blurred background and overlay */}
+      <div className="relative h-64 md:h-80 w-full flex items-center justify-center overflow-hidden">
+        <div className="absolute inset-0">
+          <img src="/banner.jpg" alt="Banner" className="w-full h-full object-cover object-center scale-110 blur-sm brightness-75" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/60 to-transparent" />
         </div>
         
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="pb-8 pt-12 md:pb-12 md:pt-16 relative z-10">
-            {/* Header da Playlist */}
-            <div className="mb-8">
-              <div className="flex items-start gap-6">
-                <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg p-8 text-white">
-                  <ListMusic className="h-16 w-16" />
-                </div>
-                
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge variant="secondary">Playlist</Badge>
-                    {playlist.isPublic ? (
-                      <Badge variant="outline" className="text-green-600 border-green-600">
-                        <Globe className="h-3 w-3 mr-1" />
-                        Pública
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-gray-600 border-gray-600">
-                        <Lock className="h-3 w-3 mr-1" />
-                        Privada
-                      </Badge>
-                    )}
-                  </div>
-                  
-                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 border-y [border-image:linear-gradient(to_right,transparent,theme(colors.slate.300/.8),transparent)1] leading-tight">
-                    {playlist.name}
-                  </h1>
-                  
-                  {playlist.description && (
-                    <p className="text-lg text-gray-700 mb-4 max-w-2xl">
-                      {playlist.description}
-                    </p>
-                  )}
-                  
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <User className="h-4 w-4" />
-                      <span>Por {playlist.user.name}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <ListMusic className="h-4 w-4" />
-                      <span>{playlist.items.length} música{playlist.items.length !== 1 ? 's' : ''}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      <span>
-                        Criada {formatDistanceToNow(new Date(playlist.createdAt), {
-                          addSuffix: true,
-                          locale: ptBR
-                        })}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+        {/* Back Button */}
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          asChild 
+          className="absolute top-4 left-4 sm:top-6 sm:left-6 z-20 text-white hover:bg-white/20 border-white/30 shadow backdrop-blur-sm"
+        >
+          <Link href="/playlists" className="flex items-center gap-1 sm:gap-2">
+            <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="text-xs sm:text-sm">Voltar</span>
+          </Link>
+        </Button>
+
+        {/* Owner Actions */}
+        {isOwner && (
+          <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-white hover:bg-white/20 border-white/30 shadow backdrop-blur-sm p-1.5 sm:p-2"
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-white/95 backdrop-blur-sm">
+                <DropdownMenuItem onClick={() => setEditModalOpen(true)}>
+                  <Edit className="w-4 h-4 mr-2" />
+                  Editar
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={handleDeletePlaylist}
+                  className="text-red-600 focus:text-red-600"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Eliminar
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-        </div>
-      </section>
-      
-      {/* Main Content */}
-      <section className="bg-white py-8">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          {/* Lista de Músicas */}
-          <div className="space-y-4">
-            {playlist.items.length === 0 ? (
-              <Card className="border-0 shadow-lg">
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <ListMusic className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Playlist vazia</h3>
-                  <p className="text-muted-foreground text-center">
-                    Esta playlist ainda não tem músicas.
-                    {isOwner && " Adicione algumas músicas para começar!"}
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-2">
-                {playlist.items.map((item: any, index: number) => (
-                  <Card key={item.id} className="hover:bg-accent/50 transition-colors">
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-4">
-                        {/* Número da música */}
-                        <div className="w-8 text-center text-sm text-muted-foreground font-mono">
-                          {index + 1}
-                        </div>
+        )}
 
-                        {/* Info da música */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3">
-                            <h3 className="font-semibold truncate">
-                              {item.song ? (
-                                <Link 
-                                  href={`/musics/${item.song.slug}`}
-                                  className="hover:underline"
-                                >
-                                  {item.song.title}
-                                </Link>
-                              ) : (
-                                <span className="text-muted-foreground italic">
-                                  Música não encontrada
-                                </span>
-                              )}
-                            </h3>
-                            
-                            <div className="flex items-center gap-2">
-                              {item.song?.type && (
-                                <Badge variant="outline" className="text-xs">
-                                  {item.song.type.toLowerCase()}
-                                </Badge>
-                              )}
-                              
-                              {item.song?.moments?.length > 0 && (
-                                <Badge variant="secondary" className="text-xs">
-                                  {item.song.moments[0].toLowerCase().replace(/_/g, ' ')}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
-                            <span>
-                              Adicionada por {item.addedBy.name} • {formatDistanceToNow(new Date(item.createdAt), {
-                                addSuffix: true,
-                                locale: ptBR
-                              })}
-                            </span>
-                          </div>
-                        </div>
+        {/* Hero Content */}
+        <div className="relative z-10 flex flex-col items-center justify-center w-full px-4 sm:px-6 text-center">
+          <h1 className="text-3xl md:text-5xl font-extrabold text-white drop-shadow-lg tracking-tight text-center mb-2 md:mb-4">
+            {playlist.name}
+          </h1>
+          
+          {playlist.description && (
+            <p className="text-base sm:text-lg text-white/90 max-w-xs sm:max-w-2xl md:max-w-3xl mx-auto mb-4 leading-relaxed drop-shadow">
+              {playlist.description}
+            </p>
+          )}
 
-                        {/* Ações */}
-                        <div className="flex items-center gap-2">
-                          {item.song && (
-                            <>
-                              <StarButton 
-                                songId={item.song.id} 
-                                size="sm" 
-                                showCount={false}
-                              />
-                              
-                              <Button size="sm" variant="ghost" asChild>
-                                <Link href={`/musics/${item.song.slug}`}>
-                                  <Play className="h-4 w-4 mr-1" />
-                                  Ver
-                                </Link>
-                              </Button>
-                              
-                              <Button size="sm" variant="ghost" asChild>
-                                <Link 
-                                  href={`/musics/${item.song.slug}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  <ExternalLink className="h-4 w-4" />
-                                </Link>
-                              </Button>
-                            </>
-                          )}
-
-                          {/* Dropdown de ações para o dono */}
-                          {isOwner && (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent>
-                                <DropdownMenuItem 
-                                  className="text-red-600 focus:text-red-600"
-                                  onClick={() => handleRemoveSong(item.song?.id || item.songId)}
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Remover da playlist
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+          {/* Metadata */}
+          <div className="flex flex-wrap items-center gap-2 justify-center mb-2">
+            <div className="bg-white/80 text-gray-900 font-semibold px-3 py-1 text-xs shadow-sm rounded-full flex items-center gap-1">
+              {getVisibilityIcon(playlist.visibility)}
+              <span>{getVisibilityLabel(playlist.visibility)}</span>
+            </div>
+            
+            <div className="bg-white/80 text-gray-900 font-semibold px-3 py-1 text-xs shadow-sm rounded-full flex items-center gap-1">
+              <Music className="w-3 h-3" />
+              <span>{playlist.items?.length || 0} músicas</span>
+            </div>
+            
+            {playlist.user && (
+              <div className="bg-white/80 text-gray-900 font-semibold px-3 py-1 text-xs shadow-sm rounded-full">
+                por {playlist.user.name}
               </div>
             )}
           </div>
+
+          {/* Action Buttons */}
+          {isOwner && (
+            <div className="flex gap-3 justify-center mt-2">
+              <Button 
+                variant="ghost" 
+                className="bg-white/20 hover:bg-white/40 text-white border-white/30 shadow"
+                onClick={() => setEditModalOpen(true)}
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Editar
+              </Button>
+            </div>
+          )}
         </div>
-      </section>
+      </div>
+
+      {/* Songs List */}
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        {playlist.items && playlist.items.length > 0 ? (
+          <div className="space-y-1">
+            {playlist.items.map((item: any, index: number) => (
+              <div
+                key={item.id}
+                className="group flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg hover:bg-gray-50/80 transition-all duration-200 border border-transparent hover:border-gray-200"
+              >
+                <div className="flex-shrink-0 w-6 sm:w-8 text-center">
+                  <span className="text-xs sm:text-sm text-gray-500 group-hover:hidden font-medium">
+                    {index + 1}
+                  </span>
+                  <Play className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600 hidden group-hover:block cursor-pointer hover:text-gray-900 transition-colors" />
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  {item.song ? (
+                    <Link
+                      href={`/musics/${item.song.slug}`}
+                      className="block hover:text-gray-900 transition-colors"
+                    >
+                      <h4 className="font-semibold text-gray-800 truncate text-sm sm:text-base">
+                        {item.song.title}
+                      </h4>
+                      <div className="flex items-center gap-1 sm:gap-2 mt-1 sm:mt-2">
+                        {item.song.tags && item.song.tags.length > 0 && (
+                          <div className="flex gap-1">
+                            {item.song.tags.slice(0, 2).map((tag: string) => (
+                              <Badge 
+                                key={tag} 
+                                variant="secondary" 
+                                className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors px-1.5 py-0.5"
+                              >
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </Link>
+                  ) : (
+                    <div className="text-gray-500">
+                      <span className="text-sm italic">Música não encontrada</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {item.song && (
+                    <>
+                      <StarButton songId={item.song.id} />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        asChild
+                        className="opacity-0 group-hover:opacity-100 transition-all duration-200 text-gray-600 hover:text-gray-900"
+                      >
+                        <Link href={`/musics/${item.song.slug}`}>
+                          Ver
+                        </Link>
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12 sm:py-16 px-4">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+              <Music className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-gray-400" />
+            </div>
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-2 sm:mb-3">
+              Nenhuma música ainda
+            </h3>
+            <p className="text-sm sm:text-base text-gray-600 mb-6 sm:mb-8 max-w-xs sm:max-w-md mx-auto">
+              Esta playlist ainda não possui músicas. {isOwner ? 'Adicione algumas para começar!' : ''}
+            </p>
+            {isOwner && (
+              <Button asChild className="bg-gray-900 hover:bg-gray-800 text-white">
+                <Link href={`/playlists/${playlist.id}/edit`}>
+                  Adicionar Músicas
+                </Link>
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Edit Playlist Modal */}
+      {playlist && (
+        <PlaylistEditModal
+          isOpen={editModalOpen}
+          onClose={() => setEditModalOpen(false)}
+          playlist={playlist}
+          onUpdate={handlePlaylistUpdate}
+        />
+      )}
     </div>
   );
 }

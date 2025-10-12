@@ -276,7 +276,24 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  return NextResponse.next();
+  // ==========================================
+  // HEADERS SEO AGRESSIVOS
+  // ==========================================
+  const response = NextResponse.next();
+  
+  // Headers para melhorar SEO e indexação
+  if (pathname.startsWith('/musics/') || pathname === '/musics' || pathname === '/') {
+    // Páginas de conteúdo - máxima crawlabilidade
+    response.headers.set('Cache-Control', 'public, max-age=3600, s-maxage=7200');
+    response.headers.set('X-Robots-Tag', 'index, follow, max-image-preview:large, max-snippet:-1');
+  }
+  
+  // Headers globais para SEO
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('X-Frame-Options', 'SAMEORIGIN');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  
+  return response;
 }
 
 export const config = {

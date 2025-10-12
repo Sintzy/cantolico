@@ -164,7 +164,6 @@ export default function TermsPage() {
             <CardContent className="space-y-4">
               <p>Para questões sobre estes termos ou o serviço:</p>
               <ul className="space-y-1 ml-4">
-                <li>Email Principal: <a href="mailto:cantolico@cantolico.pt" className="text-primary underline">cantolico@cantolico.pt</a></li>
                 <li>Suporte Técnico: <a href="mailto:miguel@cantolico.pt" className="text-primary underline">miguel@cantolico.pt</a></li>
                 <li>Tempo de Resposta: Até 48 horas úteis</li>
               </ul>

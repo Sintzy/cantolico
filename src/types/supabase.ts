@@ -417,7 +417,8 @@ export interface Database {
           id: string
           name: string
           description: string | null
-          isPublic: boolean
+          isPublic: boolean | null
+          visibility: 'PUBLIC' | 'PRIVATE' | 'NOT_LISTED'
           userId: number
           createdAt: string
           updatedAt: string
@@ -426,7 +427,8 @@ export interface Database {
           id?: string
           name: string
           description?: string | null
-          isPublic?: boolean
+          isPublic?: boolean | null
+          visibility?: 'PUBLIC' | 'PRIVATE' | 'NOT_LISTED'
           userId: number
           createdAt?: string
           updatedAt?: string
@@ -435,7 +437,8 @@ export interface Database {
           id?: string
           name?: string
           description?: string | null
-          isPublic?: boolean
+          isPublic?: boolean | null
+          visibility?: 'PUBLIC' | 'PRIVATE' | 'NOT_LISTED'
           userId?: number
           createdAt?: string
           updatedAt?: string
@@ -465,6 +468,44 @@ export interface Database {
           order?: number
           addedById?: number
           createdAt?: string
+        }
+      }
+      PlaylistMember: {
+        Row: {
+          id: string
+          playlistId: string
+          userEmail: string
+          role: 'EDITOR' | 'VIEWER'
+          status: 'PENDING' | 'ACCEPTED' | 'DECLINED'
+          invitedBy: number
+          invitedAt: string
+          acceptedAt: string | null
+          createdAt: string
+          updatedAt: string
+        }
+        Insert: {
+          id?: string
+          playlistId: string
+          userEmail: string
+          role?: 'EDITOR' | 'VIEWER'
+          status?: 'PENDING' | 'ACCEPTED' | 'DECLINED'
+          invitedBy: number
+          invitedAt?: string
+          acceptedAt?: string | null
+          createdAt?: string
+          updatedAt?: string
+        }
+        Update: {
+          id?: string
+          playlistId?: string
+          userEmail?: string
+          role?: 'EDITOR' | 'VIEWER'
+          status?: 'PENDING' | 'ACCEPTED' | 'DECLINED'
+          invitedBy?: number
+          invitedAt?: string
+          acceptedAt?: string | null
+          createdAt?: string
+          updatedAt?: string
         }
       }
       AuditLog: {

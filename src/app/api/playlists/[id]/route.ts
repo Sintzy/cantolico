@@ -23,6 +23,7 @@ export async function GET(
         name,
         description,
         isPublic,
+        visibility,
         userId,
         createdAt,
         updatedAt
@@ -42,13 +43,26 @@ export async function GET(
 
     // Verificar permissões
     const isOwner = session?.user?.id === playlist.userId;
-    const isPublic = playlist.isPublic;
+    const visibility = playlist.visibility || (playlist.isPublic ? 'PUBLIC' : 'PRIVATE');
+    const isAccessible = visibility === 'PUBLIC' || visibility === 'NOT_LISTED';
 
-    if (!isPublic && !isOwner) {
-      return NextResponse.json(
-        { error: 'Access denied' },
-        { status: 403 }
-      );
+    // Para playlists privadas, verificar se é proprietário ou membro aceito
+    if (visibility === 'PRIVATE' && !isOwner) {
+      // Verificar se o usuário é um membro aceito da playlist
+      const { data: memberAccess } = await supabase
+        .from('PlaylistMember')
+        .select('status')
+        .eq('playlistId', playlistId)
+        .eq('userEmail', session?.user?.email)
+        .eq('status', 'ACCEPTED')
+        .single();
+
+      if (!memberAccess) {
+        return NextResponse.json(
+          { error: 'Access denied' },
+          { status: 403 }
+        );
+      }
     }
 
     // Buscar dados do usuário separadamente
@@ -143,10 +157,30 @@ export async function GET(
       }
     }
 
+    // Get playlist members if user is owner or member
+    let membersData: any[] = [];
+    if (isOwner || (visibility === 'PRIVATE' && session?.user?.email)) {
+      const { data: members } = await supabase
+        .from('PlaylistMember')
+        .select(`
+          id,
+          userEmail,
+          role,
+          status,
+          invitedAt,
+          acceptedAt
+        `)
+        .eq('playlistId', playlistId)
+        .order('invitedAt', { ascending: false });
+      
+      membersData = members || [];
+    }
+
     // Reformatar dados para manter compatibilidade
     const formattedPlaylist = {
       ...playlist,
       user: user || null,
+      members: isOwner ? membersData : undefined, // Only include if owner
       items: (playlistItems || []).map(item => {
         const song = songsData.find(s => s.id === item.songId);
         const addedBy = usersData.find(u => u.id === item.addedById);
@@ -193,7 +227,7 @@ export async function PUT(
     const { id } = await params;
     const playlistId = id;
     const body = await request.json();
-    const { name, description, isPublic } = body;
+    const { name, description, isPublic, visibility } = body;
 
     // Obter informações de IP e User-Agent para logs
     const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
@@ -202,7 +236,7 @@ export async function PUT(
     // Verificar se é o dono da playlist
     const { data: playlist, error: checkError } = await supabase
       .from('Playlist')
-      .select('userId, name, description, isPublic')
+      .select('userId, name, description, isPublic, visibility')
       .eq('id', playlistId)
       .single();
 
@@ -235,11 +269,16 @@ export async function PUT(
       );
     }
 
+    // Determinar visibilidade final
+    const finalVisibility = visibility || (isPublic !== undefined ? (isPublic ? 'PUBLIC' : 'PRIVATE') : playlist.visibility || 'PRIVATE');
+    const finalIsPublic = finalVisibility === 'PUBLIC';
+
     // Criar objeto com as mudanças
     const changes = {
       name: playlist.name !== name ? { from: playlist.name, to: name } : null,
       description: playlist.description !== description ? { from: playlist.description, to: description } : null,
-      isPublic: playlist.isPublic !== !!isPublic ? { from: playlist.isPublic, to: !!isPublic } : null
+      visibility: playlist.visibility !== finalVisibility ? { from: playlist.visibility, to: finalVisibility } : null,
+      isPublic: playlist.isPublic !== finalIsPublic ? { from: playlist.isPublic, to: finalIsPublic } : null
     };
 
     // Filtrar apenas mudanças válidas
@@ -277,13 +316,15 @@ export async function PUT(
       .update({
         name: name.trim(),
         description: description?.trim() || null,
-        isPublic: !!isPublic
+        visibility: finalVisibility,
+        isPublic: finalIsPublic
       })
       .eq('id', playlistId)
       .select(`
         id,
         name,
         description,
+        visibility,
         isPublic,
         userId,
         createdAt,
@@ -453,6 +494,140 @@ export async function DELETE(
     console.error('Error deleting playlist:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const { id } = await params;
+    const playlistId = id;
+    const body = await request.json();
+
+    const {
+      name,
+      description,
+      isPublic,
+      isPrivate,
+      isNotListed
+    } = body;
+
+    // Validar dados
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+      return NextResponse.json(
+        { error: 'Nome da playlist é obrigatório' },
+        { status: 400 }
+      );
+    }
+
+    if (name.trim().length > 100) {
+      return NextResponse.json(
+        { error: 'Nome da playlist deve ter no máximo 100 caracteres' },
+        { status: 400 }
+      );
+    }
+
+    if (description && description.length > 500) {
+      return NextResponse.json(
+        { error: 'Descrição deve ter no máximo 500 caracteres' },
+        { status: 400 }
+      );
+    }
+
+    // Verificar se a playlist existe e se o usuário é o dono
+    const { data: playlist, error: checkError } = await supabase
+      .from('Playlist')
+      .select('userId, name')
+      .eq('id', playlistId)
+      .single();
+
+    if (checkError || !playlist) {
+      return NextResponse.json(
+        { error: 'Playlist não encontrada' },
+        { status: 404 }
+      );
+    }
+
+    if (playlist.userId !== session.user.id) {
+      return NextResponse.json(
+        { error: 'Sem permissão para editar esta playlist' },
+        { status: 403 }
+      );
+    }
+
+    // Determinar visibilidade
+    let visibility = 'PRIVATE';
+    if (isPublic) {
+      visibility = 'PUBLIC';
+    } else if (isNotListed) {
+      visibility = 'NOT_LISTED';
+    }
+
+    // Atualizar playlist
+    const { data: updatedPlaylist, error: updateError } = await supabase
+      .from('Playlist')
+      .update({
+        name: name.trim(),
+        description: description?.trim() || null,
+        isPublic: isPublic || false,
+        visibility: visibility,
+        updatedAt: new Date().toISOString()
+      })
+      .eq('id', playlistId)
+      .select(`
+        id,
+        name,
+        description,
+        isPublic,
+        visibility,
+        userId,
+        createdAt,
+        updatedAt
+      `)
+      .single();
+
+    if (updateError) {
+      console.error('Error updating playlist:', updateError);
+      return NextResponse.json(
+        { error: 'Erro ao atualizar playlist' },
+        { status: 500 }
+      );
+    }
+
+    // Log da atualização
+    await logGeneral('SUCCESS', 'Playlist atualizada', 'Utilizador atualizou informações da playlist', {
+      userId: session.user.id,
+      userEmail: session.user.email,
+      playlistId,
+      playlistName: updatedPlaylist.name,
+      visibility: updatedPlaylist.visibility,
+      action: 'playlist_updated',
+      entity: 'playlist'
+    });
+
+    return NextResponse.json(updatedPlaylist);
+
+  } catch (error) {
+    console.error('Error updating playlist:', error);
+    await logErrors('ERROR', 'Erro ao atualizar playlist', 'Erro interno do servidor ao atualizar playlist', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      action: 'playlist_update_error'
+    });
+    return NextResponse.json(
+      { error: 'Erro interno do servidor' },
       { status: 500 }
     );
   }

@@ -359,12 +359,18 @@ export const authOptions: AuthOptions = {
   ],
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 dias
+    updateAge: 24 * 60 * 60, // 24 horas
   },
   secret: process.env.NEXTAUTH_SECRET,
   pages: {
     signIn: '/login',
+    signOut: '/login',
     error: '/login',
+    verifyRequest: '/login',
+    newUser: '/', // Redirect para home após registo OAuth
   },
+  debug: process.env.NODE_ENV === 'development',
   callbacks: {
     
     async session({ session, token }) {
@@ -412,12 +418,34 @@ export const authOptions: AuthOptions = {
       
       if (account?.provider === 'google') {
         try {
+          // Validar dados básicos do Google
+          if (!user.email) {
+            await logErrors('ERROR', 'OAuth Google sem email', 
+              'Google OAuth retornou utilizador sem email', {
+              userId: user.id,
+              name: user.name,
+              action: 'oauth_no_email_error'
+            });
+            return false;
+          }
+
           // Check if user already exists
-          const { data: existingUser } = await (supabase as any)
+          const { data: existingUser, error: fetchError } = await (supabase as any)
             .from('User')
             .select('*')
             .eq('email', user.email!)
             .single();
+
+          // Se houve erro na busca (diferente de "não encontrado")
+          if (fetchError && fetchError.code !== 'PGRST116') {
+            await logErrors('ERROR', 'Erro ao buscar utilizador OAuth', 
+              'Erro na base de dados durante OAuth', {
+              email: user.email,
+              error: fetchError.message,
+              action: 'oauth_db_fetch_error'
+            });
+            return false;
+          }
 
           if (existingUser) {
             // Check moderation status separately
@@ -518,7 +546,9 @@ export const authOptions: AuthOptions = {
               );
             }
           } else {
-            // New user via Google OAuth
+            // New user via Google OAuth - será criado pelo adapter automaticamente
+            console.log(`✅ [OAUTH] Novo utilizador será criado: ${user.email}`);
+            
             await logGeneral('INFO', 'Novo utilizador criado via OAuth', 
               'Nova conta criada através do Google OAuth', {
               email: user.email,
@@ -529,16 +559,7 @@ export const authOptions: AuthOptions = {
               entity: 'user'
             });
 
-            // Enviar email de boas-vindas para novo utilizador OAuth
-            try {
-              await sendWelcomeEmail(
-                user.email || '',
-                user.name || 'Utilizador'
-              );
-            } catch (emailError) {
-              console.error('❌ Erro ao enviar email de boas-vindas OAuth:', emailError);
-              // Não falhar o registo se o email falhar
-            }
+            // O email de boas-vindas será enviado pelo adapter após criação
           }
           
           return true;
