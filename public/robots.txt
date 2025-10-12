@@ -20,6 +20,9 @@ Disallow: /banned*
 # Sitemap para indexação rápida
 Sitemap: https://cantolico.pt/sitemap.xml
 
+# Ads.txt file for advertising transparency
+# Allow: /ads.txt
+
 # Crawl-delay otimizado para melhor performance
 Crawl-delay: 1
 

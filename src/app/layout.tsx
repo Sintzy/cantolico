@@ -124,6 +124,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
     <html lang="pt">
       <head>
+        {/* Ezoic Privacy Scripts - MUST load first for compliance */}
+        <script src="https://cmp.gatekeeperconsent.com/min.js" data-cfasync="false"></script>
+        <script src="https://the.gatekeeperconsent.com/cmp.min.js" data-cfasync="false"></script>
+        
+        {/* Ezoic Header Script - Main ad system initialization */}
+        <script async src="//www.ezojs.com/ezoic/sa.min.js"></script>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.ezstandalone = window.ezstandalone || {};
+              ezstandalone.cmd = ezstandalone.cmd || [];
+            `
+          }}
+        />
+        
+        {/* Other scripts */}
         <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
         <script
           type="application/ld+json"

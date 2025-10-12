@@ -20,6 +20,16 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA,
     NEXT_PUBLIC_VERCEL_GIT_COMMIT_REF: process.env.VERCEL_GIT_COMMIT_REF,
   },
+  // Ezoic ads.txt redirect configuration
+  async redirects() {
+    return [
+      {
+        source: '/ads.txt',
+        destination: 'https://srv.adstxtmanager.com/19390/cantolico.pt',
+        permanent: true, // 301 redirect for SEO
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;
