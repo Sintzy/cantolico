@@ -26,7 +26,6 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { toast } from "sonner";
-import PlaylistEditModal from "@/components/PlaylistEditModal";
 
 interface PlaylistPageProps {
   params: Promise<{
@@ -39,7 +38,6 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
   const router = useRouter();
   const [playlist, setPlaylist] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [editModalOpen, setEditModalOpen] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -54,10 +52,6 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
     try {
       const response = await fetch(`/api/playlists/${id}`);
       if (response.status === 404) {
-        notFound();
-      }
-      if (response.status === 403) {
-        toast.error('Esta playlist é privada');
         notFound();
       }
       if (!response.ok) {
@@ -123,14 +117,6 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
     }
   };
 
-  const handlePlaylistUpdate = () => {
-    setEditModalOpen(false);
-    // Refresh the playlist data to get the latest version
-    if (playlist?.id) {
-      fetchPlaylist(playlist.id);
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-white">
@@ -157,43 +143,42 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Hero Section with blurred background and overlay */}
-      <div className="relative h-64 md:h-80 w-full flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0">
-          <img src="/banner.jpg" alt="Banner" className="w-full h-full object-cover object-center scale-110 blur-sm brightness-75" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/60 to-transparent" />
-        </div>
+      {/* Modern Hero Section */}
+      <div className="relative w-full h-72 md:h-96 flex items-center justify-center overflow-hidden bg-gradient-to-br from-gray-50 via-white to-gray-100">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/5 to-white/90" />
         
         {/* Back Button */}
         <Button 
           variant="ghost" 
           size="sm" 
           asChild 
-          className="absolute top-4 left-4 sm:top-6 sm:left-6 z-20 text-white hover:bg-white/20 border-white/30 shadow backdrop-blur-sm"
+          className="absolute top-6 left-6 z-20 text-gray-600 hover:text-gray-900 hover:bg-white/80 backdrop-blur-sm"
         >
-          <Link href="/playlists" className="flex items-center gap-1 sm:gap-2">
-            <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4" />
-            <span className="text-xs sm:text-sm">Voltar</span>
+          <Link href="/playlists" className="flex items-center gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            Voltar
           </Link>
         </Button>
 
         {/* Owner Actions */}
         {isOwner && (
-          <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20">
+          <div className="absolute top-6 right-6 z-20">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="text-white hover:bg-white/20 border-white/30 shadow backdrop-blur-sm p-1.5 sm:p-2"
+                  className="text-gray-600 hover:text-gray-900 hover:bg-white/80 backdrop-blur-sm"
                 >
                   <MoreVertical className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-white/95 backdrop-blur-sm">
-                <DropdownMenuItem onClick={() => setEditModalOpen(true)}>
-                  <Edit className="w-4 h-4 mr-2" />
-                  Editar
+                <DropdownMenuItem asChild>
+                  <Link href={`/playlists/${playlist.id}/edit`} className="flex items-center gap-2">
+                    <Edit className="w-4 h-4" />
+                    Editar
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={handleDeletePlaylist}
@@ -208,66 +193,59 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
         )}
 
         {/* Hero Content */}
-        <div className="relative z-10 flex flex-col items-center justify-center w-full px-4 sm:px-6 text-center">
-          <h1 className="text-3xl md:text-5xl font-extrabold text-white drop-shadow-lg tracking-tight text-center mb-2 md:mb-4">
-            {playlist.name}
-          </h1>
-          
-          {playlist.description && (
-            <p className="text-base sm:text-lg text-white/90 max-w-xs sm:max-w-2xl md:max-w-3xl mx-auto mb-4 leading-relaxed drop-shadow">
-              {playlist.description}
-            </p>
-          )}
-
-          {/* Metadata */}
-          <div className="flex flex-wrap items-center gap-2 justify-center mb-2">
-            <div className="bg-white/80 text-gray-900 font-semibold px-3 py-1 text-xs shadow-sm rounded-full flex items-center gap-1">
-              {getVisibilityIcon(playlist.visibility)}
-              <span>{getVisibilityLabel(playlist.visibility)}</span>
+        <div className="relative z-10 flex flex-col items-center justify-center w-full px-6 text-center">
+          <div className="mb-6">
+            <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-gray-800 to-gray-600 rounded-2xl flex items-center justify-center mb-6 mx-auto shadow-lg">
+              <Music className="w-8 h-8 md:w-10 md:h-10 text-white" />
             </div>
             
-            <div className="bg-white/80 text-gray-900 font-semibold px-3 py-1 text-xs shadow-sm rounded-full flex items-center gap-1">
-              <Music className="w-3 h-3" />
-              <span>{playlist.items?.length || 0} músicas</span>
-            </div>
+            <h1 className="text-4xl md:text-7xl font-black text-gray-900 tracking-tight mb-4 drop-shadow-sm">
+              {playlist.name}
+            </h1>
             
-            {playlist.user && (
-              <div className="bg-white/80 text-gray-900 font-semibold px-3 py-1 text-xs shadow-sm rounded-full">
-                por {playlist.user.name}
-              </div>
+            {playlist.description && (
+              <p className="text-lg md:text-xl text-gray-700 max-w-3xl mx-auto mb-6 leading-relaxed">
+                {playlist.description}
+              </p>
             )}
           </div>
 
-          {/* Action Buttons */}
-          {isOwner && (
-            <div className="flex gap-3 justify-center mt-2">
-              <Button 
-                variant="ghost" 
-                className="bg-white/20 hover:bg-white/40 text-white border-white/30 shadow"
-                onClick={() => setEditModalOpen(true)}
-              >
-                <Edit className="w-4 h-4 mr-2" />
-                Editar
-              </Button>
+          {/* Metadata */}
+          <div className="flex flex-wrap items-center gap-4 justify-center text-sm text-gray-600">
+            <div className="flex items-center gap-2 bg-white/60 backdrop-blur-sm px-3 py-2 rounded-full border border-gray-200">
+              {getVisibilityIcon(playlist.visibility)}
+              <span className="font-medium">{getVisibilityLabel(playlist.visibility)}</span>
             </div>
-          )}
+            
+            <div className="flex items-center gap-2 bg-white/60 backdrop-blur-sm px-3 py-2 rounded-full border border-gray-200">
+              <Music className="w-4 h-4 text-gray-500" />
+              <span className="font-medium">{playlist.items?.length || 0} músicas</span>
+            </div>
+            
+            {playlist.user && (
+              <div className="flex items-center gap-2 bg-white/60 backdrop-blur-sm px-3 py-2 rounded-full border border-gray-200">
+                <span>por</span>
+                <span className="font-medium">{playlist.user.name}</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Songs List */}
-      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <div className="container mx-auto px-4 py-8">
         {playlist.items && playlist.items.length > 0 ? (
           <div className="space-y-1">
             {playlist.items.map((item: any, index: number) => (
               <div
                 key={item.id}
-                className="group flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg hover:bg-gray-50/80 transition-all duration-200 border border-transparent hover:border-gray-200"
+                className="group flex items-center gap-4 p-4 rounded-lg hover:bg-gray-50/80 transition-all duration-200 border border-transparent hover:border-gray-200"
               >
-                <div className="flex-shrink-0 w-6 sm:w-8 text-center">
-                  <span className="text-xs sm:text-sm text-gray-500 group-hover:hidden font-medium">
+                <div className="flex-shrink-0 w-8 text-center">
+                  <span className="text-sm text-gray-500 group-hover:hidden font-medium">
                     {index + 1}
                   </span>
-                  <Play className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600 hidden group-hover:block cursor-pointer hover:text-gray-900 transition-colors" />
+                  <Play className="w-4 h-4 text-gray-600 hidden group-hover:block cursor-pointer hover:text-gray-900 transition-colors" />
                 </div>
                 
                 <div className="flex-1 min-w-0">
@@ -276,17 +254,17 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
                       href={`/musics/${item.song.slug}`}
                       className="block hover:text-gray-900 transition-colors"
                     >
-                      <h4 className="font-semibold text-gray-800 truncate text-sm sm:text-base">
+                      <h4 className="font-semibold text-gray-800 truncate text-base">
                         {item.song.title}
                       </h4>
-                      <div className="flex items-center gap-1 sm:gap-2 mt-1 sm:mt-2">
+                      <div className="flex items-center gap-2 mt-2">
                         {item.song.tags && item.song.tags.length > 0 && (
                           <div className="flex gap-1">
                             {item.song.tags.slice(0, 2).map((tag: string) => (
                               <Badge 
                                 key={tag} 
                                 variant="secondary" 
-                                className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors px-1.5 py-0.5"
+                                className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
                               >
                                 {tag}
                               </Badge>
@@ -323,14 +301,14 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
             ))}
           </div>
         ) : (
-          <div className="text-center py-12 sm:py-16 px-4">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
-              <Music className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-gray-400" />
+          <div className="text-center py-16">
+            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Music className="w-12 h-12 text-gray-400" />
             </div>
-            <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-2 sm:mb-3">
+            <h3 className="text-xl font-semibold text-gray-800 mb-3">
               Nenhuma música ainda
             </h3>
-            <p className="text-sm sm:text-base text-gray-600 mb-6 sm:mb-8 max-w-xs sm:max-w-md mx-auto">
+            <p className="text-gray-600 mb-8 max-w-md mx-auto">
               Esta playlist ainda não possui músicas. {isOwner ? 'Adicione algumas para começar!' : ''}
             </p>
             {isOwner && (
@@ -343,16 +321,6 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
           </div>
         )}
       </div>
-
-      {/* Edit Playlist Modal */}
-      {playlist && (
-        <PlaylistEditModal
-          isOpen={editModalOpen}
-          onClose={() => setEditModalOpen(false)}
-          playlist={playlist}
-          onUpdate={handlePlaylistUpdate}
-        />
-      )}
     </div>
   );
 }

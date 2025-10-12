@@ -30,7 +30,7 @@ export async function POST(
       );
     }
 
-    // Verificar se é o dono da playlist
+    // Verificar se é o dono da playlist ou colaborador editor
     const { data: playlist, error: playlistError } = await supabase
       .from('Playlist')
       .select('userId')
@@ -44,9 +44,27 @@ export async function POST(
       );
     }
 
-    if (playlist.userId !== session.user.id) {
+    // Verificar se é o dono
+    const isOwner = playlist.userId === session.user.id;
+    
+    // Se não é o dono, verificar se é colaborador editor
+    let isEditor = false;
+    if (!isOwner) {
+      const { data: membership } = await supabase
+        .from('PlaylistMember')
+        .select('role, status')
+        .eq('playlistId', playlistId)
+        .eq('userEmail', session.user.email)
+        .eq('status', 'ACCEPTED')
+        .eq('role', 'EDITOR')
+        .single();
+
+      isEditor = !!membership;
+    }
+
+    if (!isOwner && !isEditor) {
       return NextResponse.json(
-        { error: 'Access denied' },
+        { error: 'Access denied. Only playlist owner or editors can add songs.' },
         { status: 403 }
       );
     }
@@ -235,7 +253,7 @@ export async function DELETE(
 
     const songId = song.id;
 
-    // Verificar se é o dono da playlist
+    // Verificar se é o dono da playlist ou colaborador editor
     const { data: playlist, error: playlistError } = await supabase
       .from('Playlist')
       .select('userId')
@@ -249,9 +267,27 @@ export async function DELETE(
       );
     }
 
-    if (playlist.userId !== session.user.id) {
+    // Verificar se é o dono
+    const isOwner = playlist.userId === session.user.id;
+    
+    // Se não é o dono, verificar se é colaborador editor
+    let isEditor = false;
+    if (!isOwner) {
+      const { data: membership } = await supabase
+        .from('PlaylistMember')
+        .select('role, status')
+        .eq('playlistId', playlistId)
+        .eq('userEmail', session.user.email)
+        .eq('status', 'ACCEPTED')
+        .eq('role', 'EDITOR')
+        .single();
+
+      isEditor = !!membership;
+    }
+
+    if (!isOwner && !isEditor) {
       return NextResponse.json(
-        { error: 'Access denied' },
+        { error: 'Access denied. Only playlist owner or editors can remove songs.' },
         { status: 403 }
       );
     }

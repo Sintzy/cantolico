@@ -1,3 +1,13 @@
+/* Shimmer Animation for Modern Skeletons */
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 /* Toast/sonner: força background branco sólido */
 .toaster .sonner-toast, .toaster .sonner-toast[data-type] {
   background: #fff !important;

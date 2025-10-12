@@ -1,321 +1,515 @@
-'use client';
+﻿'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { 
-  ListMusic, 
-  Plus, 
-  Clock, 
-  Globe, 
-  Lock,
-  Music,
-  Edit,
-  Trash2,
-  MoreHorizontal,
-  Eye
-} from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Plus, Music, Users, Lock, Globe, Crown, UserCheck, Settings, Edit } from 'lucide-react';
+import Link from 'next/link';
+import EditPlaylistModal from '../../components/EditPlaylistModal';
+
+interface PlaylistMember {
+  id: string;
+  email: string;
+  name: string | null;
+  role: 'owner' | 'editor';
+  status: 'accepted' | 'pending';
+  joinedAt: string;
+  user?: {
+    id: string;
+    name: string | null;
+    email: string;
+  };
+}
 
 interface Playlist {
   id: string;
   name: string;
-  description?: string;
+  description: string | null;
+  visibility: 'PUBLIC' | 'PRIVATE' | 'NOT_LISTED';
   isPublic: boolean;
   userId: number;
   createdAt: string;
   updatedAt: string;
-  user: {
-    id: number;
-    name: string;
-  };
-  _count: {
-    items: number;
-  };
+  songsCount: number;
+  members?: PlaylistMember[];
+  userRole?: 'owner' | 'editor';
 }
 
-export default function MyPlaylistsPage() {
-  const { data: session, status } = useSession();
+function PlaylistsContent() {
+  const { data: session } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
+
+  // Check for invitation messages
+  useEffect(() => {
+    const inviteAccepted = searchParams.get('invite_accepted');
+    const playlistName = searchParams.get('playlist_name');
+    const error = searchParams.get('error');
+    
+    if (inviteAccepted === 'true' && playlistName) {
+      toast.success(`Convite aceito! Agora és editor da playlist "${decodeURIComponent(playlistName)}"`);
+    } else if (error) {
+      const errorMessages: { [key: string]: string } = {
+        'invalid_token': 'Link de convite inválido.',
+        'expired_token': 'Este convite expirou. Contacta o proprietário da playlist para um novo convite.',
+        'invite_cancelled': 'Este convite foi cancelado pelo proprietário da playlist.',
+        'invite_not_found': 'Convite não encontrado.',
+        'already_accepted': 'Este convite já foi aceito anteriormente.',
+        'email_mismatch': 'O teu email não corresponde ao email convidado.',
+        'accept_failed': 'Erro ao aceitar o convite. Tenta novamente.',
+        'server_error': 'Erro interno do servidor. Tenta novamente mais tarde.'
+      };
+      
+      const message = errorMessages[error] || 'Erro desconhecido com o convite.';
+      toast.error(message);
+    }
+    
+    // Clean up URL parameters
+    if (inviteAccepted || error) {
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
-    if (status === 'loading') return;
-    
-    if (!session?.user?.id) {
-      router.push('/login');
+    if (!session?.user) {
+      setLoading(false);
       return;
     }
 
+    const fetchPlaylists = async () => {
+      try {
+        const response = await fetch('/api/user/playlists');
+        if (response.ok) {
+          const data = await response.json();
+          setPlaylists(data);
+        } else {
+          console.error('Failed to fetch playlists');
+          toast.error('Erro ao carregar playlists');
+        }
+      } catch (error) {
+        console.error('Error fetching playlists:', error);
+        toast.error('Erro de conexão');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchPlaylists();
-  }, [session, status, router]);
+  }, [session]);
 
-  const fetchPlaylists = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/user/playlists');
-      
-      if (response.ok) {
-        const data = await response.json();
-        setPlaylists(data);
-      } else {
-        toast.error('Erro ao carregar playlists');
-      }
-    } catch (error) {
-      console.error('Error fetching playlists:', error);
-      toast.error('Erro de conexão');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeletePlaylist = async (playlistId: string, playlistName: string) => {
-    const confirmed = confirm(`Tens a certeza que queres eliminar a playlist "${playlistName}"? Esta ação não pode ser desfeita.`);
-    if (!confirmed) return;
-
-    try {
-      const response = await fetch(`/api/playlists/${playlistId}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        toast.success('Playlist eliminada com sucesso');
-        // Atualizar a lista removendo a playlist eliminada
-        setPlaylists(playlists.filter(p => p.id !== playlistId));
-      } else {
-        const error = await response.json();
-        toast.error(error.error || 'Erro ao eliminar playlist');
-      }
-    } catch (error) {
-      console.error('Error deleting playlist:', error);
-      toast.error('Erro de conexão ao eliminar playlist');
-    }
-  };
-
-  if (status === 'loading' || loading) {
+  if (!session?.user) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-48 bg-gray-200 rounded-lg"></div>
-            ))}
+      <div className="min-h-screen bg-white">
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center py-12">
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">Playlists</h1>
+            <p className="text-gray-600 mb-6">Faz login para ver as tuas playlists</p>
+            <Button asChild>
+              <Link href="/login">Fazer Login</Link>
+            </Button>
           </div>
         </div>
       </div>
     );
   }
 
-  if (!session?.user?.id) {
-    return null;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white">
+        {/* Header Skeleton */}
+        <div className="bg-white border-b">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <Skeleton className="h-7 w-48 mb-2" />
+                <Skeleton className="h-4 w-64" />
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Skeleton className="h-9 w-20" />
+                <Skeleton className="h-9 w-28" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content Skeleton */}
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="space-y-8">
+            {/* Owned Playlists Skeleton */}
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <Skeleton className="h-5 w-5" />
+                <Skeleton className="h-6 w-32" />
+                <Skeleton className="h-5 w-8" />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                {[...Array(4)].map((_, i) => (
+                  <Card key={i} className="bg-white border">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <Skeleton className="h-5 w-3/4 mb-2" />
+                          <Skeleton className="h-3 w-full" />
+                        </div>
+                        <div className="flex flex-col items-end gap-1 ml-2">
+                          <Skeleton className="h-4 w-4" />
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-1">
+                            <Skeleton className="h-3 w-3" />
+                            <Skeleton className="h-3 w-12" />
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Skeleton className="h-3 w-3" />
+                            <Skeleton className="h-3 w-4" />
+                          </div>
+                        </div>
+                        <Skeleton className="h-3 w-16" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </section>
+
+            {/* Member Playlists Skeleton */}
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <Skeleton className="h-5 w-5" />
+                <Skeleton className="h-6 w-40" />
+                <Skeleton className="h-5 w-8" />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                {[...Array(2)].map((_, i) => (
+                  <Card key={i} className="bg-white border">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <Skeleton className="h-5 w-3/4 mb-2" />
+                          <Skeleton className="h-3 w-full" />
+                        </div>
+                        <div className="flex flex-col items-end gap-1 ml-2">
+                          <Skeleton className="h-4 w-16" />
+                          <Skeleton className="h-4 w-4" />
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-1">
+                            <Skeleton className="h-3 w-3" />
+                            <Skeleton className="h-3 w-12" />
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Skeleton className="h-3 w-3" />
+                            <Skeleton className="h-3 w-4" />
+                          </div>
+                        </div>
+                        <Skeleton className="h-3 w-16" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    );
   }
+
+  const handleEditPlaylist = (playlist: Playlist) => {
+    setSelectedPlaylist(playlist);
+    setEditModalOpen(true);
+  };
+
+  const handlePlaylistUpdated = (updatedPlaylist: any) => {
+    setPlaylists(prev => 
+      prev.map(p => p.id === updatedPlaylist.id ? { ...p, ...updatedPlaylist } : p)
+    );
+    setEditModalOpen(false);
+  };
+
+  const handlePlaylistDeleted = (playlistId: string) => {
+    setPlaylists(prev => prev.filter(p => p.id !== playlistId));
+    setEditModalOpen(false);
+    toast.success('Playlist apagada com sucesso!');
+  };
+
+  const ownedPlaylists = playlists.filter(p => p.userRole === 'owner');
+  const memberPlaylists = playlists.filter(p => p.userRole === 'editor');
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Hero Section com estilo da landing page */}
-      <section className="relative bg-gradient-to-br from-blue-50 via-white to-purple-10">
-        {/* Background decoration */}
-        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-          <div className="absolute left-1/2 top-0 -translate-x-1/2">
-            <div className="h-60 w-60 rounded-full bg-gradient-to-tr from-blue-500/20 to-purple-500/20 blur-[80px]" />
-          </div>
-        </div>
-        
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="pb-8 pt-12 md:pb-12 md:pt-16 relative z-10">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-8">
-              <div className="text-center lg:text-left">
-                <div className="mb-4 border-y [border-image:linear-gradient(to_right,transparent,theme(colors.slate.300/.8),transparent)1]">
-                  <div className="-mx-0.5 flex justify-center lg:justify-start -space-x-2 py-2">
-                    <div className="w-6 h-6 bg-gradient-to-r from-green-500 to-blue-600 rounded-full flex items-center justify-center">
-                      <ListMusic className="text-white text-xs w-3 h-3" />
-                    </div>
-                    <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                      <Music className="text-white text-xs w-3 h-3" />
-                    </div>
-                    <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                      <Plus className="text-white text-xs w-3 h-3" />
-                    </div>
-                  </div>
-                </div>
-                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 border-y [border-image:linear-gradient(to_right,transparent,theme(colors.slate.300/.8),transparent)1] leading-tight">
-                  Minhas Playlists
-                </h1>
-                <p className="text-lg text-gray-700 max-w-2xl">
-                  Gere as tuas coleções de música litúrgica
-                </p>
-              </div>
-              
-              <Button 
-                asChild 
-                size="lg" 
-                className="bg-gradient-to-t from-green-600 to-green-500 text-white hover:from-green-700 hover:to-green-600"
-              >
+      <div className="bg-white border-b">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">As Minhas Playlists</h1>
+              <p className="text-gray-600 mt-1">
+                Gere e organiza as tuas coleções de música
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button asChild variant="outline">
+                <Link href="/playlists/explore">
+                  <Globe className="w-4 h-4 mr-2" />
+                  Explorar
+                </Link>
+              </Button>
+              <Button asChild>
                 <Link href="/playlists/create">
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="w-4 h-4 mr-2" />
                   Nova Playlist
                 </Link>
               </Button>
             </div>
           </div>
         </div>
-      </section>
-      
-      {/* Main Content */}
-      <section className="bg-white py-8">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          {/* Lista de Playlists */}
-          {playlists.length === 0 ? (
-            <Card className="border-0 shadow-lg">
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <ListMusic className="h-16 w-16 text-muted-foreground mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Nenhuma playlist criada</h3>
-                <p className="text-muted-foreground text-center mb-6 max-w-md">
-                  Cria a tua primeira playlist para organizares as tuas músicas favoritas e partilhares com outros.
-                </p>
-                <Button asChild>
-                  <Link href="/playlists/create">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Criar primeira playlist
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {playlists.map((playlist) => (
-            <Card key={playlist.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg p-3 text-white">
-                    <ListMusic className="h-6 w-6" />
-                  </div>
-                  
-                  <div className="flex items-center gap-1">
-                    {playlist.isPublic ? (
-                      <Badge variant="outline" className="text-green-600 border-green-600">
-                        <Globe className="h-3 w-3 mr-1" />
-                        Pública
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-gray-600 border-gray-600">
-                        <Lock className="h-3 w-3 mr-1" />
-                        Privada
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                
-                <CardTitle className="line-clamp-2 mt-3">
-                  <Link 
-                    href={`/playlists/${playlist.id}`}
-                    className="hover:underline"
-                  >
-                    {playlist.name}
-                  </Link>
-                </CardTitle>
-                
-                {playlist.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {playlist.description}
-                  </p>
-                )}
-              </CardHeader>
-              
-              <CardContent className="pt-0">
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <Music className="h-4 w-4" />
-                    <span>{playlist._count.items} música{playlist._count.items !== 1 ? 's' : ''}</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-4 w-4" />
-                    <span>
-                      {formatDistanceToNow(new Date(playlist.updatedAt), {
-                        addSuffix: true,
-                        locale: ptBR
-                      })}
-                    </span>
-                  </div>
-                </div>
-                
-                <div className="flex justify-between items-start mt-4">
-                  <Button size="sm" variant="outline" asChild>
-                    <Link href={`/playlists/${playlist.id}`}>
-                      <Eye className="h-4 w-4 mr-2" />
-                      Ver Playlist
-                    </Link>
-                  </Button>
-                  
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem asChild>
-                        <Link href={`/playlists/${playlist.id}/edit`}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Editar
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        className="text-red-600 focus:text-red-600"
-                        onClick={() => handleDeletePlaylist(playlist.id, playlist.name)}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Eliminar
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-      
-      {/* Playlists Públicas */}
-      <div className="mt-12">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold">Playlists Públicas</h2>
-          <Button variant="outline" asChild>
-            <Link href="/playlists/explore">
-              Ver todas
-            </Link>
-          </Button>
-        </div>
-        
-        <p className="text-muted-foreground mb-4">
-          Descubra playlists criadas por outros usuários da comunidade
-        </p>
-        
-        <Button variant="outline" asChild>
-          <Link href="/playlists/explore">
-            <Globe className="h-4 w-4 mr-2" />
-            Explorar playlists públicas
-          </Link>
-        </Button>
       </div>
-        </div>
-      </section>
+
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        {playlists.length === 0 ? (
+          <div className="bg-white rounded-lg border p-8 text-center">
+            <Music className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Nenhuma playlist encontrada</h2>
+            <p className="text-gray-600 mb-6">Cria a tua primeira playlist para começar a organizar as tuas músicas favoritas</p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button asChild>
+                <Link href="/playlists/create">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Criar Primeira Playlist
+                </Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/playlists/explore">
+                  <Globe className="w-4 h-4 mr-2" />
+                  Explorar Playlists
+                </Link>
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {/* Owned Playlists */}
+            {ownedPlaylists.length > 0 && (
+              <section>
+                <div className="flex items-center gap-2 mb-4">
+                  <Crown className="w-5 h-5 text-yellow-600" />
+                  <h2 className="text-xl font-semibold text-gray-900">Minhas Playlists</h2>
+                  <Badge variant="secondary">{ownedPlaylists.length}</Badge>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                  {ownedPlaylists.map((playlist) => (
+                    <div key={playlist.id} className="relative group">
+                      <PlaylistCard playlist={playlist} onEdit={handleEditPlaylist} />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditPlaylist(playlist)}
+                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur-sm border shadow-sm"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Member Playlists - Where user is invited as editor */}
+            {memberPlaylists.length > 0 && (
+              <section>
+                <div className="flex items-center gap-2 mb-4">
+                  <UserCheck className="w-5 h-5 text-blue-600" />
+                  <h2 className="text-xl font-semibold text-gray-900">Playlists Colaborativas</h2>
+                  <Badge variant="secondary">{memberPlaylists.length}</Badge>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                  {memberPlaylists.map((playlist) => (
+                    <div key={playlist.id} className="relative group">
+                      <PlaylistCard playlist={playlist} showInvitedBadge onEdit={handleEditPlaylist} />
+                      {playlist.userRole === 'owner' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditPlaylist(playlist)}
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur-sm border shadow-sm"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Edit Playlist Modal */}
+      {selectedPlaylist && (
+        <EditPlaylistModal
+          isOpen={editModalOpen}
+          onClose={() => setEditModalOpen(false)}
+          playlist={selectedPlaylist}
+          onUpdate={() => {
+            window.location.reload();
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+interface PlaylistCardProps {
+  playlist: Playlist;
+  showInvitedBadge?: boolean;
+  onEdit: (playlist: Playlist) => void;
+}
+
+function PlaylistCard({ playlist, showInvitedBadge = false, onEdit }: PlaylistCardProps) {
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-PT', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const getMembersCount = () => {
+    if (!playlist.members) return 1;
+    return playlist.members.filter(m => m.status === 'accepted').length;
+  };
+
+  return (
+    <Card className="hover:shadow-lg transition-all duration-200 hover:-translate-y-1 relative">
+      <Link href={`/playlists/${playlist.id}`} className="block">
+        <CardHeader className="pb-2">
+          <div className="flex items-start justify-between">
+            <div className="flex-1 min-w-0">
+              <CardTitle className="text-lg font-semibold text-gray-900 truncate group-hover:text-blue-600 transition-colors">
+                {playlist.name}
+              </CardTitle>
+              {playlist.description && (
+                <CardDescription className="mt-1 text-sm text-gray-600 line-clamp-2">
+                  {playlist.description}
+                </CardDescription>
+              )}
+            </div>
+            <div className="flex flex-col items-end gap-1 ml-2">
+              {showInvitedBadge && (
+                <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
+                  Convidado
+                </Badge>
+              )}
+              <div title={playlist.isPublic ? "Playlist pública" : "Playlist privada"}>
+                {playlist.isPublic ? (
+                  <Globe className="w-4 h-4 text-green-600" />
+                ) : (
+                  <Lock className="w-4 h-4 text-gray-400" />
+                )}
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-2">
+          <div className="flex items-center justify-between text-sm text-gray-600">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1">
+                <Music className="w-4 h-4" />
+                <span>{playlist.songsCount} música{playlist.songsCount !== 1 ? 's' : ''}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Users className="w-4 h-4" />
+                <span>{getMembersCount()}</span>
+              </div>
+            </div>
+            <span className="text-xs text-gray-500">
+              {formatDate(playlist.updatedAt)}
+            </span>
+          </div>
+        </CardContent>
+      </Link>
+    </Card>
+  );
+}
+
+export default function PlaylistsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white">
+        {/* Header Skeleton */}
+        <div className="bg-white border-b">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <div className="h-7 w-48 bg-gray-200 rounded mb-2 animate-pulse"></div>
+                <div className="h-4 w-64 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="h-9 w-20 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-9 w-28 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content Skeleton */}
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="space-y-8">
+            {/* Section Header */}
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="h-5 w-5 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-6 w-32 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-5 w-8 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="bg-white border rounded-lg p-4">
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 space-y-2">
+                          <div className="h-5 w-3/4 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="h-3 w-full bg-gray-200 rounded animate-pulse"></div>
+                        </div>
+                        <div className="h-4 w-4 bg-gray-200 rounded animate-pulse ml-2"></div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="h-3 w-12 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="h-3 w-4 bg-gray-200 rounded animate-pulse"></div>
+                        </div>
+                        <div className="h-3 w-16 bg-gray-200 rounded animate-pulse"></div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    }>
+      <PlaylistsContent />
+    </Suspense>
   );
 }

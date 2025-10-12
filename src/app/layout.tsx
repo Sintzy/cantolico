@@ -6,7 +6,7 @@ import AuthSessionProvider from "@/components/SessionProvider";
 import Navbar from "@/components/Navbar";
 import { Toaster } from "@/components/ui/sonner"
 import Footer from "@/components/Footer";
-import AdminNotificationWrapper from "@/components/AdminNotificationWrapper";
+
 import EmailVerificationBanner from "@/components/EmailVerificationBanner";
 import { SITE_IMAGES, SITE_CONFIG } from "@/lib/site-images";
 
@@ -128,7 +128,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </main>
           <Toaster />
-          <AdminNotificationWrapper />
           <Footer />
         </AuthSessionProvider>
       </body>

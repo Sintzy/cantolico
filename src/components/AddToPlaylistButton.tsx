@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { Plus, ListMusic, Check, ArrowLeft, Music, Globe, Lock } from 'lucide-react';
+import { Plus, ListMusic, Check, ArrowLeft, Music, Globe, Lock, EyeOff, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -14,11 +14,12 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import { getVisibilityLabel, getVisibilityFlags } from '@/types/playlist';
 
 interface AddToPlaylistButtonProps {
   songId: string;
@@ -32,6 +33,8 @@ interface Playlist {
   name: string;
   description?: string;
   isPublic: boolean;
+  isPrivate: boolean;
+  isNotListed: boolean;
   _count: {
     items: number;
   };
@@ -50,22 +53,38 @@ export default function AddToPlaylistButton({
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
   const [newPlaylistDescription, setNewPlaylistDescription] = useState('');
-  const [newPlaylistIsPublic, setNewPlaylistIsPublic] = useState(false);
+  const [newPlaylistVisibility, setNewPlaylistVisibility] = useState<'PUBLIC' | 'PRIVATE' | 'NOT_LISTED'>('PRIVATE');
   const [isLoading, setIsLoading] = useState(false);
+  const [playlistsLoading, setPlaylistsLoading] = useState(false);
 
-  // Carregar playlists do usuário
+  // Carregar playlists do usuário (próprias e colaborativas)
   useEffect(() => {
     if (!session?.user?.id || !isOpen) return;
 
     const fetchPlaylists = async () => {
+      setPlaylistsLoading(true);
       try {
-        const response = await fetch(`/api/playlists?userId=${session.user.id}`);
+        const response = await fetch('/api/user/playlists');
         if (response.ok) {
           const data = await response.json();
-          setPlaylists(data);
+          // Mapear para o formato esperado pelo componente
+          const formattedPlaylists = data.map((playlist: any) => ({
+            id: playlist.id,
+            name: playlist.name,
+            description: playlist.description,
+            isPublic: playlist.isPublic,
+            isPrivate: !playlist.isPublic,
+            isNotListed: false,
+            _count: {
+              items: playlist.songsCount || 0
+            }
+          }));
+          setPlaylists(formattedPlaylists);
         }
       } catch (error) {
         console.error('Error fetching playlists:', error);
+      } finally {
+        setPlaylistsLoading(false);
       }
     };
 
@@ -103,7 +122,7 @@ export default function AddToPlaylistButton({
         body: JSON.stringify({
           name: newPlaylistName.trim(),
           description: newPlaylistDescription.trim() || null,
-          isPublic: newPlaylistIsPublic
+          visibility: newPlaylistVisibility
         }),
       });
 
@@ -114,7 +133,7 @@ export default function AddToPlaylistButton({
         setIsCreatingNew(false);
         setNewPlaylistName('');
         setNewPlaylistDescription('');
-        setNewPlaylistIsPublic(false);
+        setNewPlaylistVisibility('PRIVATE');
         toast.success('Playlist criada com sucesso!');
       } else {
         const error = await response.json();
@@ -180,7 +199,7 @@ export default function AddToPlaylistButton({
     setIsCreatingNew(false);
     setNewPlaylistName('');
     setNewPlaylistDescription('');
-    setNewPlaylistIsPublic(false);
+    setNewPlaylistVisibility('PRIVATE');
     setSelectedPlaylist('');
   };
 
@@ -229,10 +248,20 @@ export default function AddToPlaylistButton({
         <div className="space-y-4">
           {!isCreatingNew ? (
             <>
+              {/* Loading Spinner */}
+              {playlistsLoading && (
+                <div className="flex items-center justify-center py-8">
+                  <div className="flex items-center gap-3">
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-muted-foreground/20 border-t-muted-foreground"></div>
+                    <span className="text-muted-foreground text-sm">A carregar...</span>
+                  </div>
+                </div>
+              )}
+
               {/* Lista de Playlists Existentes */}
-              {playlists.length > 0 ? (
+              {!playlistsLoading && playlists.length > 0 ? (
                 <div className="space-y-3">
-                  <Label className="text-sm font-medium">Suas Playlists</Label>
+                  <Label className="text-sm font-medium">Suas Playlists ({playlists.length})</Label>
                   
                   <div className="space-y-2">
                     {playlists.map((playlist) => (
@@ -263,24 +292,38 @@ export default function AddToPlaylistButton({
                             <Music className="h-3 w-3" />
                             <span>{playlist._count.items} músicas</span>
                             <span>•</span>
-                            {playlist.isPublic ? (
-                              <span className="flex items-center gap-1">
-                                <Globe className="h-3 w-3" />
-                                Pública
-                              </span>
-                            ) : (
-                              <span className="flex items-center gap-1">
-                                <Lock className="h-3 w-3" />
-                                Privada
-                              </span>
-                            )}
+{(() => {
+                              const visibility = playlist.isPublic ? 'PUBLIC' : playlist.isNotListed ? 'NOT_LISTED' : 'PRIVATE';
+                              if (visibility === 'PUBLIC') {
+                                return (
+                                  <span className="flex items-center gap-1">
+                                    <Globe className="h-3 w-3" />
+                                    Pública
+                                  </span>
+                                );
+                              } else if (visibility === 'NOT_LISTED') {
+                                return (
+                                  <span className="flex items-center gap-1">
+                                    <Eye className="h-3 w-3" />
+                                    Não listada
+                                  </span>
+                                );
+                              } else {
+                                return (
+                                  <span className="flex items-center gap-1">
+                                    <Lock className="h-3 w-3" />
+                                    Privada
+                                  </span>
+                                );
+                              }
+                            })()}
                           </div>
                         </div>
                       </button>
                     ))}
                   </div>
                 </div>
-              ) : (
+              ) : !playlistsLoading && (
                 <div className="text-center py-8 border-2 border-dashed rounded-lg">
                   <ListMusic className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
                   <h3 className="font-medium mb-2">Nenhuma playlist encontrada</h3>
@@ -294,7 +337,7 @@ export default function AddToPlaylistButton({
                 </div>
               )}
 
-              {playlists.length > 0 && (
+              {!playlistsLoading && playlists.length > 0 && (
                 <>
                   <Separator />
                   
@@ -353,20 +396,74 @@ export default function AddToPlaylistButton({
                   />
                 </div>
 
-                <div className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="isPublic" className="font-medium">
-                      Playlist Pública
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Outros usuários podem descobrir sua playlist
-                    </p>
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">
+                    Quem pode ver esta playlist?
+                  </Label>
+                  
+                  <div className="space-y-2">
+                    {['PRIVATE', 'NOT_LISTED', 'PUBLIC'].map((visibility) => {
+                      const getIcon = (vis: string) => {
+                        switch (vis) {
+                          case 'PUBLIC': return Globe;
+                          case 'PRIVATE': return Lock;
+                          case 'NOT_LISTED': return EyeOff;
+                          default: return Lock;
+                        }
+                      };
+                      
+                      const Icon = getIcon(visibility);
+                      const isSelected = newPlaylistVisibility === visibility;
+                      
+                      return (
+                        <div
+                          key={visibility}
+                          onClick={() => setNewPlaylistVisibility(visibility as any)}
+                          className={cn(
+                            "p-3 border-2 rounded-lg cursor-pointer transition-all",
+                            isSelected
+                              ? "border-blue-500 bg-blue-50"
+                              : "border-gray-200 hover:border-gray-300 bg-white"
+                          )}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={cn(
+                              "w-6 h-6 rounded-md flex items-center justify-center",
+                              isSelected ? "bg-blue-100" : "bg-gray-100"
+                            )}>
+                              <Icon className={cn(
+                                "h-3 w-3",
+                                isSelected ? "text-blue-600" : "text-gray-600"
+                              )} />
+                            </div>
+                            <div className="flex-1">
+                              <h4 className={cn(
+                                "font-medium text-sm",
+                                isSelected ? "text-blue-900" : "text-gray-900"
+                              )}>
+                                {getVisibilityLabel(visibility as any)}
+                              </h4>
+                              <p className="text-xs text-gray-600">
+                                {visibility === 'PUBLIC' && 'Visível para todos'}
+                                {visibility === 'NOT_LISTED' && 'Apenas com link'}
+                                {visibility === 'PRIVATE' && 'Apenas para ti'}
+                              </p>
+                            </div>
+                            <div className={cn(
+                              "w-3 h-3 rounded-full border-2",
+                              isSelected
+                                ? "border-blue-500 bg-blue-500"
+                                : "border-gray-300"
+                            )}>
+                              {isSelected && (
+                                <div className="w-full h-full rounded-full bg-white scale-50"></div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                  <Switch
-                    id="isPublic"
-                    checked={newPlaylistIsPublic}
-                    onCheckedChange={setNewPlaylistIsPublic}
-                  />
                 </div>
               </div>
 
@@ -390,7 +487,7 @@ export default function AddToPlaylistButton({
                   {isLoading ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                      Criando...
+                      A criar...
                     </>
                   ) : (
                     <>

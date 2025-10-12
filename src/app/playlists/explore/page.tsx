@@ -1,161 +1,276 @@
 
+'use client';
+
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase-client';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { 
-  ListMusic, 
-  Clock, 
+  Search, 
   Globe, 
   Music,
-  User
+  User,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 
-export default async function ExplorePlaylistsPage() {
-  const { data: publicPlaylists = [] } = await supabase
-    .from('Playlist')
-    .select(`
-      *,
-      User!Playlist_userId_fkey (
-        id,
-        name,
-        image
-      )
-    `)
-    .eq('isPublic', true)
-    .order('updatedAt', { ascending: false })
-    .limit(50);
+interface Playlist {
+  id: string;
+  name: string;
+  description: string | null;
+  isPublic: boolean;
+  userId: number;
+  createdAt: string;
+  updatedAt: string;
+  User: {
+    id: number;
+    name: string;
+    image?: string;
+  };
+  songsCount?: number;
+}
 
-  // Buscar contagem de itens para cada playlist
-  const playlistsWithCounts = await Promise.all(
-    (publicPlaylists || []).map(async (playlist) => {
-      const { count } = await supabase
-        .from('PlaylistItem')
-        .select('*', { count: 'exact', head: true })
-        .eq('playlistId', playlist.id);
-      
-      return {
-        ...playlist,
-        _count: { items: count || 0 }
-      };
-    })
-  );
+const ITEMS_PER_PAGE = 12;
+
+export default function ExplorePlaylistsPage() {
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [filteredPlaylists, setFilteredPlaylists] = useState<Playlist[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('updated');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Fetch playlists
+  useEffect(() => {
+    const fetchPlaylists = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch('/api/playlists/explore');
+        if (response.ok) {
+          const data = await response.json();
+          setPlaylists(data);
+          setFilteredPlaylists(data);
+        }
+      } catch (error) {
+        console.error('Error fetching playlists:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPlaylists();
+  }, []);
+
+  // Filter and sort playlists
+  useEffect(() => {
+    let filtered = [...playlists];
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(playlist =>
+        playlist.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        playlist.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        playlist.User.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'songs':
+          return (b.songsCount || 0) - (a.songsCount || 0);
+        case 'created':
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case 'updated':
+        default:
+          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+      }
+    });
+
+    setFilteredPlaylists(filtered);
+    setCurrentPage(1); // Reset to first page when filters change
+  }, [playlists, searchQuery, sortBy]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredPlaylists.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedPlaylists = filteredPlaylists.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-PT', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="bg-gradient-to-br from-green-500 to-blue-600 rounded-lg p-3 text-white">
-            <Globe className="h-8 w-8" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold">Playlists Públicas</h1>
-            <p className="text-muted-foreground">
-              Descubra coleções de músicas criadas pela comunidade
-            </p>
+      <div className="bg-white border-b">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Explorar Playlists</h1>
+              <p className="text-gray-600 mt-1">Descobre playlists públicas da comunidade</p>
+            </div>
+            <Badge variant="secondary" className="self-start">
+              {filteredPlaylists.length} playlist{filteredPlaylists.length !== 1 ? 's' : ''}
+            </Badge>
           </div>
         </div>
       </div>
 
-      {/* Lista de Playlists */}
-      {playlistsWithCounts.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Globe className="h-16 w-16 text-muted-foreground mb-4" />
-            <h3 className="text-xl font-semibold mb-2">Nenhuma playlist pública</h3>
-            <p className="text-muted-foreground text-center">
-              Ainda não há playlists públicas disponíveis. Seja o primeiro a compartilhar uma!
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {playlistsWithCounts.map((playlist: any) => (
-            <Card key={playlist.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="bg-gradient-to-br from-green-500 to-blue-600 rounded-lg p-3 text-white">
-                    <ListMusic className="h-6 w-6" />
-                  </div>
-                  
-                  <Badge variant="outline" className="text-green-600 border-green-600">
-                    <Globe className="h-3 w-3 mr-1" />
-                    Pública
-                  </Badge>
-                </div>
-                
-                <CardTitle className="line-clamp-2 mt-3">
-                  <Link 
-                    href={`/playlists/${playlist.id}`}
-                    className="hover:underline"
-                  >
-                    {playlist.name}
-                  </Link>
-                </CardTitle>
-                
-                {playlist.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {playlist.description}
-                  </p>
-                )}
-              </CardHeader>
-              
-              <CardContent className="pt-0 space-y-3">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <User className="h-4 w-4" />
-                  <span>Por {playlist.User.name}</span>
-                </div>
-                
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <Music className="h-4 w-4" />
-                    <span>{playlist._count.items} música{playlist._count.items !== 1 ? 's' : ''}</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-4 w-4" />
-                    <span>
-                      {formatDistanceToNow(new Date(playlist.updatedAt), {
-                        addSuffix: true,
-                        locale: ptBR
-                      })}
-                    </span>
-                  </div>
-                </div>
-                
-                <Button className="w-full" asChild>
-                  <Link href={`/playlists/${playlist.id}`}>
-                    <ListMusic className="h-4 w-4 mr-2" />
-                    Ver Playlist
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+      {/* Filters */}
+      <div className="bg-white border-b">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            {/* Search */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Pesquisar por nome, descrição ou autor..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Sort */}
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="updated">Mais recente</SelectItem>
+                <SelectItem value="created">Mais antiga</SelectItem>
+                <SelectItem value="name">Nome A-Z</SelectItem>
+                <SelectItem value="songs">Mais músicas</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-      )}
-      
-      {/* Call to Action */}
-      <div className="mt-12 text-center">
-        <Card className="bg-gradient-to-r from-blue-50 to-green-50 border-blue-200">
-          <CardContent className="py-8">
-            <h2 className="text-2xl font-bold mb-4">Cria a tua própria playlist</h2>
-            <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-              Organiza as tuas músicas favoritas e partilha com a comunidade. 
-              As tuas playlists podem ser privadas (só tu vês) ou públicas (qualquer pessoa com o link pode ver).
+      </div>
+
+      {/* Content */}
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="flex items-center gap-3">
+              <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-gray-900"></div>
+              <span className="text-gray-600">A carregar...</span>
+            </div>
+          </div>
+        ) : filteredPlaylists.length === 0 ? (
+          <div className="text-center py-12">
+            <Globe className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              {searchQuery ? 'Nenhuma playlist encontrada' : 'Nenhuma playlist pública'}
+            </h2>
+            <p className="text-gray-600 mb-6">
+              {searchQuery 
+                ? 'Tenta outro termo de pesquisa' 
+                : 'Ainda não há playlists públicas disponíveis'
+              }
             </p>
-            <Button size="lg" asChild>
-              <Link href="/playlists">
-                <ListMusic className="h-4 w-4 mr-2" />
-                Ir para Minhas Playlists
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
+          </div>
+        ) : (
+          <>
+            {/* Playlists Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 mb-8">
+              {paginatedPlaylists.map((playlist) => (
+                <Card key={playlist.id} className="hover:shadow-md transition-all duration-200 hover:-translate-y-1">
+                  <Link href={`/playlists/${playlist.id}`} className="block">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <Globe className="w-5 h-5 text-green-600" />
+                        <Badge variant="outline" className="text-xs">Pública</Badge>
+                      </div>
+                      <CardTitle className="text-lg line-clamp-2 group-hover:text-blue-600 transition-colors">
+                        {playlist.name}
+                      </CardTitle>
+                      {playlist.description && (
+                        <p className="text-sm text-gray-600 line-clamp-2 mt-1">
+                          {playlist.description}
+                        </p>
+                      )}
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="space-y-2">
+                        <div className="flex items-center text-sm text-gray-500">
+                          <User className="w-4 h-4 mr-1" />
+                          <span className="truncate">{playlist.User.name}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-gray-500">
+                          <div className="flex items-center">
+                            <Music className="w-3 h-3 mr-1" />
+                            <span>{playlist.songsCount || 0} música{(playlist.songsCount || 0) !== 1 ? 's' : ''}</span>
+                          </div>
+                          <span>{formatDate(playlist.updatedAt)}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Link>
+                </Card>
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(pageNum)}
+                        className="w-10 h-10 p-0"
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

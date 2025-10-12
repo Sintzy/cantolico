@@ -19,7 +19,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
     const { id, songId } = await params
 
-    // Verificar se a playlist existe e pertence ao usuário
+    // Verificar se a playlist existe e se o usuário tem permissão
     const { data: playlist, error: playlistError } = await supabase
       .from('Playlist')
       .select('userId')
@@ -30,8 +30,26 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       return NextResponse.json({ error: 'Playlist não encontrada' }, { status: 404 })
     }
 
-    if (playlist.userId !== session.user.id) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
+    // Verificar se é o dono
+    const isOwner = playlist.userId === session.user.id;
+    
+    // Se não é o dono, verificar se é colaborador editor
+    let isEditor = false;
+    if (!isOwner) {
+      const { data: membership } = await supabase
+        .from('PlaylistMember')
+        .select('role, status')
+        .eq('playlistId', id)
+        .eq('userEmail', session.user.email)
+        .eq('status', 'ACCEPTED')
+        .eq('role', 'EDITOR')
+        .single();
+
+      isEditor = !!membership;
+    }
+
+    if (!isOwner && !isEditor) {
+      return NextResponse.json({ error: 'Não autorizado. Apenas o proprietário ou editores podem remover músicas.' }, { status: 403 })
     }
 
     // Verificar se a música existe na playlist
