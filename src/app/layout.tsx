@@ -14,10 +14,10 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: {
-    default: "Cantólico! - Cânticos Católicos | Letras, Acordes e Partituras Grátis",
-    template: `%s | Cantólico - Cânticos Católicos`
+    default: "Cantólico - Cânticos Católicos com Letras e Acordes",
+    template: `%s | Cantólico`
   },
-  description: "🎵 A maior biblioteca de cânticos católicos online! Encontra qualquer cântico católico com letras, acordes e partituras. Melhor que MusiCristo e VitaminaC. Grátis para sempre!",
+  description: "Biblioteca de cânticos católicos com letras, acordes e partituras. Encontra e partilha música litúrgica para a celebração eucarística.",
   keywords: [
     // Cânticos principais
     "cânticos católicos", "canticos catolicos", "cancioneiro católico", "cancioneiro catolico",
@@ -85,25 +85,25 @@ export const metadata: Metadata = {
     google: 'google-site-verification-code-here', // Substituir pelo código real
   },
   openGraph: {
-    title: "Cantólico! - A Maior Biblioteca de Cânticos Católicos Online",
-    description: "🎵 Encontra qualquer cântico católico! Letras, acordes, partituras grátis. Melhor que MusiCristo e VitaminaC. + de 1000 cânticos disponíveis!",
+    title: "Cantólico - Cânticos Católicos com Letras e Acordes",
+    description: "Biblioteca de cânticos católicos com letras, acordes e partituras. Encontra e partilha música litúrgica para a celebração eucarística.",
     type: "website",
     locale: "pt_PT",
     url: "https://cantolico.pt",
-    siteName: "Cantólico - Cânticos Católicos",
+    siteName: "Cantólico",
     images: [
       {
         url: SITE_IMAGES.ogImage,
         width: 1200,
         height: 630,
-        alt: "Cantólico - A maior biblioteca de cânticos católicos com letras, acordes e partituras grátis",
+        alt: "Cantólico - Cânticos católicos com letras, acordes e partituras",
       }
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Cantólico! - Cânticos Católicos Grátis",
-    description: "🎵 A maior biblioteca de cânticos católicos! Letras, acordes, partituras. Melhor que MusiCristo!",
+    title: "Cantólico - Cânticos Católicos",
+    description: "Biblioteca de cânticos católicos com letras, acordes e partituras.",
     creator: "@cantolico",
     images: [SITE_IMAGES.twitterImage],
   },
