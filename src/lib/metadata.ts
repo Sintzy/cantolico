@@ -33,18 +33,24 @@ export function createMetadata(config: MetadataConfig = {}): Metadata {
   // O título será processado pelo template do layout raiz
   const fullTitle = title || SITE_CONFIG.name;
   
-  // Keywords padrão do site
+  // Keywords padrão do site - SEO AGRESSIVO
   const defaultKeywords = [
-    "cânticos católicos",
-    "música religiosa", 
-    "liturgia",
-    "cancioneiro",
-    "igreja católica",
-    "música sacra",
-    "partituras",
-    "acordes",
-    "missa",
-    "celebração"
+    "cânticos católicos", "canticos catolicos", "música católica", "musica catolica",
+    "liturgia", "cancioneiro católico", "cancioneiro catolico", "igreja católica",
+    "música sacra", "musica sacra", "partituras católicas", "partituras catolicas", 
+    "acordes", "cifras", "missa", "celebração", "celebracao",
+    
+    // Cânticos populares
+    "Deus está aqui", "Deus esta aqui", "Ave Maria", "Santo", "Gloria a Deus",
+    "Aleluia", "Cordeiro de Deus", "Salve Rainha",
+    
+    // Competidores
+    "musicristo", "vitamina c canticos", "vitaminac", "melhor que musicristo",
+    "alternativa musicristo", "melhor site canticos", "site canticos gratis",
+    
+    // Variações
+    "cantolico", "cantólico", "letras cânticos", "letras canticos",
+    "acordes igreja", "cifras católicas", "cifras catolicas"
   ];
 
   const allKeywords = [...new Set([...keywords, ...defaultKeywords])];
@@ -111,27 +117,87 @@ export function createMetadata(config: MetadataConfig = {}): Metadata {
 // Metadados específicos para diferentes tipos de página
 export const PAGE_METADATA = {
   home: (): Metadata => createMetadata({
-    title: undefined, // Usa apenas o nome do site
-    description: SITE_CONFIG.description,
+    title: "🎵 Cantólico - A Maior Biblioteca de Cânticos Católicos | +1000 Cânticos Grátis",
+    description: "⭐ ENCONTRA QUALQUER CÂNTICO CATÓLICO! Deus está aqui, Ave Maria, Santo, Gloria - Letras, acordes e partituras GRÁTIS. Melhor que MusiCristo e VitaminaC! +1000 cânticos disponíveis.",
+    keywords: [
+      // Cânticos populares para capturar tráfego
+      "Deus está aqui", "Deus esta aqui letra", "Ave Maria cantico", "Santo cantico catolico",
+      "Gloria a Deus", "Aleluia cantico", "Cordeiro de Deus letra", "Salve Rainha",
+      
+      // Competidores - dominação direta
+      "musicristo", "musicristo canticos", "vitamina c canticos", "vitaminac",
+      "melhor que musicristo", "alternativa musicristo", "melhor site canticos",
+      "site canticos gratis", "cancioneiro online gratis",
+      
+      // Termos gerais high-volume
+      "cânticos católicos", "canticos catolicos", "letras cânticos", "acordes canticos",
+      "partituras católicas", "cifras igreja", "música católica grátis", "cancioneiro católico",
+      
+      // Long-tail keywords
+      "maior biblioteca canticos catolicos", "todos canticos catolicos",
+      "cantolico maior site", "site completo canticos", "letras acordes partituras gratis"
+    ],
     type: "website",
     url: "https://cantolico.pt",
     canonical: "https://cantolico.pt",
   }),
 
   musics: (): Metadata => createMetadata({
-    title: "Lista de Cânticos",
-    description: "Descobre e pesquisa cânticos católicos para a liturgia. Mais de 100 cânticos organizados por momentos litúrgicos, instrumentos e tags.",
-    keywords: ["pesquisar cânticos", "música litúrgica", "cancioneiro católico"],
+    title: "🎵 Todos os Cânticos Católicos | +1000 Cânticos com Letras e Acordes Grátis",
+    description: "📚 A MAIOR biblioteca de cânticos católicos! Encontra Deus está aqui, Ave Maria, Santo e TODOS os cânticos. Letras, acordes, cifras GRÁTIS. Melhor que MusiCristo!",
+    keywords: [
+      // Intenção de busca direta
+      "todos canticos catolicos", "lista canticos catolicos", "biblioteca canticos",
+      "pesquisar canticos", "encontrar canticos", "buscar canticos",
+      
+      // Competidores
+      "lista musicristo", "todos canticos musicristo", "vitamina c lista",
+      "melhor lista canticos", "mais canticos que musicristo",
+      
+      // Específicos populares
+      "lista Deus está aqui", "todos Ave Maria", "canticos Santo",
+      "canticos Gloria", "canticos Aleluia", "canticos missa completos",
+      
+      // Variações
+      "cancioneiro completo", "hinario catolico completo", "cifras igreja completas",
+      "acordes todos canticos", "letras todos canticos catolicos"
+    ],
     url: "https://cantolico.pt/musics",
     canonical: "https://cantolico.pt/musics",
   }),
 
   musicDetail: (title: string, moments: string[], tags: string[], author?: string): Metadata => {
     const momentos = moments.join(", ");
+    const authorPart = author ? ` de ${author}` : '';
+    
     return createMetadata({
-      title,
-      description: `Abre e vê a música "${title}" - Cântico católico para ${momentos}. Encontra a letra, acordes e partituras no Cantólico!`,
-      keywords: [title, ...tags, ...moments, "letra", "acordes", "partitura"],
+      title: `🎵 ${title}${authorPart} - Letra, Acordes e Cifra GRÁTIS | Cantólico`,
+      description: `⭐ ${title}${authorPart} - Letra completa, acordes, cifra e partitura GRÁTIS! Melhor que MusiCristo e VitaminaC. Cântico católico para ${momentos}. Download PDF disponível!`,
+      keywords: [
+        // Título específico - todas as variações
+        title, title.toLowerCase(), 
+        `${title} letra`, `${title} acordes`, `${title} cifra`, `${title} cantico`,
+        `${title} católico`, `${title} catolico`, `cantico ${title}`,
+        `letra ${title}`, `acordes ${title}`, `cifra ${title}`,
+        
+        // Com "de" se tiver autor
+        ...(author ? [
+          `${title} ${author}`, `${author} ${title}`, 
+          `${title} de ${author}`, `cantor ${author}`
+        ] : []),
+        
+        // Competidores específicos
+        `${title} musicristo`, `${title} vitamina c`, `${title} melhor site`,
+        `${title} gratis`, `${title} pdf`, `${title} download`,
+        
+        // Contexto litúrgico
+        ...tags, ...moments,
+        `${title} missa`, `${title} igreja`, `${title} liturgia`,
+        
+        // Variações de escrita
+        `letra de ${title}`, `acordes de ${title}`, `como tocar ${title}`,
+        `${title} violao`, `${title} guitarra`, `${title} piano`
+      ],
       author,
       type: "article",
       url: `https://cantolico.pt/musics/${title.toLowerCase().replace(/\s+/g, "-")}`,

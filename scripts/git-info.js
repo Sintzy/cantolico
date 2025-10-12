@@ -33,17 +33,19 @@ function updateEnvLocal() {
   // Remove existing git-related variables
   envContent = envContent
     .split('\n')
-    .filter(line => !line.startsWith('NEXT_PUBLIC_COMMIT_SHA=') && !line.startsWith('NEXT_PUBLIC_BRANCH='))
+    .filter(line => !line.startsWith('NEXT_PUBLIC_COMMIT_SHA=') && !line.startsWith('NEXT_PUBLIC_BRANCH=') && !line.startsWith('NEXT_PUBLIC_BUILD_TIME='))
     .join('\n');
   
-  // Add new git variables
-  envContent += `\n# Git info (auto-generated)\nNEXT_PUBLIC_COMMIT_SHA=${commit}\nNEXT_PUBLIC_BRANCH=${branch}\n`;
+  // Add new git variables with build timestamp
+  const buildTime = new Date().toISOString();
+  envContent += `\n# Git info (auto-generated)\nNEXT_PUBLIC_COMMIT_SHA=${commit}\nNEXT_PUBLIC_BRANCH=${branch}\nNEXT_PUBLIC_BUILD_TIME=${buildTime}\n`;
   
   fs.writeFileSync(envPath, envContent);
   
   console.log(`✅ Updated .env.local with git info:`);
   console.log(`   Commit: ${commit.slice(0, 7)}`);
   console.log(`   Branch: ${branch}`);
+  console.log(`   Build Time: ${buildTime}`);
 }
 
 // Only run if called directly (not imported)

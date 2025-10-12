@@ -1,16 +1,33 @@
 User-agent: *
 Allow: /
 
-# Sitemap
+# Priorizar páginas importantes para SEO - MAXIMA INDEXAÇÃO
+Allow: /musics/*
+Allow: /playlists/*
+Allow: /
+Allow: /terms
+Allow: /privacy-policy
+
+# Bloquear páginas não importantes para SEO
+Disallow: /admin*
+Disallow: /login*
+Disallow: /register*
+Disallow: /auth*
+Disallow: /api*
+Disallow: /logs*
+Disallow: /banned*
+
+# Sitemap para indexação rápida
 Sitemap: https://cantolico.pt/sitemap.xml
 
-# Disallow admin pages from search engines
-Disallow: /admin/
-Disallow: /api/
+# Crawl-delay otimizado para melhor performance
+Crawl-delay: 1
 
-# Allow important pages
-Allow: /musics/
+# User-agent específicos para melhor crawling
+User-agent: Googlebot
+Crawl-delay: 1
+Allow: /
 
-Allow: /terms/
-Allow: /login/
-Allow: /register/
+User-agent: Bingbot  
+Crawl-delay: 1
+Allow: /

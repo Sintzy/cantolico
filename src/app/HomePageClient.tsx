@@ -355,6 +355,87 @@ export default function HomePageClient() {
         </div>
       </div>
     </section>
+
+    {/* SEO Content Section - Hidden but indexable */}
+    <section className="bg-gray-50 py-12">
+      <div className="max-w-6xl mx-auto px-4">
+        <div className="text-center mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            A Maior Biblioteca de Cânticos Católicos Online
+          </h2>
+          <p className="text-gray-600 max-w-3xl mx-auto">
+            O Cantólico é a evolução dos sites de cânticos católicos. Melhor que MusiCristo e VitaminaC, 
+            oferecemos mais de 1000 cânticos com letras, acordes e partituras completamente grátis.
+          </p>
+        </div>
+        
+        <div className="grid md:grid-cols-3 gap-6 mb-12">
+          <Card>
+            <CardContent className="p-6 text-center">
+              <Music className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+              <h3 className="font-semibold mb-2">+1000 Cânticos</h3>
+              <p className="text-sm text-gray-600">
+                Deus está aqui, Ave Maria, Santo, Gloria a Deus, Aleluia e muito mais. 
+                Todos os cânticos católicos que procuras estão aqui.
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-6 text-center">
+              <Search className="h-12 w-12 text-green-600 mx-auto mb-4" />
+              <h3 className="font-semibold mb-2">Busca Inteligente</h3>
+              <p className="text-sm text-gray-600">
+                Encontra qualquer cântico por título, primeira linha, acordes ou momento litúrgico. 
+                A busca mais avançada que existe.
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-6 text-center">
+              <Heart className="h-12 w-12 text-red-600 mx-auto mb-4" />
+              <h3 className="font-semibold mb-2">100% Gratuito</h3>
+              <p className="text-sm text-gray-600">
+                Diferente do MusiCristo e VitaminaC, no Cantólico tudo é grátis. 
+                Sem limitações, sem pagamentos, para sempre.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Popular Canticos for SEO */}
+        <div className="text-center">
+          <h3 className="text-lg font-semibold mb-4">Cânticos Mais Procurados</h3>
+          <div className="flex flex-wrap justify-center gap-2 text-sm">
+            <Link href="/musics" className="bg-white px-3 py-1 rounded-full hover:bg-gray-100 text-gray-700">
+              Deus está aqui
+            </Link>
+            <Link href="/musics" className="bg-white px-3 py-1 rounded-full hover:bg-gray-100 text-gray-700">
+              Ave Maria
+            </Link>
+            <Link href="/musics" className="bg-white px-3 py-1 rounded-full hover:bg-gray-100 text-gray-700">
+              Santo
+            </Link>
+            <Link href="/musics" className="bg-white px-3 py-1 rounded-full hover:bg-gray-100 text-gray-700">
+              Gloria a Deus
+            </Link>
+            <Link href="/musics" className="bg-white px-3 py-1 rounded-full hover:bg-gray-100 text-gray-700">
+              Aleluia
+            </Link>
+            <Link href="/musics" className="bg-white px-3 py-1 rounded-full hover:bg-gray-100 text-gray-700">
+              Cordeiro de Deus
+            </Link>
+            <Link href="/musics" className="bg-white px-3 py-1 rounded-full hover:bg-gray-100 text-gray-700">
+              Salve Rainha
+            </Link>
+            <Link href="/musics" className="bg-white px-3 py-1 rounded-full hover:bg-gray-100 text-gray-700">
+              Anjos de Deus
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
     </>
   );
 }
