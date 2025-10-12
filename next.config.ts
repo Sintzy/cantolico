@@ -19,6 +19,8 @@ const nextConfig: NextConfig = {
     // Expose Vercel git environment variables to the client
     NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA,
     NEXT_PUBLIC_VERCEL_GIT_COMMIT_REF: process.env.VERCEL_GIT_COMMIT_REF,
+    // Set build time during the build process
+    NEXT_PUBLIC_BUILD_TIME: new Date().toISOString(),
   },
   // Ezoic ads.txt redirect configuration
   async redirects() {

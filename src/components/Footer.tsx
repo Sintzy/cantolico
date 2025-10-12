@@ -22,20 +22,19 @@ export default function Footer() {
     const calculateTimeAgo = () => {
       let referenceTime: Date;
       
-      // On Vercel, commits trigger immediate builds, so we can use a reasonable approximation
-      if (process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA) {
-        // For Vercel deployments, assume commit was recent (builds are triggered immediately)
-        // We could fetch from GitHub API here for exact timestamp, but for simplicity:
-        const buildTime = Date.now() - (2 * 60 * 1000); // Assume commit was ~2min ago
-        referenceTime = new Date(buildTime);
-      } else {
-        // Local development - use our custom build time
-        const buildTimeStr = process.env.NEXT_PUBLIC_BUILD_TIME;
-        if (!buildTimeStr) {
-          setTimeAgo('tempo desconhecido');
-          return;
-        }
+      // Try to use our custom build time first (works for both Vercel and local)
+      const buildTimeStr = process.env.NEXT_PUBLIC_BUILD_TIME;
+      if (buildTimeStr) {
         referenceTime = new Date(buildTimeStr);
+      } else if (process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA) {
+        // Fallback for Vercel deployments without build time
+        // Use a more reasonable estimate or fetch from GitHub API
+        setTimeAgo('recentemente');
+        return;
+      } else {
+        // No build time available
+        setTimeAgo('tempo desconhecido');
+        return;
       }
       
       const now = new Date();
