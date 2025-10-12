@@ -117,8 +117,8 @@ export function createMetadata(config: MetadataConfig = {}): Metadata {
 // Metadados específicos para diferentes tipos de página
 export const PAGE_METADATA = {
   home: (): Metadata => createMetadata({
-    title: "🎵 Cantólico - A Maior Biblioteca de Cânticos Católicos | +1000 Cânticos Grátis",
-    description: "⭐ ENCONTRA QUALQUER CÂNTICO CATÓLICO! Deus está aqui, Ave Maria, Santo, Gloria - Letras, acordes e partituras GRÁTIS. Melhor que MusiCristo e VitaminaC! +1000 cânticos disponíveis.",
+    title: "Cantólico - Cânticos Católicos com Letras e Acordes",
+    description: "Biblioteca de cânticos católicos com letras, acordes e partituras. Encontra Deus está aqui, Ave Maria, Santo e outros cânticos para a liturgia.",
     keywords: [
       // Cânticos populares para capturar tráfego
       "Deus está aqui", "Deus esta aqui letra", "Ave Maria cantico", "Santo cantico catolico",
@@ -143,8 +143,8 @@ export const PAGE_METADATA = {
   }),
 
   musics: (): Metadata => createMetadata({
-    title: "🎵 Todos os Cânticos Católicos | +1000 Cânticos com Letras e Acordes Grátis",
-    description: "📚 A MAIOR biblioteca de cânticos católicos! Encontra Deus está aqui, Ave Maria, Santo e TODOS os cânticos. Letras, acordes, cifras GRÁTIS. Melhor que MusiCristo!",
+    title: "Cânticos Católicos - Lista Completa com Letras e Acordes",
+    description: "Biblioteca completa de cânticos católicos com letras, acordes e partituras. Pesquisa e encontra qualquer cântico para a liturgia.",
     keywords: [
       // Intenção de busca direta
       "todos canticos catolicos", "lista canticos catolicos", "biblioteca canticos",
@@ -171,8 +171,8 @@ export const PAGE_METADATA = {
     const authorPart = author ? ` de ${author}` : '';
     
     return createMetadata({
-      title: `🎵 ${title}${authorPart} - Letra, Acordes e Cifra GRÁTIS | Cantólico`,
-      description: `⭐ ${title}${authorPart} - Letra completa, acordes, cifra e partitura GRÁTIS! Melhor que MusiCristo e VitaminaC. Cântico católico para ${momentos}. Download PDF disponível!`,
+      title: `${title}${authorPart} - Letra e Acordes | Cantólico`,
+      description: `${title}${authorPart} - Letra completa, acordes e cifra. Cântico católico para ${momentos}. Download disponível.`,
       keywords: [
         // Título específico - todas as variações
         title, title.toLowerCase(), 
@@ -214,7 +214,7 @@ export const PAGE_METADATA = {
 
   playlistDetail: (name: string, description?: string): Metadata => createMetadata({
     title: name,
-    description: description || `Playlist "${name}" - Coleção de cânticos católicos selecionados no Cantólico!`,
+    description: description || `Playlist "${name}" - Coleção de cânticos católicos selecionados.`,
     keywords: ["playlist", "coleção", name],
     type: "article",
   }),
@@ -229,38 +229,38 @@ export const PAGE_METADATA = {
 
   login: (): Metadata => createMetadata({
     title: "Iniciar Sessão",
-    description: "Entra na tua conta do Cantólico! para submeter e gerir os teus cânticos católicos.",
+    description: "Entra na tua conta do Cantólico para submeter e gerir os teus cânticos católicos.",
     noIndex: true,
   }),
 
   register: (): Metadata => createMetadata({
     title: "Criar Conta",
-    description: "Junta-te à comunidade do Cantólico! e contribui para o maior cancioneiro católico colaborativo.",
+    description: "Junta-te à comunidade do Cantólico e contribui para o cancioneiro católico colaborativo.",
     canonical: "https://cantolico.pt/register",
     noIndex: true,
   }),
 
   userProfile: (userName?: string, userBio?: string): Metadata => createMetadata({
     title: userName ? `Perfil de ${userName}` : "Perfil de Utilizador",
-    description: userBio || `Perfil de ${userName || "utilizador"} no Cantólico! - Cancioneiro católico colaborativo.`,
+    description: userBio || `Perfil de ${userName || "utilizador"} no Cantólico - Cancioneiro católico colaborativo.`,
     keywords: ["perfil", "utilizador", userName || ""].filter(Boolean),
     type: "profile",
   }),
 
   admin: (): Metadata => createMetadata({
     title: "Administração",
-    description: "Painel de administração do Cantólico! - Gerir utilizadores, músicas e submissões.",
+    description: "Painel de administração do Cantólico - Gerir utilizadores, músicas e submissões.",
     noIndex: true,
   }),
 
   terms: (): Metadata => createMetadata({
     title: "Termos e Condições",
-    description: "Termos e condições de utilização do Cantólico! - Cancioneiro católico colaborativo.",
+    description: "Termos e condições de utilização do Cantólico - Cancioneiro católico colaborativo.",
   }),
 
   privacy: (): Metadata => createMetadata({
     title: "Política de Privacidade", 
-    description: "Política de privacidade do Cantólico! - Como protegemos e utilizamos os teus dados.",
+    description: "Política de privacidade do Cantólico - Como protegemos e utilizamos os teus dados.",
   }),
 
   notFound: (): Metadata => createMetadata({
@@ -289,7 +289,7 @@ export function createMusicMetadata(song: {
   
   return createMetadata({
     title,
-    description: `Abre e vê a música "${title}" - Cântico católico para ${momentos}. Encontra a letra, acordes e partituras no Cantólico!`,
+    description: `"${title}" - Cântico católico para ${momentos}. Letra, acordes e partituras no Cantólico.`,
     keywords: [title, ...tags, ...moments, "letra", "acordes", "partitura"],
     author,
     type: "article",
