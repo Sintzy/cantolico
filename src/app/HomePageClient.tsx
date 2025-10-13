@@ -52,7 +52,7 @@ export default function HomePageClient() {
               data-aos="zoom-y-out"
               data-aos-delay={150}
             >
-              A maior biblioteca de <br className="hidden sm:inline" />
+              A melhor biblioteca de <br className="hidden sm:inline" />
               cânticos católicos
             </h1>
             <div className="mx-auto max-w-3xl">
