@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase-client';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
+import { logPlaylistAction, getUserInfoFromRequest } from '@/lib/user-action-logger';
 import { logGeneral, logErrors } from '@/lib/logs';
 
 export async function GET(
@@ -12,8 +13,6 @@ export async function GET(
     const session = await getServerSession(authOptions);
     const { id } = await params;
     const playlistId = id;
-
-    console.log('Fetching playlist with ID:', playlistId);
 
     // Buscar playlist básica primeiro
     const { data: playlist, error: playlistError } = await supabase
@@ -31,10 +30,7 @@ export async function GET(
       .eq('id', playlistId)
       .single();
 
-    console.log('Playlist query result:', { playlist, playlistError });
-
     if (playlistError || !playlist) {
-      console.log('Playlist not found:', playlistError);
       return NextResponse.json(
         { error: 'Playlist not found' },
         { status: 404 }

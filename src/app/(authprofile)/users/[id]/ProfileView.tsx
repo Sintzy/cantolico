@@ -241,12 +241,12 @@ export default function ProfileView({ user, isOwner }: ProfileViewProps) {
     <main className="min-h-screen bg-white">
       {/* Header Section */}
       <section className="bg-white">
-        <div className="max-w-6xl mx-auto px-6 py-8">
-          <div className="flex flex-col lg:flex-row gap-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+          <div className="flex flex-col sm:flex-row lg:flex-row gap-6 sm:gap-8">
             {/* Avatar */}
-            <div className="flex-shrink-0">
+            <div className="flex-shrink-0 self-center sm:self-start">
               <div className="relative">
-                <Avatar className="h-32 w-32">
+                <Avatar className="h-24 w-24 sm:h-32 sm:w-32">
                   <AvatarImage 
                     src={editMode ? form.image || "/default-profile.png" : user.image || "/default-profile.png"} 
                     alt={user.name || "Utilizador"} 
@@ -352,17 +352,17 @@ export default function ProfileView({ user, isOwner }: ProfileViewProps) {
               </div>
 
               {/* User Stats */}
-              <div className="flex flex-wrap gap-6 text-sm text-muted-foreground">
+              <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-6 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
-                  <Mail className="w-4 h-4" />
-                  <span>{user.email}</span>
+                  <Mail className="w-4 h-4 flex-shrink-0" />
+                  <span className="break-all">{user.email}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <CalendarDays className="w-4 h-4" />
+                  <CalendarDays className="w-4 h-4 flex-shrink-0" />
                   <span>Membro desde {formatDate(user.createdAt)}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Star className="w-4 h-4" />
+                  <Star className="w-4 h-4 flex-shrink-0" />
                   <span>{user._count.submissions} submissões</span>
                 </div>
               </div>
@@ -372,8 +372,8 @@ export default function ProfileView({ user, isOwner }: ProfileViewProps) {
       </section>
 
       {/* Content */}
-      <section className="py-8">
-        <div className="max-w-6xl mx-auto px-6 space-y-8">
+      <section className="py-6 sm:py-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-6 sm:space-y-8">
           {/* Biography */}
           <Card>
             <CardHeader>
@@ -406,7 +406,7 @@ export default function ProfileView({ user, isOwner }: ProfileViewProps) {
           </Card>
 
           {/* Music Statistics */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
@@ -468,7 +468,7 @@ export default function ProfileView({ user, isOwner }: ProfileViewProps) {
             </CardHeader>
             <CardContent>
               {musics.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {musics.map((music) => (
                     <Link key={music.id} href={`/musics/${music.id}`}>
                       <Card className="hover:shadow-md transition-shadow cursor-pointer">

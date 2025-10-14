@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { supabase } from '@/lib/supabase-client';
 import { z } from 'zod';
+import { logAdminAction, logModerationAction, getUserInfoFromRequest } from '@/lib/user-action-logger';
 import { logAdmin, logErrors } from '@/lib/logs';
 import { sendEmail, createWarningEmailTemplate, createBanEmailTemplate, createSuspensionEmailTemplate } from '@/lib/email';
 

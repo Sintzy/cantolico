@@ -392,13 +392,13 @@ export default function ReviewSubmissionPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto py-6 px-4 space-y-6">
+      <div className="max-w-7xl mx-auto py-4 sm:py-6 px-4 space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="flex items-center justify-between">
+        <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Rever Submissão</h1>
-              <p className="text-gray-600 mt-1">ID: {submissionId}</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Rever Submissão</h1>
+              <p className="text-gray-600 mt-1 text-sm">ID: {submissionId}</p>
             </div>
             <Badge variant={submission.status === "PENDING" ? "outline" : "secondary"}>
               {submission.status}
@@ -415,23 +415,21 @@ export default function ReviewSubmissionPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid md:grid-cols-3 gap-4">
-              <div>
-                <Label className="text-sm font-medium text-gray-500">Nome</Label>
-                <p className="text-gray-900">{submission.submitter?.name || "Nome não disponível"}</p>
-              </div>
-              <div>
-                <Label className="text-sm font-medium text-gray-500">Email</Label>
-                <p className="text-gray-900">{submission.submitter?.email || "Email não disponível"}</p>
-              </div>
-              <div>
-                <Label className="text-sm font-medium text-gray-500">Cargo</Label>
-                <Badge variant="outline">{submission.submitter?.role || "USER"}</Badge>
-              </div>
-            </div>
-            
-            {/* Ações de Moderação */}
-            <div className="flex gap-2 mt-4 pt-4 border-t">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Nome</Label>
+                    <p className="text-gray-900 break-words">{submission.submitter?.name || "Nome não disponível"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Email</Label>
+                    <p className="text-gray-900 break-all">{submission.submitter?.email || "Email não disponível"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Cargo</Label>
+                    <Badge variant="outline">{submission.submitter?.role || "USER"}</Badge>
+                  </div>
+                </div>            {/* Ações de Moderação */}
+            <div className="flex flex-col sm:flex-row gap-2 mt-4 pt-4 border-t">
               <Dialog open={showWarnDialog} onOpenChange={setShowWarnDialog}>
                 <DialogTrigger asChild>
                   <Button variant="outline" size="sm" className="text-yellow-600 border-yellow-600 hover:bg-yellow-50">
@@ -580,7 +578,7 @@ export default function ReviewSubmissionPage() {
                   </div>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label>Instrumento Principal</Label>
                     <Select value={instrument} onValueChange={setInstrument}>

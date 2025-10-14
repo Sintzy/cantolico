@@ -4,12 +4,13 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { supabase } from "@/lib/supabase-client";
 import bcrypt from "bcryptjs";
-import { logGeneral, logErrors } from "@/lib/logs";
+import { logAuthAction } from "@/lib/user-action-logger";
 import { createSecurityLog, createSecurityAlert } from "@/lib/logging-middleware";
 import { trackLoginAttempt, isIPBlocked, getFailedAttemptsCount } from "@/lib/login-monitor";
 import { triggerAdminLoginEvent } from "@/lib/realtime-alerts";
 import { sendWelcomeEmail, sendLoginAlert } from "@/lib/email";
 import { getClientIP } from "@/lib/utils";
+import { logGeneral, logErrors } from "@/lib/logs";
 
 // Função para obter localização do IP
 async function getLocationFromIP(ip: string): Promise<string> {

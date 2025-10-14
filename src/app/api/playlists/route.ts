@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { withUserProtection, withPublicMonitoring, logPlaylistAction } from '@/lib/enhanced-api-protection';
 import { randomUUID } from 'crypto';
-import { logGeneral, logErrors } from '@/lib/logs';
+import { logPlaylistAction as logUserPlaylistAction, getUserInfoFromRequest } from '@/lib/user-action-logger';
 import { requireEmailVerification } from '@/lib/email';
 import { getVisibilityFlags, getVisibilityFromPlaylist } from '@/types/playlist';
 
@@ -141,28 +141,17 @@ export const POST = withUserProtection<any>(async (request: NextRequest, session
     );
   }
 
-  // Obter informações de IP e User-Agent para logs
-  const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
-  const userAgent = request.headers.get('user-agent') || 'unknown';
-
-    await logGeneral('INFO', 'Criação de playlist iniciada', 'Utilizador iniciou criação de nova playlist', {
-      userId: session.user.id,
-      userEmail: session.user.email,
+  const userInfo = getUserInfoFromRequest(request, session);
+  
+    await logUserPlaylistAction('playlist_create_attempt', userInfo, true, {
       playlistName: name,
       visibility: visibility,
-      hasDescription: !!description?.trim(),
-      ipAddress: ip,
-      userAgent: userAgent,
-      action: 'playlist_create_attempt',
-      entity: 'playlist'
+      hasDescription: !!description?.trim()
     });
 
     if (!name?.trim()) {
-      await logGeneral('WARN', 'Tentativa de criar playlist sem nome', 'Nome da playlist é obrigatório mas não foi fornecido', {
-        userId: session.user.id,
-        userEmail: session.user.email,
-        action: 'playlist_create_no_name',
-        entity: 'playlist'
+      await logUserPlaylistAction('playlist_create_no_name', userInfo, false, {
+        error: 'Nome da playlist é obrigatório'
       });
       return NextResponse.json(
         { error: 'Nome da playlist é obrigatório' },
@@ -200,28 +189,19 @@ export const POST = withUserProtection<any>(async (request: NextRequest, session
       .single();
 
     if (error) {
-      await logErrors('ERROR', 'Erro ao criar playlist', 'Erro na base de dados ao criar playlist', {
-        userId: session.user.id,
-        userEmail: session.user.email,
+      await logUserPlaylistAction('playlist_create_error', userInfo, false, {
         playlistName: name,
-        error: error.message,
-        action: 'playlist_create_error'
+        error: error.message
       });
       throw new Error(`Supabase error: ${error.message}`);
     }
 
     // Log de sucesso
-    await logGeneral('SUCCESS', 'Playlist criada com sucesso', 'Nova playlist criada pelo utilizador', {
-      userId: session.user.id,
-      userEmail: session.user.email,
+    await logUserPlaylistAction('playlist_created', userInfo, true, {
       playlistId: playlist.id,
       playlistName: playlist.name,
       visibility: getVisibilityFromPlaylist({ isPublic: playlist.isPublic }),
-      hasDescription: !!playlist.description,
-      ipAddress: ip,
-      userAgent: userAgent,
-      action: 'playlist_created',
-      entity: 'playlist'
+      hasDescription: !!playlist.description
     });
 
     // Handle member invitations if provided
@@ -380,13 +360,10 @@ export const DELETE = withUserProtection<any>(async (request: NextRequest, sessi
     }
 
     // Log da ação
-    await logGeneral('INFO', 'Playlists eliminadas em massa', 'Utilizador eliminou todas as suas playlists', {
-      userId: session.user.id,
-      userEmail: session.user.email,
+    const userInfo = getUserInfoFromRequest(request, session);
+    await logUserPlaylistAction('playlists_bulk_delete', userInfo, true, {
       deletedCount: userPlaylists.length,
-      deletedPlaylists: userPlaylists.map((p: any) => ({ id: p.id, name: p.name })),
-      action: 'playlists_bulk_delete',
-      entity: 'playlist'
+      deletedPlaylists: userPlaylists.map((p: any) => ({ id: p.id, name: p.name }))
     });
 
     return NextResponse.json({ 
@@ -397,11 +374,9 @@ export const DELETE = withUserProtection<any>(async (request: NextRequest, sessi
 
   } catch (error) {
     console.error('Error in bulk delete:', error);
-    await logErrors('ERROR', 'Erro ao eliminar playlists em massa', 'Erro na operação de eliminação em massa', {
-      userId: session.user.id,
-      userEmail: session.user.email,
-      error: error instanceof Error ? error.message : 'Unknown error',
-      action: 'playlists_bulk_delete_error'
+    const userInfo = getUserInfoFromRequest(request, session);
+    await logUserPlaylistAction('playlists_bulk_delete_error', userInfo, false, {
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
     
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
