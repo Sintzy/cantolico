@@ -129,7 +129,7 @@ const MODERATION_ICONS = {
 };
 
 export default function UsersManagement() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -262,7 +262,20 @@ export default function UsersManagement() {
         user.id === userId ? { ...user, role: newRole } : user
       ));
 
-      toast.success(`Role alterada para ${newRole} com sucesso!`);
+      // Forçar atualização da sessão se estivermos a alterar a nossa própria role
+      if (session?.user?.id?.toString() === userId) {
+        console.log('🔄 Atualizando sessão após mudança de role própria...');
+        await update();
+        
+        // Aguardar um pouco e recarregar a página para garantir sincronização
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+        
+        toast.success(`Role alterada para ${newRole} com sucesso! A página será recarregada...`);
+      } else {
+        toast.success(`Role alterada para ${newRole} com sucesso!`);
+      }
     } catch (error) {
       console.error('Erro ao alterar role:', error);
       toast.error('Erro ao alterar role do utilizador');
@@ -619,27 +632,31 @@ export default function UsersManagement() {
 
                   {/* Ações - Stack vertical no mobile */}
                   <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-2 flex-shrink-0">
+                    <div className="w-full lg:w-32">
+                      <Select
+                        value={user.role}
+                        onValueChange={(newRole: 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN') => 
+                          handleRoleChange(user.id, newRole)
+                        }
+                        disabled={changingRole === user.id}
+                      >
+                        <SelectTrigger className={`w-full text-xs ${user.id === session?.user.id?.toString() ? 'border-orange-300 bg-orange-50' : ''}`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="USER">Utilizador</SelectItem>
+                          <SelectItem value="TRUSTED">Confiável</SelectItem>
+                          <SelectItem value="REVIEWER">Revisor</SelectItem>
+                          <SelectItem value="ADMIN">Administrador</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {user.id === session?.user.id?.toString() && (
+                        <p className="text-xs text-orange-600 mt-1">⚠️ Sua própria conta</p>
+                      )}
+                    </div>
+
                     {user.id !== session?.user.id?.toString() && (
                       <>
-                        <div className="w-full lg:w-32">
-                          <Select
-                            value={user.role}
-                            onValueChange={(newRole: 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN') => 
-                              handleRoleChange(user.id, newRole)
-                            }
-                            disabled={changingRole === user.id}
-                          >
-                            <SelectTrigger className="w-full text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="USER">Utilizador</SelectItem>
-                              <SelectItem value="TRUSTED">Confiável</SelectItem>
-                              <SelectItem value="REVIEWER">Revisor</SelectItem>
-                              <SelectItem value="ADMIN">Administrador</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
 
                         {/* Botão de Moderação ou Remover Moderação */}
                         {user.moderation && user.moderation.status !== 'ACTIVE' ? (

@@ -361,7 +361,7 @@ export const authOptions: AuthOptions = {
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 dias
-    updateAge: 24 * 60 * 60, // 24 horas
+    updateAge: 5 * 60, // 5 minutos - atualiza mais frequentemente para sincronizar mudanças de role
   },
   secret: process.env.NEXTAUTH_SECRET,
   pages: {
@@ -403,10 +403,29 @@ export const authOptions: AuthOptions = {
     },
     async jwt({ token, user, account }) {
       if (user) {
+        // Dados do login inicial
         token.sub = String(user.id);
         token.role = user.role;
         token.picture = user.image;
         token.emailVerified = user.emailVerified !== null;
+      } else if (token?.sub) {
+        // Buscar dados atualizados da BD durante atualizações do token
+        try {
+          const { data: currentUser, error } = await (supabase as any)
+            .from('User')
+            .select('role, emailVerified, image')
+            .eq('id', Number(token.sub))
+            .single();
+            
+          if (!error && currentUser) {
+            token.role = currentUser.role;
+            token.emailVerified = currentUser.emailVerified !== null;
+            token.picture = currentUser.image || token.picture;
+          }
+        } catch (error) {
+          console.error('❌ [JWT] Erro ao atualizar token:', error);
+          // Manter token existente em caso de erro
+        }
       }
       
       return token;

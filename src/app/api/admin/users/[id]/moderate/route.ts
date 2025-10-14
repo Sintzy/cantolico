@@ -21,13 +21,20 @@ export async function POST(
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session || session.user.role !== 'ADMIN') {
+    if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'REVIEWER')) {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }
 
-  const { id: userId } = await params;
+    const { id: userId } = await params;
     const body = await request.json();
-    const { action, reason, moderatorNote, duration   } = ModerateUserSchema.parse(body);
+    const { action, reason, moderatorNote, duration } = ModerateUserSchema.parse(body);
+
+    // REVIEWERs podem apenas dar warnings, ADMIN pode fazer tudo
+    if (session.user.role === 'REVIEWER' && action !== 'WARNING') {
+      return NextResponse.json({ 
+        error: 'Revisores podem apenas dar avisos. Ações mais severas requerem um administrador.' 
+      }, { status: 403 });
+    }
 
     // Get client IP address for audit log
     const forwarded = request.headers.get('x-forwarded-for');
@@ -234,11 +241,11 @@ export async function DELETE(
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session || session.user.role !== 'ADMIN') {
+    if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'REVIEWER')) {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }
 
-  const { id: userId } = await params;
+    const { id: userId } = await params;
 
     // Use custom PostgreSQL function with correct parameter order
     const { error } = await supabase

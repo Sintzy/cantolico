@@ -137,12 +137,27 @@ export async function middleware(req: NextRequest) {
       }
     }
     
-    if (userRole !== 'ADMIN') {
+    // Verificar se tem permissões de ADMIN ou REVIEWER para áreas protegidas
+    if (userRole !== 'ADMIN' && userRole !== 'REVIEWER') {
       url.pathname = '/';
       return NextResponse.redirect(url);
     }
     
-    console.log(`✅ [MIDDLEWARE] Acesso admin autorizado para: ${pathname}`);
+    // Para certas rotas admin, restringir apenas a ADMIN (dashboard, users, etc.)
+    const adminOnlyPaths = ['/admin/dashboard'];
+    const isAdminOnlyPath = adminOnlyPaths.some(path => pathname.startsWith(path));
+    
+    if (isAdminOnlyPath && userRole !== 'ADMIN') {
+      url.pathname = '/';
+      return NextResponse.redirect(url);
+    }
+    
+    // Log específico para REVIEWER acessando páginas de review
+    if (userRole === 'REVIEWER' && pathname.startsWith('/admin/review')) {
+      console.log(`📝 [MIDDLEWARE] REVIEWER acessando: ${pathname}`);
+    }
+    
+    console.log(`✅ [MIDDLEWARE] Acesso admin autorizado para: ${pathname} (${userRole})`);
   }
   
   // Verificar acesso a páginas que requerem conta verificada

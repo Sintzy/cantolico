@@ -8,8 +8,13 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session || session.user.role !== 'ADMIN') {
+    if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'REVIEWER')) {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
+    }
+
+    // Log específico para REVIEWER
+    if (session.user.role === 'REVIEWER') {
+      console.log(`📝 [API] REVIEWER ${session.user.name} (${session.user.email}) acessando submissions`);
     }
 
     const { searchParams } = new URL(req.url);
