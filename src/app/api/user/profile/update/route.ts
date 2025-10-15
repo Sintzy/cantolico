@@ -2,24 +2,22 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { supabase } from "@/lib/supabase-client";
 import { NextRequest, NextResponse } from "next/server";
-import { logGeneral, logErrors } from "@/lib/logs";
+import { logProfileAction, getUserInfoFromRequest } from "@/lib/user-action-logger";
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
+    const userInfo = getUserInfoFromRequest(req, session);
+    
     if (!session?.user?.id) {
-      await logGeneral('WARN', 'Tentativa de atualização de perfil sem autenticação', 'Utilizador não autenticado tentou atualizar perfil', {
-        action: 'profile_update_unauthorized'
+      await logProfileAction('profile_update_unauthorized', userInfo, false, {
+        reason: 'User not authenticated'
       });
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const data = await req.json();
     const { name, bio, image } = data;
-
-    // Obter informações de IP e User-Agent para logs
-    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
-    const userAgent = req.headers.get('user-agent') || 'unknown';
 
     // Buscar dados atuais do utilizador para comparação
     const { data: currentUser } = await supabase
@@ -40,14 +38,9 @@ export async function POST(req: NextRequest) {
       Object.entries(changes).filter(([_, value]) => value !== null)
     );
 
-    await logGeneral('INFO', 'Atualização de perfil iniciada', 'Utilizador a atualizar o seu perfil', {
-      userId: session.user.id,
-      userEmail: session.user.email,
+    await logProfileAction('profile_update_started', userInfo, true, {
       changes: actualChanges,
-      ipAddress: ip,
-      userAgent: userAgent,
-      action: 'profile_update_attempt',
-      entity: 'user_profile'
+      requestData: { name, bio, image }
     });
 
     const { error: updateError } = await supabase
@@ -59,24 +52,20 @@ export async function POST(req: NextRequest) {
       throw new Error(`Supabase error: ${updateError.message}`);
     }
 
-    await logGeneral('SUCCESS', 'Perfil atualizado com sucesso', 'Dados do perfil do utilizador foram atualizados', {
-      userId: session.user.id,
-      userEmail: session.user.email,
+    await logProfileAction('profile_updated', userInfo, true, {
       changes: actualChanges,
-      ipAddress: ip,
-      userAgent: userAgent,
-      action: 'profile_updated',
-      entity: 'user_profile'
+      updatedFields: Object.keys(actualChanges)
     });
 
     return NextResponse.json({ success: true });
   } catch (err) {
     const session = await getServerSession(authOptions);
-    await logErrors('ERROR', 'Erro ao atualizar perfil', 'Erro interno durante atualização do perfil', {
-      userId: session?.user?.id,
-      error: err instanceof Error ? err.message : 'Erro desconhecido',
-      action: 'profile_update_error'
+    const userInfo = getUserInfoFromRequest(req, session);
+    
+    await logProfileAction('profile_update_error', userInfo, false, {
+      error: err instanceof Error ? err.message : 'Unknown error'
     });
+    
     console.error("Erro ao atualizar perfil:", err);
     return NextResponse.json({ error: "Erro ao atualizar perfil" }, { status: 500 });
   }

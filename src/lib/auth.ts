@@ -4,12 +4,13 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { supabase } from "@/lib/supabase-client";
 import bcrypt from "bcryptjs";
-import { logGeneral, logErrors } from "@/lib/logs";
+import { logAuthAction } from "@/lib/user-action-logger";
 import { createSecurityLog, createSecurityAlert } from "@/lib/logging-middleware";
 import { trackLoginAttempt, isIPBlocked, getFailedAttemptsCount } from "@/lib/login-monitor";
 import { triggerAdminLoginEvent } from "@/lib/realtime-alerts";
 import { sendWelcomeEmail, sendLoginAlert } from "@/lib/email";
 import { getClientIP } from "@/lib/utils";
+import { logGeneral, logErrors } from "@/lib/logs";
 
 // Função para obter localização do IP
 async function getLocationFromIP(ip: string): Promise<string> {
@@ -360,7 +361,7 @@ export const authOptions: AuthOptions = {
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 dias
-    updateAge: 24 * 60 * 60, // 24 horas
+    updateAge: 5 * 60, // 5 minutos - atualiza mais frequentemente para sincronizar mudanças de role
   },
   secret: process.env.NEXTAUTH_SECRET,
   pages: {
@@ -402,10 +403,29 @@ export const authOptions: AuthOptions = {
     },
     async jwt({ token, user, account }) {
       if (user) {
+        // Dados do login inicial
         token.sub = String(user.id);
         token.role = user.role;
         token.picture = user.image;
         token.emailVerified = user.emailVerified !== null;
+      } else if (token?.sub) {
+        // Buscar dados atualizados da BD durante atualizações do token
+        try {
+          const { data: currentUser, error } = await (supabase as any)
+            .from('User')
+            .select('role, emailVerified, image')
+            .eq('id', Number(token.sub))
+            .single();
+            
+          if (!error && currentUser) {
+            token.role = currentUser.role;
+            token.emailVerified = currentUser.emailVerified !== null;
+            token.picture = currentUser.image || token.picture;
+          }
+        } catch (error) {
+          console.error('❌ [JWT] Erro ao atualizar token:', error);
+          // Manter token existente em caso de erro
+        }
       }
       
       return token;

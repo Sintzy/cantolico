@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { supabase } from "@/lib/supabase-client";
-import { logGeneral, logErrors } from "@/lib/logs";
+import { logAuthAction, logAdminAction, getUserInfoFromRequest } from "@/lib/user-action-logger";
 import { logSystemEvent } from "@/lib/enhanced-logging";
+import { logErrors } from "@/lib/logs";
 
 export async function DELETE(req: NextRequest) {
   try {

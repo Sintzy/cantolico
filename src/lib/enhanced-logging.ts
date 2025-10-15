@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { logGeneral, logErrors } from '@/lib/logs';
+import { log, logGeneral, logErrors } from '@/lib/logs';
 import { createSecurityLog, createSecurityAlert } from '@/lib/logging-middleware';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
