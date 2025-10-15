@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
       title: alertData.title,
       description: alertData.description,
       log_id: alertData.logId || null,
-      email_recipients: alertData.emailRecipients || ['sintzyy@gmail.com']
+      email_recipients: alertData.emailRecipients || []
     };
 
     // Inserir alerta
@@ -130,23 +130,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Erro ao criar alerta' }, { status: 500 });
     }
 
-    // Enviar email se severidade >= 3
-    if (completeAlertData.severity >= 3) {
-      try {
-        await fetch(`${req.nextUrl.origin}/api/logs/security-email`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            to: 'sintzyy@gmail.com',
-            subject: `🚨 ALERTA DE SEGURANÇA: ${alertData.title}`,
-            alert: alertData,
-            logId: data.id
-          })
-        });
-      } catch (emailError) {
-        console.error('Erro ao enviar email de alerta:', emailError);
-      }
-    }
+    // Alertas de segurança registrados apenas no sistema (sem emails automáticos)
 
     // Log da criação do alerta
     await supabase.from('logs').insert([{

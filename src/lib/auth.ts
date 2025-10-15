@@ -7,7 +7,6 @@ import bcrypt from "bcryptjs";
 import { logAuthAction } from "@/lib/user-action-logger";
 import { createSecurityLog, createSecurityAlert } from "@/lib/logging-middleware";
 import { trackLoginAttempt, isIPBlocked, getFailedAttemptsCount } from "@/lib/login-monitor";
-import { triggerAdminLoginEvent } from "@/lib/realtime-alerts";
 import { sendWelcomeEmail, sendLoginAlert } from "@/lib/email";
 import { getClientIP } from "@/lib/utils";
 import { logGeneral, logErrors } from "@/lib/logs";
@@ -287,23 +286,15 @@ export const authOptions: AuthOptions = {
               action: 'login_privileged_role'
             });
 
-            // Criar alerta de segurança para login de admin
-            await createSecurityAlert('ADMIN_LOGIN', 'Login de administrador detectado', {
+            // Log apenas para auditoria interna (sem emails)
+            await logGeneral('INFO', 'Login de utilizador privilegiado', 'Utilizador com role ADMIN ou REVIEWER fez login', {
               userId: user.id,
               email: user.email,
               role: user.role,
               provider: 'credentials',
               ip: ip || 'unknown',
               userAgent: userAgent || 'unknown'
-            }, user.role === 'ADMIN' ? 4 : 3);
-
-            // Disparar alerta em tempo real com informações do contexto
-            await triggerAdminLoginEvent(
-              user.email,
-              ip as string,
-              userAgent as string,
-              undefined // Localização será buscada na função triggerAdminLoginEvent
-            );
+            });
           }
 
           await logGeneral('SUCCESS', 'Login realizado com sucesso', 'Utilizador autenticado via email/password', {
@@ -546,24 +537,16 @@ export const authOptions: AuthOptions = {
               // Não falhar o login se o email falhar
             }
 
-            // Log de segurança adicional para roles privilegiadas via OAuth
+            // Log apenas para auditoria interna para roles privilegiadas via OAuth (sem emails)
             if (existingUser.role === 'ADMIN' || existingUser.role === 'REVIEWER') {
-              await createSecurityAlert('ADMIN_OAUTH_LOGIN', 'Login OAuth de administrador', {
+              await logGeneral('INFO', 'Login OAuth de utilizador privilegiado', 'Utilizador com role ADMIN ou REVIEWER fez login via OAuth', {
                 userId: existingUser.id,
                 email: user.email,
                 role: existingUser.role,
                 provider: 'google',
                 ip: '127.0.0.1', // IP padrão para OAuth (não disponível)
                 userAgent: 'Google OAuth Provider'
-              }, 3);
-
-              // Trigger admin login alert
-              await triggerAdminLoginEvent(
-                user.email || '',
-                '127.0.0.1', // IP padrão para OAuth 
-                'Google OAuth Provider', 
-                `Admin OAuth login - User ID: ${existingUser.id}, Role: ${existingUser.role}`
-              );
+              });
             }
           } else {
             // New user via Google OAuth - será criado pelo adapter automaticamente
