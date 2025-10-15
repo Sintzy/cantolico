@@ -1,10 +1,11 @@
 'use client';
 import "../../../../public/styles/chords.css";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { Guitar, ChevronDown, FileText, Music, Youtube, Download } from 'lucide-react';
+import { Guitar, ChevronDown, FileText, Music, Youtube, Download, ArrowLeft } from 'lucide-react';
 import YouTube from 'react-youtube';
 import * as React from "react";
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -347,6 +348,21 @@ export default function SongPage() {
     <div className="relative w-full min-h-screen bg-white">
       {/* Hero Section with blurred background and overlay */}
       <div className="relative h-64 md:h-80 w-full flex items-center justify-center overflow-hidden">
+        {/* Back Button */}
+        <div className="absolute top-4 left-4 z-20">
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="text-white hover:bg-white/20 border border-white/30 shadow backdrop-blur-sm"
+          >
+            <Link href="/musics">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Voltar à Lista
+            </Link>
+          </Button>
+        </div>
+        
         <div className="absolute inset-0">
           <img src="/banner.jpg" alt="Banner" className="w-full h-full object-cover object-center scale-110 blur-sm brightness-75" />
           <div className="absolute inset-0 bg-gradient-to-b from-black/60 to-transparent" />
