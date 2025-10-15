@@ -36,6 +36,7 @@ import {
   Ban, 
   User, 
   Calendar, 
+  Clock,
   Music,
   FileText,
   Settings,
@@ -124,9 +125,19 @@ export default function ReviewSubmissionPage() {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [showWarnDialog, setShowWarnDialog] = useState(false);
   const [showBanDialog, setShowBanDialog] = useState(false);
+  const [showModerationHistory, setShowModerationHistory] = useState(false);
+  const [moderationHistory, setModerationHistory] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [moderationReason, setModerationReason] = useState("");
   const [moderationNote, setModerationNote] = useState("");
   const [banDuration, setBanDuration] = useState("7");
+
+  // Helper function para calcular duração
+  const calculateDuration = (startDate: string, endDate: string): number => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    return Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  };
 
   // Verificação de autorização
   useEffect(() => {
@@ -346,6 +357,27 @@ export default function ReviewSubmissionPage() {
     }
   };
 
+  const fetchModerationHistory = async () => {
+    if (!submission?.submitterId) return;
+    
+    setLoadingHistory(true);
+    try {
+      const response = await fetch(`/api/admin/users/${submission.submitterId}/moderation-history`);
+      if (!response.ok) {
+        throw new Error('Erro ao carregar histórico');
+      }
+      
+      const data = await response.json();
+      setModerationHistory(data.history || []);
+      setShowModerationHistory(true);
+    } catch (error) {
+      console.error("Erro ao buscar histórico de moderação:", error);
+      toast.error("Erro ao carregar histórico de moderação");
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
   // Loading ou não autorizado
   if (status === "loading" || loading) {
     return (
@@ -539,9 +571,118 @@ export default function ReviewSubmissionPage() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+
+              {/* Botão para ver histórico de moderação */}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={fetchModerationHistory}
+                disabled={loadingHistory}
+                className="text-blue-600 border-blue-600 hover:bg-blue-50"
+              >
+                {loadingHistory ? (
+                  <Spinner variant="circle" size={16} className="text-blue-600 mr-2" />
+                ) : (
+                  <Clock className="h-4 w-4 mr-2" />
+                )}
+                Histórico de Moderação
+              </Button>
             </div>
           </CardContent>
         </Card>
+
+        {/* Modal de Histórico de Moderação */}
+        <Dialog open={showModerationHistory} onOpenChange={setShowModerationHistory}>
+          <DialogContent className="bg-white max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Histórico de Moderação - {submission?.submitter?.name}
+              </DialogTitle>
+              <DialogDescription>
+                Todas as ações de moderação aplicadas a este utilizador
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="flex-1 overflow-y-auto pr-2">
+              {moderationHistory.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <Shield className="h-12 w-12 text-gray-400 mb-4" />
+                  <p className="text-gray-600 font-medium">Nenhuma moderação encontrada</p>
+                  <p className="text-gray-500 text-sm">Este utilizador não possui histórico de moderações</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {moderationHistory.map((entry, index) => (
+                    <Card key={index} className="border-l-4 border-l-blue-500">
+                      <CardContent className="p-4">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
+                          <div className="flex items-center gap-2">
+                            <Badge 
+                              variant={
+                                entry.type === 'WARNING' ? 'default' : 
+                                entry.type === 'SUSPENSION' ? 'secondary' : 
+                                'destructive'
+                              }
+                            >
+                              {entry.type === 'WARNING' ? 'Advertência' : 
+                               entry.type === 'SUSPENSION' ? 'Suspensão' : 
+                               'Banimento'}
+                            </Badge>
+                            {entry.expiresAt && (
+                              <Badge variant="outline">
+                                {(() => {
+                                  const days = calculateDuration(entry.moderatedAt, entry.expiresAt);
+                                  return `${days} dia${days > 1 ? 's' : ''}`;
+                                })()}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {new Date(entry.moderatedAt).toLocaleString('pt-PT')}
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <div>
+                            <Label className="text-sm font-medium text-gray-600">Motivo:</Label>
+                            <p className="text-sm text-gray-900 mt-1">{entry.reason}</p>
+                          </div>
+                          
+                          {entry.moderatorNote && (
+                            <div>
+                              <Label className="text-sm font-medium text-gray-600">Nota do Moderador:</Label>
+                              <p className="text-sm text-gray-700 mt-1 italic">{entry.moderatorNote}</p>
+                            </div>
+                          )}
+                          
+                          <div className="flex items-center gap-4 text-sm text-gray-500 pt-2 border-t">
+                            <span>
+                              <User className="h-4 w-4 inline mr-1" />
+                              Moderador: {entry.moderatedBy?.name || 'Sistema'}
+                            </span>
+                            {entry.expiresAt && (
+                              <span>
+                                <Calendar className="h-4 w-4 inline mr-1" />
+                                Expira: {new Date(entry.expiresAt).toLocaleString('pt-PT')}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowModerationHistory(false)}>
+                Fechar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Conteúdo Principal */}
         <Tabs defaultValue="edit" className="space-y-6">

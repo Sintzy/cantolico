@@ -73,14 +73,10 @@ const LOG_CONFIG = {
   },
   
   // Configurações de alertas de segurança
-  SECURITY_EMAIL: 'sintzyy@gmail.com',
   SECURITY_ALERTS: {
     MULTIPLE_FAILED_LOGINS: {
       threshold: 5,
       timeWindow: '15 minutes'
-    },
-    ADMIN_LOGIN: {
-      notify: true
     },
     SUSPICIOUS_IP: {
       notify: true
@@ -474,7 +470,7 @@ export function useLogger() {
         severity: alert.severity,
         title: alert.title,
         description: alert.description,
-        email_recipients: alert.emailRecipients || [LOG_CONFIG.SECURITY_EMAIL]
+        email_recipients: alert.emailRecipients || []
       };
 
       const { error } = await supabase
@@ -483,11 +479,6 @@ export function useLogger() {
 
       if (error) {
         console.error('Erro ao criar alerta de segurança:', error);
-      } else {
-        // Enviar email se severidade >= 3
-        if (alert.severity >= 3) {
-          await sendSecurityEmail(alert);
-        }
       }
     } catch (error) {
       console.error('Erro ao processar alerta de segurança:', error);
@@ -501,13 +492,8 @@ export function useLogger() {
       if (entry.category === 'AUTH' && entry.details?.action === 'login' && 
           session?.user?.role === 'ADMIN' && entry.status === 'SUCCESS') {
         
-        await processSecurityAlert(logId!, {
-          alertType: 'ADMIN_LOGIN',
-          severity: 3,
-          title: 'Login de Administrador',
-          description: `Login administrativo realizado por ${session.user.email}`,
-          emailRecipients: [LOG_CONFIG.SECURITY_EMAIL]
-        });
+        // Log apenas para auditoria (sem alertas de email para admins)
+        console.log(`Login de administrador registado: ${session.user.email}`);
       }
 
       // Múltiplas falhas de login
@@ -526,7 +512,7 @@ export function useLogger() {
             severity: 4,
             title: 'Múltiplas Tentativas de Login Falhadas',
             description: `5+ tentativas de login falhadas do IP ${entry.details?.clientInfo?.ip} nos últimos 15 minutos`,
-            emailRecipients: [LOG_CONFIG.SECURITY_EMAIL]
+            emailRecipients: []
           });
         }
       }
@@ -536,22 +522,7 @@ export function useLogger() {
     }
   };
 
-  // Enviar email de segurança
-  const sendSecurityEmail = async (alert: SecurityAlert) => {
-    try {
-      await fetch('/api/logs/security-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: LOG_CONFIG.SECURITY_EMAIL,
-          subject: `🚨 ALERTA DE SEGURANÇA: ${alert.title}`,
-          alert
-        })
-      });
-    } catch (error) {
-      console.error('Erro ao enviar email de segurança:', error);
-    }
-  };
+  // Alertas de segurança registrados apenas no sistema (sem emails automáticos)
 
   // ================================================
   // RETORNO DO HOOK

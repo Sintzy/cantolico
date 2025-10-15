@@ -342,8 +342,7 @@ async function createSecurityAlert(alertType: string, title: string, details: an
         alert_type: alertType,
         severity,
         title,
-        description: `Evento de segurança detectado automaticamente: ${JSON.stringify(details)}`,
-        email_recipients: ['sintzyy@gmail.com']
+        description: `Evento de segurança detectado automaticamente: ${JSON.stringify(details)}`
       }]);
 
       if (alertError) {

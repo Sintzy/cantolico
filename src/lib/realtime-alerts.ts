@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { createSecurityAlert } from '@/lib/logging-middleware';
-import { sendSecurityAlert, sendAdminLoginAlert } from '@/lib/email';
+import { sendSecurityAlert } from '@/lib/email';
 
 // ================================================
 // SISTEMA DE ALERTAS EM TEMPO REAL
@@ -55,19 +55,7 @@ class RealTimeAlertSystem {
         emailAlert: true
       },
 
-      // Regra: Login de administrador fora do horário comercial
-      {
-        id: 'admin_login_off_hours',
-        name: 'Login Admin Fora de Horas',
-        condition: (event) => {
-          if (event.type !== 'admin_login') return false;
-          const hour = new Date().getHours();
-          return hour < 8 || hour > 20; // Fora das 8h-20h
-        },
-        severity: 3,
-        cooldown: 30,
-        emailAlert: true
-      },
+
 
       // Regra: Alto número de requests de uma única IP
       {
@@ -210,9 +198,7 @@ class RealTimeAlertSystem {
       case 'multiple_failed_logins':
         return `${event.consecutiveFailures} tentativas de login falhadas detectadas para ${event.email || 'utilizador desconhecido'}`;
       
-      case 'admin_login_off_hours':
-        return `Login de administrador detectado fora do horário comercial: ${event.email}`;
-      
+
       case 'high_request_rate':
         return `Taxa elevada de requests detectada: ${event.requestsPerMinute} req/min do IP ${event.ip}`;
       
@@ -307,8 +293,7 @@ class RealTimeAlertSystem {
         title: alert.title,
         description: alert.message,
         details: alert.details,
-        status: 'OPEN',
-        email_recipients: ['sintzyy@gmail.com']
+        status: 'OPEN'
       }]);
 
     } catch (error) {
@@ -393,14 +378,10 @@ export async function triggerFailedLoginEvent(email: string, consecutiveFailures
 }
 
 export async function triggerAdminLoginEvent(email: string, ip?: string, userAgent?: string, location?: string) {
-  // Enviar email de alerta imediatamente
-  try {
-    await sendAdminLoginAlert(email, ip || 'N/A', userAgent || 'N/A', location);
-  } catch (error) {
-    console.error('Erro ao enviar alerta de login admin:', error);
-  }
+  // Apenas registrar no log para auditoria (sem emails)
+  console.log(`Admin login registrado: ${email} - IP: ${ip} - UserAgent: ${userAgent}`);
 
-  // Processar no sistema de alertas em tempo real
+  // Processar no sistema de alertas em tempo real (sem emails)
   await alertSystem.processEvent({
     type: 'admin_login',
     email,
