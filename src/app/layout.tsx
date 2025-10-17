@@ -6,6 +6,7 @@ import AuthSessionProvider from "@/components/SessionProvider";
 import Navbar from "@/components/Navbar";
 import { Toaster } from "@/components/ui/sonner"
 import Footer from "@/components/Footer";
+import { CacheProvider } from "@/components/providers/CacheProvider";
 
 import EmailVerificationBanner from "@/components/EmailVerificationBanner";
 import { SITE_IMAGES, SITE_CONFIG } from "@/lib/site-images";
@@ -184,15 +185,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className={inter.className + " flex flex-col min-h-screen"}>
-        <AuthSessionProvider>
-          <Navbar />
-          <EmailVerificationBanner />
-          <main className="flex-1">
-            {children}
-          </main>
-          <Toaster />
-          <Footer />
-        </AuthSessionProvider>
+        <CacheProvider>
+          <AuthSessionProvider>
+            <Navbar />
+            <EmailVerificationBanner />
+            <main className="flex-1">
+              {children}
+            </main>
+            <Toaster />
+            <Footer />
+          </AuthSessionProvider>
+        </CacheProvider>
       </body>
     </html>
   );

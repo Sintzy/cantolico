@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import removeAccents from 'remove-accents';
 import Link from 'next/link';
-import { Search, Filter, Tags, ArrowDownAZ, Music, ChevronLeft, ChevronRight, X, SlidersHorizontal, Menu } from 'lucide-react';
+import { Search, Filter, Tags, ArrowDownAZ, Music, ChevronLeft, ChevronRight, X, SlidersHorizontal, Menu, RefreshCw, Clock } from 'lucide-react';
 import BannerDisplay from '@/components/BannerDisplay';
 import StarButton from '@/components/StarButton';
 import AddToPlaylistButton from '@/components/AddToPlaylistButton';
@@ -61,70 +61,141 @@ type Song = {
 };
 
 export default function MusicsPage() {
+  // Estados principais
   const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
   const [filteredSongs, setFilteredSongs] = useState<Song[]>([]);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   
   // Use page state hook para manter estado entre navegações
-  const { state, saveState, restoreScrollPosition, saveScrollPosition } = usePageState('musics');
+  const { state, saveState, restoreScrollPosition, saveScrollPosition, isInitialized } = usePageState('musics');
   
-  const [searchTerm, setSearchTerm] = useState(state.searchTerm);
-  const [selectedMoment, setSelectedMoment] = useState<string | null>(state.selectedMoment);
-  const [tagFilter, setTagFilter] = useState(state.tagFilter);
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(state.sortOrder);
-  const [currentPage, setCurrentPage] = useState(state.currentPage);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedMoment, setSelectedMoment] = useState<string | null>(null);
+  const [tagFilter, setTagFilter] = useState('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [currentPage, setCurrentPage] = useState(1);
 
   const itemsPerPage = 12;
   const totalPages = Math.ceil((filteredSongs || []).length / itemsPerPage);
 
-  useEffect(() => {
-    const fetchSongs = async () => {
-      try {
-        setLoading(true);
-        const res = await fetch('/api/musics/getmusics');
+  // Função para carregar dados (com cache simples)
+  const loadMusicData = useCallback(async (forceRefresh = false) => {
+    const cacheKey = 'musicList_data';
+    const cacheTimeKey = 'musicList_timestamp';
+    const cacheExpiry = 10 * 60 * 1000; // 10 minutos
+
+    try {
+      setLoading(true);
+      
+      // Verificar cache se não for refresh forçado
+      if (!forceRefresh && typeof window !== 'undefined') {
+        const cachedData = sessionStorage.getItem(cacheKey);
+        const cacheTime = sessionStorage.getItem(cacheTimeKey);
         
-        if (!res.ok) {
-          throw new Error('Erro ao carregar músicas do servidor');
+        if (cachedData && cacheTime) {
+          const isExpired = Date.now() - parseInt(cacheTime) > cacheExpiry;
+          
+          if (!isExpired) {
+            const parsedData = JSON.parse(cachedData);
+            setSongs(parsedData.songs || []);
+            console.log('Cache: Dados carregados do cache', { 
+              totalSongs: parsedData.songs?.length || 0,
+              source: 'cache',
+              timestamp: new Date().toISOString()
+            });
+            setLoading(false);
+            return;
+          }
         }
-        
-        const data = await res.json();
-        setSongs(data.songs || []);
-        
-        // Após carregar, restaurar posição do scroll se existir
-        if (state.scrollPosition > 0) {
-          restoreScrollPosition();
-        }
-      } catch (error) {
-        console.error('Erro ao carregar músicas:', error);
-        toast.error('Erro ao carregar as músicas. Tenta recarregar a página.');
-      } finally {
-        setLoading(false);
       }
-    };
-    fetchSongs();
-  }, [state.scrollPosition, restoreScrollPosition]);
-  
-  // Salvar posição do scroll periodicamente
+
+      // Buscar dados da API
+      const response = await fetch('/api/musics/getmusics');
+      if (!response.ok) {
+        throw new Error('Erro ao carregar músicas');
+      }
+      
+      const data = await response.json();
+      setSongs(data.songs || []);
+      
+      // Salvar no cache
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(cacheKey, JSON.stringify(data));
+        sessionStorage.setItem(cacheTimeKey, Date.now().toString());
+      }
+      
+      console.log('Cache: Dados carregados da API', { 
+        totalSongs: data.songs?.length || 0,
+        source: 'api',
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('Erro ao carregar músicas:', error);
+      toast.error('Erro ao carregar as músicas');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Inicializar estado dos filtros apenas após carregar do localStorage
   useEffect(() => {
+    if (isInitialized) {
+      setSearchTerm(state.searchTerm || '');
+      setSelectedMoment(state.selectedMoment || null);
+      setTagFilter(state.tagFilter || '');
+      setSortOrder(state.sortOrder || 'asc');
+      setCurrentPage(state.currentPage || 1);
+    }
+  }, [isInitialized]);
+
+  // Carregar dados iniciais - apenas uma vez
+  useEffect(() => {
+    if (isInitialized) {
+      loadMusicData();
+    }
+  }, [isInitialized]);
+
+  // Restaurar posição do scroll - apenas uma vez após carregar
+  useEffect(() => {
+    if (isInitialized && songs.length > 0 && state.scrollPosition > 0) {
+      const timer = setTimeout(() => {
+        window.scrollTo({ top: state.scrollPosition, behavior: 'auto' });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isInitialized, songs.length]);
+  
+  // Salvar posição do scroll - configurar apenas uma vez
+  useEffect(() => {
+    if (!isInitialized) return;
+    
+    let scrollTimer: NodeJS.Timeout;
+    
     const handleScroll = () => {
-      // Throttle para não salvar muito frequentemente
-      clearTimeout((window as any).scrollTimer);
-      (window as any).scrollTimer = setTimeout(() => {
-        saveScrollPosition();
-      }, 500);
+      clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(() => {
+        const scrollY = window.scrollY;
+        if (scrollY > 100) {
+          localStorage.setItem('pageState_musics', JSON.stringify({
+            ...state,
+            scrollPosition: scrollY
+          }));
+        }
+      }, 300);
     };
     
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      clearTimeout((window as any).scrollTimer);
+      clearTimeout(scrollTimer);
     };
-  }, [saveScrollPosition]);
+  }, [isInitialized]);
 
   useEffect(() => {
     const filtered = songs
-      .filter((song) => {
+      .filter((song: Song) => {
         const titleMatch = removeAccents(song.title.toLowerCase()).includes(
           removeAccents(searchTerm.toLowerCase())
         );
@@ -132,7 +203,7 @@ export default function MusicsPage() {
           ? (song.moments || []).includes(selectedMoment)
           : true;
         const tagMatch = tagFilter
-          ? (song.tags || []).some((tag) =>
+          ? (song.tags || []).some((tag: string) =>
               removeAccents(tag.toLowerCase()).includes(
                 removeAccents(tagFilter.toLowerCase())
               )
@@ -140,7 +211,7 @@ export default function MusicsPage() {
           : true;
         return titleMatch && momentMatch && tagMatch;
       })
-      .sort((a, b) =>
+      .sort((a: Song, b: Song) =>
         sortOrder === 'asc'
           ? a.title.localeCompare(b.title)
           : b.title.localeCompare(a.title)
@@ -149,6 +220,22 @@ export default function MusicsPage() {
     setFilteredSongs(filtered);
     setCurrentPage(1);
   }, [searchTerm, selectedMoment, tagFilter, sortOrder, songs]);
+
+  // Função para navegar para música individual
+  const handleNavigateToSong = useCallback((songSlug: string) => {
+    // Salvar estado atual antes de navegar
+    saveState({
+      scrollPosition: window.scrollY,
+      currentPage,
+      searchTerm,
+      selectedMoment,
+      tagFilter,
+      sortOrder
+    });
+    
+    // Marcar que vamos navegar para uma página individual
+    sessionStorage.setItem('navigatingToSong', 'true');
+  }, [saveState, currentPage, searchTerm, selectedMoment, tagFilter, sortOrder]);
 
   const clearFilters = () => {
     setSearchTerm('');
@@ -163,7 +250,8 @@ export default function MusicsPage() {
       selectedMoment: null,
       tagFilter: '',
       currentPage: 1,
-      scrollPosition: 0
+      scrollPosition: 0,
+      sortOrder: 'asc'
     });
   };
 
@@ -179,7 +267,11 @@ export default function MusicsPage() {
             onChange={(e) => {
               const newValue = e.target.value;
               setSearchTerm(newValue);
-              saveState({ searchTerm: newValue, currentPage: 1, scrollPosition: 0 });
+              saveState({ 
+                searchTerm: newValue, 
+                currentPage: 1, 
+                scrollPosition: 0 
+              });
             }}
             placeholder="Nome do cântico..."
             className="pl-10 h-9"
@@ -194,7 +286,11 @@ export default function MusicsPage() {
           onValueChange={(v) => {
             const newValue = v === 'ALL' ? null : v;
             setSelectedMoment(newValue);
-            saveState({ selectedMoment: newValue, currentPage: 1, scrollPosition: 0 });
+            saveState({ 
+              selectedMoment: newValue, 
+              currentPage: 1, 
+              scrollPosition: 0 
+            });
           }}
           value={selectedMoment ?? 'ALL'}
         >
@@ -222,9 +318,13 @@ export default function MusicsPage() {
             onChange={(e) => {
               const newValue = e.target.value;
               setTagFilter(newValue);
-              saveState({ tagFilter: newValue, currentPage: 1, scrollPosition: 0 });
+              saveState({ 
+                tagFilter: newValue, 
+                currentPage: 1, 
+                scrollPosition: 0 
+              });
             }}
-            placeholder="Ex: mariana, juvenil..."
+            placeholder="Ex: amor, paz..."
             className="pl-10 h-9"
           />
         </div>
@@ -237,7 +337,10 @@ export default function MusicsPage() {
           onValueChange={(v) => {
             const newValue = v as 'asc' | 'desc';
             setSortOrder(newValue);
-            saveState({ sortOrder: newValue, scrollPosition: 0 });
+            saveState({ 
+              sortOrder: newValue, 
+              scrollPosition: 0 
+            });
           }}
           value={sortOrder}
         >
@@ -324,6 +427,23 @@ export default function MusicsPage() {
             <p className="text-base sm:text-lg text-gray-700 max-w-2xl mx-auto px-4">
               Explora todos os nossos cânticos!
             </p>
+
+            {/* Refresh Button */}
+            <div className="flex items-center justify-center gap-4 mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  loadMusicData(true);
+                  toast.success('Dados atualizados!');
+                }}
+                className="flex items-center gap-2"
+                disabled={loading}
+              >
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                {loading ? 'Atualizando...' : 'Atualizar'}
+              </Button>
+            </div>
           </div>
         </div>
       </section>
@@ -422,17 +542,7 @@ export default function MusicsPage() {
                                     <Link 
                                       href={`/musics/${song.slug || song.id}`}
                                       className="hover:underline"
-                                      onClick={() => {
-                                        // Salvar estado atual antes de navegar
-                                        saveState({
-                                          scrollPosition: window.scrollY,
-                                          currentPage,
-                                          searchTerm,
-                                          selectedMoment,
-                                          tagFilter,
-                                          sortOrder
-                                        });
-                                      }}
+                                      onClick={() => handleNavigateToSong(song.slug || song.id)}
                                     >
                                       {song.title}
                                     </Link>
@@ -455,17 +565,7 @@ export default function MusicsPage() {
                                   >
                                     <Link 
                                       href={`/musics/${song.slug || song.id}`}
-                                      onClick={() => {
-                                        // Salvar estado atual antes de navegar
-                                        saveState({
-                                          scrollPosition: window.scrollY,
-                                          currentPage,
-                                          searchTerm,
-                                          selectedMoment,
-                                          tagFilter,
-                                          sortOrder
-                                        });
-                                      }}
+                                      onClick={() => handleNavigateToSong(song.slug || song.id)}
                                     >
                                       <span className="hidden sm:inline">Ver Cântico</span>
                                       <span className="sm:hidden">Ver</span>
@@ -547,7 +647,11 @@ export default function MusicsPage() {
                           onClick={() => {
                             const newPage = Math.max(currentPage - 1, 1);
                             setCurrentPage(newPage);
-                            saveState({ currentPage: newPage, scrollPosition: 0 });
+                            saveState({ 
+                              currentPage: newPage, 
+                              scrollPosition: 0 
+                            });
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
                           }}
                           disabled={currentPage === 1}
                           className="h-8 sm:h-9 px-2 sm:px-3 flex-shrink-0"
@@ -577,7 +681,11 @@ export default function MusicsPage() {
                                 variant={page === currentPage ? 'default' : 'outline'}
                                 onClick={() => {
                                   setCurrentPage(page);
-                                  saveState({ currentPage: page, scrollPosition: 0 });
+                                  saveState({ 
+                                    currentPage: page, 
+                                    scrollPosition: 0 
+                                  });
+                                  window.scrollTo({ top: 0, behavior: 'smooth' });
                                 }}
                                 className="w-8 h-8 sm:w-9 sm:h-9 p-0 text-xs sm:text-sm flex-shrink-0"
                               >
@@ -593,7 +701,11 @@ export default function MusicsPage() {
                           onClick={() => {
                             const newPage = Math.min(currentPage + 1, totalPages);
                             setCurrentPage(newPage);
-                            saveState({ currentPage: newPage, scrollPosition: 0 });
+                            saveState({ 
+                              currentPage: newPage, 
+                              scrollPosition: 0 
+                            });
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
                           }}
                           disabled={currentPage === totalPages}
                           className="h-8 sm:h-9 px-2 sm:px-3 flex-shrink-0"

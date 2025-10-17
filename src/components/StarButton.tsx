@@ -6,6 +6,8 @@ import { Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useStarCountCache } from '@/hooks/useCache';
+import { useAppCache } from '@/components/providers/CacheProvider';
 
 interface StarButtonProps {
   songId: string;
@@ -21,10 +23,11 @@ export default function StarButton({
   size = 'md'
 }: StarButtonProps) {
   const { data: session } = useSession();
-  const [isStarred, setIsStarred] = useState(false);
-  const [starCount, setStarCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  
+  // Use cache para star count
+  const { starCount, isStarred, setStarCount, setIsStarred, updateStarCache, getStarCache } = useStarCountCache(songId);
 
   // Tamanhos do ícone baseado no prop size
   const iconSizes = {
@@ -36,12 +39,17 @@ export default function StarButton({
   // Carregar status inicial
   useEffect(() => {
     const fetchStarStatus = async () => {
+      // Verificar cache primeiro
+      const cached = getStarCache();
+      if (cached) {
+        return; // Já tem dados do cache
+      }
+      
       try {
         const response = await fetch(`/api/songs/${songId}/star`);
         if (response.ok) {
           const data = await response.json();
-          setIsStarred(data.isStarred);
-          setStarCount(data.starCount);
+          updateStarCache(data.starCount, data.isStarred);
         }
       } catch (error) {
         console.error('Error fetching star status:', error);
@@ -49,7 +57,7 @@ export default function StarButton({
     };
 
     fetchStarStatus();
-  }, [songId]);
+  }, [songId, getStarCache, updateStarCache]);
 
   const handleStar = async () => {
     if (!session) {
@@ -86,8 +94,9 @@ export default function StarButton({
 
       if (response.ok) {
         const data = await response.json();
-        setIsStarred(data.starred);
-        setStarCount(data.starCount);
+        
+        // Atualizar cache com novos dados
+        updateStarCache(data.starCount, data.starred);
         
         // Toast de sucesso com animação
         if (data.starred) {

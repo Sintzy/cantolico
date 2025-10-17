@@ -64,12 +64,20 @@ function transposeMarkdownChords(text: string, interval: number): string {
 
 export default function SongPage() {
   const { id } = useParams();
+  const router = useRouter();
   const [song, setSong] = React.useState<SongData | null>(null);
   const [pdfUrl, setPdfUrl] = React.useState<string | null>(null);
   const [audioUrl, setAudioUrl] = React.useState<string | null>(null);
   const [transposition, setTransposition] = React.useState<number>(0);
   const [showChords, setShowChords] = React.useState<boolean>(true);
   const [loading, setLoading] = React.useState(true);
+
+  // Função para voltar preservando o estado da página
+  const handleBackToList = React.useCallback(() => {
+    // Marca que estamos retornando da página individual
+    sessionStorage.setItem('returningFromSong', 'true');
+    router.push('/musics');
+  }, [router]);
 
   React.useEffect(() => {
     const fetchSong = async () => {
@@ -352,15 +360,13 @@ export default function SongPage() {
         {/* Back Button */}
         <div className="absolute top-4 left-4 z-20">
           <Button
-            asChild
             variant="ghost"
             size="sm"
             className="text-white hover:bg-white/20 border border-white/30 shadow backdrop-blur-sm"
+            onClick={handleBackToList}
           >
-            <Link href="/musics">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Voltar à Lista
-            </Link>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar à Lista
           </Button>
         </div>
         
