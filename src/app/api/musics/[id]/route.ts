@@ -38,6 +38,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         type,
         mainInstrument,
         tags,
+        author,
         currentVersionId,
         createdAt,
         updatedAt,

@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
         type,
         mainInstrument,
         tags,
+        author,
         currentVersionId,
         createdAt,
         updatedAt,

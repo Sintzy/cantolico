@@ -27,6 +27,7 @@ export async function GET(
         mainInstrument,
         moments,
         tags,
+        author,
         createdAt,
         updatedAt,
         currentVersion:SongVersion!Song_currentVersionId_fkey (
@@ -82,6 +83,7 @@ export async function PUT(
       mainInstrument,
       moments,
       tags,
+      author,
       lyricsPlain,
       sourceText,
       keyOriginal,
@@ -146,7 +148,8 @@ export async function PUT(
         type,
         mainInstrument,
         moments,
-        tags: processedTags
+        tags: processedTags,
+        author: author?.trim() || null
       })
       .eq('id', songId);
 

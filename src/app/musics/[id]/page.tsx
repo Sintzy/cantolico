@@ -1,10 +1,11 @@
 'use client';
 import "../../../../public/styles/chords.css";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { Guitar, ChevronDown, FileText, Music, Youtube, Download } from 'lucide-react';
+import { Guitar, ChevronDown, FileText, Music, Youtube, Download, ArrowLeft } from 'lucide-react';
 import YouTube from 'react-youtube';
 import * as React from "react";
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,6 +19,7 @@ type SongData = {
   tags: string[];
   moments: string[];
   mainInstrument: string;
+  author?: string | null;
   currentVersion: {
     sourceText: string | null;
     sourcePdfKey: string | null;
@@ -329,7 +331,7 @@ export default function SongPage() {
   return <div className="p-6 text-muted-foreground text-center"><Spinner variant="circle" size={32} className="text-black" />A carregar música...</div>;
   }
 
-  const { title, mainInstrument, tags, moments, currentVersion } = song;
+  const { title, mainInstrument, tags, moments, currentVersion, author } = song;
 
 
   const getYoutubeId = (url: string) => {
@@ -347,6 +349,21 @@ export default function SongPage() {
     <div className="relative w-full min-h-screen bg-white">
       {/* Hero Section with blurred background and overlay */}
       <div className="relative h-64 md:h-80 w-full flex items-center justify-center overflow-hidden">
+        {/* Back Button */}
+        <div className="absolute top-4 left-4 z-20">
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="text-white hover:bg-white/20 border border-white/30 shadow backdrop-blur-sm"
+          >
+            <Link href="/musics">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Voltar à Lista
+            </Link>
+          </Button>
+        </div>
+        
         <div className="absolute inset-0">
           <img src="/banner.jpg" alt="Banner" className="w-full h-full object-cover object-center scale-110 blur-sm brightness-75" />
           <div className="absolute inset-0 bg-gradient-to-b from-black/60 to-transparent" />
@@ -430,6 +447,12 @@ export default function SongPage() {
               <Music className="h-4 w-4 mr-1" />
               <span className="font-medium">Instrumento:</span> {mainInstrument}
             </div>
+            {author && (
+              <div className="flex items-center gap-2 text-sm text-blue-900/80">
+                <FileText className="h-4 w-4 mr-1" />
+                <span className="font-medium">Autor:</span> {author}
+              </div>
+            )}
           </div>
 
           {/* Tags */}

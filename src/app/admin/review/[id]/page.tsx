@@ -109,6 +109,7 @@ export default function ReviewSubmissionPage() {
   
   // Estados do formulário
   const [title, setTitle] = useState("");
+  const [author, setAuthor] = useState("");
   const [markdown, setMarkdown] = useState("");
   const [preview, setPreview] = useState("");
   const [spotifyLink, setSpotifyLink] = useState("");
@@ -178,6 +179,7 @@ export default function ReviewSubmissionPage() {
         
         setSubmission(data);
         setTitle(data.title || "");
+        setAuthor(data.author || "");
         setMarkdown(data.tempText || "");
         setSpotifyLink(data.spotifyLink || "");
         setYoutubeLink(data.youtubeLink || "");
@@ -221,6 +223,7 @@ export default function ReviewSubmissionPage() {
     
     const formData = new FormData();
     formData.append("title", title);
+    formData.append("author", author);
     formData.append("markdown", markdown);
     formData.append("spotifyLink", spotifyLink);
     formData.append("youtubeLink", youtubeLink);
@@ -717,6 +720,21 @@ export default function ReviewSubmissionPage() {
                       className="bg-white flex-1"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <Label className="flex items-center gap-2">Autor (opcional)</Label>
+                  <div className="flex gap-2 items-center">
+                    <Input
+                      value={author}
+                      onChange={(e) => setAuthor(e.target.value)}
+                      placeholder="Nome do autor/compositor..."
+                      className="bg-white flex-1"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Se souber quem compôs esta música, pode adicionar o nome aqui
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -94,6 +94,7 @@ export default function CreateNewMusicPage() {
   const [form, setForm] = useState({
     id: randomUUID(),
     title: "",
+    author: "",
     moments: [] as LiturgicalMoment[],
     tags: [] as string[],
     tagsInput: "",
@@ -255,6 +256,7 @@ export default function CreateNewMusicPage() {
       const formData = new FormData();
       formData.append("id", form.id);
       formData.append("title", form.title);
+      formData.append("author", form.author);
       formData.append("instrument", form.instrument);
       formData.append("type", form.type);
       formData.append("markdown", form.markdown);
@@ -437,6 +439,19 @@ export default function CreateNewMusicPage() {
                     onChange={(e) => setForm({ ...form, title: e.target.value })}
                     placeholder="Nome da música"
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="author">Autor (opcional)</Label>
+                  <Input
+                    id="author"
+                    value={form.author || ''}
+                    onChange={(e) => setForm({ ...form, author: e.target.value })}
+                    placeholder="Nome do autor/compositor"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Se souber quem compôs esta música, pode adicionar o nome aqui
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -839,6 +854,17 @@ export default function CreateNewMusicPage() {
                           {form.title || "❌ Não definido"}
                         </span>
                       </div>
+                      {form.author && (
+                        <div className="flex justify-between items-start gap-4">
+                          <span className="font-medium text-muted-foreground flex items-center gap-2">
+                            <User className="w-4 h-4" />
+                            Autor:
+                          </span>
+                          <span className="text-foreground text-right max-w-[60%] break-words">
+                            {form.author}
+                          </span>
+                        </div>
+                      )}
                       <div className="flex justify-between items-start gap-4">
                         <span className="font-medium text-muted-foreground flex items-center gap-2">
                           <Music className="w-4 h-4" />

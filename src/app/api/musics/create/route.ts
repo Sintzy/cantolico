@@ -96,6 +96,7 @@ export const POST = withUserProtection<any>(async (req: NextRequest, session: an
     }
 
     const title = formData.get("title")?.toString() ?? "";
+    const author = formData.get("author")?.toString() || null;
     const type = formData.get("type")?.toString() as SongType;
     const instrument = formData.get("instrument")?.toString() as Instrument;
     const markdown = formData.get("markdown")?.toString() ?? "";
@@ -249,6 +250,7 @@ export const POST = withUserProtection<any>(async (req: NextRequest, session: an
     .insert({
       id: submissionId,
       title,
+      author,
       moment: moments,
       type,
       mainInstrument: instrument,

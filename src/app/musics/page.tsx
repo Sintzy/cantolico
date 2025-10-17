@@ -25,6 +25,7 @@ import StarButton from '@/components/StarButton';
 import AddToPlaylistButton from '@/components/AddToPlaylistButton';
 import { MusicListSkeleton } from '@/components/MusicListSkeleton';
 import { toast } from 'sonner';
+import { usePageState } from '@/hooks/usePageState';
 
 const allMoments = [
   'ENTRADA',
@@ -62,13 +63,17 @@ type Song = {
 export default function MusicsPage() {
   const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedMoment, setSelectedMoment] = useState<string | null>(null);
-  const [tagFilter, setTagFilter] = useState('');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [filteredSongs, setFilteredSongs] = useState<Song[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+  
+  // Use page state hook para manter estado entre navegações
+  const { state, saveState, restoreScrollPosition, saveScrollPosition } = usePageState('musics');
+  
+  const [searchTerm, setSearchTerm] = useState(state.searchTerm);
+  const [selectedMoment, setSelectedMoment] = useState<string | null>(state.selectedMoment);
+  const [tagFilter, setTagFilter] = useState(state.tagFilter);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(state.sortOrder);
+  const [currentPage, setCurrentPage] = useState(state.currentPage);
 
   const itemsPerPage = 12;
   const totalPages = Math.ceil((filteredSongs || []).length / itemsPerPage);
@@ -85,6 +90,11 @@ export default function MusicsPage() {
         
         const data = await res.json();
         setSongs(data.songs || []);
+        
+        // Após carregar, restaurar posição do scroll se existir
+        if (state.scrollPosition > 0) {
+          restoreScrollPosition();
+        }
       } catch (error) {
         console.error('Erro ao carregar músicas:', error);
         toast.error('Erro ao carregar as músicas. Tenta recarregar a página.');
@@ -93,7 +103,24 @@ export default function MusicsPage() {
       }
     };
     fetchSongs();
-  }, []);
+  }, [state.scrollPosition, restoreScrollPosition]);
+  
+  // Salvar posição do scroll periodicamente
+  useEffect(() => {
+    const handleScroll = () => {
+      // Throttle para não salvar muito frequentemente
+      clearTimeout((window as any).scrollTimer);
+      (window as any).scrollTimer = setTimeout(() => {
+        saveScrollPosition();
+      }, 500);
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      clearTimeout((window as any).scrollTimer);
+    };
+  }, [saveScrollPosition]);
 
   useEffect(() => {
     const filtered = songs
@@ -127,7 +154,17 @@ export default function MusicsPage() {
     setSearchTerm('');
     setSelectedMoment(null);
     setTagFilter('');
+    setCurrentPage(1);
     setIsMobileFiltersOpen(false);
+    
+    // Salvar estado limpo
+    saveState({
+      searchTerm: '',
+      selectedMoment: null,
+      tagFilter: '',
+      currentPage: 1,
+      scrollPosition: 0
+    });
   };
 
   const renderFilterContent = () => (
@@ -139,7 +176,11 @@ export default function MusicsPage() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              const newValue = e.target.value;
+              setSearchTerm(newValue);
+              saveState({ searchTerm: newValue, currentPage: 1, scrollPosition: 0 });
+            }}
             placeholder="Nome do cântico..."
             className="pl-10 h-9"
           />
@@ -150,7 +191,11 @@ export default function MusicsPage() {
       <div className="space-y-2">
         <Label className="text-sm font-medium text-foreground">Momento Litúrgico</Label>
         <Select
-          onValueChange={(v) => setSelectedMoment(v === 'ALL' ? null : v)}
+          onValueChange={(v) => {
+            const newValue = v === 'ALL' ? null : v;
+            setSelectedMoment(newValue);
+            saveState({ selectedMoment: newValue, currentPage: 1, scrollPosition: 0 });
+          }}
           value={selectedMoment ?? 'ALL'}
         >
           <SelectTrigger className="h-9">
@@ -174,7 +219,11 @@ export default function MusicsPage() {
           <Tags className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             value={tagFilter}
-            onChange={(e) => setTagFilter(e.target.value)}
+            onChange={(e) => {
+              const newValue = e.target.value;
+              setTagFilter(newValue);
+              saveState({ tagFilter: newValue, currentPage: 1, scrollPosition: 0 });
+            }}
             placeholder="Ex: mariana, juvenil..."
             className="pl-10 h-9"
           />
@@ -185,7 +234,11 @@ export default function MusicsPage() {
       <div className="space-y-2">
         <Label className="text-sm font-medium text-foreground">Ordenação</Label>
         <Select
-          onValueChange={(v) => setSortOrder(v as 'asc' | 'desc')}
+          onValueChange={(v) => {
+            const newValue = v as 'asc' | 'desc';
+            setSortOrder(newValue);
+            saveState({ sortOrder: newValue, scrollPosition: 0 });
+          }}
           value={sortOrder}
         >
           <SelectTrigger className="h-9">
@@ -369,6 +422,17 @@ export default function MusicsPage() {
                                     <Link 
                                       href={`/musics/${song.slug || song.id}`}
                                       className="hover:underline"
+                                      onClick={() => {
+                                        // Salvar estado atual antes de navegar
+                                        saveState({
+                                          scrollPosition: window.scrollY,
+                                          currentPage,
+                                          searchTerm,
+                                          selectedMoment,
+                                          tagFilter,
+                                          sortOrder
+                                        });
+                                      }}
                                     >
                                       {song.title}
                                     </Link>
@@ -389,7 +453,20 @@ export default function MusicsPage() {
                                     size="sm"
                                     className="h-7 sm:h-8 text-xs px-2 sm:px-3"
                                   >
-                                    <Link href={`/musics/${song.slug || song.id}`}>
+                                    <Link 
+                                      href={`/musics/${song.slug || song.id}`}
+                                      onClick={() => {
+                                        // Salvar estado atual antes de navegar
+                                        saveState({
+                                          scrollPosition: window.scrollY,
+                                          currentPage,
+                                          searchTerm,
+                                          selectedMoment,
+                                          tagFilter,
+                                          sortOrder
+                                        });
+                                      }}
+                                    >
                                       <span className="hidden sm:inline">Ver Cântico</span>
                                       <span className="sm:hidden">Ver</span>
                                     </Link>
@@ -467,7 +544,11 @@ export default function MusicsPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                          onClick={() => {
+                            const newPage = Math.max(currentPage - 1, 1);
+                            setCurrentPage(newPage);
+                            saveState({ currentPage: newPage, scrollPosition: 0 });
+                          }}
                           disabled={currentPage === 1}
                           className="h-8 sm:h-9 px-2 sm:px-3 flex-shrink-0"
                         >
@@ -494,7 +575,10 @@ export default function MusicsPage() {
                                 key={page}
                                 size="sm"
                                 variant={page === currentPage ? 'default' : 'outline'}
-                                onClick={() => setCurrentPage(page)}
+                                onClick={() => {
+                                  setCurrentPage(page);
+                                  saveState({ currentPage: page, scrollPosition: 0 });
+                                }}
                                 className="w-8 h-8 sm:w-9 sm:h-9 p-0 text-xs sm:text-sm flex-shrink-0"
                               >
                                 {page}
@@ -506,7 +590,11 @@ export default function MusicsPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                          onClick={() => {
+                            const newPage = Math.min(currentPage + 1, totalPages);
+                            setCurrentPage(newPage);
+                            saveState({ currentPage: newPage, scrollPosition: 0 });
+                          }}
                           disabled={currentPage === totalPages}
                           className="h-8 sm:h-9 px-2 sm:px-3 flex-shrink-0"
                         >

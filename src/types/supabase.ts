@@ -228,6 +228,7 @@ export interface Database {
           createdAt: string
           updatedAt: string
           slug: string
+          author: string | null
         }
         Insert: {
           id?: string
@@ -240,6 +241,7 @@ export interface Database {
           createdAt?: string
           updatedAt?: string
           slug: string
+          author?: string | null
         }
         Update: {
           id?: string
@@ -252,6 +254,7 @@ export interface Database {
           createdAt?: string
           updatedAt?: string
           slug?: string
+          author?: string | null
         }
       }
       SongVersion: {
@@ -334,6 +337,7 @@ export interface Database {
           createdAt: string
           reviewedAt: string | null
           reviewerId: number | null
+          author: string | null
         }
         Insert: {
           id?: string
@@ -355,6 +359,7 @@ export interface Database {
           createdAt?: string
           reviewedAt?: string | null
           reviewerId?: number | null
+          author?: string | null
         }
         Update: {
           id?: string
@@ -376,6 +381,7 @@ export interface Database {
           createdAt?: string
           reviewedAt?: string | null
           reviewerId?: number | null
+          author?: string | null
         }
       }
       Favorite: {

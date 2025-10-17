@@ -26,7 +26,7 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChordGuideButton } from "@/components/ChordGuidePopup";
-import { ArrowLeft, Save, Music, Edit3, Tag, Clock, Settings, Eye, Search as SearchIcon } from 'lucide-react';
+import { ArrowLeft, Save, Music, Edit3, Tag, Clock, Settings, Eye, Search as SearchIcon, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { LiturgicalMoment, Instrument, SongType } from '@/lib/constants';
@@ -116,6 +116,7 @@ interface SongData {
   mainInstrument: Instrument;
   moments: LiturgicalMoment[];
   tags: string[];
+  author?: string | null;
   currentVersion?: {
     id: string;
     lyricsPlain: string;
@@ -133,6 +134,7 @@ interface EditForm {
   mainInstrument: Instrument;
   moments: LiturgicalMoment[];
   tags: string[];
+  author: string;
   lyricsPlain: string;
   sourceText: string;
   keyOriginal: string;
@@ -211,6 +213,7 @@ export default function EditMusicPage() {
     mainInstrument: Instrument.GUITARRA,
     moments: [],
     tags: [],
+    author: '',
     lyricsPlain: '',
     sourceText: '',
     keyOriginal: '',
@@ -262,6 +265,7 @@ export default function EditMusicPage() {
           mainInstrument: data.mainInstrument,
           moments: Array.isArray(data.moments) ? data.moments : [],
           tags: parsedTags,
+          author: data.author || '',
           lyricsPlain: data.currentVersion?.lyricsPlain || '',
           sourceText: data.currentVersion?.sourceText || '',
           keyOriginal: data.currentVersion?.keyOriginal || '',
@@ -308,6 +312,7 @@ export default function EditMusicPage() {
           mainInstrument: form.mainInstrument,
           moments: form.moments,
           tags: formatTagsForPostgreSQL(form.tags),
+          author: form.author.trim() || null,
           lyricsPlain: form.lyricsPlain.trim(),
           sourceText: form.sourceText.trim(),
           keyOriginal: form.keyOriginal.trim(),
@@ -470,6 +475,22 @@ export default function EditMusicPage() {
                       className="bg-white flex-1"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <Label className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Autor (opcional)
+                  </Label>
+                  <Input
+                    value={form.author}
+                    onChange={(e) => setForm({ ...form, author: e.target.value })}
+                    placeholder="Nome do autor do cântico..."
+                    className="bg-white"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Se deixado em branco, o campo autor não será exibido nas informações do cântico
+                  </p>
                 </div>
 
                 <div className="grid md:grid-cols-3 gap-4">
