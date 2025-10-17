@@ -8,11 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
-import { Star, Music, ChevronLeft, ChevronRight, Clock, Search, ArrowUpDown } from 'lucide-react';
+import { Star, Music, ChevronLeft, ChevronRight, Clock, Search, ArrowUpDown, RefreshCw } from 'lucide-react';
 import StarButton from '@/components/StarButton';
 import AddToPlaylistButton from '@/components/AddToPlaylistButton';
 import { MusicListSkeleton } from '@/components/MusicListSkeleton';
 import { toast } from 'sonner';
+import { useCache } from '@/hooks/useCache';
+import { useAppCache } from '@/components/providers/CacheProvider';
 import removeAccents from 'remove-accents';
 
 interface StarredSong {
@@ -77,34 +79,47 @@ const sortOptions = [
 
 export default function StarredSongsPage() {
   const { data: session, status } = useSession();
-  const [allSongs, setAllSongs] = useState<StarredSong[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('starred-desc');
   const [currentPage, setCurrentPage] = useState(1);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const itemsPerPage = 12;
-
-  const fetchAllStarredSongs = async () => {
-    try {
-      setLoading(true);
-      // Buscar todas as músicas favoritas (sem paginação para permitir filtro local)
+  // Use cache para músicas favoritas
+  const { 
+    data: starredData, 
+    loading, 
+    refetch: refetchStarredSongs 
+  } = useCache(
+    `starred-songs-${session?.user?.id}`,
+    async () => {
+      if (!session?.user?.id) {
+        throw new Error('User not authenticated');
+      }
       const response = await fetch(`/api/user/starred-songs?page=1&limit=1000`);
-      
       if (!response.ok) {
         throw new Error('Falha ao carregar músicas favoritas');
       }
-
-      const data = await response.json();
-      setAllSongs(data.songs);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro desconhecido');
-      toast.error('Erro ao carregar músicas favoritas');
-    } finally {
-      setLoading(false);
+      return response.json();
+    },
+    {
+      ttl: 5 * 60 * 1000, // 5 minutos
+      persistOnRefresh: true
     }
-  };
+  );
+
+  const allSongs = starredData?.songs || [];
+  const itemsPerPage = 12;
+
+  // Log do cache no console
+  useEffect(() => {
+    if (starredData && !loading) {
+      console.log('Cache: Músicas favoritas carregadas do cache', { 
+        totalSongs: allSongs.length,
+        source: 'cache',
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [starredData, loading, allSongs.length]);
 
   // Filtro e ordenação em memória
   const filteredAndSortedSongs = useMemo(() => {
@@ -112,7 +127,7 @@ export default function StarredSongsPage() {
 
     // Aplicar filtro de pesquisa
     if (searchTerm.trim()) {
-      filtered = allSongs.filter(song => 
+      filtered = allSongs.filter((song: StarredSong) => 
         removeAccents(song.title.toLowerCase()).includes(
           removeAccents(searchTerm.toLowerCase())
         ) ||
@@ -154,11 +169,8 @@ export default function StarredSongsPage() {
   const totalPages = Math.ceil(filteredAndSortedSongs.length / itemsPerPage);
 
   useEffect(() => {
-    if (status === 'authenticated') {
-      fetchAllStarredSongs();
-    } else if (status === 'unauthenticated') {
+    if (status === 'unauthenticated') {
       setError('Precisas de estar autenticado para veres as tuas músicas favoritas');
-      setLoading(false);
     }
   }, [status]);
 
@@ -222,7 +234,7 @@ export default function StarredSongsPage() {
               <Star className="h-16 w-16 text-destructive mx-auto mb-4" />
               <h1 className="text-2xl font-bold text-foreground mb-2">Erro</h1>
               <p className="text-destructive mb-6">{error}</p>
-              <Button onClick={() => fetchAllStarredSongs()}>Tentar Novamente</Button>
+              <Button onClick={() => refetchStarredSongs()}>Tentar Novamente</Button>
             </div>
           </div>
         </section>
@@ -236,9 +248,27 @@ export default function StarredSongsPage() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="mb-8">
-            <div className="flex items-center gap-3 mb-4">
-              <Star className="h-8 w-8 text-yellow-500" />
-              <h1 className="text-3xl font-bold text-foreground">Músicas Favoritas</h1>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <Star className="h-8 w-8 text-yellow-500" />
+                <h1 className="text-3xl font-bold text-foreground">Músicas Favoritas</h1>
+              </div>
+              
+              {/* Refresh Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  refetchStarredSongs();
+                  toast.success('Músicas favoritas atualizadas!');
+                  console.log('Cache: Músicas favoritas atualizadas manualmente');
+                }}
+                className="flex items-center gap-2"
+                disabled={loading}
+              >
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                {loading ? 'Atualizando...' : 'Atualizar'}
+              </Button>
             </div>
             <p className="text-muted-foreground">
               {filteredAndSortedSongs.length === 0 ? 'Ainda não favoritaste nenhuma música' : 
@@ -369,7 +399,7 @@ export default function StarredSongsPage() {
                             <div>
                               {(Array.isArray(song.moments) && song.moments.length > 0) ? (
                                 <div className="flex flex-wrap gap-1.5">
-                                  {song.moments.slice(0, 4).map((moment, momentIndex) => (
+                                  {song.moments.slice(0, 4).map((moment: string, momentIndex: number) => (
                                     <Badge 
                                       key={`${song.id}-moment-${momentIndex}`} 
                                       variant="secondary"
@@ -398,7 +428,7 @@ export default function StarredSongsPage() {
                             <div>
                               {(Array.isArray(song.tags) && song.tags.length > 0) ? (
                                 <div className="flex flex-wrap gap-1.5">
-                                  {song.tags.slice(0, 5).map((tag, tagIndex) => (
+                                  {song.tags.slice(0, 5).map((tag: string, tagIndex: number) => (
                                     <span 
                                       key={`${song.id}-tag-${tagIndex}`} 
                                       className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary border border-primary/20"
