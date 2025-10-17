@@ -19,6 +19,7 @@ type SongData = {
   tags: string[];
   moments: string[];
   mainInstrument: string;
+  author?: string | null;
   currentVersion: {
     sourceText: string | null;
     sourcePdfKey: string | null;
@@ -330,7 +331,7 @@ export default function SongPage() {
   return <div className="p-6 text-muted-foreground text-center"><Spinner variant="circle" size={32} className="text-black" />A carregar música...</div>;
   }
 
-  const { title, mainInstrument, tags, moments, currentVersion } = song;
+  const { title, mainInstrument, tags, moments, currentVersion, author } = song;
 
 
   const getYoutubeId = (url: string) => {
@@ -446,6 +447,12 @@ export default function SongPage() {
               <Music className="h-4 w-4 mr-1" />
               <span className="font-medium">Instrumento:</span> {mainInstrument}
             </div>
+            {author && (
+              <div className="flex items-center gap-2 text-sm text-blue-900/80">
+                <FileText className="h-4 w-4 mr-1" />
+                <span className="font-medium">Autor:</span> {author}
+              </div>
+            )}
           </div>
 
           {/* Tags */}
