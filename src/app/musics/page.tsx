@@ -66,6 +66,7 @@ export default function MusicsPage() {
   const [loading, setLoading] = useState(true);
   const [filteredSongs, setFilteredSongs] = useState<Song[]>([]);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false); // Flag para evitar múltiplas cargas
   
   // Use page state hook para manter estado entre navegações
   const { state, saveState, restoreScrollPosition, saveScrollPosition, isInitialized } = usePageState('musics');
@@ -79,11 +80,19 @@ export default function MusicsPage() {
   const itemsPerPage = 12;
   const totalPages = Math.ceil((filteredSongs || []).length / itemsPerPage);
 
-  // Função para carregar dados (com cache simples)
-  const loadMusicData = useCallback(async (forceRefresh = false) => {
+  // Função para carregar dados (com cache simples) - sem useCallback
+  const loadMusicData = async (forceRefresh = false) => {
+    // Evitar múltiplas cargas simultâneas e loops infinitos
+    if (loading && !forceRefresh) {
+      console.log('Carregamento já em andamento, pulando...');
+      return;
+    }
+    
     const cacheKey = 'musicList_data';
     const cacheTimeKey = 'musicList_timestamp';
     const cacheExpiry = 10 * 60 * 1000; // 10 minutos
+
+    console.log('Iniciando carregamento de dados...', { forceRefresh, currentlyLoading: loading });
 
     try {
       setLoading(true);
@@ -97,32 +106,58 @@ export default function MusicsPage() {
           const isExpired = Date.now() - parseInt(cacheTime) > cacheExpiry;
           
           if (!isExpired) {
-            const parsedData = JSON.parse(cachedData);
-            setSongs(parsedData.songs || []);
-            console.log('Cache: Dados carregados do cache', { 
-              totalSongs: parsedData.songs?.length || 0,
-              source: 'cache',
-              timestamp: new Date().toISOString()
-            });
-            setLoading(false);
-            return;
+            try {
+              const parsedData = JSON.parse(cachedData);
+              setSongs(parsedData.songs || []);
+              setDataLoaded(true);
+              console.log('Cache: Dados carregados do cache', { 
+                totalSongs: parsedData.songs?.length || 0,
+                source: 'cache',
+                timestamp: new Date().toISOString()
+              });
+              setLoading(false);
+              return;
+            } catch (parseError) {
+              console.warn('Erro ao fazer parse do cache:', parseError);
+              // Continue para buscar da API
+            }
           }
         }
       }
 
-      // Buscar dados da API
-      const response = await fetch('/api/musics/getmusics');
+      // Buscar dados da API com timeout
+      console.log('Fazendo fetch da API...');
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 segundos timeout
+      
+      const response = await fetch('/api/musics/getmusics', {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
       if (!response.ok) {
-        throw new Error('Erro ao carregar músicas');
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       const data = await response.json();
-      setSongs(data.songs || []);
+      
+      if (!data || !Array.isArray(data.songs)) {
+        throw new Error('Formato de dados inválido');
+      }
+
+      setSongs(data.songs);
+      setDataLoaded(true);
       
       // Salvar no cache
       if (typeof window !== 'undefined') {
-        sessionStorage.setItem(cacheKey, JSON.stringify(data));
-        sessionStorage.setItem(cacheTimeKey, Date.now().toString());
+        try {
+          sessionStorage.setItem(cacheKey, JSON.stringify(data));
+          sessionStorage.setItem(cacheTimeKey, Date.now().toString());
+        } catch (storageError) {
+          console.warn('Erro ao salvar no cache:', storageError);
+        }
       }
       
       console.log('Cache: Dados carregados da API', { 
@@ -133,11 +168,13 @@ export default function MusicsPage() {
       
     } catch (error) {
       console.error('Erro ao carregar músicas:', error);
-      toast.error('Erro ao carregar as músicas');
+      toast.error('Erro ao carregar as músicas. Tente novamente.');
+      setDataLoaded(true); // Marcar como tentado mesmo com erro para evitar loops
     } finally {
+      console.log('Finalizando carregamento...');
       setLoading(false);
     }
-  }, []);
+  };
 
   // Inicializar estado dos filtros apenas após carregar do localStorage
   useEffect(() => {
@@ -152,10 +189,10 @@ export default function MusicsPage() {
 
   // Carregar dados iniciais - apenas uma vez
   useEffect(() => {
-    if (isInitialized) {
+    if (isInitialized && !dataLoaded) {
       loadMusicData();
     }
-  }, [isInitialized]);
+  }, [isInitialized, dataLoaded]);
 
   // Restaurar posição do scroll - apenas uma vez após carregar
   useEffect(() => {
