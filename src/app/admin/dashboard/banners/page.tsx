@@ -501,10 +501,13 @@ export default function BannerManagement() {
                 <Label htmlFor="type">Tipo</Label>
                 <Select
                   value={formData.type}
-                  onValueChange={(value: Banner['type']) => setFormData({ ...formData, type: value })}
+                  onValueChange={(value: Banner['type']) => {
+                    console.log('Selected banner type:', value);
+                    setFormData({ ...formData, type: value });
+                  }}
                 >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Seleciona o tipo de banner" />
                   </SelectTrigger>
                   <SelectContent>
                     {Object.entries(bannerTypeLabels).map(([value, label]) => (
@@ -532,10 +535,13 @@ export default function BannerManagement() {
                 <Label htmlFor="position">Posição</Label>
                 <Select
                   value={formData.position}
-                  onValueChange={(value: Banner['position']) => setFormData({ ...formData, position: value })}
+                  onValueChange={(value: Banner['position']) => {
+                    console.log('Selected banner position:', value);
+                    setFormData({ ...formData, position: value });
+                  }}
                 >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Seleciona a posição" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="TOP">Topo da página</SelectItem>

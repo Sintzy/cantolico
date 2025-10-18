@@ -438,9 +438,19 @@ export default function SongPage() {
           <div className="flex gap-3 justify-center mt-2">
             <StarButton songId={id as string} className="bg-white/20 hover:bg-white/40 text-white border-white/30 shadow" />
             <AddToPlaylistButton songId={id as string} className="bg-white/20 hover:bg-white/40 text-white border-white/30 shadow" />
+            <Button 
+              variant="ghost" 
+              className="text-white hover:bg-white/20 border-white/30 shadow"
+              onClick={() => {
+                const pdfUrl = `/api/musics/${id}/pdf?transposition=${transposition}`;
+                window.open(pdfUrl, '_blank');
+              }}
+            >
+              <FileText className="h-4 w-4 mr-1" /> PDF
+            </Button>
             {pdfUrl && (
               <Button asChild variant="ghost" className="text-white hover:bg-white/20 border-white/30 shadow">
-                <a href={pdfUrl} target="_blank" rel="noopener noreferrer"><Download className="h-4 w-4 mr-1" /> PDF</a>
+                <a href={pdfUrl} target="_blank" rel="noopener noreferrer"><Download className="h-4 w-4 mr-1" /> PDF Original</a>
               </Button>
             )}
           </div>
@@ -451,6 +461,16 @@ export default function SongPage() {
       <div className="fixed bottom-0 left-0 right-0 z-30 md:hidden bg-white/90 backdrop-blur border-t border-blue-100 flex justify-around py-2 shadow-lg">
         <StarButton songId={id as string} className="text-blue-700" />
         <AddToPlaylistButton songId={id as string} className="text-blue-700" />
+        <Button 
+          variant="ghost" 
+          className="text-blue-700"
+          onClick={() => {
+            const pdfUrl = `/api/musics/${id}/pdf?transposition=${transposition}`;
+            window.open(pdfUrl, '_blank');
+          }}
+        >
+          <FileText className="h-5 w-5" />
+        </Button>
         {pdfUrl && (
           <Button asChild variant="ghost" className="text-blue-700">
             <a href={pdfUrl} target="_blank" rel="noopener noreferrer"><Download className="h-5 w-5" /></a>
@@ -490,6 +510,18 @@ export default function SongPage() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            {/* Botão PDF com transposição */}
+            <Button 
+              className="w-full mt-2" 
+              variant="outline"
+              onClick={() => {
+                const pdfUrl = `/api/musics/${id}/pdf?transposition=${transposition}`;
+                window.open(pdfUrl, '_blank');
+              }}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Gerar PDF
+            </Button>
           </div>
 
           {/* Song Info */}

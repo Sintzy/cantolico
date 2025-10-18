@@ -98,7 +98,7 @@ export default function Footer() {
             <a href="https://github.com/sintzy" target="_blank" rel="noreferrer">
               <Github className="h-5 w-5 hover:text-gray-900" />
             </a>
-            <a href="https://instagram.com/loading" target="_blank" rel="noreferrer">
+            <a href="https://instagram.com/cantolicoo" target="_blank" rel="noreferrer">
               <Instagram className="h-5 w-5 hover:text-pink-600" />
             </a>
             

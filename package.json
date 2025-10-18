@@ -32,6 +32,7 @@
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.1",
+    "fontkit": "^2.0.4",
     "framer-motion": "^12.23.9",
     "glob": "^11.0.3",
     "lucide-react": "^0.525.0",
