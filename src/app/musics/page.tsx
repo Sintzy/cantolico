@@ -68,10 +68,24 @@ export default function MusicsPage() {
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false); // Flag para evitar múltiplas cargas
   
-  // Use page state hook para manter estado entre navegações
-  const { state, saveState, restoreScrollPosition, saveScrollPosition, isInitialized } = usePageState('musics');
+  // Use page state hook para manter estado entre navegações - temporariamente comentado
+  // const { state, saveState, restoreScrollPosition, saveScrollPosition, isInitialized } = usePageState('musics');
   
-  const [searchTerm, setSearchTerm] = useState('');
+  // Função temporária para substituir saveState
+  const saveState = (stateData: any) => {
+    try {
+      localStorage.setItem('pageState_musics', JSON.stringify(stateData));
+    } catch (error) {
+      console.warn('Erro ao salvar estado:', error);
+    }
+  };
+  
+  console.log('🎵 MusicPage render (simplified):', { 
+    dataLoaded, 
+    loading, 
+    songsLength: songs.length, 
+    timestamp: new Date().toISOString() 
+  });  const [searchTerm, setSearchTerm] = useState('');
   const [selectedMoment, setSelectedMoment] = useState<string | null>(null);
   const [tagFilter, setTagFilter] = useState('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -82,17 +96,22 @@ export default function MusicsPage() {
 
   // Função para carregar dados (com cache simples) - sem useCallback
   const loadMusicData = async (forceRefresh = false) => {
-    // Evitar múltiplas cargas simultâneas e loops infinitos
-    if (loading && !forceRefresh) {
-      console.log('Carregamento já em andamento, pulando...');
+    // Evitar múltiplas cargas simultâneas apenas se já temos dados
+    if (loading && !forceRefresh && dataLoaded) {
+      console.log('Carregamento já em andamento e dados já carregados, pulando...');
       return;
     }
     
     const cacheKey = 'musicList_data';
     const cacheTimeKey = 'musicList_timestamp';
-    const cacheExpiry = 10 * 60 * 1000; // 10 minutos
+    const cacheExpiry = 5 * 60 * 1000; // 5 minutos - dados mais frescos
 
-    console.log('Iniciando carregamento de dados...', { forceRefresh, currentlyLoading: loading });
+    console.log('Iniciando carregamento de dados...', { 
+      forceRefresh, 
+      currentlyLoading: loading, 
+      dataLoaded,
+      hasCache: !!sessionStorage.getItem('musicList_data')
+    });
 
     try {
       setLoading(true);
@@ -168,7 +187,13 @@ export default function MusicsPage() {
       
     } catch (error) {
       console.error('Erro ao carregar músicas:', error);
-      toast.error('Erro ao carregar as músicas. Tente novamente.');
+      
+      if (error instanceof Error && error.name === 'AbortError') {
+        toast.error('Timeout: A requisição demorou muito tempo. Tente novamente.');
+      } else {
+        toast.error('Erro ao carregar as músicas. Tente novamente.');
+      }
+      
       setDataLoaded(true); // Marcar como tentado mesmo com erro para evitar loops
     } finally {
       console.log('Finalizando carregamento...');
@@ -176,24 +201,43 @@ export default function MusicsPage() {
     }
   };
 
-  // Inicializar estado dos filtros apenas após carregar do localStorage
+  // Inicializar estado dos filtros - abordagem simples por enquanto
   useEffect(() => {
-    if (isInitialized) {
-      setSearchTerm(state.searchTerm || '');
-      setSelectedMoment(state.selectedMoment || null);
-      setTagFilter(state.tagFilter || '');
-      setSortOrder(state.sortOrder || 'asc');
-      setCurrentPage(state.currentPage || 1);
+    // Carregar estado salvo do localStorage se existir
+    const savedState = localStorage.getItem('pageState_musics');
+    if (savedState) {
+      try {
+        const parsed = JSON.parse(savedState);
+        setSearchTerm(parsed.searchTerm || '');
+        setSelectedMoment(parsed.selectedMoment || null);
+        setTagFilter(parsed.tagFilter || '');
+        setSortOrder(parsed.sortOrder || 'asc');
+        setCurrentPage(parsed.currentPage || 1);
+      } catch (error) {
+        console.warn('Erro ao carregar estado salvo:', error);
+      }
     }
-  }, [isInitialized]);
+  }, []);
 
-  // Carregar dados iniciais - apenas uma vez
+  // Carregar dados iniciais - sempre buscar dados frescos na primeira carga
   useEffect(() => {
-    if (isInitialized && !dataLoaded) {
-      loadMusicData();
+    console.log('🔄 useEffect simples para carregar dados:', { dataLoaded });
+    if (!dataLoaded) {
+      console.log('✅ Executando loadMusicData...');
+      
+      // Verificar se é uma nova sessão (sessionStorage vazio = nova aba/navegador)
+      const isNewSession = !sessionStorage.getItem('musicList_data');
+      if (isNewSession) {
+        console.log('🆕 Nova sessão detectada - forçar refresh dos dados');
+        loadMusicData(true); // Forçar refresh para nova sessão
+      } else {
+        loadMusicData(); // Usar cache se disponível
+      }
     }
-  }, [isInitialized, dataLoaded]);
+  }, []);
 
+  // TODO: Restaurar funcionalidade de scroll quando usePageState for corrigido
+  /*
   // Restaurar posição do scroll - apenas uma vez após carregar
   useEffect(() => {
     if (isInitialized && songs.length > 0 && state.scrollPosition > 0) {
@@ -229,6 +273,7 @@ export default function MusicsPage() {
       clearTimeout(scrollTimer);
     };
   }, [isInitialized]);
+  */
 
   useEffect(() => {
     const filtered = songs
