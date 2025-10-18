@@ -6,6 +6,7 @@ import YouTube from 'react-youtube';
 import * as React from "react";
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Head from 'next/head';
 import { supabase } from '@/lib/supabase';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -354,7 +355,56 @@ export default function SongPage() {
 
 
   return (
-    <div className="relative w-full min-h-screen bg-white">
+    <>
+      {/* Structured Data for SEO */}
+      <script 
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "MusicComposition",
+            "name": title,
+            "composer": {
+              "@type": "Person", 
+              "name": author || currentVersion?.createdBy?.name || "Autor desconhecido"
+            },
+            "musicalKey": mainInstrument,
+            "genre": "Sacred Music",
+            "keywords": [
+              title.toLowerCase(),
+              `${title.toLowerCase()} letra`, 
+              `${title.toLowerCase()} acordes`,
+              "canticos catolicos",
+              "musica liturgica",
+              ...tags.map(t => t.toLowerCase()),
+              ...moments.map(m => m.toLowerCase().replace('_', ' '))
+            ].join(", "),
+            "inLanguage": "pt-PT",
+            "audience": {
+              "@type": "Audience",
+              "audienceType": "Catholics"
+            },
+            "publisher": {
+              "@type": "Organization",
+              "name": "Cantólico - Cânticos Católicos",
+              "url": "https://cantolico.pt"
+            },
+            "datePublished": new Date().toISOString(),
+            "description": `${title} - Cântico católico com letra e acordes para ${moments.map(m => m.replace('_', ' ').toLowerCase()).join(', ')}`,
+            "url": `https://cantolico.pt/musics/${id}`,
+            ...(currentVersion?.youtubeLink && {
+              "video": {
+                "@type": "VideoObject",
+                "name": title,
+                "embedUrl": currentVersion.youtubeLink,
+                "uploadDate": new Date().toISOString()
+              }
+            })
+          })
+        }}
+      />
+      
+      <div className="relative w-full min-h-screen bg-white">
       {/* Hero Section with blurred background and overlay */}
       <div className="relative h-64 md:h-80 w-full flex items-center justify-center overflow-hidden">
         {/* Back Button */}
@@ -559,6 +609,7 @@ export default function SongPage() {
         <ScrollToTopButton />
       </div>
     </div>
+    </>
   );
 }
 

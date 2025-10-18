@@ -50,13 +50,30 @@ export async function generateMetadata({ params }: MusicPageProps): Promise<Meta
       }
     }
 
+    // Criar keywords otimizadas para SEO
+    const seoKeywords = [
+      song.title.toLowerCase(),
+      `${song.title.toLowerCase()} letra`,
+      `${song.title.toLowerCase()} acordes`,
+      `${song.title.toLowerCase()} cantico`,
+      `${song.title.toLowerCase()} cantico catolico`,
+      "canticos catolicos",
+      "letras canticos catolicos", 
+      "acordes canticos catolicos",
+      ...(Array.isArray(song.tags) ? song.tags : []),
+      ...(Array.isArray(song.moments) ? song.moments.map(m => m.toLowerCase().replace('_', ' ')) : []),
+      "liturgia",
+      "missa",
+      song.mainInstrument.toLowerCase()
+    ];
+
     return {
-      title: song.title,
-      description: `${song.title} - Cântico católico para ${momentos}. ${tags ? `Tags: ${tags}.` : ""} Partilhado por ${autor} no Can♱ólico!`,
-      keywords: [song.title, ...(Array.isArray(song.tags) ? song.tags : []), ...(Array.isArray(song.moments) ? song.moments : []), "cântico", "católico", "liturgia", song.mainInstrument],
+      title: `${song.title} - Letra e Acordes | Cantólico`,
+      description: `${song.title} - Cântico católico com letra e acordes para ${momentos.replace(/_/g, ' ').toLowerCase()}. ${tags ? `${tags}.` : ""} Biblioteca de cânticos católicos online grátis.`,
+      keywords: seoKeywords,
       openGraph: {
-        title: song.title,
-        description: `${song.title} - Cântico católico para ${momentos}. Descobre este e outros cânticos no Can♱ólico!`,
+        title: `${song.title} - Letra e Acordes | Cantólico`,
+        description: `${song.title} - Cântico católico com letra e acordes para ${momentos.replace(/_/g, ' ').toLowerCase()}. Biblioteca de cânticos católicos online.`,
         type: "article",
         locale: "pt_PT",
         images: [
@@ -64,14 +81,14 @@ export async function generateMetadata({ params }: MusicPageProps): Promise<Meta
             url: SITE_IMAGES.ogImage,
             width: 1200,
             height: 630,
-            alt: `${song.title} - Can♱ólico!`,
+            alt: `${song.title} - Letra e Acordes | Cantólico`,
           }
         ],
       },
       twitter: {
         card: "summary_large_image",
-        title: song.title,
-        description: `${song.title} - Cântico católico para ${momentos}`,
+        title: `${song.title} - Letra e Acordes`,
+        description: `${song.title} - Cântico católico com letra e acordes para ${momentos.replace(/_/g, ' ').toLowerCase()}`,
         images: [SITE_IMAGES.twitterImage],
       }
     };

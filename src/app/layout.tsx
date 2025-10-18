@@ -18,35 +18,35 @@ export const metadata: Metadata = {
     default: "Cantólico - Cânticos Católicos com Letras e Acordes",
     template: `%s | Cantólico`
   },
-  description: "Biblioteca de cânticos católicos com letras, acordes e partituras. Encontra e partilha música litúrgica para a celebração eucarística.",
+  description: "Lista completa de cânticos católicos online com letras, acordes e partituras gratuitas. Biblioteca de música litúrgica para missa, celebrações e liturgia. Mais de 1000 cânticos católicos portugueses.",
   keywords: [
-    // Cânticos principais
-    "cânticos católicos", "canticos catolicos", "cancioneiro católico", "cancioneiro catolico",
-    "música católica", "musica catolica", "música liturgica", "musica liturgica",
-    "letras cânticos católicos", "letras canticos catolicos", "acordes cânticos",
+    // Pesquisas principais (alta prioridade)
+    "lista canticos catolicos", "lista cânticos católicos", "canticos catolicos online",
+    "cânticos católicos gratis", "canticos catolicos gratis", "biblioteca canticos catolicos",
+    "cancioneiro catolico online", "cancioneiro católico online", "hinario catolico online",
     
-    // Cânticos específicos populares
-    "Deus está aqui", "Deus esta aqui", "deus esta aqui cantico", "deus está aqui letra",
-    "Aleluia", "aleluia cantico", "Gloria a Deus", "gloria a deus cantico",
-    "Santo", "santo cantico", "Cordeiro de Deus", "cordeiro de deus cantico",
-    "Ave Maria", "ave maria cantico", "Salve Rainha", "salve rainha cantico",
+    // Pesquisas funcionais
+    "letras canticos catolicos", "letras cânticos católicos", "acordes canticos catolicos", 
+    "acordes cânticos católicos", "partituras canticos catolicos", "partituras cânticos católicos",
+    "cifras canticos igreja", "cifras cânticos igreja", "musicas catolicas online",
     
-    // Competidores
-    "musicristo", "musicristo canticos", "vitamina c canticos", "vitaminac",
-    "melhor que musicristo", "alternativa musicristo", "melhor site canticos",
+    // Cânticos específicos populares (SEO long-tail)
+    "deus esta aqui letra", "deus esta aqui acordes", "aleluia cantico letra",
+    "gloria a deus nas alturas letra", "santo cantico letra", "cordeiro de deus letra",
+    "ave maria cantico letra", "salve rainha letra", "vem espirito santo letra",
     
-    // Termos gerais
-    "cânticos missa", "canticos missa", "música igreja", "musica igreja",
-    "partituras católicas", "partituras catolicas", "acordes igreja",
-    "liturgia", "cancioneiro", "hinário", "hinario católico", "hinario catolico",
+    // Contexto litúrgico
+    "canticos missa online", "cânticos missa online", "musica liturgica online",
+    "música litúrgica online", "canticos entrada missa", "canticos comunhao",
+    "canticos ofertorio", "canticos final missa", "liturgia canticos",
     
     // Eventos religiosos
-    "cânticos natal", "canticos natal", "cânticos páscoa", "canticos pascoa",
-    "cânticos quaresma", "canticos quaresma", "cânticos domingo",
+    "canticos natal portugueses", "cânticos natal portugueses", "canticos pascoa",
+    "canticos quaresma", "canticos domingo ramos", "canticos pentecostes",
     
-    // Variações
-    "cantolico", "cantólico", "cantolico.pt", "site cânticos grátis",
-    "cânticos pdf", "canticos pdf", "cifras católicas", "cifras catolicas"
+    // Termos marca e locais
+    "cantolico", "cantólico", "cantolico.pt", "cantolico portugal",
+    "canticos catolicos portugal", "cânticos católicos portugal", "hinario portugal"
   ],
   authors: [{ name: "Cantólico - Cânticos Católicos" }],
   creator: "Cantólico - A maior biblioteca de cânticos católicos",
@@ -87,7 +87,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "Cantólico - Cânticos Católicos com Letras e Acordes",
-    description: "Biblioteca de cânticos católicos com letras, acordes e partituras. Encontra e partilha música litúrgica para a celebração eucarística.",
+    description: "Lista completa de cânticos católicos online com letras, acordes e partituras gratuitas. Biblioteca de música litúrgica para missa, celebrações e liturgia.",
     type: "website",
     locale: "pt_PT",
     url: "https://cantolico.pt",
@@ -104,7 +104,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Cantólico - Cânticos Católicos",
-    description: "Biblioteca de cânticos católicos com letras, acordes e partituras.",
+    description: "Lista completa de cânticos católicos online com letras, acordes e partituras gratuitas.",
     creator: "@cantolico",
     images: [SITE_IMAGES.twitterImage],
   },
@@ -125,22 +125,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
     <html lang="pt">
       <head>
-        {/* Ezoic Privacy Scripts - MUST load first for compliance */}
-        <script src="https://cmp.gatekeeperconsent.com/min.js" data-cfasync="false"></script>
-        <script src="https://the.gatekeeperconsent.com/cmp.min.js" data-cfasync="false"></script>
-        
-        {/* Ezoic Header Script - Main ad system initialization */}
-        <script async src="//www.ezojs.com/ezoic/sa.min.js"></script>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.ezstandalone = window.ezstandalone || {};
-              ezstandalone.cmd = ezstandalone.cmd || [];
-            `
-          }}
-        />
-        
-        {/* Other scripts */}
+        {/* Scripts */}
         <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
         <script
           type="application/ld+json"
@@ -150,16 +135,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               "@type": ["WebSite", "MusicGroup", "Organization"],
               "name": "Cantólico - Cânticos Católicos",
               "alternateName": ["Cantolico", "Cantólico!", "Canticos Catolicos", "Cânticos Católicos Online"],
-              "description": "A maior biblioteca de cânticos católicos online com letras, acordes e partituras grátis. Melhor que MusiCristo e VitaminaC.",
+              "description": "Lista completa de cânticos católicos online com letras, acordes e partituras gratuitas. Biblioteca de música litúrgica portuguesa para missa e celebrações.",
               "url": "https://cantolico.pt",
               "sameAs": [
-                "https://instagram.com/cantolico",
+                "https://instagram.com/cantolicoo",
                 "https://github.com/sintzy/cantolico"
               ],
               "potentialAction": [
                 {
                   "@type": "SearchAction",
-                  "target": "https://cantolico.pt/musics?search={search_term_string}",
+                  "target": "https://cantolico.pt/musics#{search_term_string}",
                   "query-input": "required name=search_term_string"
                 }
               ],
@@ -171,15 +156,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               },
               "mainEntity": {
                 "@type": "ItemList",
-                "name": "Cânticos Católicos",
-                "description": "Biblioteca completa de cânticos católicos com letras, acordes e partituras",
+                "name": "Lista de Cânticos Católicos",
+                "description": "Lista completa de cânticos católicos portugueses com letras, acordes e partituras para missa e liturgia",
                 "numberOfItems": "1000+"
               },
               "audience": {
                 "@type": "Audience",
                 "audienceType": ["Catholics", "Musicians", "Church Musicians", "Liturgy Teams", "Catolicos", "Musicos Igreja"]
               },
-              "keywords": "cânticos católicos, canticos catolicos, música católica, letras cânticos, acordes igreja, partituras católicas, cancioneiro católico, liturgia, missa, Deus está aqui, Ave Maria, Santo, Gloria, Aleluia, musicristo alternativa, vitamina c alternativa"
+              "keywords": "lista canticos catolicos, canticos catolicos online, letras canticos catolicos, acordes canticos catolicos, biblioteca canticos catolicos, cancioneiro catolico online, musica liturgica online, hinario catolico, canticos missa, Deus esta aqui, Ave Maria, Santo, Gloria, Aleluia"
             })
           }}
         />
