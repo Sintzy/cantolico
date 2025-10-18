@@ -520,7 +520,7 @@ export async function GET(
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `inline; filename="${encodeURIComponent(song.title)}.pdf"`,
+        'Content-Disposition': `inline; filename="${encodeURIComponent(song.title)} - Cantolico.pdf"`,
       },
     });
   } catch (error) {
