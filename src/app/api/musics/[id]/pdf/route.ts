@@ -240,95 +240,113 @@ export async function GET(
     const chordFormat = detectChordFormat(sourceText);
     console.log('Formato detectado:', chordFormat);
 
-    // Função para renderizar texto com acordes no PDF de forma mais robusta
-    const renderMusicContent = (text: string, startY: number): number => {
+    // Função para calcular altura necessária para o conteúdo
+    const calculateContentHeight = (text: string): number => {
       const lines = text.split('\n');
-      let currentY = startY;
-      const fontSize = 11; // Ligeiramente maior para melhor legibilidade
       const lineHeight = 14;
-      const chordFontSize = 10; // Acordes um pouco maiores
-      const leftMargin = 50;
-      const rightMargin = width - 50;
-      const contentWidth = rightMargin - leftMargin;
+      let totalHeight = 0;
       
-      console.log(`Renderizando ${lines.length} linhas de música`);
-
-      for (let i = 0; i < lines.length && currentY > 80; i++) {
-        const line = lines[i];
-        
+      for (const line of lines) {
         if (!line.trim()) {
-          currentY -= lineHeight / 2;
-          continue;
+          totalHeight += lineHeight / 2;
+        } else if (line.includes('[') && line.includes(']') && line.trim() !== line.match(/^(\s*\[[A-G][#b]?[^\]]*\]\s*)+$/)?.[0]) {
+          // Linha com acordes inline precisa de espaço extra
+          totalHeight += lineHeight + 4;
+        } else {
+          totalHeight += lineHeight;
+          // Seções precisam de espaço extra
+          if (/^(Intro|Ponte|Solo|Bridge|Instrumental|Interlude|Refrão|Estrofe|Verso):?\s*$/i.test(line.trim())) {
+            totalHeight += 4;
+          }
         }
+      }
+      
+      return totalHeight;
+    };
 
-        // Verificar se é linha de seção (Intro, Ponte, etc.)
-        const isIntroLine = /^(Intro|Ponte|Solo|Bridge|Instrumental|Interlude|Refrão|Estrofe|Verso):?\s*$/i.test(line.trim());
+    // Função para renderizar uma linha individual
+    const renderLine = (line: string, x: number, currentY: number, columnWidth: number): number => {
+      const fontSize = 11;
+      const lineHeight = 14;
+      const chordFontSize = 10;
+      
+      if (!line.trim()) {
+        return currentY - lineHeight / 2;
+      }
+
+      // Verificar se é linha de seção (Intro, Ponte, etc.)
+      const isIntroLine = /^(Intro|Ponte|Solo|Bridge|Instrumental|Interlude|Refrão|Estrofe|Verso):?\s*$/i.test(line.trim());
+      
+      // Verificar se é linha só com acordes
+      const isChordOnlyLine = /^(\s*\[[A-G][#b]?[^\]]*\]\s*)+\s*$/.test(line.trim());
+      
+      if (isIntroLine) {
+        // Renderizar título da seção em negrito e cor moderna
+        page.drawText(line.trim(), {
+          x: x,
+          y: currentY,
+          size: fontSize + 2,
+          font: boldFont,
+          color: rgb(0.2, 0.3, 0.5),
+        });
+        console.log('Renderizada seção:', line.trim());
+        return currentY - lineHeight - 4;
         
-        // Verificar se é linha só com acordes
-        const isChordOnlyLine = /^(\s*\[[A-G][#b]?[^\]]*\]\s*)+\s*$/.test(line.trim());
+      } else if (isChordOnlyLine) {
+        // Renderizar linha de acordes com cor azul moderna
+        const chordMatches = line.match(/\[([A-G][#b]?[^\]]*)\]/g) || [];
+        let chordX = x;
         
-        if (isIntroLine) {
-          // Renderizar título da seção em negrito e cor moderna
-          page.drawText(line.trim(), {
-            x: leftMargin,
-            y: currentY,
-            size: fontSize + 2,
-            font: boldFont,
-            color: rgb(0.2, 0.3, 0.5), // Azul escuro elegante
-          });
-          currentY -= lineHeight + 4;
-          console.log('Renderizada seção:', line.trim());
-          
-        } else if (isChordOnlyLine) {
-          // Renderizar linha de acordes com cor azul moderna
-          const chordMatches = line.match(/\[([A-G][#b]?[^\]]*)\]/g) || [];
-          let chordX = leftMargin;
-          
-          console.log('Acordes encontrados:', chordMatches);
-          
-          for (const chordMatch of chordMatches) {
-            const cleanChord = chordMatch.replace(/[\[\]]/g, '');
+        console.log('Acordes encontrados:', chordMatches);
+        
+        for (const chordMatch of chordMatches) {
+          const cleanChord = chordMatch.replace(/[\[\]]/g, '');
+          // Verificar se o acorde cabe na coluna
+          if (chordX + cleanChord.length * 7.5 <= x + columnWidth) {
             page.drawText(cleanChord, {
               x: chordX,
               y: currentY,
               size: chordFontSize,
               font: boldFont,
-              color: rgb(0.1, 0.4, 0.7), // Azul mais moderno e legível
+              color: rgb(0.1, 0.4, 0.7),
             });
-            chordX += cleanChord.length * 7.5 + 22; // Espaçamento mais generoso
+            chordX += cleanChord.length * 7.5 + 22;
           }
-          currentY -= lineHeight;
+        }
+        return currentY - lineHeight;
+        
+      } else {
+        // Renderizar letra (pode ter acordes inline)
+        if (line.includes('[') && line.includes(']')) {
+          // Linha com acordes inline
+          const parts = line.split(/(\[[A-G][#b]?[^\]]*\])/);
+          let textX = x;
+          let hasText = false;
           
-        } else {
-          // Renderizar letra (pode ter acordes inline)
-          if (line.includes('[') && line.includes(']')) {
-            // Linha com acordes inline - processar acordes e texto separadamente
-            const parts = line.split(/(\[[A-G][#b]?[^\]]*\])/);
-            let textX = leftMargin;
-            let hasText = false;
-            
-            for (const part of parts) {
-              if (part.match(/^\[[A-G][#b]?[^\]]*\]$/)) {
-                // É um acorde
-                const cleanChord = part.replace(/[\[\]]/g, '');
+          for (const part of parts) {
+            if (part.match(/^\[[A-G][#b]?[^\]]*\]$/)) {
+              // É um acorde
+              const cleanChord = part.replace(/[\[\]]/g, '');
+              if (textX + cleanChord.length * 6.5 <= x + columnWidth) {
                 page.drawText(cleanChord, {
                   x: textX,
-                  y: currentY + 9, // Acordes um pouco acima
+                  y: currentY + 9,
                   size: chordFontSize,
                   font: boldFont,
-                  color: rgb(0.1, 0.4, 0.7), // Azul moderno
+                  color: rgb(0.1, 0.4, 0.7),
                 });
                 textX += cleanChord.length * 6.5 + 6;
-              } else if (part.trim()) {
-                // É texto - verificar se tem formatação **bold**
-                if (part.includes('**')) {
-                  // Processar formatação bold no texto
-                  const textParts = part.split(/(\*\*[^*]+\*\*)/);
-                  
-                  for (const textPart of textParts) {
-                    if (textPart.match(/^\*\*[^*]+\*\*$/)) {
-                      // Texto em bold
-                      const boldText = textPart.replace(/\*\*/g, '');
+              }
+            } else if (part.trim()) {
+              // É texto - processar formatação **bold**
+              if (part.includes('**')) {
+                const textParts = part.split(/(\*\*[^*]+\*\*)/);
+                
+                for (const textPart of textParts) {
+                  if (textPart.match(/^\*\*[^*]+\*\*$/)) {
+                    // Texto em bold
+                    const boldText = textPart.replace(/\*\*/g, '');
+                    if (textX + boldText.length * 7 <= x + columnWidth) {
                       page.drawText(boldText, {
                         x: textX,
                         y: currentY,
@@ -337,8 +355,10 @@ export async function GET(
                         color: rgb(0.1, 0.1, 0.1),
                       });
                       textX += boldText.length * 7;
-                    } else if (textPart.trim()) {
-                      // Texto normal
+                    }
+                  } else if (textPart.trim()) {
+                    // Texto normal
+                    if (textX + textPart.length * 6.5 <= x + columnWidth) {
                       page.drawText(textPart, {
                         x: textX,
                         y: currentY,
@@ -349,77 +369,136 @@ export async function GET(
                       textX += textPart.length * 6.5;
                     }
                   }
-                } else {
-                  // Texto simples sem formatação
+                }
+              } else {
+                // Texto simples sem formatação
+                if (textX + part.length * 6.5 <= x + columnWidth) {
                   page.drawText(part, {
                     x: textX,
                     y: currentY,
                     size: fontSize,
                     font: font,
-                    color: rgb(0.15, 0.15, 0.15), // Preto suave
+                    color: rgb(0.15, 0.15, 0.15),
                   });
                   textX += part.length * 6.5;
                 }
-                hasText = true;
               }
+              hasText = true;
             }
-            
-            if (hasText) {
-              currentY -= lineHeight + 4; // Espaço extra para acordes inline
-            }
-            
-          } else {
-            // Linha simples de texto - processar formatação **bold**
-            const textLine = line.trim();
-            if (textLine) {
-              // Verificar se contém formatação **bold**
-              if (textLine.includes('**')) {
-                // Processar texto com formatação bold
-                const parts = textLine.split(/(\*\*[^*]+\*\*)/);
-                let textX = leftMargin;
-                
-                for (const part of parts) {
-                  if (part.match(/^\*\*[^*]+\*\*$/)) {
-                    // É texto em bold - remover os asteriscos
-                    const boldText = part.replace(/\*\*/g, '');
+          }
+          
+          if (hasText) {
+            return currentY - lineHeight - 4;
+          }
+          
+        } else {
+          // Linha simples de texto
+          const textLine = line.trim();
+          if (textLine) {
+            // Verificar se contém formatação **bold**
+            if (textLine.includes('**')) {
+              const parts = textLine.split(/(\*\*[^*]+\*\*)/);
+              let textX = x;
+              
+              for (const part of parts) {
+                if (part.match(/^\*\*[^*]+\*\*$/)) {
+                  // É texto em bold
+                  const boldText = part.replace(/\*\*/g, '');
+                  if (textX + boldText.length * 7 <= x + columnWidth) {
                     page.drawText(boldText, {
                       x: textX,
                       y: currentY,
                       size: fontSize,
-                      font: boldFont, // Usar fonte em negrito
-                      color: rgb(0.1, 0.1, 0.1), // Preto um pouco mais forte para destaque
+                      font: boldFont,
+                      color: rgb(0.1, 0.1, 0.1),
                     });
-                    textX += boldText.length * 7; // Espaço ligeiramente maior para bold
-                  } else if (part.trim()) {
-                    // É texto normal
+                    textX += boldText.length * 7;
+                  }
+                } else if (part.trim()) {
+                  // É texto normal
+                  if (textX + part.length * 6.5 <= x + columnWidth) {
                     page.drawText(part, {
                       x: textX,
                       y: currentY,
                       size: fontSize,
-                      font: font, // Fonte regular
+                      font: font,
                       color: rgb(0.15, 0.15, 0.15),
                     });
                     textX += part.length * 6.5;
                   }
                 }
-              } else {
-                // Texto simples sem formatação
+              }
+            } else {
+              // Texto simples sem formatação - verificar se cabe na coluna
+              if (textLine.length * 6.5 <= columnWidth) {
                 page.drawText(textLine, {
-                  x: leftMargin,
+                  x: x,
                   y: currentY,
                   size: fontSize,
                   font: font,
-                  color: rgb(0.15, 0.15, 0.15), // Preto suave e moderno
+                  color: rgb(0.15, 0.15, 0.15),
                 });
               }
-              currentY -= lineHeight;
-              console.log('Renderizada letra:', textLine.substring(0, 50));
             }
+            console.log('Renderizada letra:', textLine.substring(0, 50));
+            return currentY - lineHeight;
           }
         }
       }
       
       return currentY;
+    };
+
+    // Função para renderizar conteúdo em múltiplas colunas
+    const renderMusicContent = (text: string, startY: number): number => {
+      const lines = text.split('\n');
+      const availableHeight = startY - 80; // Espaço até o rodapé
+      const contentHeight = calculateContentHeight(text);
+      
+      console.log(`Renderizando ${lines.length} linhas de música`);
+      console.log(`Altura disponível: ${availableHeight}, Altura do conteúdo: ${contentHeight}`);
+      
+      const leftMargin = 50;
+      const rightMargin = width - 50;
+      const totalWidth = rightMargin - leftMargin;
+      
+      // Se o conteúdo cabe em uma coluna, usar layout tradicional
+      if (contentHeight <= availableHeight) {
+        let currentY = startY;
+        
+        for (const line of lines) {
+          currentY = renderLine(line, leftMargin, currentY, totalWidth);
+          if (currentY < 80) break;
+        }
+        
+        return currentY;
+      }
+      
+      // Conteúdo muito longo - usar duas colunas
+      const columnWidth = (totalWidth - 30) / 2; // 30px de espaço entre colunas
+      const leftColumnX = leftMargin;
+      const rightColumnX = leftMargin + columnWidth + 30;
+      
+      // Dividir linhas entre as duas colunas
+      const midPoint = Math.ceil(lines.length / 2);
+      const leftColumnLines = lines.slice(0, midPoint);
+      const rightColumnLines = lines.slice(midPoint);
+      
+      // Renderizar coluna esquerda
+      let leftY = startY;
+      for (const line of leftColumnLines) {
+        leftY = renderLine(line, leftColumnX, leftY, columnWidth);
+        if (leftY < 80) break;
+      }
+      
+      // Renderizar coluna direita
+      let rightY = startY;
+      for (const line of rightColumnLines) {
+        rightY = renderLine(line, rightColumnX, rightY, columnWidth);
+        if (rightY < 80) break;
+      }
+      
+      return Math.min(leftY, rightY);
     };
 
     // Renderizar o conteúdo da música
