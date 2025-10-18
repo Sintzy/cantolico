@@ -75,6 +75,26 @@ export function extractChords(text: string): string[] {
 }
 
 /**
+ * Detecta o tom da música baseado no primeiro acorde ou padrão mais comum
+ */
+export function detectKey(text: string): string | null {
+  const chords = extractChords(text);
+  
+  if (chords.length === 0) return null;
+  
+  // Pega o primeiro acorde como base para detectar o tom
+  const firstChord = chords[0];
+  const chordRegex = /^([A-G][#b]?)/;
+  const match = firstChord.match(chordRegex);
+  
+  if (match) {
+    return match[1]; // Retorna apenas a nota base (ex: C, D#, Bb)
+  }
+  
+  return null;
+}
+
+/**
  * Transpõe um acorde individual
  */
 export function transposeChord(chord: string, semitones: number): string {
