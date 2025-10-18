@@ -44,9 +44,9 @@ export function createMetadata(config: MetadataConfig = {}): Metadata {
     "Deus está aqui", "Deus esta aqui", "Ave Maria", "Santo", "Gloria a Deus",
     "Aleluia", "Cordeiro de Deus", "Salve Rainha",
     
-    // Competidores
-    "musicristo", "vitamina c canticos", "vitaminac", "melhor que musicristo",
-    "alternativa musicristo", "melhor site canticos", "site canticos gratis",
+    // Termos de destaque
+    "biblioteca canticos online", "cancioneiro catolico completo", 
+    "melhor site canticos", "site canticos gratis", "hinario online",
     
     // Variações
     "cantolico", "cantólico", "letras cânticos", "letras canticos",
@@ -125,8 +125,8 @@ export const PAGE_METADATA = {
       "Gloria a Deus", "Aleluia cantico", "Cordeiro de Deus letra", "Salve Rainha",
       
       // Competidores - dominação direta
-      "musicristo", "musicristo canticos", "vitamina c canticos", "vitaminac",
-      "melhor que musicristo", "alternativa musicristo", "melhor site canticos",
+      "biblioteca canticos online", "cancioneiro online completo", 
+      "melhor site canticos", "site canticos completo", "hinario online gratis",
       "site canticos gratis", "cancioneiro online gratis",
       
       // Termos gerais high-volume
@@ -151,8 +151,8 @@ export const PAGE_METADATA = {
       "pesquisar canticos", "encontrar canticos", "buscar canticos",
       
       // Competidores
-      "lista musicristo", "todos canticos musicristo", "vitamina c lista",
-      "melhor lista canticos", "mais canticos que musicristo",
+      "lista completa canticos", "todos canticos catolicos", "biblioteca canticos",
+      "melhor lista canticos", "mais canticos online",
       
       // Específicos populares
       "lista Deus está aqui", "todos Ave Maria", "canticos Santo",
@@ -187,7 +187,7 @@ export const PAGE_METADATA = {
         ] : []),
         
         // Competidores específicos
-        `${title} musicristo`, `${title} vitamina c`, `${title} melhor site`,
+        `${title} online`, `${title} gratis`, `${title} melhor site`,
         `${title} gratis`, `${title} pdf`, `${title} download`,
         
         // Contexto litúrgico

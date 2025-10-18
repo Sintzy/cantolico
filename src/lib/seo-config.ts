@@ -1,11 +1,11 @@
 /**
- * Configuração SEO Agressiva para Dominação dos Resultados de Busca
- * Objetivo: Aparecer em TODAS as buscas de cânticos católicos
+ * Configuração SEO para optimização de resultados de pesquisa
+ * Foco em cânticos católicos e música litúrgica
  */
 
-// Lista de cânticos populares para SEO targeting
+// Cânticos populares na liturgia católica
 export const POPULAR_CANTICOS = [
-  // Top cânticos mais buscados
+  // Cânticos fundamentais
   "Deus está aqui", "Deus esta aqui", "Ave Maria", "Santo", "Gloria a Deus", 
   "Aleluia", "Cordeiro de Deus", "Salve Rainha", "Anjos de Deus", "Como é Grande",
   "Eu Navegarei", "Rude Cruz", "Quão Grande és Tu", "Amazing Grace", 
@@ -25,16 +25,15 @@ export const POPULAR_CANTICOS = [
   "Gloria in Excelsis", "Kyrie Eleison", "Agnus Dei", "Sanctus"
 ] as const;
 
-// Termos competitors para dominar
-export const COMPETITOR_TERMS = [
-  "musicristo", "musicristo canticos", "musicristo acordes",
-  "vitamina c canticos", "vitaminac", "vitamina c cifras",
-  "melhor que musicristo", "alternativa musicristo", 
-  "melhor site canticos", "site canticos gratis",
-  "cancioneiro online", "cifras igreja online"
+// Termos de destaque para SEO
+export const PRIORITY_TERMS = [
+  "canticos catolicos online", "letras acordes canticos",
+  "biblioteca canticos catolicos", "site canticos gratis",
+  "cancioneiro catolico online", "cifras igreja online",
+  "partituras canticos catolicos", "hinario catolico online"
 ] as const;
 
-// Meta keywords agressivos para cada página de música
+// Palavras-chave para páginas de música
 export const generateMusicSEOKeywords = (title: string, artist?: string) => {
   const baseKeywords = [
     // Título específico
@@ -58,9 +57,9 @@ export const generateMusicSEOKeywords = (title: string, artist?: string) => {
     `${title.toLowerCase()} igreja`,
     `${title.toLowerCase()} missa`,
     
-    // Competidores
-    `${title.toLowerCase()} musicristo`,
-    `${title.toLowerCase()} vitamina c`,
+    // Variações de busca
+    `${title.toLowerCase()} cantico`,
+    `${title.toLowerCase()} online`,
     `melhor ${title.toLowerCase()}`,
     
     // Termos gerais
@@ -79,11 +78,11 @@ export const generateMusicSEOKeywords = (title: string, artist?: string) => {
   return baseKeywords;
 };
 
-// Meta descriptions agressivas
+// Descrições meta para páginas de música
 export const generateMusicSEODescription = (title: string, artist?: string) => {
   const artistPart = artist ? ` de ${artist}` : '';
   
-  return `🎵 ${title}${artistPart} - Letra completa, acordes e cifra GRÁTIS! Melhor que MusiCristo e VitaminaC. ⭐ Cantólico tem a maior biblioteca de cânticos católicos online!`;
+  return `${title}${artistPart} - Letra, acordes e partitura gratuitos. O Cantólico oferece a melhor colecção de cânticos católicos online para a liturgia.`;
 };
 
 // Structured data para páginas de música
@@ -140,7 +139,7 @@ export const generateMusicFAQSchema = (title: string) => {
         "name": `Onde encontrar a letra de ${title}?`,
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": `A letra completa de ${title} está disponível gratuitamente no Cantólico, a maior biblioteca de cânticos católicos online.`
+          "text": `A letra completa de ${title} está disponível gratuitamente no Cantólico, biblioteca especializada em cânticos católicos.`
         }
       },
       {
@@ -148,7 +147,7 @@ export const generateMusicFAQSchema = (title: string) => {
         "name": `${title} tem acordes disponíveis?`,
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": `Sim! No Cantólico você encontra os acordes e cifras de ${title} de forma gratuita, melhor que MusiCristo ou VitaminaC.`
+          "text": `Sim! No Cantólico encontra os acordes e cifras de ${title} de forma completamente gratuita, na nossa biblioteca online de cânticos católicos.`
         }
       },
       {
@@ -156,7 +155,7 @@ export const generateMusicFAQSchema = (title: string) => {
         "name": `Como tocar ${title} na guitarra?`,
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": `No Cantólico temos os acordes completos de ${title} para guitarra e violão, com cifras simplificadas para facilitar o aprendizado.`
+          "text": `No Cantólico tem os acordes completos de ${title} para guitarra e violão, com cifras simplificadas para facilitar a aprendizagem.`
         }
       },
       {
@@ -171,19 +170,19 @@ export const generateMusicFAQSchema = (title: string) => {
   };
 };
 
-// SEO config para homepage
+// Configuração SEO para página principal
 export const HOMEPAGE_SEO = {
-  title: "🎵 Cantólico - A Maior Biblioteca de Cânticos Católicos | Letras, Acordes, Partituras Grátis",
-  description: "⭐ Encontra QUALQUER cântico católico! +1000 cânticos com letras, acordes e partituras GRÁTIS. Melhor que MusiCristo e VitaminaC. Deus está aqui, Ave Maria, Santo e muito mais!",
+  title: "Cantólico - Biblioteca de Cânticos Católicos | Letras, Acordes e Partituras",
+  description: "Descubra a melhor colecção de cânticos católicos com letras, acordes e partituras gratuitas. Biblioteca completa de música litúrgica para celebrações e liturgia.",
   keywords: [
     ...POPULAR_CANTICOS,
-    ...COMPETITOR_TERMS,
-    "maior site canticos catolicos",
+    ...PRIORITY_TERMS,
+    "biblioteca canticos catolicos",
     "melhor cancioneiro online", 
-    "cantolico maior biblioteca",
-    "site canticos gratis completo",
-    "todas letras canticos catolicos",
-    "todos acordes canticos igreja"
+    "cantolico biblioteca",
+    "site canticos gratis",
+    "letras canticos catolicos",
+    "acordes canticos igreja"
   ]
 };
 

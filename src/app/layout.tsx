@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     default: "Cantólico - Cânticos Católicos com Letras e Acordes",
     template: `%s | Cantólico`
   },
-  description: "Lista completa de cânticos católicos online com letras, acordes e partituras gratuitas. Biblioteca de música litúrgica para missa, celebrações e liturgia. Mais de 1000 cânticos católicos portugueses.",
+  description: "Biblioteca completa de cânticos católicos com letras, acordes e partituras gratuitas. Colecção de música litúrgica para missa, celebrações e liturgia católica.",
   keywords: [
     // Pesquisas principais (alta prioridade)
     "lista canticos catolicos", "lista cânticos católicos", "canticos catolicos online",
@@ -87,7 +87,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "Cantólico - Cânticos Católicos com Letras e Acordes",
-    description: "Lista completa de cânticos católicos online com letras, acordes e partituras gratuitas. Biblioteca de música litúrgica para missa, celebrações e liturgia.",
+    description: "Biblioteca completa de cânticos católicos com letras, acordes e partituras gratuitas. Colecção de música litúrgica para celebrações católicas.",
     type: "website",
     locale: "pt_PT",
     url: "https://cantolico.pt",
@@ -104,7 +104,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Cantólico - Cânticos Católicos",
-    description: "Lista completa de cânticos católicos online com letras, acordes e partituras gratuitas.",
+    description: "Biblioteca completa de cânticos católicos com letras, acordes e partituras gratuitas.",
     creator: "@cantolico",
     images: [SITE_IMAGES.twitterImage],
   },
@@ -135,7 +135,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               "@type": ["WebSite", "MusicGroup", "Organization"],
               "name": "Cantólico - Cânticos Católicos",
               "alternateName": ["Cantolico", "Cantólico!", "Canticos Catolicos", "Cânticos Católicos Online"],
-              "description": "Lista completa de cânticos católicos online com letras, acordes e partituras gratuitas. Biblioteca de música litúrgica portuguesa para missa e celebrações.",
+              "description": "Biblioteca completa de cânticos católicos com letras, acordes e partituras gratuitas. Colecção de música litúrgica portuguesa para celebrações e liturgia.",
               "url": "https://cantolico.pt",
               "sameAs": [
                 "https://instagram.com/cantolicoo",
@@ -157,8 +157,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               "mainEntity": {
                 "@type": "ItemList",
                 "name": "Lista de Cânticos Católicos",
-                "description": "Lista completa de cânticos católicos portugueses com letras, acordes e partituras para missa e liturgia",
-                "numberOfItems": "1000+"
+                "description": "Biblioteca completa de cânticos católicos portugueses com letras, acordes e partituras para missa e liturgia"
               },
               "audience": {
                 "@type": "Audience",
