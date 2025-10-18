@@ -68,17 +68,8 @@ export default function MusicsPage() {
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false); // Flag para evitar múltiplas cargas
   
-  // Use page state hook para manter estado entre navegações - temporariamente comentado
-  // const { state, saveState, restoreScrollPosition, saveScrollPosition, isInitialized } = usePageState('musics');
-  
-  // Função temporária para substituir saveState
-  const saveState = (stateData: any) => {
-    try {
-      localStorage.setItem('pageState_musics', JSON.stringify(stateData));
-    } catch (error) {
-      console.warn('Erro ao salvar estado:', error);
-    }
-  };
+  // Use page state hook para manter estado entre navegações
+  const { state, saveState, restoreScrollPosition, saveScrollPosition, isInitialized } = usePageState('musics');
   
   console.log('🎵 MusicPage render (simplified):', { 
     dataLoaded, 
@@ -201,28 +192,21 @@ export default function MusicsPage() {
     }
   };
 
-  // Inicializar estado dos filtros - abordagem simples por enquanto
+  // Inicializar estado dos filtros quando usePageState estiver pronto
   useEffect(() => {
-    // Carregar estado salvo do localStorage se existir
-    const savedState = localStorage.getItem('pageState_musics');
-    if (savedState) {
-      try {
-        const parsed = JSON.parse(savedState);
-        setSearchTerm(parsed.searchTerm || '');
-        setSelectedMoment(parsed.selectedMoment || null);
-        setTagFilter(parsed.tagFilter || '');
-        setSortOrder(parsed.sortOrder || 'asc');
-        setCurrentPage(parsed.currentPage || 1);
-      } catch (error) {
-        console.warn('Erro ao carregar estado salvo:', error);
-      }
+    if (isInitialized && state) {
+      setSearchTerm(state.searchTerm || '');
+      setSelectedMoment(state.selectedMoment || null);
+      setTagFilter(state.tagFilter || '');
+      setSortOrder(state.sortOrder || 'asc');
+      setCurrentPage(state.currentPage || 1);
     }
-  }, []);
+  }, [isInitialized, state]);
 
   // Carregar dados iniciais - sempre buscar dados frescos na primeira carga
   useEffect(() => {
-    console.log('🔄 useEffect simples para carregar dados:', { dataLoaded });
-    if (!dataLoaded) {
+    console.log('🔄 useEffect para carregar dados:', { isInitialized, dataLoaded });
+    if (isInitialized && !dataLoaded) {
       console.log('✅ Executando loadMusicData...');
       
       // Verificar se é uma nova sessão (sessionStorage vazio = nova aba/navegador)
@@ -234,21 +218,20 @@ export default function MusicsPage() {
         loadMusicData(); // Usar cache se disponível
       }
     }
-  }, []);
+  }, [isInitialized, dataLoaded]);
 
-  // TODO: Restaurar funcionalidade de scroll quando usePageState for corrigido
-  /*
-  // Restaurar posição do scroll - apenas uma vez após carregar
+  // Restaurar posição do scroll - apenas uma vez após carregar dados
   useEffect(() => {
-    if (isInitialized && songs.length > 0 && state.scrollPosition > 0) {
+    if (isInitialized && songs.length > 0 && state?.scrollPosition > 0) {
       const timer = setTimeout(() => {
+        console.log('🔄 Restaurando scroll para posição:', state.scrollPosition);
         window.scrollTo({ top: state.scrollPosition, behavior: 'auto' });
-      }, 100);
+      }, 300); // Aumentar delay para garantir que a página renderizou
       return () => clearTimeout(timer);
     }
-  }, [isInitialized, songs.length]);
+  }, [isInitialized, songs.length, state?.scrollPosition]);
   
-  // Salvar posição do scroll - configurar apenas uma vez
+  // Salvar posição do scroll periodicamente
   useEffect(() => {
     if (!isInitialized) return;
     
@@ -259,12 +242,17 @@ export default function MusicsPage() {
       scrollTimer = setTimeout(() => {
         const scrollY = window.scrollY;
         if (scrollY > 100) {
-          localStorage.setItem('pageState_musics', JSON.stringify({
+          saveState({
             ...state,
-            scrollPosition: scrollY
-          }));
+            scrollPosition: scrollY,
+            searchTerm,
+            selectedMoment,
+            tagFilter,
+            sortOrder,
+            currentPage
+          });
         }
-      }, 300);
+      }, 500); // Aumentar debounce para evitar muitas chamadas
     };
     
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -272,8 +260,7 @@ export default function MusicsPage() {
       window.removeEventListener('scroll', handleScroll);
       clearTimeout(scrollTimer);
     };
-  }, [isInitialized]);
-  */
+  }, [isInitialized, state, searchTerm, selectedMoment, tagFilter, sortOrder, currentPage, saveState]);
 
   useEffect(() => {
     const filtered = songs
@@ -306,18 +293,20 @@ export default function MusicsPage() {
   // Função para navegar para música individual
   const handleNavigateToSong = useCallback((songSlug: string) => {
     // Salvar estado atual antes de navegar
-    saveState({
-      scrollPosition: window.scrollY,
-      currentPage,
-      searchTerm,
-      selectedMoment,
-      tagFilter,
-      sortOrder
-    });
+    if (saveState) {
+      saveState({
+        scrollPosition: window.scrollY,
+        currentPage,
+        searchTerm,
+        selectedMoment,
+        tagFilter,
+        sortOrder
+      });
+    }
     
     // Marcar que vamos navegar para uma página individual
     sessionStorage.setItem('navigatingToSong', 'true');
-  }, [saveState, currentPage, searchTerm, selectedMoment, tagFilter, sortOrder]);
+  }, [currentPage, searchTerm, selectedMoment, tagFilter, sortOrder]);
 
   const clearFilters = () => {
     setSearchTerm('');
@@ -327,14 +316,16 @@ export default function MusicsPage() {
     setIsMobileFiltersOpen(false);
     
     // Salvar estado limpo
-    saveState({
-      searchTerm: '',
-      selectedMoment: null,
-      tagFilter: '',
-      currentPage: 1,
-      scrollPosition: 0,
-      sortOrder: 'asc'
-    });
+    if (saveState) {
+      saveState({
+        searchTerm: '',
+        selectedMoment: null,
+        tagFilter: '',
+        currentPage: 1,
+        scrollPosition: 0,
+        sortOrder: 'asc'
+      });
+    }
   };
 
   const renderFilterContent = () => (
@@ -349,11 +340,14 @@ export default function MusicsPage() {
             onChange={(e) => {
               const newValue = e.target.value;
               setSearchTerm(newValue);
-              saveState({ 
-                searchTerm: newValue, 
-                currentPage: 1, 
-                scrollPosition: 0 
-              });
+              if (saveState) {
+                saveState({ 
+                  ...state,
+                  searchTerm: newValue, 
+                  currentPage: 1, 
+                  scrollPosition: 0 
+                });
+              }
             }}
             placeholder="Nome do cântico..."
             className="pl-10 h-9"
@@ -368,11 +362,14 @@ export default function MusicsPage() {
           onValueChange={(v) => {
             const newValue = v === 'ALL' ? null : v;
             setSelectedMoment(newValue);
-            saveState({ 
-              selectedMoment: newValue, 
-              currentPage: 1, 
-              scrollPosition: 0 
-            });
+            if (saveState) {
+              saveState({ 
+                ...state,
+                selectedMoment: newValue, 
+                currentPage: 1, 
+                scrollPosition: 0 
+              });
+            }
           }}
           value={selectedMoment ?? 'ALL'}
         >
@@ -400,11 +397,14 @@ export default function MusicsPage() {
             onChange={(e) => {
               const newValue = e.target.value;
               setTagFilter(newValue);
-              saveState({ 
-                tagFilter: newValue, 
-                currentPage: 1, 
-                scrollPosition: 0 
-              });
+              if (saveState) {
+                saveState({ 
+                  ...state,
+                  tagFilter: newValue, 
+                  currentPage: 1, 
+                  scrollPosition: 0 
+                });
+              }
             }}
             placeholder="Ex: amor, paz..."
             className="pl-10 h-9"
@@ -419,10 +419,13 @@ export default function MusicsPage() {
           onValueChange={(v) => {
             const newValue = v as 'asc' | 'desc';
             setSortOrder(newValue);
-            saveState({ 
-              sortOrder: newValue, 
-              scrollPosition: 0 
-            });
+            if (saveState) {
+              saveState({ 
+                ...state,
+                sortOrder: newValue, 
+                scrollPosition: 0 
+              });
+            }
           }}
           value={sortOrder}
         >
@@ -729,10 +732,13 @@ export default function MusicsPage() {
                           onClick={() => {
                             const newPage = Math.max(currentPage - 1, 1);
                             setCurrentPage(newPage);
-                            saveState({ 
-                              currentPage: newPage, 
-                              scrollPosition: 0 
-                            });
+                            if (saveState) {
+                              saveState({ 
+                                ...state,
+                                currentPage: newPage, 
+                                scrollPosition: 0 
+                              });
+                            }
                             window.scrollTo({ top: 0, behavior: 'smooth' });
                           }}
                           disabled={currentPage === 1}
@@ -763,10 +769,13 @@ export default function MusicsPage() {
                                 variant={page === currentPage ? 'default' : 'outline'}
                                 onClick={() => {
                                   setCurrentPage(page);
-                                  saveState({ 
-                                    currentPage: page, 
-                                    scrollPosition: 0 
-                                  });
+                                  if (saveState) {
+                                    saveState({ 
+                                      ...state,
+                                      currentPage: page, 
+                                      scrollPosition: 0 
+                                    });
+                                  }
                                   window.scrollTo({ top: 0, behavior: 'smooth' });
                                 }}
                                 className="w-8 h-8 sm:w-9 sm:h-9 p-0 text-xs sm:text-sm flex-shrink-0"
@@ -783,10 +792,13 @@ export default function MusicsPage() {
                           onClick={() => {
                             const newPage = Math.min(currentPage + 1, totalPages);
                             setCurrentPage(newPage);
-                            saveState({ 
-                              currentPage: newPage, 
-                              scrollPosition: 0 
-                            });
+                            if (saveState) {
+                              saveState({ 
+                                ...state,
+                                currentPage: newPage, 
+                                scrollPosition: 0 
+                              });
+                            }
                             window.scrollTo({ top: 0, behavior: 'smooth' });
                           }}
                           disabled={currentPage === totalPages}
