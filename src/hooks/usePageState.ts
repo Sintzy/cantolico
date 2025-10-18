@@ -21,8 +21,8 @@ const DEFAULT_STATE: PageState = {
 export function usePageState(pageKey: string) {
   const [state, setState] = useState<PageState>(DEFAULT_STATE);
   const [isClient, setIsClient] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   const isRestoringRef = useRef(false);
-  const isInitializedRef = useRef(false);
   
   // Detectar se estamos no cliente
   useEffect(() => {
@@ -33,7 +33,7 @@ export function usePageState(pageKey: string) {
   useEffect(() => {
     if (!isClient) return;
     
-    if (isInitializedRef.current) return;
+    if (isInitialized) return;
     
     const savedState = localStorage.getItem(`pageState_${pageKey}`);
     const returningFromSong = sessionStorage.getItem('returningFromSong');
@@ -57,8 +57,8 @@ export function usePageState(pageKey: string) {
     }
     
     // Marcar como inicializado independentemente de ter dados ou não
-    isInitializedRef.current = true;
-  }, [pageKey, isClient]);
+    setIsInitialized(true);
+  }, [pageKey, isClient, isInitialized]);
 
   // Salvar estado no localStorage sem causar re-renders
   const saveState = useCallback((newState: Partial<PageState>) => {
@@ -121,7 +121,7 @@ export function usePageState(pageKey: string) {
     if (isClient) {
       localStorage.removeItem(`pageState_${pageKey}`);
     }
-    isInitializedRef.current = false;
+    setIsInitialized(false);
   }, [pageKey, isClient]);
 
   return {
@@ -130,6 +130,6 @@ export function usePageState(pageKey: string) {
     restoreScrollPosition,
     saveScrollPosition,
     clearState,
-    isInitialized: isInitializedRef.current
+    isInitialized
   };
 }
