@@ -22,16 +22,6 @@ const nextConfig: NextConfig = {
     // Set build time during the build process
     NEXT_PUBLIC_BUILD_TIME: new Date().toISOString(),
   },
-  // Ezoic ads.txt redirect configuration
-  async redirects() {
-    return [
-      {
-        source: '/ads.txt',
-        destination: 'https://srv.adstxtmanager.com/19390/cantolico.pt',
-        permanent: true, // 301 redirect for SEO
-      },
-    ];
-  },
 };
 
 module.exports = nextConfig;
