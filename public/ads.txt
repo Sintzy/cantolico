@@ -1,7 +1,1 @@
-# Ezoic ads.txt file
-# This file is managed by Ezoic's ads.txt manager service
-# Domain: cantolico.pt
-# Updated automatically to include all authorized ad sellers
-
-# Redirect to Ezoic's managed ads.txt service for automatic updates
-# This ensures maximum ad revenue by including all current ad partners
+google.com, pub-1343808891223374, DIRECT, f08c47fec0942fa0
