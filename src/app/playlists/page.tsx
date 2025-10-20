@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Plus, Music, Users, Lock, Globe, Crown, UserCheck, Settings, Edit } from 'lucide-react';
 import Link from 'next/link';
 import EditPlaylistModal from '../../components/EditPlaylistModal';
+import GoogleAdBanner from '@/components/GoogleAdBanner';
 
 interface PlaylistMember {
   id: string;
@@ -284,6 +285,18 @@ function PlaylistsContent() {
       </div>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Top Banner Ad */}
+        <div className="bg-white rounded-lg border mb-6 overflow-hidden">
+          <GoogleAdBanner
+            slot="PLAYLIST_LIST"
+            adFormat="HORIZONTAL"
+            style={{ 
+              display: 'block',
+              minHeight: '120px',
+              width: '100%'
+            }}
+          />
+        </div>
 
         {playlists.length === 0 ? (
           <div className="bg-white rounded-lg border p-8 text-center">

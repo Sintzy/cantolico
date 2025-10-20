@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { useCache } from '@/hooks/useCache';
 import { useAppCache } from '@/components/providers/CacheProvider';
 import removeAccents from 'remove-accents';
+import GoogleAdBanner from '@/components/GoogleAdBanner';
 
 interface StarredSong {
   id: string;
@@ -309,6 +310,19 @@ export default function StarredSongsPage() {
               </div>
             </div>
           )}
+
+          {/* Top Banner Ad */}
+          <div className="bg-white rounded-lg border mb-6 overflow-hidden">
+            <GoogleAdBanner
+              slot="STARRED_SONGS"
+              adFormat="HORIZONTAL"
+              style={{ 
+                display: 'block',
+                minHeight: '120px',
+                width: '100%'
+              }}
+            />
+          </div>
 
           {/* Lista de Músicas */}
           {filteredAndSortedSongs.length === 0 && !loading ? (

@@ -24,6 +24,7 @@ import BannerDisplay from '@/components/BannerDisplay';
 import StarButton from '@/components/StarButton';
 import AddToPlaylistButton from '@/components/AddToPlaylistButton';
 import { MusicListSkeleton } from '@/components/MusicListSkeleton';
+import GoogleAdBanner from '@/components/GoogleAdBanner';
 import { toast } from 'sonner';
 import { usePageState } from '@/hooks/usePageState';
 
@@ -477,9 +478,6 @@ export default function MusicsPage() {
 
   return (
     <main className="min-h-screen bg-white">
-      {/* Banners */}
-      <BannerDisplay page="MUSICS" />
-      
       {/* Hero Section com estilo da landing page */}
       <section className="relative bg-white">
         {/* Background decoration */}
@@ -567,7 +565,7 @@ export default function MusicsPage() {
           <div className="flex gap-6 lg:gap-8">
             {/* Desktop Sidebar - Filtros */}
             <aside className="hidden lg:block w-80 flex-shrink-0">
-              <div className="sticky top-8">
+              <div className="sticky top-8 space-y-6">
                 <Card className="border border-border shadow-sm bg-background">
                   <CardHeader className="pb-4 border-b border-border">
                     <div className="flex items-center gap-3">
@@ -581,6 +579,20 @@ export default function MusicsPage() {
                     {renderFilterContent()}
                   </CardContent>
                 </Card>
+                
+                {/* Sidebar Ad */}
+                <div className="bg-white rounded-lg border overflow-hidden">
+                  <GoogleAdBanner
+                    slot="MUSIC_LIST_SIDEBAR"
+                    adFormat="VERTICAL"
+                    responsive="desktop"
+                    style={{ 
+                      display: 'block',
+                      minHeight: '300px',
+                      width: '100%'
+                    }}
+                  />
+                </div>
               </div>
             </aside>
 
@@ -602,6 +614,19 @@ export default function MusicsPage() {
                 </Card>
               ) : (
                 <>
+                  {/* Top Banner Ad */}
+                  <div className="bg-white rounded-lg border mb-6 overflow-hidden">
+                    <GoogleAdBanner
+                      slot="MUSIC_LIST_TOP"
+                      adFormat="HORIZONTAL"
+                      style={{ 
+                        display: 'block',
+                        minHeight: '120px',
+                        width: '100%'
+                      }}
+                    />
+                  </div>
+                  
                   {/* Lista de Músicas */}
                   <div className="space-y-3">
                     {paginatedSongs.map((song) => (
@@ -720,6 +745,19 @@ export default function MusicsPage() {
                         </CardContent>
                       </Card>
                     ))}
+                  </div>
+
+                  {/* Bottom Banner Ad */}
+                  <div className="bg-white rounded-lg border my-6 overflow-hidden">
+                    <GoogleAdBanner
+                      slot="MUSIC_LIST_BOTTOM"
+                      adFormat="HORIZONTAL"
+                      style={{ 
+                        display: 'block',
+                        minHeight: '120px',
+                        width: '100%'
+                      }}
+                    />
                   </div>
 
                   {/* Paginação */}

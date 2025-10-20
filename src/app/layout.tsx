@@ -10,6 +10,7 @@ import { CacheProvider } from "@/components/providers/CacheProvider";
 
 import EmailVerificationBanner from "@/components/EmailVerificationBanner";
 import { SITE_IMAGES, SITE_CONFIG } from "@/lib/site-images";
+import JsonLd from "@/components/JsonLd";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -127,48 +128,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         {/* Scripts */}
         <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": ["WebSite", "MusicGroup", "Organization"],
-              "name": "Cantólico - Cânticos Católicos",
-              "alternateName": ["Cantolico", "Cantólico!", "Canticos Catolicos", "Cânticos Católicos Online"],
-              "description": "Biblioteca completa de cânticos católicos com letras, acordes e partituras gratuitas. Colecção de música litúrgica portuguesa para celebrações e liturgia.",
-              "url": "https://cantolico.pt",
-              "sameAs": [
-                "https://instagram.com/cantolicoo",
-                "https://github.com/sintzy/cantolico"
-              ],
-              "potentialAction": [
-                {
-                  "@type": "SearchAction",
-                  "target": "https://cantolico.pt/musics#{search_term_string}",
-                  "query-input": "required name=search_term_string"
-                }
-              ],
-              "publisher": {
-                "@type": "Organization",
-                "name": "Cantólico - Cânticos Católicos",
-                "url": "https://cantolico.pt",
-                "logo": "https://cantolico.pt/cantolicoemail.png"
-              },
-              "mainEntity": {
-                "@type": "ItemList",
-                "name": "Lista de Cânticos Católicos",
-                "description": "Biblioteca completa de cânticos católicos portugueses com letras, acordes e partituras para missa e liturgia"
-              },
-              "audience": {
-                "@type": "Audience",
-                "audienceType": ["Catholics", "Musicians", "Church Musicians", "Liturgy Teams", "Catolicos", "Musicos Igreja"]
-              },
-              "keywords": "lista canticos catolicos, canticos catolicos online, letras canticos catolicos, acordes canticos catolicos, biblioteca canticos catolicos, cancioneiro catolico online, musica liturgica online, hinario catolico, canticos missa, Deus esta aqui, Ave Maria, Santo, Gloria, Aleluia"
-            })
-          }}
+        {/* Google AdSense Script */}
+        <script 
+          async 
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1343808891223374"
+          crossOrigin="anonymous"
         />
       </head>
       <body className={inter.className + " flex flex-col min-h-screen"}>
+        <JsonLd />
         <CacheProvider>
           <AuthSessionProvider>
             <Navbar />
