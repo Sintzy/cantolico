@@ -128,6 +128,15 @@ export default function AdminReviewPage() {
         setTotalPages(data.totalPages || 1);
         setTotalItems(data.totalItems || data.total || 0);
         
+        // Debug logs
+        console.log('📊 Pagination Debug:', {
+          totalPages: data.totalPages,
+          totalItems: data.totalItems,
+          submissions: fetchedSubmissions.length,
+          page: page,
+          itemsPerPage: itemsPerPage
+        });
+        
         // Atualizar estatísticas se disponíveis
         if (data.stats) {
           setStats(data.stats);
@@ -203,7 +212,7 @@ export default function AdminReviewPage() {
   const handleApprove = async (submissionId: string) => {
     setLoadingActions(prev => ({ ...prev, [submissionId]: true }));
     try {
-      const res = await fetch(`/api/admin/submission/${submissionId}/approve`, {
+      const res = await fetch(`/api/admin/submission/${submissionId}/instant-approve`, {
         method: "POST",
       });
       
@@ -212,9 +221,11 @@ export default function AdminReviewPage() {
         fetchSubmissions();
         fetchStats();
       } else {
-        toast.error("Erro ao aprovar submissão");
+        const errorData = await res.json();
+        toast.error(`Erro ao aprovar submissão: ${errorData.error || 'Erro desconhecido'}`);
       }
     } catch (error) {
+      console.error('Erro ao aprovar submissão:', error);
       toast.error("Erro ao aprovar submissão");
     } finally {
       setLoadingActions(prev => ({ ...prev, [submissionId]: false }));
@@ -465,22 +476,63 @@ export default function AdminReviewPage() {
           </Select>
         </div>
 
-        {/* Results info */}
-        <div className="flex justify-between items-center text-sm text-muted-foreground">
+        {/* Results info and pagination controls */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 text-sm text-muted-foreground">
           <span>
             Mostrando {submissions.length === 0 ? 0 : ((page - 1) * itemsPerPage) + 1} a {Math.min(page * itemsPerPage, totalItems)} de {totalItems} submissões
           </span>
-          <Select value={String(itemsPerPage)} onValueChange={(value) => { setItemsPerPage(Number(value)); setPage(1); }}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10 por página</SelectItem>
-              <SelectItem value="20">20 por página</SelectItem>
-              <SelectItem value="50">50 por página</SelectItem>
-              <SelectItem value="100">100 por página</SelectItem>
-            </SelectContent>
-          </Select>
+          
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            {/* Items per page selector */}
+            <Select value={String(itemsPerPage)} onValueChange={(value) => { setItemsPerPage(Number(value)); setPage(1); }}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10 por página</SelectItem>
+                <SelectItem value="20">20 por página</SelectItem>
+                <SelectItem value="50">50 por página</SelectItem>
+                <SelectItem value="100">100 por página</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Pagination controls */}
+            {totalItems > 0 && totalPages > 1 && (
+              <div className="flex items-center gap-4">
+                {/* Current page indicator */}
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <span className="text-muted-foreground">Página</span>
+                  <span className="px-2 py-1 bg-primary text-primary-foreground rounded text-xs">
+                    {page}
+                  </span>
+                  <span className="text-muted-foreground">de {totalPages}</span>
+                </div>
+                
+                {/* Navigation buttons */}
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => goToPage(Math.max(1, page - 1))}
+                    disabled={page <= 1}
+                    title="Página anterior"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  
+                  <Button
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => goToPage(Math.min(totalPages, page + 1))}
+                    disabled={page >= totalPages}
+                    title="Próxima página"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -589,144 +641,6 @@ export default function AdminReviewPage() {
               : "Não há submissões para rever no momento"
             }
           </p>
-        </div>
-      )}
-
-      {/* Enhanced Pagination */}
-      {!loading && totalPages > 0 && (
-        <div className="flex flex-col lg:flex-row items-center justify-between gap-4 bg-muted/50 p-4 rounded-lg">
-          <div className="text-sm text-muted-foreground">
-            {submissions.length === 0 ? (
-              "Nenhuma submissão encontrada"
-            ) : (
-              <>
-                Mostrando <span className="font-medium">{((page - 1) * itemsPerPage) + 1}</span> a{" "}
-                <span className="font-medium">{Math.min(page * itemsPerPage, totalItems)}</span> de{" "}
-                <span className="font-medium">{totalItems}</span> submissões
-              </>
-            )}
-          </div>
-          
-          {totalPages > 1 && (
-            <div className="flex flex-col sm:flex-row items-center gap-4">
-              {/* Jump to page */}
-              <div className="flex items-center gap-2 text-sm">
-                <span>Ir para página:</span>
-                <Input
-                  type="number"
-                  min="1"
-                  max={totalPages}
-                  value={jumpToPage}
-                  onChange={(e) => setJumpToPage(e.target.value)}
-                  onKeyPress={handleJumpInputKeyPress}
-                  className="w-16 h-8 text-center"
-                  placeholder={String(page)}
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleJumpToPage}
-                  disabled={!jumpToPage || isNaN(parseInt(jumpToPage))}
-                >
-                  Ir
-                </Button>
-              </div>
-
-              {/* Page navigation */}
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => goToPage(1)}
-                  disabled={page === 1}
-                  title="Primeira página"
-                >
-                  <ChevronsLeft className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => goToPage(page - 1)}
-                  disabled={page === 1}
-                  title="Página anterior"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                
-                <div className="flex items-center gap-1 mx-2">
-                  {/* Show page numbers with smart logic */}
-                  {(() => {
-                    const getPageNumbers = () => {
-                      const delta = 2;
-                      const range = [];
-                      const rangeWithDots = [];
-
-                      for (let i = Math.max(2, page - delta); i <= Math.min(totalPages - 1, page + delta); i++) {
-                        range.push(i);
-                      }
-
-                      if (page - delta > 2) {
-                        rangeWithDots.push(1, '...');
-                      } else {
-                        rangeWithDots.push(1);
-                      }
-
-                      rangeWithDots.push(...range);
-
-                      if (page + delta < totalPages - 1) {
-                        rangeWithDots.push('...', totalPages);
-                      } else if (totalPages > 1) {
-                        rangeWithDots.push(totalPages);
-                      }
-
-                      return rangeWithDots;
-                    };
-
-                    return getPageNumbers().map((pageNum, index) => {
-                      if (pageNum === '...') {
-                        return (
-                          <span key={`ellipsis-${index}`} className="px-2 text-muted-foreground">
-                            ...
-                          </span>
-                        );
-                      }
-                      
-                      return (
-                        <Button
-                          key={pageNum}
-                          variant={page === pageNum ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => goToPage(Number(pageNum))}
-                          className="w-10"
-                        >
-                          {pageNum}
-                        </Button>
-                      );
-                    });
-                  })()}
-                </div>
-                
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => goToPage(page + 1)}
-                  disabled={page === totalPages}
-                  title="Próxima página"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => goToPage(totalPages)}
-                  disabled={page === totalPages}
-                  title="Última página"
-                >
-                  <ChevronsRight className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          )}
         </div>
       )}
 

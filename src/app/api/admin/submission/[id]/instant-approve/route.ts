@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { adminSupabase as supabase } from "@/lib/supabase-admin";
 import { randomUUID } from 'crypto';
 import { formatTagsForPostgreSQL } from '@/lib/utils';
+import { logQuickAction, getUserInfoFromRequest, USER_ACTIONS } from '@/lib/user-action-logger';
 
 export async function POST(
   req: NextRequest,
@@ -33,6 +34,15 @@ export async function POST(
       return NextResponse.json({ error: 'Esta submissão já foi processada' }, { status: 400 });
     }
 
+    // Validações básicas
+    if (!submission.title?.trim()) {
+      return NextResponse.json({ error: 'Título da submissão é obrigatório' }, { status: 400 });
+    }
+
+    if (!submission.tempText?.trim()) {
+      return NextResponse.json({ error: 'Conteúdo da submissão é obrigatório' }, { status: 400 });
+    }
+
     // Gerar slug único
     const baseSlug = submission.title.toLowerCase()
       .replace(/\s+/g, '-')
@@ -60,9 +70,15 @@ export async function POST(
     const songId = randomUUID();
     const processedTags = formatTagsForPostgreSQL(submission.tags);
 
-    console.log('Tags processing (instant-approve):', {
-      original: submission.tags,
-      processed: processedTags
+    console.log('Creating song with instant-approve:', {
+      songId,
+      title: submission.title,
+      slug,
+      type: submission.type,
+      mainInstrument: submission.mainInstrument,
+      moments: submission.moment,
+      tags: submission.tags,
+      processedTags
     });
       
     const { data: newSong, error: songError } = await supabase
@@ -80,8 +96,21 @@ export async function POST(
       .single();
 
     if (songError || !newSong) {
-      console.error('Error creating song:', songError);
-      return NextResponse.json({ error: 'Erro ao criar música' }, { status: 500 });
+      console.error('Error creating song in instant-approve:', {
+        error: songError,
+        submission: {
+          id: submission.id,
+          title: submission.title,
+          type: submission.type,
+          mainInstrument: submission.mainInstrument,
+          moments: submission.moment,
+          tags: submission.tags
+        }
+      });
+      return NextResponse.json({ 
+        error: 'Erro ao criar música', 
+        details: songError?.message || 'Erro desconhecido' 
+      }, { status: 500 });
     }
 
     // Criar versão da música
@@ -104,8 +133,20 @@ export async function POST(
       .single();
 
     if (versionError || !newVersion) {
-      console.error('Error creating version:', versionError);
-      return NextResponse.json({ error: 'Erro ao criar versão da música' }, { status: 500 });
+      console.error('Error creating version in instant-approve:', {
+        error: versionError,
+        versionData: {
+          songId: newSong?.id,
+          sourceText: submission.tempText?.substring(0, 100) + '...',
+          createdById: submission.submitterId,
+          spotifyLink: submission.spotifyLink,
+          youtubeLink: submission.youtubeLink
+        }
+      });
+      return NextResponse.json({ 
+        error: 'Erro ao criar versão da música', 
+        details: versionError?.message || 'Erro desconhecido' 
+      }, { status: 500 });
     }
 
     // Atualizar a música com a versão atual
@@ -132,6 +173,21 @@ export async function POST(
       console.error('Error updating submission:', updateSubmissionError);
       return NextResponse.json({ error: 'Erro ao atualizar submissão' }, { status: 500 });
     }
+
+    // Log successful instant approval
+    const userInfo = getUserInfoFromRequest(req, session);
+    await logQuickAction(
+      'APPROVE_SUBMISSION',
+      { ...userInfo, userId: session.user.id, userEmail: session.user.email },
+      true,
+      {
+        submissionId: id,
+        submissionTitle: submission.title,
+        songId: newSong.id,
+        approvalType: 'instant',
+        submitterId: submission.submitterId
+      }
+    );
 
     return NextResponse.json({ 
       success: true, 

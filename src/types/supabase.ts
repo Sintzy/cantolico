@@ -590,6 +590,74 @@ export interface Database {
           updatedAt?: string
         }
       }
+      logs: {
+        Row: {
+          id: string
+          level: string
+          category: string
+          message: string
+          details: Json | null
+          user_id: number | null
+          user_email: string | null
+          user_role: string | null
+          ip_address: string | null
+          user_agent: string | null
+          url: string | null
+          method: string | null
+          correlation_id: string | null
+          request_id: string | null
+          parent_log_id: string | null
+          server_instance: string | null
+          environment: string | null
+          tags: string[] | null
+          expires_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          level: string
+          category: string
+          message: string
+          details?: Json | null
+          user_id?: number | null
+          user_email?: string | null
+          user_role?: string | null
+          ip_address?: string | null
+          user_agent?: string | null
+          url?: string | null
+          method?: string | null
+          correlation_id?: string | null
+          request_id?: string | null
+          parent_log_id?: string | null
+          server_instance?: string | null
+          environment?: string | null
+          tags?: string[] | null
+          expires_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          level?: string
+          category?: string
+          message?: string
+          details?: Json | null
+          user_id?: number | null
+          user_email?: string | null
+          user_role?: string | null
+          ip_address?: string | null
+          user_agent?: string | null
+          url?: string | null
+          method?: string | null
+          correlation_id?: string | null
+          request_id?: string | null
+          parent_log_id?: string | null
+          server_instance?: string | null
+          environment?: string | null
+          tags?: string[] | null
+          expires_at?: string | null
+          created_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never

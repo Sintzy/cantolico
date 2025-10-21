@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase-client';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { withAuthApiProtection, withApiProtection } from '@/lib/api-middleware';
-import { logSongAction, getUserInfoFromRequest } from '@/lib/user-action-logger';
+import { logQuickAction, getUserInfoFromRequest, USER_ACTIONS } from '@/lib/user-action-logger';
 import { requireEmailVerification } from '@/lib/email';
 
 export const POST = withAuthApiProtection(async (
@@ -42,7 +42,7 @@ export const POST = withAuthApiProtection(async (
 
     if (songError || !songs || songs.length === 0) {
       const userInfo = getUserInfoFromRequest(request, session);
-      await logSongAction('star_song_not_found', userInfo, false, {
+      await logQuickAction('STAR_SONG', userInfo, false, {
         songIdOrSlug,
         error: 'Song not found'
       });
@@ -69,7 +69,7 @@ export const POST = withAuthApiProtection(async (
 
     if (existingStars && existingStars.length > 0) {
       const userInfo = getUserInfoFromRequest(request, session);
-      await logSongAction('star_song_already_starred', userInfo, false, {
+      await logQuickAction('STAR_SONG', userInfo, false, {
         songId: song.id,
         songTitle: song.title,
         songSlug: song.slug,
@@ -91,7 +91,7 @@ export const POST = withAuthApiProtection(async (
 
     if (createError) {
       const userInfo = getUserInfoFromRequest(request, session);
-      await logSongAction('star_song_error', userInfo, false, {
+      await logQuickAction('STAR_SONG', userInfo, false, {
         songId: song.id,
         songTitle: song.title,
         error: createError.message
@@ -101,7 +101,7 @@ export const POST = withAuthApiProtection(async (
 
     // Log de sucesso
     const userInfo = getUserInfoFromRequest(request, session);
-    await logSongAction('song_starred', userInfo, true, {
+    await logQuickAction('STAR_SONG', userInfo, true, {
       songId: song.id,
       songTitle: song.title,
       songSlug: song.slug
@@ -168,7 +168,7 @@ export const DELETE = withAuthApiProtection(async (
 
     if (songError || !songs || songs.length === 0) {
       const userInfo = getUserInfoFromRequest(request, session);
-      await logSongAction('unstar_song_not_found', userInfo, false, {
+      await logQuickAction('UNSTAR_SONG', userInfo, false, {
         songIdOrSlug,
         error: 'Song not found'
       });
@@ -190,7 +190,7 @@ export const DELETE = withAuthApiProtection(async (
 
     if (deleteError) {
       const userInfo = getUserInfoFromRequest(request, session);
-      await logSongAction('unstar_song_error', userInfo, false, {
+      await logQuickAction('UNSTAR_SONG', userInfo, false, {
         songId: song.id,
         songTitle: song.title,
         error: deleteError.message
@@ -200,7 +200,7 @@ export const DELETE = withAuthApiProtection(async (
 
     // Log de sucesso
     const userInfo = getUserInfoFromRequest(request, session);
-    await logSongAction('song_unstarred', userInfo, true, {
+    await logQuickAction('UNSTAR_SONG', userInfo, true, {
       songId: song.id,
       songTitle: song.title,
       songSlug: song.slug

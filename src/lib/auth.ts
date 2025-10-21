@@ -4,7 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { supabase } from "@/lib/supabase-client";
 import bcrypt from "bcryptjs";
-import { logAuthAction } from "@/lib/user-action-logger";
+import { logAuthAction, logQuickAction, USER_ACTIONS, getUserInfoFromRequest } from "@/lib/user-action-logger";
 import { createSecurityLog, createSecurityAlert } from "@/lib/logging-middleware";
 import { trackLoginAttempt, isIPBlocked, getFailedAttemptsCount } from "@/lib/login-monitor";
 import { sendWelcomeEmail, sendLoginAlert } from "@/lib/email";
@@ -297,19 +297,22 @@ export const authOptions: AuthOptions = {
             });
           }
 
-          await logGeneral('SUCCESS', 'Login realizado com sucesso', 'Utilizador autenticado via email/password', {
-            userId: user.id,
-            email: user.email,
-            name: user.name,
-            role: user.role,
-            loginMethod: 'email_password',
-            isAdmin: user.role === 'ADMIN',
-            isReviewer: user.role === 'REVIEWER',
-            ipAddress: ip,
-            userAgent: userAgent,
-            action: 'login_success',
-            entity: 'user_session'
-          });
+          // Log successful credentials login
+          await logQuickAction(
+            'LOGIN_MANUAL',
+            {
+              userId: user.id,
+              userEmail: user.email,
+              ipAddress: ip as string,
+              userAgent: userAgent as string
+            },
+            true,
+            {
+              loginMethod: 'email_password',
+              role: user.role,
+              name: user.name
+            }
+          );
 
           // Enviar email de alerta de login
           try {
@@ -507,19 +510,24 @@ export const authOptions: AuthOptions = {
 
             console.log(`✅ [OAUTH] Email auto-verificado para ${user.email}`);
 
-            await logGeneral('SUCCESS', 'Login OAuth realizado com sucesso', 
-              'Utilizador existente autenticado via Google OAuth', {
-              userId: existingUser.id,
-              email: user.email,
-              name: user.name,
-              role: existingUser.role,
-              loginMethod: 'oauth_google',
-              isAdmin: existingUser.role === 'ADMIN',
-              isReviewer: existingUser.role === 'REVIEWER',
-              provider: 'google',
-              action: 'oauth_login_success',
-              entity: 'user_session'
-            });
+            // Log successful OAuth login
+            await logQuickAction(
+              'LOGIN_MANUAL',
+              {
+                userId: existingUser.id,
+                userEmail: user.email,
+                ipAddress: 'unknown', // OAuth doesn't provide IP
+                userAgent: 'OAuth Provider'
+              },
+              true,
+              {
+                loginMethod: 'oauth_google',
+                provider: 'google',
+                isExistingUser: true,
+                role: existingUser.role,
+                name: user.name
+              }
+            );
 
             // Enviar email de alerta de login OAuth
             try {
@@ -552,15 +560,21 @@ export const authOptions: AuthOptions = {
             // New user via Google OAuth - será criado pelo adapter automaticamente
             console.log(`✅ [OAUTH] Novo utilizador será criado: ${user.email}`);
             
-            await logGeneral('INFO', 'Novo utilizador criado via OAuth', 
-              'Nova conta criada através do Google OAuth', {
-              email: user.email,
-              name: user.name,
-              registrationMethod: 'oauth_google',
-              provider: 'google',
-              action: 'oauth_new_user',
-              entity: 'user'
-            });
+            // Log new user registration via OAuth
+            await logQuickAction(
+              'REGISTER_OAUTH',
+              {
+                userEmail: user.email,
+                ipAddress: 'unknown',
+                userAgent: 'OAuth Provider'
+              },
+              true,
+              {
+                registrationMethod: 'oauth_google',
+                provider: 'google',
+                name: user.name
+              }
+            );
 
             // O email de boas-vindas será enviado pelo adapter após criação
           }

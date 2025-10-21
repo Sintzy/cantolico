@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase-client";
 import bcrypt from "bcryptjs";
-import { logAuthAction, getUserInfoFromRequest } from "@/lib/user-action-logger";
+import { logQuickAction, getUserInfoFromRequest, USER_ACTIONS } from "@/lib/user-action-logger";
 import { logSystemEvent, logDatabaseError } from "@/lib/enhanced-logging";
 import { sendWelcomeEmail, sendEmailConfirmation, generateEmailVerificationToken, createEmailVerificationData } from "@/lib/email";
 
@@ -17,11 +17,18 @@ export async function POST(req: NextRequest) {
 
     const userInfo = getUserInfoFromRequest(req);
     
-    await logAuthAction('user_registration_attempt', userInfo, true, {
-      email,
-      name,
-      registrationMethod: 'email_password'
-    });
+    // Log registration attempt
+    await logQuickAction(
+      'REGISTER_EMAIL',
+      userInfo,
+      false, // Will be updated to true if successful
+      {
+        email,
+        name,
+        registrationMethod: 'email_password',
+        stage: 'attempt'
+      }
+    );
 
     // Teste de conectividade com Supabase
     const { data: testConnection, error: connectionError } = await supabase
@@ -47,10 +54,16 @@ export async function POST(req: NextRequest) {
       .single();
       
     if (existing) {
-      await logAuthAction('user_registration_blocked', userInfo, false, {
-        email,
-        reason: 'email_already_exists'
-      });
+      await logQuickAction(
+        'REGISTER_EMAIL',
+        userInfo,
+        false,
+        {
+          email,
+          reason: 'email_already_exists',
+          stage: 'blocked'
+        }
+      );
       return NextResponse.json({ error: "Email já usado" }, { status: 400 });
     }
 
@@ -103,9 +116,15 @@ export async function POST(req: NextRequest) {
     if (tokenError) {
       console.error('Erro ao criar token de verificação:', tokenError);
       // Não falhar o registro, mas logar o erro
-      await logAuthAction('email_verification_token_error', { ...userInfo, userId: user.id, userEmail: user.email }, false, {
-        error: tokenError.message
-      });
+      await logQuickAction(
+        'REQUEST_EMAIL_VERIFICATION',
+        { ...userInfo, userId: user.id, userEmail: user.email },
+        false,
+        {
+          error: tokenError.message,
+          stage: 'token_creation_failed'
+        }
+      );
     }
 
     // Log de evento crítico do sistema
@@ -133,15 +152,28 @@ export async function POST(req: NextRequest) {
     } catch (emailError) {
       console.error('❌ Erro ao enviar email de verificação:', emailError);
       // Não falhar o registo se o email falhar
-      await logAuthAction('email_verification_send_error', { ...userInfo, userId: user.id, userEmail: user.email }, false, {
-        error: emailError instanceof Error ? emailError.message : 'Erro desconhecido'
-      });
+      await logQuickAction(
+        'REQUEST_EMAIL_VERIFICATION',
+        { ...userInfo, userId: user.id, userEmail: user.email },
+        false,
+        {
+          error: emailError instanceof Error ? emailError.message : 'Erro desconhecido',
+          stage: 'email_send_failed'
+        }
+      );
     }
 
-    await logAuthAction('user_registered', { ...userInfo, userId: user.id, userEmail: user.email }, true, {
-      name: user.name,
-      registrationMethod: 'email_password'
-    });
+    // Log successful registration
+    await logQuickAction(
+      'REGISTER_EMAIL',
+      { ...userInfo, userId: user.id, userEmail: user.email },
+      true,
+      {
+        name: user.name,
+        registrationMethod: 'email_password',
+        stage: 'completed'
+      }
+    );
 
     return NextResponse.json({ 
       success: true, 
@@ -152,12 +184,18 @@ export async function POST(req: NextRequest) {
     console.error('Registration error details:', error);
     
     const userInfo = getUserInfoFromRequest(req);
-    await logAuthAction('user_registration_error', userInfo, false, {
-      error: error instanceof Error ? error.message : 'Erro desconhecido',
-      stack: error instanceof Error ? error.stack : undefined,
-      email,
-      name
-    });
+    await logQuickAction(
+      'REGISTER_EMAIL',
+      userInfo,
+      false,
+      {
+        error: error instanceof Error ? error.message : 'Erro desconhecido',
+        stack: error instanceof Error ? error.stack : undefined,
+        email,
+        name,
+        stage: 'error'
+      }
+    );
     
     return NextResponse.json({ 
       error: "Erro interno do servidor",

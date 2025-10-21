@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase-client";
-import { logGeneral, logErrors } from "@/lib/logs";
+import { logQuickAction, getUserInfoFromRequest, USER_ACTIONS } from "@/lib/user-action-logger";
 import { logSystemEvent } from "@/lib/enhanced-logging";
 import { sendWelcomeEmail } from "@/lib/email";
 
@@ -20,17 +20,6 @@ export async function GET(req: NextRequest) {
     const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
     const userAgent = req.headers.get('user-agent') || 'unknown';
 
-    try {
-      await logGeneral('INFO', 'Tentativa de verificação de email', 'Utilizador a tentar verificar email', {
-        token: token.substring(0, 8) + '...', // Log apenas parte do token por segurança
-        ipAddress: ip,
-        userAgent: userAgent,
-        action: 'email_verification_attempt'
-      });
-    } catch (logError) {
-      console.warn('Erro no logging (não crítico):', logError);
-    }
-
     // Buscar token na base de dados
     const { data: verificationData, error: tokenError } = await supabase
       .from('VerificationToken')
@@ -40,16 +29,6 @@ export async function GET(req: NextRequest) {
 
     if (tokenError || !verificationData) {
       console.error('Token não encontrado ou erro:', tokenError);
-      try {
-        await logErrors('WARN', 'Token de verificação inválido', 'Token não encontrado na base de dados', {
-          token: token.substring(0, 8) + '...',
-          ip,
-          userAgent
-        });
-      } catch (logError) {
-        console.warn('Erro no logging (não crítico):', logError);
-      }
-      
       return NextResponse.redirect(new URL('/auth/confirm-email?status=invalid-token', req.url));
     }
 
@@ -64,17 +43,6 @@ export async function GET(req: NextRequest) {
         .delete()
         .eq('token', token);
 
-      try {
-        await logErrors('WARN', 'Token de verificação expirado', 'Utilizador tentou usar token expirado', {
-          email: verificationData.identifier,
-          expiredAt: verificationData.expires,
-          ip,
-          userAgent
-        });
-      } catch (logError) {
-        console.warn('Erro no logging (não crítico):', logError);
-      }
-
       return NextResponse.redirect(new URL('/auth/confirm-email?status=expired', req.url));
     }
 
@@ -87,17 +55,6 @@ export async function GET(req: NextRequest) {
 
     if (userError || !user) {
       console.error('Utilizador não encontrado:', userError);
-      try {
-        await logErrors('ERROR', 'Utilizador não encontrado para verificação', 'Email do token não corresponde a nenhum utilizador', {
-          email: verificationData.identifier,
-          token: token.substring(0, 8) + '...',
-          ip,
-          userAgent
-        });
-      } catch (logError) {
-        console.warn('Erro no logging (não crítico):', logError);
-      }
-
       return NextResponse.redirect(new URL('/auth/confirm-email?status=user-not-found', req.url));
     }
 
@@ -122,46 +79,28 @@ export async function GET(req: NextRequest) {
 
     if (updateError) {
       console.error('Erro de atualização da base de dados:', updateError);
-      try {
-        await logErrors('ERROR', 'Erro ao verificar email', 'Falha ao atualizar status de verificação na base de dados', {
-          userId: user.id,
-          email: user.email,
-          error: updateError.message,
-          errorCode: updateError.code,
-          errorDetails: updateError.details,
-          ip,
-          userAgent
-        });
-      } catch (logError) {
-        console.warn('Erro no logging (não crítico):', logError);
-      }
-
       return NextResponse.redirect(new URL('/auth/confirm-email?status=update-failed', req.url));
-    }
-
-    // Remover token usado
+    }    // Remover token usado
     await supabase
       .from('VerificationToken')
       .delete()
       .eq('token', token);
 
-    // Log de evento crítico do sistema
-    try {
-      await logSystemEvent(
-        'email_verified',
-        'Email verificado com sucesso',
-        {
-          userId: user.id,
-          email: user.email,
-          name: user.name,
-          verifiedAt: new Date().toISOString(),
-          ip,
-          userAgent
-        }
-      );
-    } catch (logError) {
-      console.warn('Erro no logging do sistema (não crítico):', logError);
-    }
+    // Log successful email verification
+    await logQuickAction(
+      'VERIFY_EMAIL',
+      {
+        userId: user.id,
+        userEmail: user.email,
+        ipAddress: ip,
+        userAgent: userAgent
+      },
+      true,
+      {
+        verifiedAt: new Date().toISOString(),
+        name: user.name
+      }
+    );
 
     // Enviar email de boas-vindas após verificação
     try {
@@ -182,16 +121,6 @@ export async function GET(req: NextRequest) {
     console.error('=== ERRO NA VERIFICAÇÃO DE EMAIL ===');
     console.error('Erro:', error);
     console.error('Stack:', error instanceof Error ? error.stack : 'N/A');
-    
-    try {
-      await logErrors('ERROR', 'Erro na verificação de email', 'Erro interno durante processo de verificação', {
-        error: error instanceof Error ? error.message : 'Erro desconhecido',
-        stack: error instanceof Error ? error.stack : undefined,
-        action: 'email_verification_error'
-      });
-    } catch (logError) {
-      console.warn('Erro no logging final (não crítico):', logError);
-    }
     
     return NextResponse.redirect(new URL('/auth/confirm-email?status=error', req.url));
   }

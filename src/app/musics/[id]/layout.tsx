@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import { supabase } from "@/lib/supabase-client";
 import { findSongBySlug } from "@/lib/slugs";
-import { createMusicMetadata } from "@/lib/metadata";
+import { generateMusicSEO } from "@/lib/seo";
 
 interface MusicLayoutProps {
   children: React.ReactNode;
@@ -57,14 +57,15 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     }
 
     const autor = (song as any)?.currentVersion?.createdBy?.name;
+    const lyrics = (song as any)?.currentVersion?.sourceText;
     
-    return createMusicMetadata({
+    // Usar o sistema SEO otimizado
+    return generateMusicSEO({
       title: (song as any)?.title,
+      author: autor,
       moments: (song as any)?.moments,
-      tags: (song as any)?.tags,
-      slug: (song as any)?.slug,
-      id: (song as any)?.id,
-      author: autor || undefined,
+      slug: (song as any)?.slug || (song as any)?.id,
+      lyrics: lyrics
     });
   } catch (error) {
     return {
