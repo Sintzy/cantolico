@@ -1,7 +1,8 @@
-/* Google Ads Banner Styles */
+/* Google Ads Banner Styles - Correção para availableWidth=0 */
 .google-ad-banner {
   display: block;
   width: 100% !important;
+  min-width: 300px !important; /* Largura mínima para evitar availableWidth=0 */
   height: 100% !important;
   min-height: 250px;
   position: relative;
@@ -11,21 +12,36 @@
 .google-ad-banner .adsbygoogle {
   display: block !important;
   width: 100% !important;
+  min-width: 300px !important; /* Garante largura mínima */
   height: 100% !important;
   min-height: inherit;
   margin: 0 !important;
   padding: 0 !important;
 }
 
-/* Mobile optimizations */
+/* Mobile optimizations - Correção para telas pequenas */
 @media (max-width: 768px) {
   .google-ad-banner {
     min-height: 280px;
+    min-width: 300px !important; /* Manter largura mínima mesmo em mobile */
     padding: 10px;
   }
   
   .google-ad-banner .adsbygoogle {
     min-height: 250px;
+    min-width: 280px !important; /* Largura mínima em mobile */
+  }
+}
+
+/* Para telas muito pequenas (< 320px), ocultar anúncios ou usar tamanho fixo */
+@media (max-width: 320px) {
+  .google-ad-banner {
+    min-width: 320px !important;
+    overflow-x: auto; /* Permite scroll horizontal se necessário */
+  }
+  
+  .google-ad-banner .adsbygoogle {
+    min-width: 320px !important;
   }
 }
 

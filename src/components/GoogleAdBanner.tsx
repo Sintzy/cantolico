@@ -5,7 +5,7 @@ import { ADSENSE_CONFIG, AD_FORMATS } from '@/lib/adsense-config';
 
 interface GoogleAdBannerProps {
   slot: keyof typeof ADSENSE_CONFIG.SLOTS;
-  adFormat?: keyof typeof AD_FORMATS;
+  adFormat?: keyof typeof AD_FORMATS; // Mantido para compatibilidade mas não usado
   fullWidthResponsive?: boolean;
   className?: string;
   style?: React.CSSProperties;
@@ -51,6 +51,13 @@ export default function GoogleAdBanner({
     if (isProduction && isClient && !adLoaded && adRef.current) {
       const loadRealAd = async () => {
         try {
+          // Verificar se o container tem largura suficiente
+          const containerWidth = adRef.current?.offsetWidth || 0;
+          if (containerWidth === 0) {
+            console.warn('GoogleAd: Container width is 0, skipping ad load to prevent adsbygoogle error');
+            return;
+          }
+          
           // Pequeno delay para garantir que DOM está pronto
           await new Promise(resolve => setTimeout(resolve, 500));
           
@@ -93,6 +100,7 @@ export default function GoogleAdBanner({
         className={`google-ad-banner google-ad-responsive ${responsiveClass} ${className}`}
         style={{ 
           minHeight: style?.minHeight || '250px',
+          minWidth: '300px', // Largura mínima para evitar availableWidth=0
           width: '100%',
           display: 'block'
         }}
@@ -107,7 +115,8 @@ export default function GoogleAdBanner({
           }}
           data-ad-client={ADSENSE_CONFIG.CLIENT_ID}
           data-ad-slot={adSlot}
-          data-ad-format={format}
+          // Removido data-ad-format para evitar conflito entre métodos automático e manual
+          // Usar apenas data-full-width-responsive para responsividade automática
           data-full-width-responsive={fullWidthResponsive.toString()}
         />
       </div>

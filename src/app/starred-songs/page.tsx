@@ -17,6 +17,7 @@ import { useCache } from '@/hooks/useCache';
 import { useAppCache } from '@/components/providers/CacheProvider';
 import removeAccents from 'remove-accents';
 import GoogleAdBanner from '@/components/GoogleAdBanner';
+import { LiturgicalMoment } from '@/lib/constants';
 
 interface StarredSong {
   id: string;
@@ -47,28 +48,9 @@ type SortOption = 'title-asc' | 'title-desc' | 'starred-desc' | 'starred-asc';
 // Constantes
 const SONGS_PER_PAGE = 12;
 
-const momentLabels: Record<string, string> = {
-  'ENTRADA': 'Entrada',
-  'ATO_PENITENCIAL': 'Ato Penitencial',
-  'GLORIA': 'Glória',
-  'SALMO': 'Salmo',
-  'ACLAMACAO': 'Aclamação',
-  'OFERTORIO': 'Ofertório',
-  'SANTO': 'Santo',
-  'COMUNHAO': 'Comunhão',
-  'ACAO_DE_GRACAS': 'Ação de Graças',
-  'FINAL': 'Final',
-  'ADORACAO': 'Adoração',
-  'ASPERSAO': 'Aspersão',
-  'BAPTISMO': 'Baptismo',
-  'BENCAO_DAS_ALIANCAS': 'Bênção das Alianças',
-  'CORDEIRO_DE_DEUS': 'Cordeiro de Deus',
-  'CRISMA': 'Crisma',
-  'INTRODUCAO_DA_PALAVRA': 'Introdução da Palavra',
-  'LOUVOR': 'Louvor',
-  'PAI_NOSSO': 'Pai Nosso',
-  'REFLEXAO': 'Reflexão',
-  'TERCO_MISTERIO': 'Terço Mistério',
+// Helper function para converter chaves do enum para valores bonitos
+const getMomentDisplayName = (momentKey: string): string => {
+  return LiturgicalMoment[momentKey as keyof typeof LiturgicalMoment] || momentKey.replaceAll('_', ' ');
 };
 
 const sortOptions = [
@@ -419,7 +401,7 @@ export default function StarredSongsPage() {
                                       variant="secondary"
                                       className="text-xs h-6 px-2.5 bg-secondary/80"
                                     >
-                                      {momentLabels[moment] || moment.replaceAll('_', ' ')}
+                                      {getMomentDisplayName(moment)}
                                     </Badge>
                                   ))}
                                   {song.moments.length > 4 && (

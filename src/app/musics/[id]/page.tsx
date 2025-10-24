@@ -15,6 +15,7 @@ import { Spinner, type SpinnerProps } from '@/components/ui/shadcn-io/spinner';
 import StarButton from '@/components/StarButton';
 import AddToPlaylistButton from '@/components/AddToPlaylistButton';
 import GoogleAdBanner from '@/components/GoogleAdBanner';
+import { LiturgicalMoment } from '@/lib/constants';
 
 type SongData = {
   id: string;
@@ -32,6 +33,12 @@ type SongData = {
     createdBy: { name: string | null } | null;
   };
 };
+
+// Helper function para converter chaves do enum para valores bonitos
+const getMomentDisplayName = (momentKey: string): string => {
+  return LiturgicalMoment[momentKey as keyof typeof LiturgicalMoment] || momentKey.replaceAll('_', ' ');
+};
+
 function transposeChord(chord: string, interval: number): string {
   // Array completo de semitons (usando sustenidos como padrão)
   const semitones = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -379,7 +386,7 @@ export default function SongPage() {
               "canticos catolicos",
               "musica liturgica",
               ...tags.map(t => t.toLowerCase()),
-              ...moments.map(m => m.toLowerCase().replace('_', ' '))
+              ...moments.map(m => getMomentDisplayName(m).toLowerCase())
             ].join(", "),
             "inLanguage": "pt-PT",
             "audience": {
@@ -392,7 +399,7 @@ export default function SongPage() {
               "url": "https://cantolico.pt"
             },
             "datePublished": new Date().toISOString(),
-            "description": `${title} - Cântico católico com letra e acordes para ${moments.map(m => m.replace('_', ' ').toLowerCase()).join(', ')}`,
+            "description": `${title} - Cântico católico com letra e acordes para ${moments.map(m => getMomentDisplayName(m).toLowerCase()).join(', ')}`,
             "url": `https://cantolico.pt/musics/${id}`,
             ...(currentVersion?.youtubeLink && {
               "video": {
@@ -433,7 +440,7 @@ export default function SongPage() {
           <div className="flex flex-wrap gap-2 justify-center mb-2">
             {moments.map((m: string, i: number) => (
               <Badge key={i} className="bg-white/80 text-blue-900 font-semibold px-3 py-1 text-xs shadow-sm">
-                {m.replaceAll('_', ' ')}
+                {getMomentDisplayName(m)}
               </Badge>
             ))}
           </div>
@@ -598,7 +605,7 @@ export default function SongPage() {
                 <div className="flex flex-wrap gap-2 mt-2 md:mt-0">
                   {moments.map((m, i) => (
                     <Badge key={i} className="bg-blue-50 text-blue-700 font-semibold px-3 py-1 text-xs">
-                      {m.replaceAll('_', ' ')}
+                      {getMomentDisplayName(m)}
                     </Badge>
                   ))}
                 </div>

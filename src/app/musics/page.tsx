@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { LiturgicalMoment } from '@/lib/constants';
 import { Separator } from '@/components/ui/separator';
 import * as React from 'react';
 import { cn } from '@/lib/utils';
@@ -27,6 +28,11 @@ import { MusicListSkeleton } from '@/components/MusicListSkeleton';
 import GoogleAdBanner from '@/components/GoogleAdBanner';
 import { toast } from 'sonner';
 import { usePageState } from '@/hooks/usePageState';
+
+// Helper function para converter chaves do enum para valores bonitos
+const getMomentDisplayName = (momentKey: string): string => {
+  return LiturgicalMoment[momentKey as keyof typeof LiturgicalMoment] || momentKey.replaceAll('_', ' ');
+};
 
 const allMoments = [
   'ENTRADA',
@@ -381,7 +387,7 @@ export default function MusicsPage() {
             <SelectItem value="ALL">Todos os momentos</SelectItem>
             {allMoments.map((moment) => (
               <SelectItem key={moment} value={moment}>
-                {moment.replaceAll('_', ' ')}
+                {getMomentDisplayName(moment)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -696,7 +702,7 @@ export default function MusicsPage() {
                                           variant="secondary"
                                           className="text-xs h-6 px-2.5 bg-secondary/80"
                                         >
-                                          {moment.replaceAll('_', ' ')}
+                                          {getMomentDisplayName(moment)}
                                         </Badge>
                                       ))}
                                       {(song.moments || []).length > 4 && (
