@@ -25,7 +25,6 @@ import BannerDisplay from '@/components/BannerDisplay';
 import StarButton from '@/components/StarButton';
 import AddToPlaylistButton from '@/components/AddToPlaylistButton';
 import { MusicListSkeleton } from '@/components/MusicListSkeleton';
-import GoogleAdBanner from '@/components/GoogleAdBanner';
 import { toast } from 'sonner';
 import { usePageState } from '@/hooks/usePageState';
 
@@ -586,19 +585,7 @@ export default function MusicsPage() {
                   </CardContent>
                 </Card>
                 
-                {/* Sidebar Ad */}
-                <div className="bg-white rounded-lg border overflow-hidden">
-                  <GoogleAdBanner
-                    slot="MUSIC_LIST_SIDEBAR"
-                    adFormat="VERTICAL"
-                    responsive="desktop"
-                    style={{ 
-                      display: 'block',
-                      minHeight: '300px',
-                      width: '100%'
-                    }}
-                  />
-                </div>
+                {/* Sidebar Ad removed */}
               </div>
             </aside>
 
@@ -620,18 +607,7 @@ export default function MusicsPage() {
                 </Card>
               ) : (
                 <>
-                  {/* Top Banner Ad */}
-                  <div className="bg-white rounded-lg border mb-6 overflow-hidden">
-                    <GoogleAdBanner
-                      slot="MUSIC_LIST_TOP"
-                      adFormat="HORIZONTAL"
-                      style={{ 
-                        display: 'block',
-                        minHeight: '120px',
-                        width: '100%'
-                      }}
-                    />
-                  </div>
+                  {/* Top Banner Ad removed */}
                   
                   {/* Lista de Músicas */}
                   <div className="space-y-3">
@@ -753,18 +729,7 @@ export default function MusicsPage() {
                     ))}
                   </div>
 
-                  {/* Bottom Banner Ad */}
-                  <div className="bg-white rounded-lg border my-6 overflow-hidden">
-                    <GoogleAdBanner
-                      slot="MUSIC_LIST_BOTTOM"
-                      adFormat="HORIZONTAL"
-                      style={{ 
-                        display: 'block',
-                        minHeight: '120px',
-                        width: '100%'
-                      }}
-                    />
-                  </div>
+                  {/* Bottom Banner Ad removed */}
 
                   {/* Paginação */}
                   {totalPages > 1 && (

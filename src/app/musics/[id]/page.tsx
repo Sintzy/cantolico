@@ -1,6 +1,5 @@
 'use client';
 import "../../../../public/styles/chords.css";
-import "../../../../public/styles/google-ads.css";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Guitar, ChevronDown, FileText, Music, Youtube, Download, ArrowLeft } from 'lucide-react';
 import YouTube from 'react-youtube';
@@ -14,7 +13,6 @@ import { Button } from '@/components/ui/button';
 import { Spinner, type SpinnerProps } from '@/components/ui/shadcn-io/spinner';
 import StarButton from '@/components/StarButton';
 import AddToPlaylistButton from '@/components/AddToPlaylistButton';
-import GoogleAdBanner from '@/components/GoogleAdBanner';
 import { LiturgicalMoment } from '@/lib/constants';
 
 type SongData = {
@@ -566,21 +564,7 @@ export default function SongPage() {
             </div>
           )}
 
-          {/* Banner de Anúncios */}
-          <div className="bg-white/80 rounded-xl shadow border border-blue-100 overflow-hidden p-0">
-            <GoogleAdBanner
-              slot="MUSIC_SIDEBAR"
-              adFormat="RECTANGLE"
-              className="w-full h-full"
-              responsive="desktop"
-              style={{ 
-                display: 'block',
-                minHeight: '280px',
-                width: '100%',
-                height: '100%'
-              }}
-            />
-          </div>
+          {/* Banner de Anúncios removido */}
 
           {/* Download PDF */}
           {pdfUrl && (
@@ -622,22 +606,7 @@ export default function SongPage() {
             </section>
           )}
 
-          {/* Banner de Anúncios Mobile */}
-          <section className="md:hidden">
-            <div className="bg-white/90 rounded-2xl shadow-lg p-4 border border-blue-100">
-              <GoogleAdBanner
-                slot="MUSIC_MOBILE"
-                adFormat="RECTANGLE"
-                className="w-full flex justify-center"
-                responsive="mobile"
-                style={{ 
-                  display: 'block',
-                  minHeight: '280px',
-                  width: '100%'
-                }}
-              />
-            </div>
-          </section>
+          {/* Banner de Anúncios Mobile removido */}
 
           {/* YouTube Section */}
           {currentVersion?.youtubeLink && (
@@ -674,19 +643,7 @@ export default function SongPage() {
             </section>
           )}
 
-          {/* Banner Horizontal Final */}
-          <section className="bg-white/90 rounded-2xl shadow-lg p-4 border border-blue-100">
-            <GoogleAdBanner
-              slot="MUSIC_FOOTER"
-              adFormat="HORIZONTAL"
-              className="w-full flex justify-center"
-              style={{ 
-                display: 'block',
-                minHeight: '120px',
-                width: '100%'
-              }}
-            />
-          </section>
+          {/* Banner Horizontal Final removido */}
 
           {/* Song ID at the bottom */}
           <div className="w-full text-center pt-6">
