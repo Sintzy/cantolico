@@ -463,8 +463,8 @@ export default function MusicsPage() {
           <div className="p-1 bg-muted rounded">
             <Music className="h-3 w-3 text-muted-foreground" />
           </div>
-          <p className="text-sm text-muted-foreground">
-            {loading ? 'A carregar...' : (
+            <p className="text-sm text-muted-foreground">
+            {loading ? (<><span className="sr-only">A carregar...</span><span aria-hidden data-nosnippet>A carregar...</span></>) : (
               <>
                 <span className="font-medium text-foreground">{filteredSongs.length}</span>
                 {' '}cânticos

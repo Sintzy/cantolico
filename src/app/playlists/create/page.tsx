@@ -145,7 +145,7 @@ export default function CreatePlaylistPage() {
             <ListMusic className="h-8 w-8 text-white" />
           </div>
           <div className="space-y-2">
-            <h3 className="text-xl font-semibold text-gray-900">A carregar...</h3>
+            <h3 className="text-xl font-semibold text-gray-900"><span className="sr-only">A carregar...</span><span aria-hidden data-nosnippet>A carregar...</span></h3>
             <p className="text-gray-600">A verificar a tua autenticação</p>
           </div>
         </div>

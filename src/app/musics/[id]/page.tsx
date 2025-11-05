@@ -339,12 +339,14 @@ export default function SongPage() {
 
   if (loading) return (
     <div className="flex items-center justify-center h-[300px]">
-  <Spinner variant="circle" size={48} className="text-black" />
+      <Spinner variant="circle" size={48} className="text-black" />
+      <span className="sr-only">A carregar música...</span>
+      <span aria-hidden data-nosnippet>A carregar música...</span>
     </div>
   );
 
   if (!song) {
-  return <div className="p-6 text-muted-foreground text-center"><Spinner variant="circle" size={32} className="text-black" />A carregar música...</div>;
+  return <div className="p-6 text-muted-foreground text-center"><Spinner variant="circle" size={32} className="text-black" /><span className="sr-only">A carregar música...</span><span aria-hidden data-nosnippet>A carregar música...</span></div>;
   }
 
   const { title, mainInstrument, tags, moments, currentVersion, author } = song;

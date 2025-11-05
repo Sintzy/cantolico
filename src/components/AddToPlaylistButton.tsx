@@ -253,7 +253,7 @@ export default function AddToPlaylistButton({
                 <div className="flex items-center justify-center py-8">
                   <div className="flex items-center gap-3">
                     <div className="animate-spin rounded-full h-5 w-5 border-2 border-muted-foreground/20 border-t-muted-foreground"></div>
-                    <span className="text-muted-foreground text-sm">A carregar...</span>
+                    <span className="sr-only">A carregar...</span><span aria-hidden data-nosnippet className="text-muted-foreground text-sm">A carregar...</span>
                   </div>
                 </div>
               )}

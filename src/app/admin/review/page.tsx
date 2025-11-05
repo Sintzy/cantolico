@@ -540,7 +540,7 @@ export default function AdminReviewPage() {
       {loading && (
         <div className="flex justify-center items-center py-12">
           <Loader2 className="w-6 h-6 animate-spin mr-2" />
-          <span>A carregar submissões...</span>
+          <span className="sr-only">A carregar submissões...</span><span aria-hidden data-nosnippet>A carregar submissões...</span>
         </div>
       )}
 

@@ -266,7 +266,7 @@ export default function PlaylistsManagement() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Gestão de Playlists</h1>
-            <p className="text-gray-600">A carregar playlists...</p>
+            <p className="text-gray-600"><span className="sr-only">A carregar playlists...</span><span aria-hidden data-nosnippet>A carregar playlists...</span></p>
           </div>
         </div>
         <TableSkeleton rows={6} />

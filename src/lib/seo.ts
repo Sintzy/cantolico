@@ -1,5 +1,6 @@
 // lib/seo.ts - Sistema centralizado de SEO otimizado
 import { Metadata } from 'next';
+import { LiturgicalMoment } from './constants';
 
 export interface SEOConfig {
   title: string;
@@ -162,12 +163,27 @@ export function generateMusicSEO(music: {
   slug: string;
   lyrics?: string;
 }): Metadata {
-  const moments = music.moments?.join(', ') || '';
+  // Mapear momentos para nomes com acentos (usar LiturgicalMoment enum quando possível)
+  const mappedMoments = (music.moments || []).map(m => {
+    // Se já vier em formato legível, usa direto
+    if (Object.values(LiturgicalMoment).includes(m as LiturgicalMoment)) {
+      return m;
+    }
+    // Tentar usar a chave (por ex. 'ACLAMACAO') para obter valor com acentos
+    const key = String(m).toUpperCase();
+    if ((LiturgicalMoment as any)[key]) return (LiturgicalMoment as any)[key];
+    // fallback: capitalizar com replace underlines
+    return String(m).replaceAll('_', ' ');
+  });
+
+  const momentsText = mappedMoments.join(', ');
+
   const typeText = music.type === 'ACORDES' ? 'com acordes' : 'partitura';
-  
-  // SEO super agressivo para aparecer no Google
-  const lyricsPreview = music.lyrics ? ` Letra: "${music.lyrics.substring(0, 80)}..."` : '';
-  const fullDescription = `${music.title} ${music.author ? `de ${music.author}` : ''} - Letra completa, acordes e cifras.${lyricsPreview} ${moments ? `Para ${moments.toLowerCase()}.` : ''} Partitura grátis no Cantólico - a maior biblioteca de cânticos católicos online.`;
+
+  // SEO: construir descrição limpa e curta - evitar inserir trechos de UI (ex: 'A carregar')
+  const safeLyrics = (music.lyrics || '').replace(/A carregar[.\.]{0,3}/gi, '').trim();
+  const lyricsPreview = safeLyrics ? ` Letra: "${safeLyrics.substring(0, 80).replace(/\s+/g, ' ').trim()}..."` : '';
+  const fullDescription = `${music.title}${music.author ? ` de ${music.author}` : ''} - Letra completa, acordes e cifras.${lyricsPreview}${momentsText ? ` Para ${momentsText}.` : ''} Partitura grátis no Cantólico - a maior biblioteca de cânticos católicos online.`;
   
   // Keywords ultra específicas
   const aggressiveKeywords = [
@@ -212,7 +228,7 @@ export function generateMusicSEO(music: {
   ].filter(Boolean);
   
   return generateSEO({
-    title: `${music.title} - Letra e Acordes | Cântico Católico`,
+  title: `${music.title} - Letra e Acordes | Cântico Católico`,
     description: fullDescription,
     keywords: [...new Set(aggressiveKeywords)],
     canonical: `/musics/${music.slug}`,

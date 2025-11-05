@@ -295,7 +295,7 @@ export default function MusicsManagement() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Gestão de Músicas</h1>
-            <p className="text-gray-600">A carregar...</p>
+            <p className="text-gray-600"><span className="sr-only">A carregar...</span><span aria-hidden data-nosnippet>A carregar...</span></p>
           </div>
         </div>
         <TableSkeleton rows={8} />
@@ -310,7 +310,7 @@ export default function MusicsManagement() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Gestão de Músicas</h1>
-            <p className="text-gray-600">A carregar músicas...</p>
+            <p className="text-gray-600"><span className="sr-only">A carregar músicas...</span><span aria-hidden data-nosnippet>A carregar músicas...</span></p>
           </div>
         </div>
         <TableSkeleton rows={8} />
@@ -723,7 +723,7 @@ export default function MusicsManagement() {
             {hasMore && (
               <div ref={loadingRef} className="flex justify-center py-6">
                 <Spinner variant="circle" size={32} className="text-black" />
-                <span className="ml-2 text-gray-500">A carregar mais músicas...</span>
+                <span className="sr-only">A carregar mais músicas...</span><span aria-hidden data-nosnippet className="ml-2 text-gray-500">A carregar mais músicas...</span>
               </div>
             )}
 

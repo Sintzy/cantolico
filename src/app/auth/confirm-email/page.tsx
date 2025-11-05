@@ -259,7 +259,7 @@ function ConfirmEmailLoading() {
           </h1>
           <div className="space-y-4">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="text-gray-600">A carregar...</p>
+            <p className="text-gray-600"><span className="sr-only">A carregar...</span><span aria-hidden data-nosnippet>A carregar...</span></p>
           </div>
         </div>
       </div>

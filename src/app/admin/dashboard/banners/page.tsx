@@ -276,7 +276,7 @@ export default function BannerManagement() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Gestão de Banners</h1>
-            <p className="text-gray-600">A carregar...</p>
+            <p className="text-gray-600"><span className="sr-only">A carregar...</span><span aria-hidden data-nosnippet>A carregar...</span></p>
           </div>
         </div>
         <TableSkeleton rows={5} />
@@ -290,7 +290,7 @@ export default function BannerManagement() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Gestão de Banners</h1>
-            <p className="text-gray-600">A carregar banners...</p>
+            <p className="text-gray-600"><span className="sr-only">A carregar banners...</span><span aria-hidden data-nosnippet>A carregar banners...</span></p>
           </div>
         </div>
         <TableSkeleton rows={5} />

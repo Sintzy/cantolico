@@ -502,7 +502,7 @@ function PlaylistEditModal({ playlist, isOpen, onClose, onUpdate }: PlaylistEdit
                       <div className="flex items-center justify-center py-12">
                         <div className="flex items-center gap-3">
                           <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-2 border-muted-foreground/20 border-t-muted-foreground"></div>
-                          <span className="text-muted-foreground">A carregar...</span>
+                          <span className="sr-only">A carregar...</span><span aria-hidden data-nosnippet className="text-muted-foreground">A carregar...</span>
                         </div>
                       </div>
                     )}
