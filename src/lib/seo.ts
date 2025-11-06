@@ -17,8 +17,8 @@ export interface SEOConfig {
 
 const SITE_CONFIG = {
   name: 'Cantólico',
-  domain: 'cantolico.com',
-  url: process.env.NEXT_PUBLIC_SITE_URL || 'https://cantolico.com',
+  domain: 'cantolico.pt',
+  url: process.env.NEXT_PUBLIC_SITE_URL || 'https://cantolico.pt',
   description: 'A maior biblioteca de cânticos católicos online. Letras, acordes, cifras e partituras grátis para celebrações litúrgicas. Mais de 1000 músicas católicas.',
   keywords: [
     // Termos primários
