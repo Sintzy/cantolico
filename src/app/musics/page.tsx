@@ -20,13 +20,22 @@ import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import removeAccents from 'remove-accents';
 import Link from 'next/link';
-import { Search, Filter, Tags, ArrowDownAZ, Music, ChevronLeft, ChevronRight, X, SlidersHorizontal, Menu, RefreshCw, Clock } from 'lucide-react';
+import { Search, Filter, Tags, ArrowDownAZ, Music, ChevronLeft, ChevronRight, X, SlidersHorizontal, Menu, RefreshCw, Clock, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import BannerDisplay from '@/components/BannerDisplay';
 import StarButton from '@/components/StarButton';
 import AddToPlaylistButton from '@/components/AddToPlaylistButton';
 import { MusicListSkeleton } from '@/components/MusicListSkeleton';
 import { toast } from 'sonner';
 import { usePageState } from '@/hooks/usePageState';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+  PaginationEllipsis,
+} from '@/components/ui/pagination';
 
 // Helper function para converter chaves do enum para valores bonitos
 const getMomentDisplayName = (momentKey: string): string => {
@@ -87,6 +96,7 @@ export default function MusicsPage() {
   const [tagFilter, setTagFilter] = useState('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [currentPage, setCurrentPage] = useState(1);
+  const [jumpPageInput, setJumpPageInput] = useState('');
 
   const itemsPerPage = 12;
   const totalPages = Math.ceil((filteredSongs || []).length / itemsPerPage);
@@ -293,7 +303,11 @@ export default function MusicsPage() {
       );
 
     setFilteredSongs(filtered);
-    setCurrentPage(1);
+    // Only reset to page 1 on initial loads. If we're restoring state (isInitialized === true)
+    // we keep the restored currentPage so the "return from song" flow works.
+    if (!isInitialized) {
+      setCurrentPage(1);
+    }
   }, [searchTerm, selectedMoment, tagFilter, sortOrder, songs]);
 
   // Função para navegar para música individual
@@ -308,6 +322,14 @@ export default function MusicsPage() {
         tagFilter,
         sortOrder
       });
+      // Also write synchronously to localStorage to ensure restore works even if React state update is async
+      try {
+        const syncState = JSON.parse(localStorage.getItem('pageState_musics') || '{}');
+        const updated = { ...syncState, scrollPosition: window.scrollY, currentPage, searchTerm, selectedMoment, tagFilter, sortOrder };
+        localStorage.setItem('pageState_musics', JSON.stringify(updated));
+      } catch (err) {
+        // ignore
+      }
     }
     
     // Marcar que vamos navegar para uma página individual
@@ -731,91 +753,101 @@ export default function MusicsPage() {
 
                   {/* Bottom Banner Ad removed */}
 
-                  {/* Paginação */}
+                  {/* Paginação melhorada: First / Prev / Página atual / Jump / Next / Last */}
                   {totalPages > 1 && (
                     <div className="mt-6 sm:mt-8 flex justify-center px-4">
-                      <div className="flex items-center gap-1 max-w-full overflow-hidden">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const newPage = Math.max(currentPage - 1, 1);
-                            setCurrentPage(newPage);
-                            if (saveState) {
-                              saveState({ 
-                                ...state,
-                                currentPage: newPage, 
-                                scrollPosition: 0 
-                              });
-                            }
-                            window.scrollTo({ top: 0, behavior: 'smooth' });
-                          }}
-                          disabled={currentPage === 1}
-                          className="h-8 sm:h-9 px-2 sm:px-3 flex-shrink-0"
-                        >
-                          <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
-                          <span className="hidden sm:inline ml-1">Anterior</span>
-                        </Button>
-                        
-                        <div className="flex gap-1 mx-1 sm:mx-2 overflow-x-auto">
-                          {[...Array(Math.min(totalPages, 3))].map((_, i) => {
-                            let page;
-                            const maxPages = 3;
-                            if (totalPages <= maxPages) {
-                              page = i + 1;
-                            } else if (currentPage <= Math.floor(maxPages/2) + 1) {
-                              page = i + 1;
-                            } else if (currentPage >= totalPages - Math.floor(maxPages/2)) {
-                              page = totalPages - maxPages + 1 + i;
-                            } else {
-                              page = currentPage - Math.floor(maxPages/2) + i;
-                            }
-                            
-                            return (
-                              <Button
-                                key={page}
-                                size="sm"
-                                variant={page === currentPage ? 'default' : 'outline'}
-                                onClick={() => {
-                                  setCurrentPage(page);
-                                  if (saveState) {
-                                    saveState({ 
-                                      ...state,
-                                      currentPage: page, 
-                                      scrollPosition: 0 
-                                    });
+                      <div className="flex items-center gap-2 max-w-full overflow-hidden">
+                        {/* shadcn Pagination only - removed extra First/Previous buttons */}
+
+                        {/* Numeric window with ellipsis when many pages */}
+                        <div className="flex items-center gap-1 mx-1 sm:mx-2 overflow-x-auto">
+                          {/* shadcn pagination component */}
+                          <Pagination>
+                            <PaginationContent>
+                              <PaginationItem>
+                                <PaginationPrevious
+                                  onClick={() => {
+                                    if (currentPage === 1) return; // guard: do nothing when already at first page
+                                    const newPage = Math.max(currentPage - 1, 1);
+                                    setCurrentPage(newPage);
+                                    if (saveState) saveState({ ...state, currentPage: newPage, scrollPosition: 0 });
+                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                  }}
+                                  aria-disabled={currentPage === 1}
+                                />
+                              </PaginationItem>
+
+                              {(() => {
+                                const pages: (number | 'left-ellipsis' | 'right-ellipsis')[] = [];
+                                const maxWindow = 7;
+                                if (totalPages <= maxWindow) {
+                                  for (let i = 1; i <= totalPages; i++) pages.push(i);
+                                } else {
+                                  pages.push(1);
+                                  const left = Math.max(2, currentPage - 2);
+                                  const right = Math.min(totalPages - 1, currentPage + 2);
+                                  if (left > 2) pages.push('left-ellipsis');
+                                  for (let p = left; p <= right; p++) pages.push(p);
+                                  if (right < totalPages - 1) pages.push('right-ellipsis');
+                                  pages.push(totalPages);
+                                }
+                                return pages.map((p, idx) => {
+                                  if (p === 'left-ellipsis' || p === 'right-ellipsis') {
+                                    const isLeft = p === 'left-ellipsis';
+                                    const target = isLeft ? Math.max(2, currentPage - 3) : Math.min(totalPages - 1, currentPage + 3);
+                                    return (
+                                      <PaginationItem key={`ellipsis-${idx}`}>
+                                        <PaginationEllipsis
+                                          onClick={() => {
+                                            setCurrentPage(target);
+                                            if (saveState) saveState({ ...state, currentPage: target, scrollPosition: 0 });
+                                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                                          }}
+                                        />
+                                      </PaginationItem>
+                                    );
                                   }
-                                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                                }}
-                                className="w-8 h-8 sm:w-9 sm:h-9 p-0 text-xs sm:text-sm flex-shrink-0"
-                              >
-                                {page}
-                              </Button>
-                            );
-                          })}
+                                  if (typeof p === 'number') {
+                                    const pageNum = p;
+                                    const isActive = pageNum === currentPage;
+                                    return (
+                                      <PaginationItem key={`page-${p}`}>
+                                        <PaginationLink
+                                          isActive={isActive}
+                                          onClick={() => {
+                                            setCurrentPage(pageNum);
+                                            if (saveState) saveState({ ...state, currentPage: pageNum, scrollPosition: 0 });
+                                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                                          }}
+                                        >
+                                          {pageNum}
+                                        </PaginationLink>
+                                      </PaginationItem>
+                                    );
+                                  }
+                                  return null;
+                                });
+                              })()}
+
+                              <PaginationItem>
+                                <PaginationNext
+                                  onClick={() => {
+                                    if (currentPage === totalPages) return; // guard: do nothing when already at last page
+                                    const newPage = Math.min(currentPage + 1, totalPages);
+                                    setCurrentPage(newPage);
+                                    if (saveState) saveState({ ...state, currentPage: newPage, scrollPosition: 0 });
+                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                  }}
+                                  aria-disabled={currentPage === totalPages}
+                                />
+                              </PaginationItem>
+                            </PaginationContent>
+                          </Pagination>
                         </div>
-                        
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const newPage = Math.min(currentPage + 1, totalPages);
-                            setCurrentPage(newPage);
-                            if (saveState) {
-                              saveState({ 
-                                ...state,
-                                currentPage: newPage, 
-                                scrollPosition: 0 
-                              });
-                            }
-                            window.scrollTo({ top: 0, behavior: 'smooth' });
-                          }}
-                          disabled={currentPage === totalPages}
-                          className="h-8 sm:h-9 px-2 sm:px-3 flex-shrink-0"
-                        >
-                          <span className="hidden sm:inline mr-1">Seguinte</span>
-                          <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
-                        </Button>
+
+                        {/* removed jump-to-page input (using shadcn pagination controls) */}
+
+                        {/* removed Last button - shadcn Pagination handles navigation */}
                       </div>
                     </div>
                   )}

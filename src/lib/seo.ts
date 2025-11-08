@@ -260,7 +260,7 @@ export function generatePlaylistSEO(playlist: {
 }
 
 export function generateSearchSEO(query?: string): Metadata {
-  const title = query ? `Buscar "${query}"` : 'Buscar Músicas Católicas';
+  const title = query ? `Buscar "${query}"` : 'Procurar Músicas Católicas';
   const description = query 
     ? `Resultados da busca por "${query}" no maior acervo de músicas católicas online.`
     : 'Busque músicas católicas por título, autor, momento litúrgico ou letra. Mais de 1000 músicas disponíveis.';
