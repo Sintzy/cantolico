@@ -378,12 +378,12 @@ export default function SongPage() {
     <div className="flex items-center justify-center h-[300px]">
       <Spinner variant="circle" size={48} className="text-black" />
       <span className="sr-only">A carregar música...</span>
-      <span aria-hidden data-nosnippet>A carregar música...</span>
+      {/* Visible text removed — only spinner shown */}
     </div>
   );
 
   if (!song) {
-  return <div className="p-6 text-muted-foreground text-center"><Spinner variant="circle" size={32} className="text-black" /><span className="sr-only">A carregar música...</span><span aria-hidden data-nosnippet>A carregar música...</span></div>;
+  return <div className="p-6 text-muted-foreground text-center"><Spinner variant="circle" size={32} className="text-black" /><span className="sr-only">A carregar música...</span></div>;
   }
 
   const { title, mainInstrument, tags, moments, currentVersion, author } = song;
@@ -677,6 +677,63 @@ export default function SongPage() {
               {/* Diagramas removed from here — moved to sidebar control */}
             </section>
           )}
+
+              {/* Mobile controls: move sidebar controls below lyrics on small screens */}
+              <div className="md:hidden mt-6 space-y-4">
+                {/* Transpose Controls (mobile) */}
+                <div className="bg-white/90 rounded-xl shadow p-4 border border-blue-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <SidebarTitle>Transpor Tom</SidebarTitle>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => setTransposition(transposition - 1)}>-</Button>
+                    <span className="text-lg font-bold flex-1 text-center select-none">{transposition >= 0 ? `+${transposition}` : transposition}</span>
+                    <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => setTransposition(transposition + 1)}>+</Button>
+                  </div>
+                  <div className="mt-3">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button className="w-full justify-between" variant="outline">
+                          {diagramInstrument === 'guitar' ? 'Guitarra' : diagramInstrument === 'ukulele' ? 'Ukulele' : 'Piano'}
+                          <ChevronDown className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <DropdownMenuItem onClick={() => setDiagramInstrument('guitar')}>Guitarra</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setDiagramInstrument('ukulele')}>Ukulele</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setDiagramInstrument('piano')}>Piano</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+
+                {/* Tags (mobile) */}
+                {tags?.length > 0 && (
+                  <div className="bg-white/90 rounded-xl shadow p-4 border border-blue-100">
+                    <SidebarTitle>Tags</SidebarTitle>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {tags.map((t, tagIndex) => (
+                        <Badge key={tagIndex} className="bg-blue-100 text-blue-800 font-semibold px-3 py-1 text-xs">
+                          {t}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Chord diagrams (mobile) */}
+                {currentVersion?.sourceText && (
+                  <div className="bg-white/90 rounded-xl shadow p-4 border border-blue-100">
+                    <div className="flex items-center justify-between">
+                      <SidebarTitle>Acordes</SidebarTitle>
+                      <BetaBadgeWithNotice />
+                    </div>
+                    <div className="mt-3">
+                      <ChordDiagrams text={(showChords ? transposeMarkdownChords(currentVersion.sourceText || '', transposition) : currentVersion.sourceText) || ''} size={90} instrument={diagramInstrument} />
+                    </div>
+                  </div>
+                )}
+              </div>
 
           {/* Banner de Anúncios Mobile removido */}
 

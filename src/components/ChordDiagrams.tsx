@@ -461,17 +461,19 @@ export default function ChordDiagrams({ text, size = 110, instrument = 'guitar' 
 
   if (!chords.length) return null;
 
-  // Layout: piano -> 2 per row, guitar/ukulele -> 3 per row
+  // Layout: piano -> 2 per row on desktop, guitar/ukulele -> 3 per row on desktop.
+  // On mobile we want 3 per row for chords (as requested).
   const isPiano = instrument === 'piano';
-  const flexBasis = isPiano ? 'calc(50% - 0.5rem)' : 'calc(33.333% - 0.66rem)';
+  const gridClass = isPiano ? 'grid grid-cols-2 md:grid-cols-2 gap-4' : 'grid grid-cols-3 md:grid-cols-3 gap-4';
 
-  const gridClass = isPiano ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'grid grid-cols-1 md:grid-cols-3 gap-4';
+  // If the consumer requests a small size (mobile block), add a small wrapper class to shrink visuals
+  const smallMode = size && size <= 100;
 
   return (
     <div className={gridClass}>
       {chords.map((c, i) => (
-        <div key={i} className="flex flex-col items-center text-center w-full">
-          <div style={{ width: '100%', transform: 'scale(1)', transformOrigin: 'top center' }}>
+        <div key={i} className={`flex flex-col items-center text-center w-full ${smallMode ? 'text-xs' : ''}`}>
+          <div style={{ width: '100%', transform: smallMode ? 'scale(0.85)' : 'scale(1)', transformOrigin: 'top center' }}>
             {instrument === 'ukulele' ? (
               <Chord chord={c.chordObj} instrument={{ strings: 4, fretsOnChord: 4, name: 'Ukulele', keys: NOTES, tunings: { standard: ['G','C','E','A'] } }} />
             ) : instrument === 'piano' ? (
