@@ -1,5 +1,7 @@
-'use client';
+"use client";
 import "../../../../public/styles/chords.css";
+import ChordDiagrams from '@/components/ChordDiagrams';
+import { extractChords } from '@/lib/chord-processor';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Guitar, ChevronDown, FileText, Music, Youtube, Download, ArrowLeft } from 'lucide-react';
 import YouTube from 'react-youtube';
@@ -10,10 +12,44 @@ import Head from 'next/head';
 import { supabase } from '@/lib/supabase';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useState, useRef, useEffect } from 'react';
 import { Spinner, type SpinnerProps } from '@/components/ui/shadcn-io/spinner';
 import StarButton from '@/components/StarButton';
 import AddToPlaylistButton from '@/components/AddToPlaylistButton';
 import { LiturgicalMoment } from '@/lib/constants';
+
+// Small badge with hover/click notice for BETA warning
+function BetaBadgeWithNotice() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (!ref.current) return;
+      if (!ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('click', onDocClick);
+    return () => document.removeEventListener('click', onDocClick);
+  }, []);
+
+  return (
+    <div className="relative" ref={ref}>
+      <Badge className="bg-yellow-100 text-yellow-800 cursor-pointer" onClick={() => setOpen(v => !v)} onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
+        BETA
+      </Badge>
+      {open && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="absolute right-0 mt-2 w-64 border border-gray-200 shadow rounded p-3 text-sm text-gray-700"
+          style={{ backgroundColor: 'rgba(255,255,255,0.98)', zIndex: 9999 }}
+        >
+          <a className="underline font-bold">Aviso:</a> Esta função está em desenvolvimento, pode conter erros ou imprecisões. Use com cuidado e reporte quaisquer problemas.
+        </div>
+      )}
+    </div>
+  );
+}
 
 type SongData = {
   id: string;
@@ -79,6 +115,7 @@ export default function SongPage() {
   const [transposition, setTransposition] = React.useState<number>(0);
   const [showChords, setShowChords] = React.useState<boolean>(true);
   const [loading, setLoading] = React.useState(true);
+  const [diagramInstrument, setDiagramInstrument] = React.useState<'guitar'|'ukulele'|'piano'>('guitar');
 
   // Função para voltar preservando o estado da página
   const handleBackToList = React.useCallback(() => {
@@ -566,6 +603,37 @@ export default function SongPage() {
             </div>
           )}
 
+          {/* Separate Chords box */}
+          {currentVersion?.sourceText && (
+            <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100">
+                <div className="flex items-center justify-between">
+                  <SidebarTitle>Acordes</SidebarTitle>
+                  {/* Beta badge with hover/click notice */}
+                  <BetaBadgeWithNotice />
+                </div>
+                <div className="mt-4">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button className="w-full justify-between" variant="outline">
+                      {diagramInstrument === 'guitar' ? 'Guitarra' : diagramInstrument === 'ukulele' ? 'Ukulele' : 'Piano'}
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem onClick={() => setDiagramInstrument('guitar')}>Guitarra</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setDiagramInstrument('ukulele')}>Ukulele</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setDiagramInstrument('piano')}>Piano</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <div className="mt-4">
+                  {/* Pass transposed text so diagrams follow the transposition control */}
+                  <ChordDiagrams text={(showChords ? transposeMarkdownChords(currentVersion.sourceText || '', transposition) : currentVersion.sourceText) || ''} size={140} instrument={diagramInstrument} />
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Banner de Anúncios removido */}
 
           {/* Download PDF */}
@@ -605,6 +673,8 @@ export default function SongPage() {
               ) : (
                 <div><div dangerouslySetInnerHTML={{ __html: leftColumn || renderedHtml }} /></div>
               )}
+
+              {/* Diagramas removed from here — moved to sidebar control */}
             </section>
           )}
 

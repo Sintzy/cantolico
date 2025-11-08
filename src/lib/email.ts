@@ -862,14 +862,7 @@ export function createWelcomeEmailTemplate(userName: string): string {
       {label: '👥 Interagir', value: 'Conecta-te com outros amantes da música e artistas'},
       {label: '⭐ Avaliar Conteúdo', value: 'Ajuda a destacar as melhores músicas da plataforma'}
     ])}
-    
-    <p style="margin:20px 0 8px 0;Margin:20px 0 8px 0;font-family:Poppins,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif;line-height:22px;font-weight:600;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#333333;text-align:left;mso-line-height-rule:exactly;mso-text-raise:2px;">Primeiros Passos Recomendados:</p>
-    ${createSimpleList([
-      'Completa o teu perfil para te apresentares à comunidade',
-      'Explora as músicas mais populares para descobrires novos talentos',
-      'Cria a tua primeira playlist com as músicas que mais gostas',
-      'Considera submeter uma das tuas próprias composições'
-    ])}
+  
     
     <p style="margin:16px 0 8px 0;Margin:16px 0 8px 0;font-family:Poppins,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif;line-height:22px;font-weight:400;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#333333;text-align:left;mso-line-height-rule:exactly;mso-text-raise:2px;">Esperamos que tenhas uma experiência extraordinária na Cantólico e que encontres inspiração musical todos os dias!</p>
   `;

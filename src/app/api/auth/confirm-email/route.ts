@@ -59,7 +59,8 @@ export async function GET(req: NextRequest) {
     }
 
     // Verificar se email já está verificado
-    if (user.emailVerified) {
+    const wasVerified = !!user.emailVerified;
+    if (wasVerified) {
       // Remover token já usado
       await supabase
         .from('VerificationToken')
@@ -102,16 +103,22 @@ export async function GET(req: NextRequest) {
       }
     );
 
-    // Enviar email de boas-vindas após verificação
-    try {
-      await sendWelcomeEmail(
-        user.email,
-        user.name || 'Utilizador'
-      );
-      console.log('✅ Email de boas-vindas enviado após verificação para:', user.email);
-    } catch (emailError) {
-      console.error('❌ Erro ao enviar email de boas-vindas:', emailError);
-      // Não falhar a verificação se o email falhar
+    // Enviar email de boas-vindas após verificação apenas se ainda não tinha sido enviado
+    // pelo adapter (por exemplo contas OAuth já verificadas). Se o adapter marcou o
+    // utilizador como verificado e enviou o email, não precisamos de enviar novamente.
+    if (!wasVerified) {
+      try {
+        await sendWelcomeEmail(
+          user.email,
+          user.name || 'Utilizador'
+        );
+        console.log('✅ Email de boas-vindas enviado após verificação para:', user.email);
+      } catch (emailError) {
+        console.error('❌ Erro ao enviar email de boas-vindas:', emailError);
+        // Não falhar a verificação se o email falhar
+      }
+    } else {
+      console.log('ℹ️ Welcome email skipped because user was already verified (likely OAuth).');
     }
 
     console.log(`✅ Email verificado com sucesso para utilizador ${user.id}`);
