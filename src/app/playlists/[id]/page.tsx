@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +38,7 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
   const router = useRouter();
   const [playlist, setPlaylist] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [notFoundState, setNotFoundState] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
 
   useEffect(() => {
@@ -54,11 +54,14 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
     try {
       const response = await fetch(`/api/playlists/${id}`);
       if (response.status === 404) {
-        notFound();
+        // mark as not found and stop — avoid calling next/navigation.notFound() from a client component
+        setNotFoundState(true);
+        return;
       }
       if (response.status === 403) {
         toast.error('Esta playlist é privada');
-        notFound();
+        setNotFoundState(true);
+        return;
       }
       if (!response.ok) {
         throw new Error('Erro ao carregar playlist');
@@ -149,8 +152,18 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
     );
   }
 
-  if (!playlist) {
-    return notFound();
+  if (notFoundState) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center p-6">
+          <h1 className="text-2xl font-bold mb-2">Playlist não encontrada</h1>
+          <p className="text-sm text-gray-600 mb-4">A playlist que você tentou abrir não existe ou não está acessível.</p>
+          <div className="flex justify-center gap-2">
+            <Link href="/playlists"><Button variant="ghost">Voltar às playlists</Button></Link>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const isOwner = session?.user?.id === playlist.userId;
@@ -214,9 +227,11 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
           </h1>
           
           {playlist.description && (
-            <p className="text-base sm:text-lg text-white/90 max-w-xs sm:max-w-2xl md:max-w-3xl mx-auto mb-4 leading-relaxed drop-shadow">
-              {playlist.description}
-            </p>
+            <div className="mx-auto mb-4">
+              <div className="inline-block bg-white text-gray-900 font-medium px-3 py-1 rounded-md shadow-sm max-w-full">
+                <p className="text-sm sm:text-base leading-relaxed truncate max-w-[40ch]">{playlist.description}</p>
+              </div>
+            </div>
           )}
 
           {/* Metadata */}

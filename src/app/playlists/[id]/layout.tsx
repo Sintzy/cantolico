@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase-client";
 import { generatePlaylistSEO } from "@/lib/seo";
 
@@ -28,10 +29,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       .single();
 
     if (!playlist) {
-      return {
-        title: "Playlist não encontrada",
-        description: "Esta playlist não existe ou foi removida.",
-      };
+      // If the playlist truly doesn't exist, return a 404 so Next shows the
+      // standard not-found page. This ensures the server responds with the
+      // correct HTTP status and metadata for missing resources.
+      console.warn(`generateMetadata: playlist not found for id=${id}`);
+      return notFound();
     }
 
     const songCount = (playlist as any).PlaylistSong?.length || 0;
@@ -43,9 +45,13 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       songCount: songCount
     });
   } catch (error) {
+    // If an error occurs while fetching metadata (permissions, RLS, network),
+    // avoid returning a not-found, but surface a neutral metadata object so the
+    // client can decide how to render. Log the error for diagnostics.
+    console.warn('generateMetadata: error fetching playlist metadata', error);
     return {
-      title: "Erro ao carregar playlist",
-      description: "Ocorreu um erro ao carregar esta playlist.",
+      title: "Playlist",
+      description: "Informações da playlist indisponíveis no momento.",
     };
   }
 }
