@@ -3,11 +3,17 @@ import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { supabase } from '@/lib/supabase-client';
 import { transposeText, detectChordFormat, processAboveChords, extractChords, detectKey } from '@/lib/chord-processor';
 import { parseMomentsFromPostgreSQL } from '@/lib/utils';
+import { LiturgicalMoment } from '@/lib/constants';
 import * as fs from 'fs';
 import * as path from 'path';
 
 // Import fontkit dinamicamente
 const fontkit = require('fontkit');
+
+// Helper function para converter chaves do enum para valores bonitos
+const getMomentDisplayName = (momentKey: string): string => {
+  return LiturgicalMoment[momentKey as keyof typeof LiturgicalMoment] || momentKey.replaceAll('_', ' ');
+};
 
 export async function GET(
   request: NextRequest,
@@ -194,7 +200,7 @@ export async function GET(
       
       // Momentos à esquerda
       if (hasMoments) {
-        const moments = momentsArray.map((m: string) => m.replace('_', ' ')).join(' • ');
+        const moments = momentsArray.map((m: string) => getMomentDisplayName(m)).join(' • ');
         page.drawText(`${moments}`, {
           x: 60,
           y: momentsY,

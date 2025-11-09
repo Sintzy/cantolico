@@ -1,5 +1,7 @@
-'use client';
+"use client";
 import "../../../../public/styles/chords.css";
+import ChordDiagrams from '@/components/ChordDiagrams';
+import { extractChords } from '@/lib/chord-processor';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Guitar, ChevronDown, FileText, Music, Youtube, Download, ArrowLeft } from 'lucide-react';
 import YouTube from 'react-youtube';
@@ -10,9 +12,44 @@ import Head from 'next/head';
 import { supabase } from '@/lib/supabase';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useState, useRef, useEffect } from 'react';
 import { Spinner, type SpinnerProps } from '@/components/ui/shadcn-io/spinner';
 import StarButton from '@/components/StarButton';
 import AddToPlaylistButton from '@/components/AddToPlaylistButton';
+import { LiturgicalMoment } from '@/lib/constants';
+
+// Small badge with hover/click notice for BETA warning
+function BetaBadgeWithNotice() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (!ref.current) return;
+      if (!ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('click', onDocClick);
+    return () => document.removeEventListener('click', onDocClick);
+  }, []);
+
+  return (
+    <div className="relative" ref={ref}>
+      <Badge className="bg-yellow-100 text-yellow-800 cursor-pointer" onClick={() => setOpen(v => !v)} onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
+        BETA
+      </Badge>
+      {open && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="absolute right-0 mt-2 w-64 border border-gray-200 shadow rounded p-3 text-sm text-gray-700"
+          style={{ backgroundColor: 'rgba(255,255,255,0.98)', zIndex: 9999 }}
+        >
+          <a className="underline font-bold">Aviso:</a> Esta função está em desenvolvimento, pode conter erros ou imprecisões. Use com cuidado e reporte quaisquer problemas.
+        </div>
+      )}
+    </div>
+  );
+}
 
 type SongData = {
   id: string;
@@ -30,6 +67,12 @@ type SongData = {
     createdBy: { name: string | null } | null;
   };
 };
+
+// Helper function para converter chaves do enum para valores bonitos
+const getMomentDisplayName = (momentKey: string): string => {
+  return LiturgicalMoment[momentKey as keyof typeof LiturgicalMoment] || momentKey.replaceAll('_', ' ');
+};
+
 function transposeChord(chord: string, interval: number): string {
   // Array completo de semitons (usando sustenidos como padrão)
   const semitones = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -72,6 +115,7 @@ export default function SongPage() {
   const [transposition, setTransposition] = React.useState<number>(0);
   const [showChords, setShowChords] = React.useState<boolean>(true);
   const [loading, setLoading] = React.useState(true);
+  const [diagramInstrument, setDiagramInstrument] = React.useState<'guitar'|'ukulele'|'piano'>('guitar');
 
   // Função para voltar preservando o estado da página
   const handleBackToList = React.useCallback(() => {
@@ -332,12 +376,14 @@ export default function SongPage() {
 
   if (loading) return (
     <div className="flex items-center justify-center h-[300px]">
-  <Spinner variant="circle" size={48} className="text-black" />
+      <Spinner variant="circle" size={48} className="text-black" />
+      <span className="sr-only">A carregar música...</span>
+      {/* Visible text removed — only spinner shown */}
     </div>
   );
 
   if (!song) {
-  return <div className="p-6 text-muted-foreground text-center"><Spinner variant="circle" size={32} className="text-black" />A carregar música...</div>;
+  return <div className="p-6 text-muted-foreground text-center"><Spinner variant="circle" size={32} className="text-black" /><span className="sr-only">A carregar música...</span></div>;
   }
 
   const { title, mainInstrument, tags, moments, currentVersion, author } = song;
@@ -377,7 +423,7 @@ export default function SongPage() {
               "canticos catolicos",
               "musica liturgica",
               ...tags.map(t => t.toLowerCase()),
-              ...moments.map(m => m.toLowerCase().replace('_', ' '))
+              ...moments.map(m => getMomentDisplayName(m).toLowerCase())
             ].join(", "),
             "inLanguage": "pt-PT",
             "audience": {
@@ -390,7 +436,7 @@ export default function SongPage() {
               "url": "https://cantolico.pt"
             },
             "datePublished": new Date().toISOString(),
-            "description": `${title} - Cântico católico com letra e acordes para ${moments.map(m => m.replace('_', ' ').toLowerCase()).join(', ')}`,
+            "description": `${title} - Cântico católico com letra e acordes para ${moments.map(m => getMomentDisplayName(m).toLowerCase()).join(', ')}`,
             "url": `https://cantolico.pt/musics/${id}`,
             ...(currentVersion?.youtubeLink && {
               "video": {
@@ -431,7 +477,7 @@ export default function SongPage() {
           <div className="flex flex-wrap gap-2 justify-center mb-2">
             {moments.map((m: string, i: number) => (
               <Badge key={i} className="bg-white/80 text-blue-900 font-semibold px-3 py-1 text-xs shadow-sm">
-                {m.replaceAll('_', ' ')}
+                {getMomentDisplayName(m)}
               </Badge>
             ))}
           </div>
@@ -557,6 +603,39 @@ export default function SongPage() {
             </div>
           )}
 
+          {/* Separate Chords box */}
+          {currentVersion?.sourceText && (
+            <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100">
+                <div className="flex items-center justify-between">
+                  <SidebarTitle>Acordes</SidebarTitle>
+                  {/* Beta badge with hover/click notice */}
+                  <BetaBadgeWithNotice />
+                </div>
+                <div className="mt-4">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button className="w-full justify-between" variant="outline">
+                      {diagramInstrument === 'guitar' ? 'Guitarra' : diagramInstrument === 'ukulele' ? 'Ukulele' : 'Piano'}
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem onClick={() => setDiagramInstrument('guitar')}>Guitarra</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setDiagramInstrument('ukulele')}>Ukulele</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setDiagramInstrument('piano')}>Piano</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <div className="mt-4">
+                  {/* Pass transposed text so diagrams follow the transposition control */}
+                  <ChordDiagrams text={(showChords ? transposeMarkdownChords(currentVersion.sourceText || '', transposition) : currentVersion.sourceText) || ''} size={140} instrument={diagramInstrument} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Banner de Anúncios removido */}
+
           {/* Download PDF */}
           {pdfUrl && (
             <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100">
@@ -580,7 +659,7 @@ export default function SongPage() {
                 <div className="flex flex-wrap gap-2 mt-2 md:mt-0">
                   {moments.map((m, i) => (
                     <Badge key={i} className="bg-blue-50 text-blue-700 font-semibold px-3 py-1 text-xs">
-                      {m.replaceAll('_', ' ')}
+                      {getMomentDisplayName(m)}
                     </Badge>
                   ))}
                 </div>
@@ -594,8 +673,69 @@ export default function SongPage() {
               ) : (
                 <div><div dangerouslySetInnerHTML={{ __html: leftColumn || renderedHtml }} /></div>
               )}
+
+              {/* Diagramas removed from here — moved to sidebar control */}
             </section>
           )}
+
+              {/* Mobile controls: move sidebar controls below lyrics on small screens */}
+              <div className="md:hidden mt-6 space-y-4">
+                {/* Transpose Controls (mobile) */}
+                <div className="bg-white/90 rounded-xl shadow p-4 border border-blue-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <SidebarTitle>Transpor Tom</SidebarTitle>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => setTransposition(transposition - 1)}>-</Button>
+                    <span className="text-lg font-bold flex-1 text-center select-none">{transposition >= 0 ? `+${transposition}` : transposition}</span>
+                    <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => setTransposition(transposition + 1)}>+</Button>
+                  </div>
+                  <div className="mt-3">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button className="w-full justify-between" variant="outline">
+                          {diagramInstrument === 'guitar' ? 'Guitarra' : diagramInstrument === 'ukulele' ? 'Ukulele' : 'Piano'}
+                          <ChevronDown className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <DropdownMenuItem onClick={() => setDiagramInstrument('guitar')}>Guitarra</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setDiagramInstrument('ukulele')}>Ukulele</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setDiagramInstrument('piano')}>Piano</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+
+                {/* Tags (mobile) */}
+                {tags?.length > 0 && (
+                  <div className="bg-white/90 rounded-xl shadow p-4 border border-blue-100">
+                    <SidebarTitle>Tags</SidebarTitle>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {tags.map((t, tagIndex) => (
+                        <Badge key={tagIndex} className="bg-blue-100 text-blue-800 font-semibold px-3 py-1 text-xs">
+                          {t}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Chord diagrams (mobile) */}
+                {currentVersion?.sourceText && (
+                  <div className="bg-white/90 rounded-xl shadow p-4 border border-blue-100">
+                    <div className="flex items-center justify-between">
+                      <SidebarTitle>Acordes</SidebarTitle>
+                      <BetaBadgeWithNotice />
+                    </div>
+                    <div className="mt-3">
+                      <ChordDiagrams text={(showChords ? transposeMarkdownChords(currentVersion.sourceText || '', transposition) : currentVersion.sourceText) || ''} size={90} instrument={diagramInstrument} />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+          {/* Banner de Anúncios Mobile removido */}
 
           {/* YouTube Section */}
           {currentVersion?.youtubeLink && (
@@ -631,6 +771,8 @@ export default function SongPage() {
               </div>
             </section>
           )}
+
+          {/* Banner Horizontal Final removido */}
 
           {/* Song ID at the bottom */}
           <div className="w-full text-center pt-6">

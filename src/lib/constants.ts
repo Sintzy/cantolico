@@ -1,39 +1,39 @@
 
 export enum LiturgicalMoment {
-    ENTRADA = "ENTRADA",
-    ATO_PENITENCIAL = "ATO_PENITENCIAL",
-    GLORIA = "GLORIA",
-    SALMO = "SALMO",
-    ACLAMACAO = "ACLAMACAO",
-    OFERTORIO = "OFERTORIO",
-    SANTO = "SANTO",
-    COMUNHAO = "COMUNHAO",
-    ACAO_DE_GRACAS = "ACAO_DE_GRACAS",
-    FINAL = "FINAL",
-    ADORACAO = "ADORACAO",
-    ASPERSAO = "ASPERSAO",
-    BAPTISMO = "BAPTISMO",
-    BENCAO_DAS_ALIANCAS = "BENCAO_DAS_ALIANCAS",
-    CORDEIRO_DE_DEUS = "CORDEIRO_DE_DEUS",
-    CRISMA = "CRISMA",
-    INTRODUCAO_DA_PALAVRA = "INTRODUCAO_DA_PALAVRA",
-    LOUVOR = "LOUVOR",
-    PAI_NOSSO = "PAI_NOSSO",
-    REFLEXAO = "REFLEXAO",
-    TERCO_MISTERIO = "TERCO_MISTERIO",
+    ENTRADA = "Entrada",
+    ATO_PENITENCIAL = "Ato Penitencial",
+    GLORIA = "Glória",
+    SALMO = "Salmo",
+    ACLAMACAO = "Aclamação",
+    OFERTORIO = "Ofertório",
+    SANTO = "Santo",
+    COMUNHAO = "Comunhão",
+    ACAO_DE_GRACAS = "Ação de Graças",
+    FINAL = "Final",
+    ADORACAO = "Adoração",
+    ASPERSAO = "Aspersão",
+    BAPTISMO = "Baptismo",
+    BENCAO_DAS_ALIANCAS = "Bênção das Alianças",
+    CORDEIRO_DE_DEUS = "Cordeiro de Deus",
+    CRISMA = "Crisma",
+    INTRODUCAO_DA_PALAVRA = "Introdução da Palavra",
+    LOUVOR = "Louvor",
+    PAI_NOSSO = "Pai Nosso",
+    REFLEXAO = "Reflexão",
+    TERCO_MISTERIO = "Terço Mistério",
   }
-  
+    
   export enum Instrument {
-    ORGAO = "ORGAO",
-    GUITARRA = "GUITARRA",
-    PIANO = "PIANO",
-    CORO = "CORO",
-    OUTRO = "OUTRO",
+    ORGAO = "Órgão",
+    GUITARRA = "Guitarra",
+    PIANO = "Piano",
+    CORO = "Coro",
+    OUTRO = "Outro",
   }
   
   export enum SongType {
-    ACORDES = "ACORDES",
-    PARTITURA = "PARTITURA",
+    ACORDES = "Acordes",
+    PARTITURA = "Partitura",
   }
   
   export enum SourceType {

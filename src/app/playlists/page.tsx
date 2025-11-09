@@ -284,6 +284,7 @@ function PlaylistsContent() {
       </div>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Top Banner Ad removed */}
 
         {playlists.length === 0 ? (
           <div className="bg-white rounded-lg border p-8 text-center">

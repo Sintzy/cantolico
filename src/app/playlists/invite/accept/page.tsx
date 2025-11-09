@@ -267,7 +267,7 @@ export default function AcceptInvitePage() {
         <Card className="w-full max-w-md mx-4">
           <CardContent className="flex flex-col items-center justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-4" />
-            <p className="text-gray-600">A carregar...</p>
+            <p className="text-gray-600"><span className="sr-only">A carregar...</span><span aria-hidden data-nosnippet>A carregar...</span></p>
           </CardContent>
         </Card>
       </div>

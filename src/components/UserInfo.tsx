@@ -4,7 +4,7 @@ import { useSession } from "next-auth/react";
 export function UserInfo() {
   const { data: session, status } = useSession();
 
-  if (status === "loading") return <p>A carregar sessão...</p>;
+  if (status === "loading") return <p><span className="sr-only">A carregar sessão...</span><span aria-hidden data-nosnippet>A carregar sessão...</span></p>;
   if (!session) return <p>Não estás autenticado.</p>;
 
   return (

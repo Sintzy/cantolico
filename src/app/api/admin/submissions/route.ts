@@ -77,7 +77,8 @@ export async function GET(req: NextRequest) {
       query = query.order(sortBy, { ascending });
     }
     
-    query = query.range(skip, skip + limit - 1);
+    // Remove range pagination - we'll do it after filtering
+    // query = query.range(skip, skip + limit - 1);
 
     const { data: rawSubmissions, error, count: total } = await query;
 

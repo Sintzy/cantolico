@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { supabase } from "@/lib/supabase-client";
-import { PAGE_METADATA } from "@/lib/metadata";
+import { generatePlaylistSEO } from "@/lib/seo";
 
 interface PlaylistLayoutProps {
   children: React.ReactNode;
@@ -19,6 +19,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
         isPublic,
         User!Playlist_userId_fkey (
           name
+        ),
+        PlaylistSong!Playlist_id_fkey (
+          id
         )
       `)
       .eq('id', id)
@@ -31,10 +34,14 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       };
     }
 
-    return PAGE_METADATA.playlistDetail(
-      playlist.name,
-      playlist.description || undefined
-    );
+    const songCount = (playlist as any).PlaylistSong?.length || 0;
+
+    return generatePlaylistSEO({
+      name: playlist.name,
+      description: playlist.description,
+      id: id,
+      songCount: songCount
+    });
   } catch (error) {
     return {
       title: "Erro ao carregar playlist",

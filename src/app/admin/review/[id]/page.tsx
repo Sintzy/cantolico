@@ -387,7 +387,7 @@ export default function ReviewSubmissionPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
           <Spinner variant="circle" size={48} className="text-black" />
-          <p className="text-gray-600">A carregar submissão...</p>
+          <p className="text-gray-600"><span className="sr-only">A carregar submissão...</span><span aria-hidden data-nosnippet>A carregar submissão...</span></p>
         </div>
       </div>
     );

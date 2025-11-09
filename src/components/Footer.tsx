@@ -118,7 +118,7 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="text-center text-xs text-gray-500 py-4 border-t border-gray-100">
+      <div className="text-center text-xs text-gray-500 py-4 border-t border-gray-100" data-nosnippet>
         © {new Date().getFullYear()} Cantólico!. Todos os direitos reservados. | Made with ❤️ by <a href="https://github.com/sintzy" className="text-blue-600 hover:underline">miguel</a>
       </div>
       

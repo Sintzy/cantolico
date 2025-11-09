@@ -1,6 +1,6 @@
-import { PAGE_METADATA } from "@/lib/metadata";
+import { generateSearchSEO } from "@/lib/seo";
 
-export const metadata = PAGE_METADATA.musics();
+export const metadata = generateSearchSEO();
 
 export default function MusicsLayout({
   children,

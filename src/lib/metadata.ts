@@ -287,10 +287,38 @@ export function createMusicMetadata(song: {
   const canonicalPath = slug || id || title.toLowerCase().replace(/\s+/g, "-");
   const canonicalUrl = `https://cantolico.pt/musics/${canonicalPath}`;
   
+  // SEO-optimized description para music pages
+  const description = `${title} - Cântico católico completo com letra, acordes e cifras. ${momentos ? `Ideal para ${momentos.toLowerCase()}.` : ''} Partitura e playback disponíveis no Cantólico - a maior biblioteca de cânticos católicos online.`;
+  
+  // Keywords específicas para a música
+  const musicKeywords = [
+    // Nome da música
+    title, 
+    `${title} letra`, 
+    `${title} acordes`, 
+    `${title} cifra`,
+    `${title} cantico catolico`,
+    `${title} partitura`,
+    
+    // Tags e momentos
+    ...tags.map(tag => [tag, `${tag} cantico`, `cantico ${tag}`]).flat(),
+    ...moments.map(moment => [moment, `cantico ${moment}`, `${moment} catolico`]).flat(),
+    
+    // Combinações estratégicas
+    `letra de ${title}`,
+    `acordes de ${title}`,
+    `como tocar ${title}`,
+    `partitura ${title}`,
+    `${title} igreja catolica`,
+    
+    // Autor se disponível
+    ...(author ? [`${author} canticos`, `musicas ${author}`] : [])
+  ];
+  
   return createMetadata({
-    title,
-    description: `"${title}" - Cântico católico para ${momentos}. Letra, acordes e partituras no Cantólico.`,
-    keywords: [title, ...tags, ...moments, "letra", "acordes", "partitura"],
+    title: `${title} - Cântico Católico com Letra e Acordes`,
+    description,
+    keywords: musicKeywords,
     author,
     type: "article",
     url: canonicalUrl,
