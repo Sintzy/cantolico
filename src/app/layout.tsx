@@ -10,6 +10,7 @@ import { CacheProvider } from "@/components/providers/CacheProvider";
 import EmailVerificationBanner from "@/components/EmailVerificationBanner";
 import JsonLd from "@/components/JsonLd";
 import { generateHomeSEO } from "@/lib/seo";
+import { Analytics } from "@vercel/analytics/next"
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <EmailVerificationBanner />
             <main className="flex-1">
               {children}
+              <Analytics />
             </main>
             <Toaster />
             <Footer />
