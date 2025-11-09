@@ -95,7 +95,7 @@ export default function Footer() {
             <a href="mailto:miguel@cantolico.pt" className="hover:underline">miguel@cantolico.pt</a>
           </p>
           <div className="flex gap-4 mt-2">
-            <a href="https://github.com/sintzy" target="_blank" rel="noreferrer">
+            <a href="https://github.com/sintzy/cantolico" target="_blank" rel="noreferrer">
               <Github className="h-5 w-5 hover:text-gray-900" />
             </a>
             <a href="https://instagram.com/cantolicoo" target="_blank" rel="noreferrer">
