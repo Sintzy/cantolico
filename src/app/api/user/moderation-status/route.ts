@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { supabase } from '@/lib/supabase-client';
+import { logProfileAction, getUserInfoFromRequest } from '@/lib/user-action-logger';
 
 export async function GET() {
   try {
@@ -49,6 +50,14 @@ export async function GET() {
             updatedAt: new Date().toISOString()
           })
           .eq('userId', session.user.id);
+
+        // Log automatic reactivation
+        try {
+          const userInfo = getUserInfoFromRequest(undefined as any, session);
+          await logProfileAction('moderation_auto_reactivated', userInfo, true, {});
+        } catch (e) {
+          console.warn('Failed to log auto reactivation:', e);
+        }
 
         return NextResponse.json({
           status: 'ACTIVE',

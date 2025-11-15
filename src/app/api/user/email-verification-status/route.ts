@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { supabase } from "@/lib/supabase-client";
+import { supabase } from '@/lib/supabase-client';
+import { logVerificationAction, getUserInfoFromRequest } from '@/lib/user-action-logger';
 
 export async function GET(req: NextRequest) {
   try {
@@ -26,6 +27,14 @@ export async function GET(req: NextRequest) {
         success: false, 
         error: "Utilizador não encontrado" 
       }, { status: 404 });
+    }
+
+    // Log access to email verification status
+    try {
+      const userInfo = getUserInfoFromRequest(req, session);
+      await logVerificationAction('email_verification_status_view', userInfo, true, {});
+    } catch (e) {
+      console.warn('Failed to log email verification status view:', e);
     }
 
     return NextResponse.json({ 

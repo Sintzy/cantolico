@@ -24,8 +24,6 @@ export const GET = withAdminProtection<any>(async (request: NextRequest, session
 
   console.log('🔍 Query params:', { page, limit, search, role, status });
 
-  const offset = (page - 1) * limit;
-
   // Build basic users query
   let baseQuery = supabase
     .from('User')
@@ -37,7 +35,6 @@ export const GET = withAdminProtection<any>(async (request: NextRequest, session
       createdAt,
       image
     `)
-    .range(offset, offset + limit - 1)
     .order('createdAt', { ascending: false });
 
     // Apply search filter
@@ -51,18 +48,18 @@ export const GET = withAdminProtection<any>(async (request: NextRequest, session
   }
 
   console.log('🔍 Executing users query...');
-  const { data: baseUsers, error: baseUsersError } = await baseQuery;
+  const { data: allUsers, error: baseUsersError } = await baseQuery;
 
   if (baseUsersError) {
     console.error('❌ Error fetching users:', baseUsersError);
     return NextResponse.json({ error: 'Erro ao carregar utilizadores' }, { status: 500 });
   }
 
-  console.log(`✅ Found ${baseUsers?.length || 0} users`);
+  console.log(`✅ Found ${allUsers?.length || 0} total users`);
 
   // Enrich each user with additional data
   const enrichedUsersList = await Promise.all(
-    (baseUsers || []).map(async (user: any) => {
+    (allUsers || []).map(async (user: any) => {
       try {
         // Fetch latest moderation data
         const { data: moderationRecord } = await supabase
@@ -143,36 +140,21 @@ export const GET = withAdminProtection<any>(async (request: NextRequest, session
     );
   }
 
-  // Get total count for pagination
-  let countQuery = supabase
-    .from('User')
-    .select('id', { count: 'exact', head: true });
-
-  if (search) {
-    countQuery = countQuery.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
-  }
-
-  if (role && role !== 'all') {
-    countQuery = countQuery.eq('role', role);
-  }
-
-  const { count: totalUserCount, error: countQueryError } = await countQuery;
-
-  if (countQueryError) {
-    console.error('Error counting users:', countQueryError);
-  }
-
-  const totalPagesCount = Math.ceil((totalUserCount || 0) / limit);
+  // Apply pagination AFTER filtering
+  const offset = (page - 1) * limit;
+  const totalFilteredCount = finalUsersList.length;
+  const paginatedUsers = finalUsersList.slice(offset, offset + limit);
+  const totalPagesCount = Math.ceil(totalFilteredCount / limit);
 
   console.log('✅ Returning users data with all moderation fields:', {
-    usersCount: finalUsersList.length,
-    totalCount: totalUserCount,
+    usersCount: paginatedUsers.length,
+    totalCount: totalFilteredCount,
     totalPages: totalPagesCount
   });
 
   return NextResponse.json({
-    users: finalUsersList,
-    totalCount: totalUserCount || 0,
+    users: paginatedUsers,
+    totalCount: totalFilteredCount,
     totalPages: totalPagesCount,
     currentPage: page
   });

@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 import { useCache } from '@/hooks/useCache';
 import { useAppCache } from '@/components/providers/CacheProvider';
 import removeAccents from 'remove-accents';
-import { LiturgicalMoment } from '@/lib/constants';
+import { LiturgicalMoment, getLiturgicalMomentLabel } from '@/lib/constants';
 
 interface StarredSong {
   id: string;
@@ -49,7 +49,7 @@ const SONGS_PER_PAGE = 12;
 
 // Helper function para converter chaves do enum para valores bonitos
 const getMomentDisplayName = (momentKey: string): string => {
-  return LiturgicalMoment[momentKey as keyof typeof LiturgicalMoment] || momentKey.replaceAll('_', ' ');
+  return getLiturgicalMomentLabel(momentKey);
 };
 
 const sortOptions = [

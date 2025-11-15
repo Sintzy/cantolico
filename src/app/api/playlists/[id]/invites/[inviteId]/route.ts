@@ -27,7 +27,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Playlist not found' }, { status: 404 });
     }
 
-    if (playlist.userId !== session.user.id) {
+    if (playlist.userId !== session.user.id && session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Access denied - only playlist owner can cancel invites' }, { status: 403 });
     }
 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { supabase } from "@/lib/supabase-client";
-import { logAuthAction, logAdminAction, getUserInfoFromRequest } from "@/lib/user-action-logger";
+import { logAuthAction, logAdminAction, getUserInfoFromRequest, logProfileAction } from "@/lib/user-action-logger";
 import { logSystemEvent } from "@/lib/enhanced-logging";
 import { logErrors } from "@/lib/logs";
 
@@ -124,7 +124,26 @@ export async function DELETE(req: NextRequest) {
       totalStarredSongs: starredData?.length || 0
     };
 
-    // Log do evento antes da eliminação
+    // Log do evento antes da eliminação (user-action logger)
+    const requesterInfo = getUserInfoFromRequest(req, session);
+    if (isAdminAction) {
+      await logAdminAction('delete_user_account', requesterInfo, true, {
+        targetUserId: userIdToDelete,
+        targetUserEmail: userToDelete.email,
+        targetUserName: userToDelete.name,
+        isAdminAction,
+        reason: reason || 'Eliminação administrativa',
+        userStats: stats
+      });
+    } else {
+      await logProfileAction('delete_account_initiated', requesterInfo, true, {
+        targetUserId: userIdToDelete,
+        reason: reason || 'Auto-eliminação',
+        userStats: stats
+      });
+    }
+
+    // Also keep system event logging for operational traces
     await logSystemEvent(
       'account_deletion_initiated',
       `${isAdminAction ? 'Admin' : 'Utilizador'} iniciou eliminação de conta`,
@@ -221,7 +240,38 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    // Log final de sucesso
+    // Log final de sucesso (user-action logger)
+    const completionInfo = getUserInfoFromRequest(req, session);
+    if (isAdminAction) {
+      await logAdminAction('delete_user_account_completed', completionInfo, true, {
+        deletedUserId: userIdToDelete,
+        deletedUserEmail: userToDelete.email,
+        deletedUserName: userToDelete.name,
+        isAdminAction,
+        eliminationStats: {
+          ...stats,
+          deletedMusics: deletedMusics?.length || 0,
+          preservedApprovedMusics: updatedMusics?.length || 0,
+          deletedPlaylistsCount: stats.totalPlaylists,
+          deletedStarredSongsCount: stats.totalStarredSongs
+        }
+      });
+    } else {
+      await logProfileAction('delete_account_completed', completionInfo, true, {
+        deletedUserId: userIdToDelete,
+        deletedUserEmail: userToDelete.email,
+        deletedUserName: userToDelete.name,
+        eliminationStats: {
+          ...stats,
+          deletedMusics: deletedMusics?.length || 0,
+          preservedApprovedMusics: updatedMusics?.length || 0,
+          deletedPlaylistsCount: stats.totalPlaylists,
+          deletedStarredSongsCount: stats.totalStarredSongs
+        }
+      });
+    }
+
+    // Also keep the system event log for operational traces
     await logSystemEvent(
       'account_deletion_completed',
       `Conta eliminada com sucesso ${isAdminAction ? 'por admin' : 'pelo próprio utilizador'}`,

@@ -50,18 +50,25 @@ export async function GET(req: NextRequest) {
       }
     };
 
-    // Buscar alertas de segurança não reconhecidos
-    const { data: securityAlerts, error: alertsError } = await supabase
-      .from('security_alerts')
-      .select('id, severity, title, alert_type, created_at')
-      .neq('status', 'ACKNOWLEDGED')
+    // Buscar alertas de segurança não reconhecidos (agora armazenados nos logs com tag 'security')
+    const { data: securityLogs, error: alertsError } = await supabase
+      .from('logs')
+      .select('id, details, created_at')
+      .contains('tags', ['security'])
+      .not('details->>alert_status', 'eq', 'ACKNOWLEDGED')
       .order('created_at', { ascending: false });
 
-    if (!alertsError && securityAlerts) {
-      stats.alerts.unacknowledged = securityAlerts.length;
-      stats.alerts.critical = securityAlerts.filter(a => a.severity >= 8).length;
-      stats.alerts.high = securityAlerts.filter(a => a.severity >= 6).length;
-      stats.alerts.recent = securityAlerts.slice(0, 5); // Últimos 5 alertas
+    if (!alertsError && securityLogs) {
+      stats.alerts.unacknowledged = securityLogs.length;
+      // details.severity may be nested in details.alertType or details.severity
+      const parsed = securityLogs.map((l: any) => ({
+        id: l.id,
+        severity: l.details?.severity || l.details?.details?.severity || 0,
+        title: l.details?.description || l.details?.title || ''
+      }));
+      stats.alerts.critical = parsed.filter((a: any) => a.severity >= 4).length;
+      stats.alerts.high = parsed.filter((a: any) => a.severity >= 3).length;
+      stats.alerts.recent = parsed.slice(0, 5);
     }
 
     if (isAdmin) {

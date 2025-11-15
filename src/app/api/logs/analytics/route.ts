@@ -217,10 +217,11 @@ async function getSecurityAnalytics(startDate: Date, endDate: Date) {
       .gte('created_at', startDate.toISOString())
       .lte('created_at', endDate.toISOString());
 
-    // Alertas de segurança
+    // Alertas de segurança agora são logs com a tag 'security'
     const { data: alerts } = await supabase
-      .from('security_alerts')
-      .select('severity, alert_type, status, created_at')
+      .from('logs')
+      .select('details, created_at')
+      .contains('tags', ['security'])
       .gte('created_at', startDate.toISOString())
       .lte('created_at', endDate.toISOString());
 
@@ -245,11 +246,13 @@ async function getSecurityAnalytics(startDate: Date, endDate: Date) {
         .sort(([, a], [, b]) => (b as number) - (a as number))
         .slice(0, 10),
       alertsByType: (alerts || []).reduce((acc: any, alert: any) => {
-        acc[alert.alert_type] = (acc[alert.alert_type] || 0) + 1;
+        const at = alert.details?.alertType || alert.details?.alert_type || 'UNKNOWN';
+        acc[at] = (acc[at] || 0) + 1;
         return acc;
       }, {}),
       alertsBySeverity: (alerts || []).reduce((acc: any, alert: any) => {
-        acc[alert.severity] = (acc[alert.severity] || 0) + 1;
+        const sev = alert.details?.severity || alert.details?.level || 'unknown';
+        acc[sev] = (acc[sev] || 0) + 1;
         return acc;
       }, {})
     };

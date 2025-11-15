@@ -3,6 +3,7 @@ import { adminSupabase } from '@/lib/supabase-admin';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { logGeneral, logErrors } from '@/lib/logs';
+import { logPlaylistAction, getUserInfoFromRequest } from '@/lib/user-action-logger';
 
 // GET: List playlist members
 export async function GET(
@@ -28,7 +29,7 @@ export async function GET(
       return NextResponse.json({ error: 'Playlist not found' }, { status: 404 });
     }
 
-    if (playlist.userId !== session.user.id) {
+    if (playlist.userId !== session.user.id && session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
@@ -140,7 +141,7 @@ export async function POST(
       return NextResponse.json({ error: 'Playlist not found' }, { status: 404 });
     }
 
-    if (playlist.userId !== session.user.id) {
+    if (playlist.userId !== session.user.id && session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
@@ -200,6 +201,13 @@ export async function POST(
       return NextResponse.json({ error: 'Failed to send invitation' }, { status: 500 });
     }
 
+    // Log user action: invite to playlist
+    await logPlaylistAction('invite_to_playlist', getUserInfoFromRequest(request, session), true, {
+      playlistId,
+      invitedUserEmail: userEmail,
+      role
+    });
+
     logGeneral('INFO', 'Playlist invitation sent', `${playlistId} -> ${userEmail} by ${session.user.email}`);
 
     return NextResponse.json({
@@ -244,7 +252,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Playlist not found' }, { status: 404 });
     }
 
-    if (playlist.userId !== session.user.id) {
+    if (playlist.userId !== session.user.id && session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
@@ -259,6 +267,12 @@ export async function DELETE(
       logErrors('ERROR', 'Error removing playlist member', JSON.stringify(deleteError));
       return NextResponse.json({ error: 'Failed to remove member' }, { status: 500 });
     }
+
+    // Log user action: remove member
+    await logPlaylistAction('remove_song_from_playlist', getUserInfoFromRequest(request, session), true, {
+      playlistId,
+      memberId
+    });
 
     logGeneral('INFO', 'Playlist member removed', `${memberId} from ${playlistId} by ${session.user.email}`);
 

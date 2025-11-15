@@ -330,8 +330,8 @@ function PlaylistEditModal({ playlist, isOpen, onClose, onUpdate }: PlaylistEdit
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
-        className="p-0 overflow-hidden h-[100vh] w-[100vw] sm:h-[95vh] sm:w-[95vw] md:w-[90vw] lg:w-[85vw] max-w-7xl sm:rounded-lg"
-      >
+          className="p-0 overflow-hidden w-full max-w-none sm:mx-4 sm:rounded-lg sm:max-w-3xl md:max-w-5xl lg:max-w-[1100px] xl:max-w-[1300px] max-h-[95vh] sm:max-h-[95vh]"
+        >
         {/* Background with blur effect */}
         <div className="absolute inset-0 bg-background/95 backdrop-blur-sm" />
         
@@ -355,10 +355,10 @@ function PlaylistEditModal({ playlist, isOpen, onClose, onUpdate }: PlaylistEdit
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-8 items-start">
               
               {/* Left Column - Playlist Settings */}
-              <div className="lg:col-span-2 space-y-4 order-1 lg:order-1">
+              <div className="lg:col-span-4 space-y-4 order-1 lg:order-1">
                 <Card className="border-0 shadow-none bg-muted/20">
                   <CardHeader className="pb-4">
                     <CardTitle className="text-lg font-medium">Configurações</CardTitle>
@@ -443,7 +443,7 @@ function PlaylistEditModal({ playlist, isOpen, onClose, onUpdate }: PlaylistEdit
               </div>
 
               {/* Right Column - Members Management */}
-              <div className="lg:col-span-3 space-y-4 order-2 lg:order-2">
+              <div className="lg:col-span-8 space-y-4 order-2 lg:order-2">
                 <Card className="border-0 shadow-none bg-muted/20">
                   <CardHeader className="pb-4">
                     <CardTitle className="flex items-center justify-between text-lg font-medium">

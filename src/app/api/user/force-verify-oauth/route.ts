@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { supabase } from "@/lib/supabase-client";
 import { logSystemEvent } from "@/lib/enhanced-logging";
+import { logVerificationAction, getUserInfoFromRequest } from '@/lib/user-action-logger';
 
 export async function POST(req: NextRequest) {
   try {
@@ -46,7 +47,14 @@ export async function POST(req: NextRequest) {
       throw updateError;
     }
 
-    // Log do evento
+    // Log do evento (user action)
+    const requesterInfo = getUserInfoFromRequest(req, session);
+    await logVerificationAction('force_verify_oauth', requesterInfo, true, {
+      provider: 'google',
+      verifiedAt: updatedUser.emailVerified
+    });
+
+    // Also keep system event log for operational traces
     await logSystemEvent(
       'oauth_email_force_verified',
       'Verificação forçada de email OAuth',

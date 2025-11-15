@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { supabase } from "@/lib/supabase-client";
+import { logProfileAction, getUserInfoFromRequest } from '@/lib/user-action-logger';
 
 export async function GET(req: NextRequest) {
   try {
@@ -22,6 +23,14 @@ export async function GET(req: NextRequest) {
 
     if (error) {
       throw error;
+    }
+
+    // Log access to profile info
+    try {
+      const userInfo = getUserInfoFromRequest(req, session);
+      await logProfileAction('view_profile', userInfo, true, { action: 'view_profile_info' });
+    } catch (e) {
+      console.warn('Failed to log profile view:', e);
     }
 
     return NextResponse.json({ 

@@ -381,12 +381,7 @@ export default function LogsPage() {
               Analytics
             </Button>
           </Link>
-          <Link href="/logs/security-alerts">
-            <Button variant="outline">
-              <Shield className="h-4 w-4 mr-2" />
-              Alertas
-            </Button>
-          </Link>
+          {/* Alertas button removed (API deleted) */}
         </div>
       </div>
 
@@ -542,7 +537,7 @@ export default function LogsPage() {
             <div className="p-8 text-center">
               <div className="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-blue-500 bg-blue-100">
                 <RefreshCw className="animate-spin -ml-1 mr-3 h-5 w-5" />
-                Carregando logs...
+                A carregar as  logs...
               </div>
             </div>
           ) : logs.length === 0 ? (

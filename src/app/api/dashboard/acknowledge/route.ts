@@ -28,12 +28,10 @@ export async function POST(req: NextRequest) {
     if (type === 'all') {
       // Reconhecer todos os alertas não reconhecidos
       const { data: updatedAlerts, error } = await supabase
-        .from('security_alerts')
-        .update({
-          status: 'ACKNOWLEDGED',
-          acknowledged_by: session.user.id
-        })
-        .neq('status', 'ACKNOWLEDGED')
+        .from('logs')
+        .update({ alert_status: 'ACKNOWLEDGED', acknowledged_by: session.user.id })
+        .contains('tags', ['security'])
+        .neq('alert_status', 'ACKNOWLEDGED')
         .select('id');
 
       if (error) {
@@ -56,13 +54,11 @@ export async function POST(req: NextRequest) {
     } else if (type === 'specific' && alertIds && Array.isArray(alertIds)) {
       // Reconhecer alertas específicos
       const { data: updatedAlerts, error } = await supabase
-        .from('security_alerts')
-        .update({
-          status: 'ACKNOWLEDGED',
-          acknowledged_by: session.user.id
-        })
+        .from('logs')
+        .update({ alert_status: 'ACKNOWLEDGED', acknowledged_by: session.user.id })
         .in('id', alertIds)
-        .neq('status', 'ACKNOWLEDGED')
+        .contains('tags', ['security'])
+        .neq('alert_status', 'ACKNOWLEDGED')
         .select('id');
 
       if (error) {

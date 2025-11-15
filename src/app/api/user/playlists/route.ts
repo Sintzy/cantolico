@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { supabase } from '@/lib/supabase-client'
 import { withAuthApiProtection } from '@/lib/api-middleware'
+import { logPlaylistAction, getUserInfoFromRequest } from '@/lib/user-action-logger';
 
 export const GET = withAuthApiProtection(async (request: NextRequest) => {
   try {
@@ -71,7 +72,7 @@ export const GET = withAuthApiProtection(async (request: NextRequest) => {
     }
 
     // 3. Combinar playlists próprias e de membro
-    const allPlaylists = [
+    let allPlaylists = [
       ...(ownPlaylists || []).map(playlist => ({ 
         ...playlist, 
         userRole: 'owner',
@@ -83,6 +84,36 @@ export const GET = withAuthApiProtection(async (request: NextRequest) => {
         isOwner: false
       }))
     ];
+
+    // 3.a If admin, include all playlists from the system so admins can manage them
+    if (session.user.role === 'ADMIN') {
+      const { data: all, error: allError } = await supabase
+        .from('Playlist')
+        .select(`
+          *,
+          User:userId (
+            id,
+            name,
+            email,
+            image
+          )
+        `)
+        .order('updatedAt', { ascending: false });
+
+      if (!allError && all) {
+        const mapped = all.map((p: any) => ({
+          ...p,
+          userRole: p.userId === session.user.id ? 'owner' : 'admin',
+          isOwner: p.userId === session.user.id
+        }));
+
+        // Merge admin view with existing lists, prefer owner entries when duplicated
+        const map = new Map();
+        mapped.forEach((pl: any) => map.set(pl.id, pl));
+        allPlaylists.forEach((pl: any) => map.set(pl.id, pl));
+        allPlaylists = Array.from(map.values());
+      }
+    }
 
     // 4. Remover duplicatas (caso seja dono e membro)
     const uniquePlaylistsMap = new Map();
@@ -127,6 +158,7 @@ export const GET = withAuthApiProtection(async (request: NextRequest) => {
           updatedAt: playlist.updatedAt,
           userRole: playlist.userRole,
           songsCount: count || 0,
+          user: playlist.User || null,
           members: (members || []).map(member => ({
             id: member.id,
             role: member.role === 'EDITOR' ? 'editor' : 'viewer',
@@ -140,6 +172,15 @@ export const GET = withAuthApiProtection(async (request: NextRequest) => {
     );
 
     console.log('Returning playlists:', playlistsWithCount.length);
+
+    // Log user action: viewed playlists
+    try {
+      await logPlaylistAction('view_playlists', getUserInfoFromRequest(request, session), true, {
+        count: playlistsWithCount.length
+      });
+    } catch (e) {
+      console.warn('Failed to log view_playlists action:', e);
+    }
     return NextResponse.json(playlistsWithCount)
   } catch (error) {
     console.error('Erro ao buscar playlists do usuário:', error)

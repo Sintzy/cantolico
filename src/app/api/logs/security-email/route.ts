@@ -33,14 +33,12 @@ export async function POST(req: NextRequest) {
 
     // Atualizar alerta se logId fornecido
     if (logId) {
+      // Atualizar o log correspondente para marcar email enviado
       await supabase
-        .from('security_alerts')
-        .update({
-          email_sent: true,
-          email_sent_at: new Date().toISOString(),
-          email_recipients: [to]
-        })
-        .eq('log_id', logId);
+        .from('logs')
+        .update({ email_sent: true, email_sent_at: new Date().toISOString(), email_recipients: [to] })
+        .eq('id', logId)
+        .contains('tags', ['security']);
     }
 
     // Log do envio

@@ -38,12 +38,13 @@ export async function GET(
     }
 
     // Verificar permissões
-    const isOwner = session?.user?.id === playlist.userId;
+  const isOwner = session?.user?.id === playlist.userId;
+  const isAdmin = session?.user?.role === 'ADMIN';
     const visibility = playlist.visibility || (playlist.isPublic ? 'PUBLIC' : 'PRIVATE');
     const isAccessible = visibility === 'PUBLIC' || visibility === 'NOT_LISTED';
 
     // Para playlists privadas, verificar se é proprietário ou membro aceito
-    if (visibility === 'PRIVATE' && !isOwner) {
+  if (visibility === 'PRIVATE' && !isOwner && !isAdmin) {
       // Verificar se o usuário é um membro aceito da playlist
       const { data: memberAccess } = await supabase
         .from('PlaylistMember')
@@ -154,8 +155,8 @@ export async function GET(
     }
 
     // Get playlist members if user is owner or member
-    let membersData: any[] = [];
-    if (isOwner || (visibility === 'PRIVATE' && session?.user?.email)) {
+  let membersData: any[] = [];
+  if (isOwner || isAdmin || (visibility === 'PRIVATE' && session?.user?.email)) {
       const { data: members } = await supabase
         .from('PlaylistMember')
         .select(`
@@ -250,7 +251,7 @@ export async function PUT(
       );
     }
 
-    if (playlist.userId !== session.user.id) {
+  if (playlist.userId !== session.user.id && session.user.role !== 'ADMIN') {
       await logGeneral('WARN', 'Tentativa de editar playlist sem permissão', 'Utilizador tentou editar playlist de outro utilizador', {
         userId: session.user.id,
         userEmail: session.user.email,
@@ -427,7 +428,7 @@ export async function DELETE(
       );
     }
 
-    if (playlist.userId !== session.user.id) {
+  if (playlist.userId !== session.user.id && session.user.role !== 'ADMIN') {
       await logGeneral('WARN', 'Tentativa de eliminar playlist sem permissão', 'Utilizador tentou eliminar playlist de outro utilizador', {
         userId: session.user.id,
         userEmail: session.user.email,

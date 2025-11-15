@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase-client";
+import { adminSupabase } from '@/lib/supabase-admin';
 import { generatePlaylistSEO } from "@/lib/seo";
 
 interface PlaylistLayoutProps {
@@ -12,7 +13,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   
   try {
-    const { data: playlist } = await supabase
+    let { data: playlist } : { data: any } = await supabase
       .from('Playlist')
       .select(`
         name,
@@ -29,11 +30,42 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       .single();
 
     if (!playlist) {
-      // If the playlist truly doesn't exist, return a 404 so Next shows the
-      // standard not-found page. This ensures the server responds with the
-      // correct HTTP status and metadata for missing resources.
-      console.warn(`generateMetadata: playlist not found for id=${id}`);
-      return notFound();
+      // If not found with the regular client, try to fetch full data with the
+      // admin/service role client. That way we avoid returning notFound when
+      // the playlist exists but the current request is blocked by RLS.
+      try {
+        const { data: adminPlaylist, error: adminError } = await adminSupabase
+          .from('Playlist')
+          .select(`
+            name,
+            description,
+            isPublic,
+            User!Playlist_userId_fkey (
+              name
+            ),
+            PlaylistSong!Playlist_id_fkey (
+              id
+            )
+          `)
+          .eq('id', id)
+          .single();
+
+        if (adminError || !adminPlaylist) {
+          console.warn(`generateMetadata: playlist not found for id=${id}`);
+          return notFound();
+        }
+
+        // Use the adminPlaylist as the playlist for metadata generation
+        // (it has the same shape as the earlier select)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        playlist = adminPlaylist as any;
+      } catch (err) {
+        console.warn('generateMetadata: admin fetch failed', err);
+        return {
+          title: "Playlist",
+          description: "Informações da playlist indisponíveis no momento.",
+        };
+      }
     }
 
     const songCount = (playlist as any).PlaylistSong?.length || 0;

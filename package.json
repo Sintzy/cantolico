@@ -5,8 +5,11 @@
   "scripts": {
     "dev": "node scripts/git-info.js && next dev --turbopack",
     "build": "node scripts/git-info.js && next build",
-    "start": "next start",
+    "vercel-build": "node scripts/git-info.js && next build",
+    "start": "node scripts/git-info.js && next start",
+    "preview": "next dev",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit",
     "git-info": "node scripts/git-info.js"
   },
   "dependencies": {

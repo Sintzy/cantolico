@@ -739,7 +739,7 @@ export function createSecurityAlertTemplate(
     content,
     {
       text: 'Ver Logs de Segurança',
-      url: 'https://cantolico.pt/logs/security-alerts',
+      url: 'https://cantolico.pt/logs',
       color: severityColor
     }
   );
@@ -795,7 +795,7 @@ export function createAdminLoginAlertTemplate(
     },
     {
       text: 'Ver Logs de Segurança',
-      url: 'https://cantolico.pt/logs/security-alerts',
+      url: 'https://cantolico.pt/logs',
       color: '#6c757d'
     }
   );
@@ -938,7 +938,7 @@ export function createLoginAlertEmailTemplate(
 
   const secondaryButton = isAdmin ? {
     text: 'Ver Logs de Segurança',
-    url: 'https://cantolico.pt/logs/security-alerts',
+    url: 'https://cantolico.pt/logs',
     color: '#6c757d'
   } : {
     text: 'Alterar Palavra-passe',

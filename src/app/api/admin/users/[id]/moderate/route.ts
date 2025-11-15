@@ -76,7 +76,21 @@ export async function POST(
       return NextResponse.json({ error: 'Utilizador não encontrado' }, { status: 404 });
     }
 
-    // Log do início da moderação
+    // Log do início da moderação (user-action logger)
+    const moderatorInfo = getUserInfoFromRequest(request, session);
+    await logModerationAction('moderation_started', moderatorInfo, true, {
+      targetUserId: targetUser.id,
+      targetUserEmail: targetUser.email,
+      moderationAction: action,
+      moderationStatus: status,
+      reason,
+      moderatorNote,
+      duration,
+      expiresAt,
+      ipAddress
+    });
+
+    // Also keep previous admin log for backward compatibility
     await logAdmin('INFO', 'Moderação de utilizador iniciada', 'Admin iniciou processo de moderação de utilizador', {
       adminId: session.user.id,
       adminEmail: session.user.email,
@@ -150,7 +164,20 @@ export async function POST(
       ipAddress
     });
 
-    // Log de sucesso da moderação
+    // Log de sucesso da moderação (user-action logger)
+    await logModerationAction('moderation_completed', moderatorInfo, true, {
+      targetUserId: targetUser.id,
+      targetUserEmail: targetUser.email,
+      moderationAction: action,
+      moderationStatus: status,
+      reason,
+      moderatorNote,
+      duration,
+      expiresAt,
+      ipAddress
+    });
+
+    // Also keep previous admin log for backward compatibility
     await logAdmin('SUCCESS', 'Moderação aplicada com sucesso', 'Admin aplicou moderação a utilizador', {
       adminId: session.user.id,
       adminEmail: session.user.email,

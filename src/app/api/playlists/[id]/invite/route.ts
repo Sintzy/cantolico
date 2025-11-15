@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { sendEmail, createPlaylistInviteEmailTemplate } from '@/lib/email'
+import { logPlaylistAction, getUserInfoFromRequest } from '@/lib/user-action-logger';
 import crypto from 'crypto'
 
 export async function POST(
@@ -52,7 +53,7 @@ export async function POST(
       );
     }
 
-    if (playlist.userId !== session.user.id) {
+    if (playlist.userId !== session.user.id && session.user.role !== 'ADMIN') {
       return NextResponse.json(
         { error: 'Apenas o criador da playlist pode convidar membros' },
         { status: 403 }
@@ -164,6 +165,12 @@ export async function POST(
         to: inviteEmail,
         subject: `🎵 Convite para colaborar na playlist "${playlist.name}"`,
         html: emailTemplate
+      });
+
+      // Log the action
+      await logPlaylistAction('invite_to_playlist', getUserInfoFromRequest(request, session), true, {
+        playlistId,
+        inviteEmail
       });
 
       return NextResponse.json({

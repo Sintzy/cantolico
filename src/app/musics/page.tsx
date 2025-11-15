@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { LiturgicalMoment } from '@/lib/constants';
+import { LiturgicalMoment, getInstrumentLabel, getLiturgicalMomentLabel } from '@/lib/constants';
 import { Separator } from '@/components/ui/separator';
 import * as React from 'react';
 import { cn } from '@/lib/utils';
@@ -39,7 +39,7 @@ import {
 
 // Helper function para converter chaves do enum para valores bonitos
 const getMomentDisplayName = (momentKey: string): string => {
-  return LiturgicalMoment[momentKey as keyof typeof LiturgicalMoment] || momentKey.replaceAll('_', ' ');
+  return getLiturgicalMomentLabel(momentKey);
 };
 
 const allMoments = [
@@ -663,7 +663,7 @@ export default function MusicsPage() {
                                   </h3>
                                   <p className="text-xs sm:text-sm text-muted-foreground mt-1 flex items-center gap-2">
                                     <span className="w-1.5 h-1.5 bg-primary/60 rounded-full"></span>
-                                    {song.mainInstrument}
+                                    {getInstrumentLabel(song.mainInstrument)}
                                   </p>
                                 </div>
                                 

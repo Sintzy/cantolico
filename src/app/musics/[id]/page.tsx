@@ -16,7 +16,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Spinner, type SpinnerProps } from '@/components/ui/shadcn-io/spinner';
 import StarButton from '@/components/StarButton';
 import AddToPlaylistButton from '@/components/AddToPlaylistButton';
-import { LiturgicalMoment } from '@/lib/constants';
+import { LiturgicalMoment, getInstrumentLabel, getLiturgicalMomentLabel } from '@/lib/constants';
 
 // Small badge with hover/click notice for BETA warning
 function BetaBadgeWithNotice() {
@@ -70,7 +70,7 @@ type SongData = {
 
 // Helper function para converter chaves do enum para valores bonitos
 const getMomentDisplayName = (momentKey: string): string => {
-  return LiturgicalMoment[momentKey as keyof typeof LiturgicalMoment] || momentKey.replaceAll('_', ' ');
+  return getLiturgicalMomentLabel(momentKey);
 };
 
 function transposeChord(chord: string, interval: number): string {
@@ -579,7 +579,7 @@ export default function SongPage() {
             </div>
             <div className="flex items-center gap-2 text-sm text-blue-900/80">
               <Music className="h-4 w-4 mr-1" />
-              <span className="font-medium">Instrumento:</span> {mainInstrument}
+              <span className="font-medium">Instrumento:</span> {getInstrumentLabel(mainInstrument)}
             </div>
             {author && (
               <div className="flex items-center gap-2 text-sm text-blue-900/80">

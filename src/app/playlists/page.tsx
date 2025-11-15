@@ -37,7 +37,7 @@ interface Playlist {
   updatedAt: string;
   songsCount: number;
   members?: PlaylistMember[];
-  userRole?: 'owner' | 'editor';
+  userRole?: 'owner' | 'editor' | 'admin';
 }
 
 function PlaylistsContent() {
@@ -253,6 +253,7 @@ function PlaylistsContent() {
 
   const ownedPlaylists = playlists.filter(p => p.userRole === 'owner');
   const memberPlaylists = playlists.filter(p => p.userRole === 'editor');
+  const allPlaylistsForAdmin = playlists.filter(p => p.userRole === 'admin');
 
   return (
     <div className="min-h-screen bg-white">
@@ -318,6 +319,32 @@ function PlaylistsContent() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                   {ownedPlaylists.map((playlist) => (
+                    <div key={playlist.id} className="relative group">
+                      <PlaylistCard playlist={playlist} onEdit={handleEditPlaylist} />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditPlaylist(playlist)}
+                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur-sm border shadow-sm"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Admin: All Playlists */}
+            {session.user.role === 'ADMIN' && allPlaylistsForAdmin.length > 0 && (
+              <section>
+                <div className="flex items-center gap-2 mb-4">
+                  <Settings className="w-5 h-5 text-gray-700" />
+                  <h2 className="text-xl font-semibold text-gray-900">Todas as Playlists (Admin)</h2>
+                  <Badge variant="secondary">{allPlaylistsForAdmin.length}</Badge>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                  {allPlaylistsForAdmin.map((playlist) => (
                     <div key={playlist.id} className="relative group">
                       <PlaylistCard playlist={playlist} onEdit={handleEditPlaylist} />
                       <Button

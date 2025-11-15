@@ -630,361 +630,24 @@ export default function UsersManagement() {
                     </div>
                   </div>
 
-                  {/* Ações - Stack vertical no mobile */}
-                  <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-2 flex-shrink-0">
-                    <div className="w-full lg:w-32">
-                      <Select
-                        value={user.role}
-                        onValueChange={(newRole: 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN') => 
-                          handleRoleChange(user.id, newRole)
-                        }
-                        disabled={changingRole === user.id}
-                      >
-                        <SelectTrigger className={`w-full text-xs ${user.id === session?.user.id?.toString() ? 'border-orange-300 bg-orange-50' : ''}`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="USER">Utilizador</SelectItem>
-                          <SelectItem value="TRUSTED">Confiável</SelectItem>
-                          <SelectItem value="REVIEWER">Revisor</SelectItem>
-                          <SelectItem value="ADMIN">Administrador</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {user.id === session?.user.id?.toString() && (
-                        <p className="text-xs text-orange-600 mt-1">⚠️ Sua própria conta</p>
-                      )}
-                    </div>
+                  {/* Ações - Apenas link para detalhes e email */}
+                  <div className="flex gap-2 items-center">
+                    <Button asChild variant="outline" size="sm" className="flex-1 sm:flex-none">
+                      <Link href={`/admin/dashboard/iusers/${user.id}`}>
+                        <Eye className="h-4 w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Ver Detalhes</span>
+                      </Link>
+                    </Button>
 
-                    {user.id !== session?.user.id?.toString() && (
-                      <>
-
-                        {/* Botão de Moderação ou Remover Moderação */}
-                        {user.moderation && user.moderation.status !== 'ACTIVE' ? (
-                          <Button
-                            onClick={() => handleRemoveModeration(user.id)}
-                            variant="outline"
-                            size="sm"
-                            className="text-green-600 border-green-300 hover:bg-green-50 w-full lg:w-auto"
-                          >
-                            <CheckCircle className="h-4 w-4 mr-1" />
-                            <span className="lg:hidden">Remover Moderação</span>
-                            <span className="hidden lg:inline">Remover</span>
-                          </Button>
-                        ) : (
-                          <div className="flex flex-col lg:flex-row gap-2 w-full lg:w-auto">
-                            <Dialog open={moderateDialogOpen && selectedUser?.id === user.id} onOpenChange={setModerateDialogOpen}>
-                              <DialogTrigger asChild>
-                                <Button
-                                  onClick={() => setSelectedUser(user)}
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-orange-600 border-orange-300 hover:bg-orange-50 w-full lg:w-auto"
-                                >
-                                  <Shield className="h-4 w-4 mr-1" />
-                                  Moderar
-                                </Button>
-                              </DialogTrigger>
-                            <DialogContent className="max-w-md">
-                              <DialogHeader>
-                                <DialogTitle>Moderar Utilizador</DialogTitle>
-                                <DialogDescription>
-                                  Aplicar moderação a {selectedUser?.name}
-                                </DialogDescription>
-                              </DialogHeader>
-                              
-                              <div className="space-y-4">
-                                <div className="space-y-2">
-                                  <Label>Tipo de Moderação</Label>
-                                  <Select 
-                                    value={moderateData.type} 
-                                    onValueChange={(value: 'WARNING' | 'SUSPENSION' | 'BAN') => 
-                                      setModerateData(prev => ({ ...prev, type: value }))
-                                    }
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="WARNING">
-                                        <div className="flex items-center gap-2">
-                                          <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                                          Advertência
-                                        </div>
-                                      </SelectItem>
-                                      <SelectItem value="SUSPENSION">
-                                        <div className="flex items-center gap-2">
-                                          <X className="h-4 w-4 text-orange-500" />
-                                          Suspensão
-                                        </div>
-                                      </SelectItem>
-                                      <SelectItem value="BAN">
-                                        <div className="flex items-center gap-2">
-                                          <Ban className="h-4 w-4 text-red-500" />
-                                          Banimento
-                                        </div>
-                                      </SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-
-                                {moderateData.type === 'SUSPENSION' && (
-                                  <div className="space-y-2">
-                                    <Label>Duração (dias)</Label>
-                                    <Input
-                                      type="number"
-                                      value={moderateData.duration || ''}
-                                      onChange={(e) => setModerateData(prev => ({ 
-                                        ...prev, 
-                                        duration: parseInt(e.target.value) || undefined 
-                                      }))}
-                                      placeholder="Número de dias"
-                                    />
-                                  </div>
-                                )}
-
-                                <div className="space-y-2">
-                                  <Label>Motivo (visível ao utilizador)</Label>
-                                  <Textarea
-                                    value={moderateData.reason}
-                                    onChange={(e) => setModerateData(prev => ({ 
-                                      ...prev, 
-                                      reason: e.target.value 
-                                    }))}
-                                    placeholder="Descreva o motivo da moderação..."
-                                    rows={3}
-                                  />
-                                </div>
-
-                                <div className="space-y-2">
-                                  <Label>Nota interna (apenas para admins)</Label>
-                                  <Textarea
-                                    value={moderateData.moderatorNote || ''}
-                                    onChange={(e) => setModerateData(prev => ({ 
-                                      ...prev, 
-                                      moderatorNote: e.target.value 
-                                    }))}
-                                    placeholder="Nota interna sobre a moderação..."
-                                    rows={2}
-                                  />
-                                </div>
-                              </div>
-
-                              <DialogFooter>
-                                <Button
-                                  variant="outline"
-                                  onClick={() => {
-                                    setModerateDialogOpen(false);
-                                    setModerateData({ type: 'WARNING', reason: '', moderatorNote: '' });
-                                  }}
-                                >
-                                  Cancelar
-                                </Button>
-                                <Button
-                                  onClick={handleModerateUser}
-                                  disabled={!moderateData.reason.trim()}
-                                  className="bg-red-600 hover:bg-red-700"
-                                >
-                                  Aplicar Moderação
-                                </Button>
-                              </DialogFooter>
-                            </DialogContent>
-                          </Dialog>
-                          
-                          <Button
-                            onClick={() => {
-                              setSelectedUser(user);
-                              fetchModerationHistory(parseInt(user.id));
-                              setHistoryDialogOpen(true);
-                            }}
-                            variant="outline"
-                            size="sm"
-                            className="text-blue-600 border-blue-300 hover:bg-blue-50 w-full lg:w-auto"
-                          >
-                            <History className="h-4 w-4 mr-1" />
-                            Histórico
-                          </Button>
-                          </div>
-                        )}
-
-                        {/* Botões de ação compactos */}
-                        <div className="flex gap-1 w-full lg:w-auto">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button variant="outline" size="sm" className="flex-1 lg:flex-none">
-                                <Eye className="h-4 w-4 lg:mr-0" />
-                                <span className="lg:hidden ml-1">Detalhes</span>
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-2xl">
-                              <DialogHeader>
-                                <DialogTitle className="flex items-center gap-2">
-                                  <Users className="h-5 w-5" />
-                                  {user.name}
-                                </DialogTitle>
-                                <DialogDescription>
-                                  Informações detalhadas do utilizador
-                                </DialogDescription>
-                              </DialogHeader>
-                              <div className="mt-4 space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div>
-                                    <label className="text-sm font-medium text-gray-500">ID</label>
-                                    <p className="text-sm font-mono text-blue-600">#{user.id}</p>
-                                  </div>
-                                  <div>
-                                    <label className="text-sm font-medium text-gray-500">Email</label>
-                                    <p className="text-sm">{user.email}</p>
-                                  </div>
-                                  <div>
-                                    <label className="text-sm font-medium text-gray-500">Role</label>
-                                    <div className="flex items-center gap-2">
-                                      <Badge className={`text-xs ${ROLE_COLORS[user.role]}`}>
-                                        <span className="flex items-center gap-1">
-                                          {ROLE_ICONS[user.role]}
-                                          {user.role}
-                                        </span>
-                                      </Badge>
-                                    </div>
-                                  </div>
-                                  <div>
-                                    <label className="text-sm font-medium text-gray-500">Status</label>
-                                    <div className="flex items-center gap-2">
-                                      {user.moderation && user.moderation.status !== 'ACTIVE' ? (
-                                        <Badge className={`text-xs ${MODERATION_COLORS[user.moderation.status]}`}>
-                                          <span className="flex items-center gap-1">
-                                            {MODERATION_ICONS[user.moderation.status]}
-                                            {user.moderation.status}
-                                          </span>
-                                        </Badge>
-                                      ) : (
-                                        <Badge className={`text-xs ${MODERATION_COLORS.ACTIVE}`}>
-                                          <span className="flex items-center gap-1">
-                                            {MODERATION_ICONS.ACTIVE}
-                                            ACTIVE
-                                          </span>
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <div>
-                                    <label className="text-sm font-medium text-gray-500">Registado</label>
-                                    <p className="text-sm">{new Date(user.createdAt).toLocaleDateString('pt-PT')}</p>
-                                  </div>
-                                  <div>
-                                    <label className="text-sm font-medium text-gray-500">Contribuições</label>
-                                    <p className="text-sm">{user.totalSongs || 0} músicas publicadas</p>
-                                  </div>
-                                </div>
-
-                                {/* Informações de Moderação se existir */}
-                                {user.moderation && user.moderation.status !== 'ACTIVE' && (
-                                  <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                                    <h4 className="font-semibold text-red-800 mb-2">Moderação Ativa</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                                      <div>
-                                        <span className="text-red-600 font-medium">Tipo:</span>
-                                        <span className="ml-2">{user.moderation.type}</span>
-                                      </div>
-                                      {user.moderation.moderatedAt && (
-                                        <div>
-                                          <span className="text-red-600 font-medium">Data:</span>
-                                          <span className="ml-2">{new Date(user.moderation.moderatedAt).toLocaleDateString('pt-PT')}</span>
-                                        </div>
-                                      )}
-                                      {user.moderation.expiresAt && (
-                                        <div>
-                                          <span className="text-red-600 font-medium">Expira:</span>
-                                          <span className="ml-2">{new Date(user.moderation.expiresAt).toLocaleDateString('pt-PT')}</span>
-                                        </div>
-                                      )}
-                                      {user.moderation.moderatedBy && (
-                                        <div>
-                                          <span className="text-red-600 font-medium">Por:</span>
-                                          <span className="ml-2">{user.moderation.moderatedBy.name}</span>
-                                        </div>
-                                      )}
-                                    </div>
-                                    {user.moderation.reason && (
-                                      <div className="mt-2">
-                                        <span className="text-red-600 font-medium">Motivo:</span>
-                                        <p className="mt-1 p-2 bg-red-100 rounded text-red-800">{user.moderation.reason}</p>
-                                      </div>
-                                    )}
-                                    {user.moderation.moderatorNote && (
-                                      <div className="mt-2">
-                                        <span className="text-red-600 font-medium">Nota do Admin:</span>
-                                        <p className="mt-1 p-2 bg-blue-100 rounded text-blue-800 font-mono text-xs">{user.moderation.moderatorNote}</p>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                                
-                                <div className="flex gap-2 pt-4 border-t">
-                                  <Button asChild variant="outline" size="sm">
-                                    <Link href={`/users/${user.id}`} target="_blank">
-                                      <ExternalLink className="h-4 w-4 mr-2" />
-                                      Ver Perfil Público
-                                    </Link>
-                                  </Button>
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    onClick={() => handleSendEmail(user.email, user.name)}
-                                  >
-                                    <Mail className="h-4 w-4 mr-2" />
-                                    Enviar Email
-                                  </Button>
-                                  <Button 
-                                    variant="destructive"
-                                    size="sm"
-                                    onClick={() => handleDeleteUser(user.id, user.name)}
-                                    disabled={deletingUser === user.id}
-                                  >
-                                    {deletingUser === user.id ? (
-                                      <Spinner variant="circle" size={16} className="text-black mr-2" />
-                                    ) : (
-                                      <Ban className="h-4 w-4 mr-2" />
-                                    )}
-                                    Eliminar
-                                  </Button>
-                                </div>
-                              </div>
-                            </DialogContent>
-                          </Dialog>
-
-                          <Button 
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleSendEmail(user.email, user.name)}
-                            className="flex-1 lg:flex-none"
-                          >
-                            <Mail className="h-4 w-4 lg:mr-0" />
-                            <span className="lg:hidden ml-1">Email</span>
-                          </Button>
-
-                          <Button 
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDeleteUser(user.id, user.name)}
-                            disabled={deletingUser === user.id}
-                            className="flex-1 lg:flex-none"
-                          >
-                            {deletingUser === user.id ? (
-                              <Spinner variant="circle" size={16} className="text-black" />
-                            ) : (
-                              <>
-                                <Ban className="h-4 w-4 lg:mr-0" />
-                                <span className="lg:hidden ml-1">Eliminar</span>
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      </>
-                    )}
-                    
-                    {changingRole === user.id && (
-                      <Spinner variant="circle" size={16} className="text-black" />
-                    )}
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleSendEmail(user.email, user.name)}
+                      className="flex-1 sm:flex-none"
+                    >
+                      <Mail className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Email</span>
+                    </Button>
                     
                     {user.id === session?.user.id?.toString() && (
                       <Badge variant="outline" className="text-xs">
@@ -1011,7 +674,7 @@ export default function UsersManagement() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-6 pt-4 border-t">
+            <div className="flex flex-col sm:flex-row items-center justify-between mt-6 pt-4 border-t gap-4">
               <div className="text-sm text-gray-600">
                 Página {currentPage} de {totalPages} ({totalCount} utilizadores)
               </div>
@@ -1024,24 +687,35 @@ export default function UsersManagement() {
                   disabled={currentPage === 1}
                 >
                   <ChevronLeft className="h-4 w-4" />
-                  Anterior
+                  <span className="hidden sm:inline ml-1">Anterior</span>
                 </Button>
                 
                 <div className="flex items-center gap-1">
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    const page = i + 1;
-                    return (
-                      <Button
-                        key={page}
-                        variant={currentPage === page ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setCurrentPage(page)}
-                        className="w-8 h-8"
-                      >
-                        {page}
-                      </Button>
-                    );
-                  })}
+                  {(() => {
+                    const pages = [];
+                    const maxVisible = 5;
+                    let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+                    let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+                    
+                    if (endPage - startPage < maxVisible - 1) {
+                      startPage = Math.max(1, endPage - maxVisible + 1);
+                    }
+                    
+                    for (let i = startPage; i <= endPage; i++) {
+                      pages.push(
+                        <Button
+                          key={i}
+                          variant={currentPage === i ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCurrentPage(i)}
+                          className="w-8 h-8"
+                        >
+                          {i}
+                        </Button>
+                      );
+                    }
+                    return pages;
+                  })()}
                 </div>
                 
                 <Button
@@ -1050,7 +724,7 @@ export default function UsersManagement() {
                   onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage === totalPages}
                 >
-                  Próxima
+                  <span className="hidden sm:inline mr-1">Próxima</span>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>

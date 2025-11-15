@@ -19,7 +19,9 @@ interface DashboardStats {
   pendingSubmissions: number;
   totalSubmissions: number;
   usersByRole: { role: string; count: number }[];
+  newUsersByRole?: { role: string; count: number }[];
   songsByType: { type: string; count: number }[];
+  songsByMoment?: { moment: string; count: number }[];
   submissionsByMonth: { month: string; count: number }[];
   recentActivities: {
     id: string;
@@ -329,54 +331,36 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        {/* Users by Role */}
+        {/* New Users by Role (last 30 days) */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Utilizadores por Role</CardTitle>
-            <CardDescription>Distribuição de papéis dos utilizadores</CardDescription>
+            <CardTitle className="text-lg">Novos Utilizadores por Role (30 dias)</CardTitle>
+            <CardDescription>Contagem de registos novos por papel nos últimos 30 dias</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={stats?.usersByRole || []}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={(props: any) => {
-                    const { role, percent } = props || {};
-                    const roleLabel = role || '';
-                    // percent can be number or string or undefined depending on typings; coerce safely
-                    const p = Number(percent) || 0;
-                    const pctWhole = Math.round(p * 100);
-                    return `${roleLabel} ${pctWhole}%`;
-                  }}
-                  outerRadius={70}
-                  fill="#8884d8"
-                  dataKey="count"
-                  fontSize={12}
-                >
-                  {(stats?.usersByRole || []).map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
+              <BarChart data={stats?.newUsersByRole || []}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="role" fontSize={12} />
+                <YAxis fontSize={12} />
                 <Tooltip />
-              </PieChart>
+                <Bar dataKey="count" fill="#8884d8" />
+              </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        {/* Songs by Type */}
+        {/* Songs by Liturgical Moment */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Músicas por Tipo</CardTitle>
-            <CardDescription>Distribuição das músicas por categoria litúrgica</CardDescription>
+            <CardTitle className="text-lg">Músicas por Momento Litúrgico</CardTitle>
+            <CardDescription>Distribuição das músicas por momento litúrgico</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={stats?.songsByType || []}>
+              <BarChart data={stats?.songsByMoment || []}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="type" fontSize={12} />
+                <XAxis dataKey="moment" fontSize={12} />
                 <YAxis fontSize={12} />
                 <Tooltip />
                 <Bar dataKey="count" fill="#82ca9d" />
