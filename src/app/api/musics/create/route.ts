@@ -140,6 +140,7 @@ export const POST = withUserProtection<any>(async (req: NextRequest, session: an
       "Pai Nosso": "PAI_NOSSO",
       "Reflexão": "REFLEXAO",
       "Terço Mistério": "TERCO_MISTERIO",
+      "Outros": "OUTROS",
     };
 
     let moments: LiturgicalMoment[] = [];

@@ -64,6 +64,7 @@ const allMoments = [
   'PAI_NOSSO',
   'REFLEXAO',
   'TERCO_MISTERIO',
+  'OUTROS',
 ];
 
 type Song = {

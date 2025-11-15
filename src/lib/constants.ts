@@ -21,6 +21,7 @@ export enum LiturgicalMoment {
     PAI_NOSSO = "PAI_NOSSO",
     REFLEXAO = "REFLEXAO",
     TERCO_MISTERIO = "TERCO_MISTERIO",
+    OUTROS = "OUTROS",
   }
   
   // Display labels for liturgical moments
@@ -46,6 +47,7 @@ export enum LiturgicalMoment {
     [LiturgicalMoment.PAI_NOSSO]: "Pai Nosso",
     [LiturgicalMoment.REFLEXAO]: "Reflexão",
     [LiturgicalMoment.TERCO_MISTERIO]: "Terço Mistério",
+    [LiturgicalMoment.OUTROS]: "Outros",
   };
   
   // Helper function to get moment label
