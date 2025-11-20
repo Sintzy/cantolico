@@ -1,12 +1,11 @@
 /**
  * Sistema de Logging Centralizado
  * 
- * Logger principal usando Winston + Winston-Loki
- * Todos os logs são enviados para Loki e opcionalmente para console em desenvolvimento
+ * Logger principal com envio direto para Loki via HTTP
+ * Otimizado para ambientes serverless (Vercel)
  */
 
 import winston from 'winston';
-import LokiTransport from 'winston-loki';
 import {
   LogEvent,
   LogLevel,
@@ -194,44 +193,90 @@ const consoleFormat = winston.format.printf((info: any) => {
 });
 
 /**
+ * Enviar log diretamente para o Loki via HTTP POST
+ * Função assíncrona que funciona em ambientes serverless
+ */
+async function sendToLoki(event: LogEvent, labels: Record<string, string>): Promise<void> {
+  if (!LOKI_URL || LOKI_URL === 'http://localhost:3100') {
+    if (ENVIRONMENT === 'development') {
+      console.log('⚠️ Loki URL not configured, skipping log send');
+    }
+    return;
+  }
+
+  try {
+    const formattedLog = formatLogEventForLoki(event);
+    
+    const payload = {
+      streams: [
+        {
+          stream: labels,
+          values: [
+            [
+              String(Date.now() * 1000000), // Timestamp em nanosegundos
+              JSON.stringify(formattedLog),
+            ],
+          ],
+        },
+      ],
+    };
+
+    const url = `${LOKI_URL}/loki/api/v1/push`;
+    
+    if (ENVIRONMENT === 'development') {
+      console.log('📤 Sending to Loki:', {
+        url,
+        labels,
+        message: event.message,
+        level: event.level,
+      });
+    }
+    
+    // Usar fetch nativo (disponível no Next.js)
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Loki rejected log:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText,
+        url,
+      });
+    } else if (ENVIRONMENT === 'development') {
+      console.log('✅ Log sent to Loki successfully');
+    }
+  } catch (error: any) {
+    console.error('❌ Error sending to Loki:', {
+      message: error.message,
+      url: LOKI_URL,
+      error,
+    });
+  }
+}
+
+/**
  * Criar transports do Winston
  */
 function createTransports(): winston.transport[] {
   const transports: winston.transport[] = [];
 
-  // Transport para Loki (sempre ativo)
-  try {
-    const lokiTransport = new LokiTransport({
-      host: LOKI_URL,
-      labels: DEFAULT_LABELS,
-      json: true,
-      format: winston.format.json(),
-      replaceTimestamp: true,
-      onConnectionError: (err: any) => {
-        console.error('❌ Loki connection error:', err.message);
-      },
-      // Função para extrair labels dinâmicos de cada log
-      handleExceptions: false,
-      handleRejections: false,
-    });
-
-    transports.push(lokiTransport);
-  } catch (error) {
-    console.error('❌ Failed to initialize Loki transport:', error);
-  }
-
-  // Transport para console (apenas em desenvolvimento)
-  if (ENABLE_CONSOLE) {
-    transports.push(
-      new winston.transports.Console({
-        format: winston.format.combine(
-          winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-          winston.format.colorize({ colors: CUSTOM_COLORS }),
-          consoleFormat
-        ),
-      })
-    );
-  }
+  // Transport para console (sempre ativo para debug)
+  transports.push(
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+        winston.format.colorize({ colors: CUSTOM_COLORS }),
+        consoleFormat
+      ),
+    })
+  );
 
   return transports;
 }
@@ -276,12 +321,20 @@ class CentralizedLogger implements ILogger {
     const formattedEvent = formatLogEventForLoki(enrichedEvent);
     const labels = extractLokiLabels(enrichedEvent);
 
-    // Adicionar labels aos metadados para o Loki transport conseguir acessá-los
+    // Log para console via Winston
     winstonLogger.log({
       level: event.level,
       message: event.message,
-      labels, // Winston-Loki irá usar isto
+      labels,
       ...formattedEvent,
+    });
+
+    // Enviar para Loki de forma assíncrona (fire-and-forget)
+    sendToLoki(enrichedEvent, labels).catch((err) => {
+      // Ignorar erros de envio para não bloquear a aplicação
+      if (ENVIRONMENT === 'development') {
+        console.error('Failed to send log to Loki:', err);
+      }
     });
   }
 
