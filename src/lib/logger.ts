@@ -223,15 +223,6 @@ async function sendToLoki(event: LogEvent, labels: Record<string, string>): Prom
 
     const url = `${LOKI_URL}/loki/api/v1/push`;
     
-    if (ENVIRONMENT === 'development') {
-      console.log('📤 Sending to Loki:', {
-        url,
-        labels,
-        message: event.message,
-        level: event.level,
-      });
-    }
-    
     // Usar fetch nativo (disponível no Next.js)
     const response = await fetch(url, {
       method: 'POST',
@@ -243,21 +234,19 @@ async function sendToLoki(event: LogEvent, labels: Record<string, string>): Prom
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('❌ Loki rejected log:', {
+      console.error('Loki rejected log:', {
         status: response.status,
         statusText: response.statusText,
         body: errorText,
-        url,
       });
-    } else if (ENVIRONMENT === 'development') {
-      console.log('✅ Log sent to Loki successfully');
     }
   } catch (error: any) {
-    console.error('❌ Error sending to Loki:', {
-      message: error.message,
-      url: LOKI_URL,
-      error,
-    });
+    if (ENVIRONMENT === 'development') {
+      console.error('Error sending to Loki:', {
+        message: error.message,
+        url: LOKI_URL,
+      });
+    }
   }
 }
 
