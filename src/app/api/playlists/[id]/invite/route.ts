@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { sendEmail, createPlaylistInviteEmailTemplate } from '@/lib/email'
-import { logPlaylistAction, getUserInfoFromRequest } from '@/lib/user-action-logger';
 import crypto from 'crypto'
 
 export async function POST(
@@ -167,11 +166,7 @@ export async function POST(
         html: emailTemplate
       });
 
-      // Log the action
-      await logPlaylistAction('invite_to_playlist', getUserInfoFromRequest(request, session), true, {
-        playlistId,
-        inviteEmail
-      });
+      console.log('Playlist invitation sent successfully:', { playlistId, inviteEmail });
 
       return NextResponse.json({
         success: true,

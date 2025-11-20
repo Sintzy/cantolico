@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase-client";
-import { logQuickAction, getUserInfoFromRequest, USER_ACTIONS } from "@/lib/user-action-logger";
-import { logSystemEvent } from "@/lib/enhanced-logging";
 import { sendWelcomeEmail } from "@/lib/email";
 
 export async function GET(req: NextRequest) {
@@ -87,21 +85,7 @@ export async function GET(req: NextRequest) {
       .delete()
       .eq('token', token);
 
-    // Log successful email verification
-    await logQuickAction(
-      'VERIFY_EMAIL',
-      {
-        userId: user.id,
-        userEmail: user.email,
-        ipAddress: ip,
-        userAgent: userAgent
-      },
-      true,
-      {
-        verifiedAt: new Date().toISOString(),
-        name: user.name
-      }
-    );
+    console.log(`✅ [EMAIL VERIFY] Email verified for user: ${user.email} (ID: ${user.id})`);
 
     // Enviar email de boas-vindas após verificação apenas se ainda não tinha sido enviado
     // pelo adapter (por exemplo contas OAuth já verificadas). Se o adapter marcou o

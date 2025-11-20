@@ -1,6 +1,5 @@
 import { Adapter, AdapterAccount, AdapterSession, AdapterUser, VerificationToken } from "next-auth/adapters";
 import { supabase } from "@/lib/supabase-client";
-import { logQuickAction, logProfileAction, getUserInfoFromRequest } from '@/lib/user-action-logger';
 
 export function SupabaseAdapter(): Adapter {
   return {
@@ -31,17 +30,6 @@ export function SupabaseAdapter(): Adapter {
         }
         
         console.log(`✅ [ADAPTER] User created successfully: ID ${data.id}`);
-
-        // Log the user creation event
-        try {
-          await logQuickAction('REGISTER_EMAIL', { userId: (data as any).id.toString(), userEmail: (data as any).email }, true, {
-            name: (data as any).name,
-            createdAt: new Date().toISOString(),
-            source: 'supabase-adapter'
-          });
-        } catch (logErr) {
-          console.warn('Failed to log user creation:', logErr);
-        }
 
         // Enviar email de boas-vindas apenas se o provedor já marcou o email como verificado
         // (por exemplo OAuth). Isto evita enviar o email de boas-vindas duas vezes —
@@ -145,15 +133,7 @@ export function SupabaseAdapter(): Adapter {
 
       if (error) throw error;
 
-      // Log profile update
-      try {
-        await logProfileAction('update_profile', { userId: user.id?.toString(), userEmail: user.email }, true, {
-          updatedFields: Object.keys(user),
-          source: 'supabase-adapter'
-        });
-      } catch (logErr) {
-        console.warn('Failed to log profile update:', logErr);
-      }
+      console.log(`🔄 [ADAPTER] User profile updated: ${user.email}`);
 
       return {
         id: (data as any).id.toString(),
@@ -165,21 +145,12 @@ export function SupabaseAdapter(): Adapter {
     },
 
     async deleteUser(userId: string): Promise<void> {
-      // Retrieve user email for logging
       try {
         const { data: existing } = await (supabase as any).from('User').select('email,name').eq('id', parseInt(userId)).single();
         await (supabase as any).from('User').delete().eq('id', parseInt(userId));
-
-        try {
-          await logQuickAction('DELETE_ACCOUNT', { userId, userEmail: existing?.email }, true, {
-            name: existing?.name,
-            source: 'supabase-adapter'
-          });
-        } catch (logErr) {
-          console.warn('Failed to log user deletion:', logErr);
-        }
+        console.log(`🗑️ [ADAPTER] User deleted: ${existing?.email || userId}`);
       } catch (err) {
-        // Attempt delete even if logging fails to fetch user
+        console.error('❌ [ADAPTER] Error deleting user:', err);
         await (supabase as any).from('User').delete().eq('id', parseInt(userId));
       }
     },

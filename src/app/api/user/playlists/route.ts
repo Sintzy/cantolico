@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { supabase } from '@/lib/supabase-client'
 import { withAuthApiProtection } from '@/lib/api-middleware'
-import { logPlaylistAction, getUserInfoFromRequest } from '@/lib/user-action-logger';
 
 export const GET = withAuthApiProtection(async (request: NextRequest) => {
   try {
@@ -173,14 +172,8 @@ export const GET = withAuthApiProtection(async (request: NextRequest) => {
 
     console.log('Returning playlists:', playlistsWithCount.length);
 
-    // Log user action: viewed playlists
-    try {
-      await logPlaylistAction('view_playlists', getUserInfoFromRequest(request, session), true, {
-        count: playlistsWithCount.length
-      });
-    } catch (e) {
-      console.warn('Failed to log view_playlists action:', e);
-    }
+    // Remoção de log desnecessário
+
     return NextResponse.json(playlistsWithCount)
   } catch (error) {
     console.error('Erro ao buscar playlists do usuário:', error)

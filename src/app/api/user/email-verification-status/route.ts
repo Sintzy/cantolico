@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { supabase } from '@/lib/supabase-client';
-import { logVerificationAction, getUserInfoFromRequest } from '@/lib/user-action-logger';
 
 export async function GET(req: NextRequest) {
   try {
@@ -29,13 +28,7 @@ export async function GET(req: NextRequest) {
       }, { status: 404 });
     }
 
-    // Log access to email verification status
-    try {
-      const userInfo = getUserInfoFromRequest(req, session);
-      await logVerificationAction('email_verification_status_view', userInfo, true, {});
-    } catch (e) {
-      console.warn('Failed to log email verification status view:', e);
-    }
+    // Remoção de log de acesso desnecessário
 
     return NextResponse.json({ 
       success: true, 

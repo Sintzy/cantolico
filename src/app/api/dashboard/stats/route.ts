@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
-import { logSystemEvent } from '@/lib/enhanced-logging';
 
 export async function GET(req: NextRequest) {
   try {
@@ -179,12 +178,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    await logSystemEvent('dashboard_stats_access', `${user.role} consultou estatísticas do dashboard`, {
-      userId: session.user.id,
-      userRole: user.role,
-      statsReturned: Object.keys(stats),
-      alertsCount: stats.alerts.unacknowledged
-    });
+    console.log(`✅ Dashboard stats accessed by ${user.role}: ${stats.alerts.unacknowledged} alerts`);
 
     return NextResponse.json(stats);
 

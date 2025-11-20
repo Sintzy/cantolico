@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { adminSupabase as supabaseAdmin } from '@/lib/supabase-admin';
 import crypto from 'crypto';
 import { sendPasswordResetEmail } from '@/lib/email';
-import { logAdminAction } from '@/lib/user-action-logger';
+import { logForbiddenAccess } from '@/lib/logging-helpers';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -29,16 +29,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       // User has OAuth account(s) - no password to reset
       console.log(`🚫 Admin attempted password reset for OAuth user: ${user.email} (providers: ${accounts.map(a => a.provider).join(', ')})`);
       
-      try { 
-        await logAdminAction('admin_password_reset_blocked_oauth', { 
+      logForbiddenAccess({
+        event_type: 'forbidden_access',
+        resource: `/api/admin/users/${userId}/send-reset`,
+        user: { user_id: session.user.id, user_email: session.user.email || undefined, user_role: session.user.role },
+  network: { ip_address: req.headers.get('x-forwarded-for') || 'unknown', user_agent: req.headers.get('user-agent') || undefined },
+        details: {
           targetUserId: user.id,
           targetEmail: user.email,
           providers: accounts.map(a => a.provider),
           reason: 'OAuth users do not have passwords'
-        }, false); 
-      } catch (e) { 
-        console.warn('Failed to log OAuth password reset attempt', e); 
-      }
+        }
+      });
       
       return NextResponse.json({ 
         error: 'Este utilizador tem login via OAuth (Google) e não possui senha para redefinir.' 
@@ -52,7 +54,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     await sendPasswordResetEmail(user.name || user.email, resetToken, '24 horas');
 
-    try { await logAdminAction('admin_sent_password_reset', { targetUserId: user.id }, true); } catch (e) { console.warn('failed to log admin send reset', e); }
+    // Sucesso - remoção de log redundante
+    console.log(`✅ Admin ${session.user.email} sent password reset to ${user.email}`);
 
     return NextResponse.json({ success: true });
   } catch (error) {

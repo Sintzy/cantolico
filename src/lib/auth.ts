@@ -4,12 +4,17 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { supabase } from "@/lib/supabase-client";
 import bcrypt from "bcryptjs";
-import { logAuthAction, logQuickAction, USER_ACTIONS, getUserInfoFromRequest } from "@/lib/user-action-logger";
-import { createSecurityLog, createSecurityAlert } from "@/lib/logging-middleware";
 import { trackLoginAttempt, isIPBlocked, getFailedAttemptsCount } from "@/lib/login-monitor";
 import { sendWelcomeEmail, sendLoginAlert } from "@/lib/email";
 import { getClientIP } from "@/lib/utils";
-import { logGeneral, logErrors } from "@/lib/logs";
+import {
+  logLoginSuccess,
+  logLoginFailure,
+  logLoginBlocked,
+  logUserRegistered,
+} from "@/lib/logging-helpers";
+import { logger } from "@/lib/logger";
+import { LogCategory } from "@/types/logging";
 
 // Função para obter localização do IP
 async function getLocationFromIP(ip: string): Promise<string> {
@@ -68,7 +73,18 @@ async function getLocationFromIP(ip: string): Promise<string> {
       clearTimeout(timeoutId);
       
       if (!response.ok) {
-        console.warn(`⚠️ [GEOLOCATION] ${service.name} retornou status ${response.status}`);
+        logger.warn(`Geolocation service ${service.name} returned error status`, {
+          category: LogCategory.SYSTEM,
+          network: {
+            ip_address: ip,
+            user_agent: 'Cantolico-App/1.0',
+          },
+          details: {
+            service: service.name,
+            status: response.status,
+            endpoint: service.url,
+          },
+        });
         continue;
       }
       
@@ -79,7 +95,20 @@ async function getLocationFromIP(ip: string): Promise<string> {
         return location;
       }
     } catch (error) {
-      console.error(`❌ [GEOLOCATION] Erro no ${service.name}:`, error);
+      logger.error(`Geolocation service ${service.name} failed`, {
+        category: LogCategory.SYSTEM,
+        error: {
+          error_message: error instanceof Error ? error.message : 'Unknown error',
+          error_type: error instanceof Error ? error.constructor.name : 'Unknown',
+        },
+        network: {
+          ip_address: ip,
+        },
+        details: {
+          service: service.name,
+          endpoint: service.url,
+        },
+      });
       continue;
     }
   }
@@ -89,7 +118,12 @@ async function getLocationFromIP(ip: string): Promise<string> {
     return 'Rede Local/Privada';
   }
 
-  console.warn(`⚠️ [GEOLOCATION] Todos os serviços falharam para IP: ${ip}`);
+  logger.warn('All geolocation services failed', {
+    category: LogCategory.SYSTEM,
+    network: {
+      ip_address: ip,
+    },
+  });
   return 'Localização Indisponível';
 }
 
@@ -146,11 +180,12 @@ export const authOptions: AuthOptions = {
             userAgent: userAgent as string
           });
           
-          await logGeneral('WARN', 'Tentativa de login com credenciais incompletas', 'Email ou password em falta para login email/password', {
-            action: 'login_incomplete_credentials',
-            loginMethod: 'email_password',
-            ipAddress: ip,
-            userAgent: userAgent
+          logLoginFailure({
+            user: { user_email: credentials?.email || 'unknown' },
+            network: { ip_address: ip, user_agent: userAgent },
+            provider: 'credentials',
+            success: false,
+            failure_reason: 'Incomplete credentials',
           });
           return null;
         }
@@ -159,11 +194,13 @@ export const authOptions: AuthOptions = {
         if (await isIPBlocked(ip as string)) {
 
           
-          await createSecurityAlert('BLOCKED_IP_ATTEMPT', 'Tentativa de login de IP bloqueado', {
-            email: credentials.email,
-            ip,
-            userAgent
-          }, 4);
+          logLoginBlocked({
+            user: { user_email: credentials.email },
+            network: { ip_address: ip, user_agent: userAgent },
+            provider: 'credentials',
+            success: false,
+            failure_reason: 'IP blocked due to multiple failed attempts',
+          });
           
           return null;
         }
@@ -198,10 +235,12 @@ export const authOptions: AuthOptions = {
               userAgent: userAgent as string
             });
             
-            await logGeneral('WARN', 'Tentativa de login com email não registado', 'Email não existe na base de dados', {
-              email: credentials.email,
-              action: 'login_email_not_found',
-              ip
+            logLoginFailure({
+              user: { user_email: credentials.email },
+              network: { ip_address: ip, user_agent: userAgent },
+              provider: 'credentials',
+              success: false,
+              failure_reason: 'Email not found in database',
             });
             return null;
           }
@@ -227,12 +266,16 @@ export const authOptions: AuthOptions = {
                 .eq('userId', user.id);
             } else {
 
-              await logGeneral('WARN', 'Tentativa de login de utilizador moderado', `Utilizador ${userModeration.status.toLowerCase()} a tentar login`, {
-                userId: user.id,
-                email: credentials.email,
-                moderationStatus: userModeration.status,
-                moderationReason: userModeration.reason,
-                action: 'login_moderated_user'
+              logLoginBlocked({
+                user: { 
+                  user_id: user.id,
+                  user_email: credentials.email,
+                  user_role: user.role,
+                },
+                network: { ip_address: ip, user_agent: userAgent },
+                provider: 'credentials',
+                success: false,
+                failure_reason: `User ${userModeration.status.toLowerCase()}: ${userModeration.reason || 'Not specified'}`,
               });
               throw new Error(`Conta ${userModeration.status === 'BANNED' ? 'banida' : 'suspensa'}. Motivo: ${userModeration.reason || 'Não especificado'}. Consulte o seu email para mais informações.`);
             }
@@ -241,10 +284,12 @@ export const authOptions: AuthOptions = {
 
           
           if (!user.passwordHash) {
-            await logGeneral('WARN', 'Tentativa de login com credenciais em conta OAuth', 'Utilizador sem password hash', {
-              userId: user.id,
-              email: credentials.email,
-              action: 'login_oauth_account_with_credentials'
+            logLoginFailure({
+              user: { user_id: user.id, user_email: credentials.email },
+              network: { ip_address: ip, user_agent: userAgent },
+              provider: 'credentials',
+              success: false,
+              failure_reason: 'OAuth account attempted credentials login (no password hash)',
             });
             return null;
           }
@@ -261,11 +306,12 @@ export const authOptions: AuthOptions = {
               userAgent: userAgent as string
             });
             
-            await logGeneral('WARN', 'Tentativa de login com password incorreta', 'Password não confere', {
-              userId: user.id,
-              email: credentials.email,
-              action: 'login_wrong_password',
-              ip
+            logLoginFailure({
+              user: { user_id: user.id, user_email: credentials.email },
+              network: { ip_address: ip, user_agent: userAgent },
+              provider: 'credentials',
+              success: false,
+              failure_reason: 'Incorrect password',
             });
             return null;
           }
@@ -280,39 +326,30 @@ export const authOptions: AuthOptions = {
           });
 
           if(user.role === "ADMIN" || user.role === "REVIEWER") {
-            await logGeneral('INFO', 'Tentativa de login com role privilegiada', 'Utilizador com role ADMIN ou REVIEWER a tentar login', {
-              userId: user.id,
-              email: user.email,
-              action: 'login_privileged_role'
-            });
-
-            // Log apenas para auditoria interna (sem emails)
-            await logGeneral('INFO', 'Login de utilizador privilegiado', 'Utilizador com role ADMIN ou REVIEWER fez login', {
-              userId: user.id,
-              email: user.email,
-              role: user.role,
-              provider: 'credentials',
-              ip: ip || 'unknown',
-              userAgent: userAgent || 'unknown'
+            logger.info('Privileged user login', {
+              category: LogCategory.USER,
+              user: {
+                user_id: user.id,
+                user_email: user.email,
+                user_role: user.role,
+              },
+              network: { ip_address: ip, user_agent: userAgent },
+              tags: ['privileged', 'admin', 'reviewer'],
             });
           }
 
           // Log successful credentials login
-          await logQuickAction(
-            'LOGIN_MANUAL',
-            {
-              userId: user.id,
-              userEmail: user.email,
-              ipAddress: ip as string,
-              userAgent: userAgent as string
+          logLoginSuccess({
+            user: {
+              user_id: user.id,
+              user_email: user.email,
+              user_name: user.name || undefined,
+              user_role: user.role,
             },
-            true,
-            {
-              loginMethod: 'email_password',
-              role: user.role,
-              name: user.name
-            }
-          );
+            network: { ip_address: ip, user_agent: userAgent },
+            provider: 'credentials',
+            success: true,
+          });
 
           // Enviar email de alerta de login
           try {
@@ -326,7 +363,14 @@ export const authOptions: AuthOptions = {
               user.role === 'ADMIN' || user.role === 'REVIEWER'
             );
           } catch (emailError) {
-            console.error('❌ Erro ao enviar email de alerta de login:', emailError);
+            logger.error('Failed to send login alert email', {
+              category: LogCategory.EMAIL,
+              user: { user_email: user.email },
+              error: {
+                error_message: emailError instanceof Error ? emailError.message : 'Unknown error',
+                error_type: emailError instanceof Error ? emailError.constructor.name : 'Unknown',
+              },
+            });
             // Não falhar o login se o email falhar
           }
 
@@ -341,11 +385,15 @@ export const authOptions: AuthOptions = {
 
           return userResult;
         } catch (error) {
-          console.error('❌ [AUTH] Erro durante processo de login:', error);
-          await logErrors('ERROR', 'Erro durante processo de login', 'Erro interno na autenticação', {
-            email: credentials.email,
-            error: error instanceof Error ? error.message : 'Erro desconhecido',
-            action: 'login_error'
+          logger.error('Error during login process', {
+            category: LogCategory.USER,
+            user: { user_email: credentials.email },
+            network: { ip_address: ip, user_agent: userAgent },
+            error: {
+              error_message: error instanceof Error ? error.message : 'Unknown error',
+              error_type: error instanceof Error ? error.constructor.name : 'Unknown',
+              stack_trace: error instanceof Error ? error.stack : undefined,
+            },
           });
           return null;
         }
@@ -386,12 +434,17 @@ export const authOptions: AuthOptions = {
             (session.user as any).role = (user as any).role;
             (session.user as any).emailVerified = (user as any).emailVerified !== null;
           }
-        } else {
         }
         
         return session;
       } catch (error) {
-        console.error('❌ [SESSION] Erro no callback de sessão:', error);
+        logger.error('Error in session callback', {
+          category: LogCategory.USER,
+          error: {
+            error_message: error instanceof Error ? error.message : 'Unknown error',
+            error_type: error instanceof Error ? error.constructor.name : 'Unknown',
+          },
+        });
         return session;
       }
     },
@@ -417,7 +470,14 @@ export const authOptions: AuthOptions = {
             token.picture = currentUser.image || token.picture;
           }
         } catch (error) {
-          console.error('❌ [JWT] Erro ao atualizar token:', error);
+          logger.error('Error updating JWT token', {
+            category: LogCategory.USER,
+            user: { user_id: token.sub },
+            error: {
+              error_message: error instanceof Error ? error.message : 'Unknown error',
+              error_type: error instanceof Error ? error.constructor.name : 'Unknown',
+            },
+          });
           // Manter token existente em caso de erro
         }
       }
@@ -434,11 +494,10 @@ export const authOptions: AuthOptions = {
         try {
           // Validar dados básicos do Google
           if (!user.email) {
-            await logErrors('ERROR', 'OAuth Google sem email', 
-              'Google OAuth retornou utilizador sem email', {
-              userId: user.id,
-              name: user.name,
-              action: 'oauth_no_email_error'
+            logger.error('Google OAuth returned user without email', {
+              category: LogCategory.USER,
+              user: { user_name: user.name || undefined },
+              tags: ['oauth', 'google', 'validation-error'],
             });
             return false;
           }
@@ -452,11 +511,13 @@ export const authOptions: AuthOptions = {
 
           // Se houve erro na busca (diferente de "não encontrado")
           if (fetchError && fetchError.code !== 'PGRST116') {
-            await logErrors('ERROR', 'Erro ao buscar utilizador OAuth', 
-              'Erro na base de dados durante OAuth', {
-              email: user.email,
-              error: fetchError.message,
-              action: 'oauth_db_fetch_error'
+            logger.error('Database error during OAuth user fetch', {
+              category: LogCategory.DATABASE,
+              user: { user_email: user.email },
+              error: {
+                error_message: fetchError.message,
+                error_code: fetchError.code,
+              },
             });
             return false;
           }
@@ -484,13 +545,16 @@ export const authOptions: AuthOptions = {
                   .eq('userId', existingUser.id);
               } else {
                 // User is still banned/suspended
-                await logGeneral('WARN', 'Tentativa de login OAuth de utilizador moderado', 
-                  `Utilizador ${userModeration.status.toLowerCase()} a tentar login via Google`, {
-                  userId: existingUser.id,
-                  email: user.email,
-                  moderationStatus: userModeration.status,
-                  moderationReason: userModeration.reason,
-                  action: 'oauth_login_moderated_user'
+                logLoginBlocked({
+                  user: {
+                    user_id: existingUser.id,
+                    user_email: user.email,
+                    user_role: existingUser.role,
+                  },
+                  network: { ip_address: 'unknown', user_agent: 'Google OAuth' },
+                  provider: 'google',
+                  success: false,
+                  failure_reason: `User ${userModeration.status.toLowerCase()}: ${userModeration.reason || 'Not specified'}`,
                 });
                 return false;
               }
@@ -508,26 +572,23 @@ export const authOptions: AuthOptions = {
               .update(updateData)
               .eq('id', existingUser.id);
 
-            console.log(`✅ [OAUTH] Email auto-verificado para ${user.email}`);
+            logger.info('Email auto-verified for OAuth user', {
+              category: LogCategory.USER,
+              user: { user_email: user.email },
+            });
 
             // Log successful OAuth login
-            await logQuickAction(
-              'LOGIN_MANUAL',
-              {
-                userId: existingUser.id,
-                userEmail: user.email,
-                ipAddress: 'unknown', // OAuth doesn't provide IP
-                userAgent: 'OAuth Provider'
+            logLoginSuccess({
+              user: {
+                user_id: existingUser.id,
+                user_email: user.email,
+                user_name: user.name || undefined,
+                user_role: existingUser.role,
               },
-              true,
-              {
-                loginMethod: 'oauth_google',
-                provider: 'google',
-                isExistingUser: true,
-                role: existingUser.role,
-                name: user.name
-              }
-            );
+              network: { ip_address: 'unknown', user_agent: 'Google OAuth' },
+              provider: 'google',
+              success: true,
+            });
 
             // Enviar email de alerta de login OAuth
             try {
@@ -541,51 +602,59 @@ export const authOptions: AuthOptions = {
                 existingUser.role === 'ADMIN' || existingUser.role === 'REVIEWER'
               );
             } catch (emailError) {
-              console.error('❌ Erro ao enviar email de alerta OAuth:', emailError);
+              logger.error('Failed to send OAuth login alert email', {
+                category: LogCategory.EMAIL,
+                user: { user_email: existingUser.email },
+                error: {
+                  error_message: emailError instanceof Error ? emailError.message : 'Unknown error',
+                },
+              });
               // Não falhar o login se o email falhar
             }
 
-            // Log apenas para auditoria interna para roles privilegiadas via OAuth (sem emails)
+            // Log apenas para auditoria interna para roles privilegiadas via OAuth
             if (existingUser.role === 'ADMIN' || existingUser.role === 'REVIEWER') {
-              await logGeneral('INFO', 'Login OAuth de utilizador privilegiado', 'Utilizador com role ADMIN ou REVIEWER fez login via OAuth', {
-                userId: existingUser.id,
-                email: user.email,
-                role: existingUser.role,
-                provider: 'google',
-                ip: '127.0.0.1', // IP padrão para OAuth (não disponível)
-                userAgent: 'Google OAuth Provider'
+              logger.info('Privileged user OAuth login', {
+                category: LogCategory.USER,
+                user: {
+                  user_id: existingUser.id,
+                  user_email: user.email,
+                  user_role: existingUser.role,
+                },
+                network: { ip_address: 'unknown', user_agent: 'Google OAuth' },
+                tags: ['privileged', 'oauth', 'google'],
               });
             }
           } else {
             // New user via Google OAuth - será criado pelo adapter automaticamente
-            console.log(`✅ [OAUTH] Novo utilizador será criado: ${user.email}`);
+            logger.info('New user will be created via OAuth', {
+              category: LogCategory.USER,
+              user: { user_email: user.email },
+              tags: ['oauth', 'google', 'new-user'],
+            });
             
             // Log new user registration via OAuth
-            await logQuickAction(
-              'REGISTER_OAUTH',
-              {
-                userEmail: user.email,
-                ipAddress: 'unknown',
-                userAgent: 'OAuth Provider'
+            logUserRegistered({
+              user: {
+                user_email: user.email,
+                user_name: user.name || undefined,
               },
-              true,
-              {
-                registrationMethod: 'oauth_google',
-                provider: 'google',
-                name: user.name
-              }
-            );
+              network: { ip_address: 'unknown', user_agent: 'Google OAuth' },
+              registration_method: 'oauth_google',
+            });
 
             // O email de boas-vindas será enviado pelo adapter após criação
           }
           
           return true;
         } catch (error) {
-          await logErrors('ERROR', 'Erro durante OAuth sign-in', 
-            'Erro interno durante autenticação Google', {
-            email: user.email,
-            error: error instanceof Error ? error.message : 'Erro desconhecido',
-            action: 'oauth_sign_in_error'
+          logger.error('Error during OAuth sign-in', {
+            category: LogCategory.USER,
+            user: { user_email: user.email || undefined },
+            error: {
+              error_message: error instanceof Error ? error.message : 'Unknown error',
+              error_type: error instanceof Error ? error.constructor.name : 'Unknown',
+            },
           });
           return false;
         }

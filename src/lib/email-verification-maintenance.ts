@@ -1,5 +1,4 @@
 import { supabase } from "@/lib/supabase-client";
-import { logGeneral, logErrors } from "@/lib/logs";
 
 /**
  * Tarefa de limpeza automática do sistema de verificação de email
@@ -28,11 +27,7 @@ export class EmailVerificationMaintenanceService {
 
       const deletedCount = Array.isArray(data) ? data.length : 0;
 
-      await logGeneral('INFO', 'Limpeza automática de tokens', 'Tokens expirados removidos', {
-        deletedTokens: deletedCount,
-        cleanupTime: new Date().toISOString(),
-        action: 'maintenance_cleanup'
-      });
+      console.log(`🧹 [MAINTENANCE] Cleaned up ${deletedCount} expired verification tokens`);
 
       return {
         success: true,
@@ -40,12 +35,8 @@ export class EmailVerificationMaintenanceService {
       };
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      
-      await logErrors('ERROR', 'Erro na limpeza de tokens', 'Falha ao remover tokens expirados', {
-        error: errorMessage,
-        action: 'maintenance_cleanup_failed'
-      });
+      console.error('❌ [MAINTENANCE] Error cleaning up tokens:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
 
       return {
         success: false,
@@ -139,12 +130,7 @@ export class EmailVerificationMaintenanceService {
         });
       }
 
-      await logGeneral('INFO', 'Verificação de consistência', 'Verificação de dados de email concluída', {
-        issuesFound: issues.length,
-        totalProblems: issues.reduce((sum, issue) => sum + issue.count, 0),
-        checkTime: new Date().toISOString(),
-        action: 'consistency_check'
-      });
+      console.log(`✅ [MAINTENANCE] Consistency check complete - found ${issues.length} types of issues`);
 
       return {
         success: true,
@@ -152,12 +138,8 @@ export class EmailVerificationMaintenanceService {
       };
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      
-      await logErrors('ERROR', 'Erro na verificação de consistência', 'Falha ao verificar dados', {
-        error: errorMessage,
-        action: 'consistency_check_failed'
-      });
+      console.error('❌ [MAINTENANCE] Error checking consistency:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
 
       return {
         success: false,
@@ -211,13 +193,7 @@ export class EmailVerificationMaintenanceService {
         totalRepaired += orphansRemoved;
       }
 
-      await logGeneral('INFO', 'Reparação automática', 'Problemas de consistência reparados', {
-        tokensRemoved: tokensRemoved || 0,
-        orphansRemoved: orphansRemoved || 0,
-        totalRepaired,
-        repairTime: new Date().toISOString(),
-        action: 'auto_repair'
-      });
+      console.log(`🔧 [MAINTENANCE] Auto-repair complete - repaired ${totalRepaired} issues`);
 
       return {
         success: true,
@@ -225,12 +201,8 @@ export class EmailVerificationMaintenanceService {
       };
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      
-      await logErrors('ERROR', 'Erro na reparação automática', 'Falha ao reparar problemas', {
-        error: errorMessage,
-        action: 'auto_repair_failed'
-      });
+      console.error('❌ [MAINTENANCE] Error during auto-repair:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
 
       return {
         success: false,
@@ -273,14 +245,7 @@ export class EmailVerificationMaintenanceService {
         repair: repairResult
       };
 
-      await logGeneral('INFO', 'Manutenção completa concluída', 'Sistema de verificação otimizado', {
-        tokensRemoved: cleanupResult.deletedCount,
-        issuesFound: consistencyResult.issues.length,
-        problemsRepaired: repairResult.repaired,
-        maintenanceTime: new Date().toISOString(),
-        action: 'full_maintenance'
-      });
-
+      console.log(`🎉 [MAINTENANCE] Full maintenance complete - ${cleanupResult.deletedCount} tokens removed, ${repairResult.repaired} issues repaired`);
       console.log('✅ Manutenção completa concluída com sucesso!');
 
       return {
@@ -289,14 +254,9 @@ export class EmailVerificationMaintenanceService {
       };
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      
-      await logErrors('ERROR', 'Erro na manutenção completa', 'Falha durante manutenção do sistema', {
-        error: errorMessage,
-        action: 'full_maintenance_failed'
-      });
-
-      console.error('❌ Erro na manutenção completa:', errorMessage);
+      console.error('❌ [MAINTENANCE] Error during full maintenance:', error);
+      console.error('❌ Erro na manutenção completa:', error instanceof Error ? error.message : 'Erro desconhecido');
+      const errorMessage = error instanceof Error ? error.message : String(error);
 
       return {
         success: false,

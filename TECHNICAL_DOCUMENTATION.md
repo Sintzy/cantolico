@@ -364,42 +364,40 @@ CREATE TABLE "Star" (
 
 #### **Sistema de Logs e Auditoria**
 ```sql
--- Enum para tipos de log
-CREATE TYPE "LogType" AS ENUM ('INFO', 'WARN', 'ERROR', 'SUCCESS', 'SECURITY');
-
--- Tabela de logs do sistema
-CREATE TABLE "Log" (
+-- Tabela unificada de logs do sistema
+-- Utiliza tags para categorização (ex: tags=['security'] para alertas de segurança)
+CREATE TABLE "logs" (
     "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid(),
-    "type" "LogType" NOT NULL,
-    "title" TEXT NOT NULL,
-    "description" TEXT,
-    "metadata" JSONB,
-    "userId" INTEGER,
-    "userEmail" TEXT,
-    "ipAddress" TEXT,
-    "userAgent" TEXT,
-    "acknowledged" BOOLEAN DEFAULT false NOT NULL,
-    "acknowledgedAt" TIMESTAMPTZ,
-    "acknowledgedBy" INTEGER,
-    "createdAt" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    CONSTRAINT "Log_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id"),
-    CONSTRAINT "Log_acknowledgedBy_fkey" FOREIGN KEY ("acknowledgedBy") REFERENCES "User"("id")
+    "level" TEXT NOT NULL, -- INFO, WARN, ERROR, SUCCESS, SECURITY
+    "category" TEXT, -- API, USER, ADMIN, SECURITY, PERFORMANCE, EMAIL
+    "message" TEXT NOT NULL,
+    "details" JSONB, -- Metadados estruturados
+    "user_id" INTEGER,
+    "user_email" TEXT,
+    "user_role" TEXT,
+    "ip_address" TEXT,
+    "user_agent" TEXT,
+    "url" TEXT,
+    "method" TEXT, -- GET, POST, PUT, DELETE
+    "status_code" INTEGER, -- HTTP status code
+    "response_time_ms" INTEGER, -- Tempo de resposta em ms
+    "status" TEXT, -- SUCCESS, FAILED
+    "tags" TEXT[], -- Array de tags para categorização (ex: ['security'], ['email'], ['admin'])
+    "correlation_id" TEXT, -- ID para correlacionar requests relacionados
+    "request_id" TEXT, -- ID único da request
+    "server_instance" TEXT, -- Instância do servidor (para load balancing)
+    "environment" TEXT, -- development, production
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT "logs_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("id")
 );
 
--- Tabela de alertas de segurança
-CREATE TABLE "SecurityAlert" (
-    "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid(),
-    "type" TEXT NOT NULL,
-    "severity" TEXT NOT NULL,
-    "title" TEXT NOT NULL,
-    "description" TEXT NOT NULL,
-    "metadata" JSONB NOT NULL,
-    "resolved" BOOLEAN DEFAULT false NOT NULL,
-    "resolvedAt" TIMESTAMPTZ,
-    "resolvedBy" INTEGER,
-    "createdAt" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    CONSTRAINT "SecurityAlert_resolvedBy_fkey" FOREIGN KEY ("resolvedBy") REFERENCES "User"("id")
-);
+-- Índices para performance
+CREATE INDEX "logs_level_idx" ON "logs"("level");
+CREATE INDEX "logs_category_idx" ON "logs"("category");
+CREATE INDEX "logs_user_id_idx" ON "logs"("user_id");
+CREATE INDEX "logs_created_at_idx" ON "logs"("created_at" DESC);
+CREATE INDEX "logs_tags_idx" ON "logs" USING GIN("tags"); -- Busca por tags (alertas de segurança)
+CREATE INDEX "logs_correlation_id_idx" ON "logs"("correlation_id");
 ```
 
 #### **Sistema de Banners**
@@ -445,6 +443,8 @@ CREATE INDEX "Log_createdAt_idx" ON "Log"("createdAt" DESC);
 CREATE INDEX "Song_search_idx" ON "Song" USING GIN(
     to_tsvector('portuguese', COALESCE("title", '') || ' ' || COALESCE("author", '') || ' ' || array_to_string("tags", ' '))
 );
+
+-- Nota: Não existe tabela separada "SecurityAlert" - alertas de segurança são logs com tags=['security']
 ```
 
 ### **Row Level Security (RLS)**
@@ -927,22 +927,57 @@ CREATE TYPE "SubmissionStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
 
 #### 📋 **Logs do Sistema** (`/logs`)
 - **Componente:** `src/app/logs/page.tsx`
-- **Funcionalidade:** Auditoria e monitorização
+- **API:** `GET /api/logs` com parâmetros de filtro
+- **Funcionalidade:** Auditoria e monitorização centralizada
 - **Características:**
-  - 📜 **Histórico completo** de ações
-  - 🔍 **Filtros avançados** por tipo e utilizador
-  - 🚨 **Alertas** por severidade
-  - 📊 **Análise** de padrões
-  - 📧 **Notificações** automáticas
+  - 📜 **Histórico completo** de todas as ações do sistema
+  - 🔍 **Filtros avançados:**
+    - Por `level` (INFO, WARN, ERROR, SUCCESS, SECURITY)
+    - Por `category` (API, USER, ADMIN, SECURITY, PERFORMANCE, EMAIL)
+    - Por `user_id` ou `user_email`
+    - Por `tags` (ex: filtrar apenas `tags=['security']` para alertas)
+    - Por intervalo de datas (`created_at`)
+  - 🚨 **Código de cores** por severidade/nível
+  - 📊 **Análise** de padrões e tendências
+  - 📧 **Tracking de emails** enviados (verificação, reset, notificações)
+  - 🔗 **Rastreamento** de requests correlacionadas via `correlation_id`
+  - 📈 **Métricas** de performance (response times, status codes)
+- **Estrutura de Log:**
+  ```typescript
+  {
+    id: string;
+    level: 'INFO' | 'WARN' | 'ERROR' | 'SUCCESS' | 'SECURITY';
+    category: 'API' | 'USER' | 'ADMIN' | 'SECURITY' | 'PERFORMANCE' | 'EMAIL';
+    message: string;
+    details: Record<string, any>; // JSONB com contexto adicional
+    user_id: number | null;
+    user_email: string | null;
+    ip_address: string | null;
+    tags: string[]; // Ex: ['security'], ['email', 'verification']
+    created_at: string;
+  }
+  ```
 
 #### 🔒 **Alertas de Segurança** (`/logs/security-alerts`)
 - **Componente:** `src/app/logs/security-alerts/page.tsx`
-- **Funcionalidade:** Monitorização de segurança
+- **API:** `GET /api/logs?tags=security` (filtra logs com `tags=['security']`)
+- **Funcionalidade:** Monitorização dedicada de segurança
+- **Nota:** Não existe tabela `SecurityAlert` separada - alertas são logs marcados com `tags: ['security']`
 - **Características:**
-  - 🚨 **Alertas** críticos de segurança
-  - 🔍 **Análise** de tentativas de ataque
-  - 📊 **Dashboard** de ameaças
-  - ✅ **Resolução** de incidentes
+  - 🚨 **Alertas críticos** de segurança filtrados automaticamente
+  - 🔍 **Tipos de alertas detectados:**
+    - Login de administrador
+    - Tentativas de acesso não autorizado
+    - Múltiplas falhas de login (brute force)
+    - Padrões suspeitos de comportamento
+    - Acessos a rotas protegidas
+    - SQL injection attempts
+    - XSS attempts
+    - Rate limiting violations
+  - 📊 **Dashboard** visual de ameaças
+  - 📧 **Notificações** por email para severidade >= 3
+  - 🎯 **Severidade** (1-5) baseada no tipo de alerta
+  - ⚡ **Detecção** em tempo real via `logging-middleware.ts`
 
 #### 📊 **Análise de Segurança** (`/logs/security-analysis`)
 - **Componente:** `src/app/logs/security-analysis/page.tsx`
@@ -1505,20 +1540,45 @@ CREATE TYPE "SubmissionStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
 ### **Sistema de Logs**
 
 #### `GET /api/logs`
-- **Funcionalidade:** Lista de logs do sistema
+- **Funcionalidade:** Lista de logs do sistema com filtros avançados
 - **Autenticação:** ADMIN
 - **Parâmetros de query:**
-  - `type` (string) - Filtro por tipo
+  - `level` (string) - Filtro por nível: INFO, WARN, ERROR, SUCCESS, SECURITY
+  - `category` (string) - Filtro por categoria: API, USER, ADMIN, SECURITY, PERFORMANCE, EMAIL
   - `userId` (number) - Filtro por utilizador
-  - `page` (number) - Página
-  - `limit` (number) - Limite
+  - `tags` (string) - Filtro por tags (ex: `tags=security` para alertas de segurança)
+  - `startDate` (string) - Data início (ISO 8601)
+  - `endDate` (string) - Data fim (ISO 8601)
+  - `page` (number) - Página (paginação)
+  - `limit` (number) - Limite de resultados por página
+- **Resposta:**
+  ```typescript
+  {
+    logs: Array<{
+      id: string;
+      level: string;
+      category: string;
+      message: string;
+      details: object;
+      user_id: number | null;
+      user_email: string | null;
+      ip_address: string | null;
+      tags: string[];
+      created_at: string;
+    }>;
+    total: number;
+    page: number;
+    limit: number;
+  }
+  ```
 
 #### `GET /api/logs/[id]`
-- **Funcionalidade:** Detalhes de log específico
+- **Funcionalidade:** Detalhes de log específico com contexto completo
 - **Autenticação:** ADMIN
+- **Resposta:** Log individual com todos os campos (request_id, correlation_id, response_time_ms, etc.)
 
 #### `POST /api/logs/analytics`
-- **Funcionalidade:** Registro de eventos de analytics
+- **Funcionalidade:** Registro manual de eventos de analytics (não utilizado atualmente - logging é automático)
 - **Corpo da requisição:**
 ```json
 {
@@ -1529,16 +1589,19 @@ CREATE TYPE "SubmissionStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
 ```
 
 #### `GET /api/logs/security-alerts`
-- **Funcionalidade:** Alertas de segurança
+- **Funcionalidade:** Atalho para `GET /api/logs?tags=security` - lista apenas alertas de segurança
 - **Autenticação:** ADMIN
+- **Nota:** Não existe endpoint separado - filtra logs com `tags=['security']`
 
 #### `PUT /api/logs/security-alerts/[id]/acknowledge`
-- **Funcionalidade:** Reconhecer alerta de segurança
+- **Funcionalidade:** Marcar alerta de segurança como reconhecido
 - **Autenticação:** ADMIN
+- **Nota:** Endpoint legado - atualmente não implementado (não há campo `acknowledged` na tabela `logs`)
 
 #### `GET /api/logs/security-analysis`
-- **Funcionalidade:** Análise comportamental de segurança
+- **Funcionalidade:** Análise comportamental de segurança e detecção de padrões
 - **Autenticação:** ADMIN
+- **Resposta:** Estatísticas e padrões detectados (análise de IPs, user-agents, tentativas de ataque)
 
 ### **Autenticação**
 
@@ -2013,14 +2076,39 @@ export async function middleware(request: NextRequest) {
   - 🎯 **Detecção** de formato automática
 
 ### **Sistema de Logs Avançado**
-- **Biblioteca:** `src/lib/enhanced-logging.ts`
-- **Tipos:** INFO, WARN, ERROR, SUCCESS, SECURITY
+- **Bibliotecas Principais:**
+  - `src/lib/logging-middleware.ts` - Middleware automático para requests/responses API
+  - `src/lib/user-action-logger.ts` - Logger de ações de utilizador
+  - `src/lib/enhanced-logging.ts` - Funções auxiliares de logging
+  - `src/lib/login-monitor.ts` - Monitorização de logins
+  - `src/lib/realtime-alerts.ts` - Alertas em tempo real
+- **Níveis (level):** INFO, WARN, ERROR, SUCCESS, SECURITY
+- **Categorias (category):**
+  - 🌐 **API** - Requests e responses HTTP
+  - 👤 **USER** - Ações de utilizadores (criação, edição, favoritar)
+  - 🔐 **ADMIN** - Ações administrativas (moderação, banimento)
+  - 🚨 **SECURITY** - Eventos de segurança (tentativas de acesso, ataques)
+  - ⚡ **PERFORMANCE** - Métricas de performance (requests lentas)
+  - 📧 **EMAIL** - Tracking de emails (verificação, reset senha, notificações)
+- **Sistema de Tags:** Array `tags[]` para categorização adicional
+  - `tags: ['security']` - Marca logs como alertas de segurança
+  - `tags: ['email']` - Tracking de emails enviados
+  - `tags: ['admin']` - Ações administrativas críticas
 - **Características:**
-  - 📝 **Persistência** na base de dados
-  - 🔍 **Contexto** automático (IP, User-Agent)
-  - 📊 **Metadata** estruturada
-  - 🚨 **Alertas** em tempo real
-  - 📧 **Notificações** críticas
+  - 📝 **Persistência** automática na tabela `logs` (snake_case)
+  - 🔍 **Contexto** automático (IP, User-Agent, Request ID, Correlation ID)
+  - 📊 **Metadata** estruturada em campo `details` (JSONB)
+  - 🚨 **Alertas** em tempo real para eventos críticos
+  - 📧 **Notificações** por email para alertas de segurança (severity >= 3)
+  - 🔗 **Rastreamento** de requests relacionados via `correlation_id`
+  - 🌍 **Multi-instância** com `server_instance` e `environment`
+- **Logging Automático:**
+  - ✅ Todas as requests API (método, URL, user-agent, IP, timing)
+  - ✅ Tentativas de login (sucesso/falha, OAuth/credentials)
+  - ✅ Ações de CRUD em músicas, playlists, submissões
+  - ✅ Ações administrativas (moderação, aprovação, banimento)
+  - ✅ Eventos de segurança (acessos não autorizados, padrões suspeitos)
+  - ✅ Envio de emails (verificação, reset senha, notificações)
 
 ### **Geração de Slugs**
 - **Biblioteca:** `src/lib/slugs.ts`
@@ -2034,10 +2122,46 @@ export async function middleware(request: NextRequest) {
 - **Provider:** Resend
 - **Biblioteca:** `src/lib/email.ts`
 - **Templates:**
-  - ✉️ **Verificação** de email
-  - 📧 **Notificações** de aprovação/rejeição
+  - ✉️ **Verificação** de email (`sendVerificationEmail`)
+  - 🔑 **Reset de senha** (`sendPasswordResetEmail`)
+  - 📧 **Notificações** de aprovação/rejeição de músicas
   - ⚠️ **Alertas** de moderação
-  - 🔒 **Alertas** de segurança
+  - 🔒 **Alertas** de segurança críticos (severity >= 3)
+- **Tracking de Emails:**
+  - Todos os emails enviados são logados na tabela `logs`
+  - `category: 'EMAIL'` para identificação
+  - `details` contém: tipo de email, destinatário, status de envio
+  - `tags: ['email', 'verification']` ou `tags: ['email', 'password_reset']`
+  - Permite auditoria completa de comunicações
+- **Exemplos de Logs de Email:**
+  ```typescript
+  // Email de verificação
+  {
+    level: 'INFO',
+    category: 'EMAIL',
+    message: 'Verification email sent',
+    details: {
+      to: 'user@example.com',
+      type: 'verification',
+      status: 'delivered'
+    },
+    tags: ['email', 'verification'],
+    user_email: 'user@example.com'
+  }
+  
+  // Email de reset de senha
+  {
+    level: 'INFO',
+    category: 'EMAIL',
+    message: 'Password reset email sent',
+    details: {
+      to: 'user@example.com',
+      type: 'password_reset',
+      status: 'delivered'
+    },
+    tags: ['email', 'password_reset']
+  }
+  ```
 - **Características:**
   - 🎨 **HTML responsivo**
   - 📱 **Mobile-friendly**
@@ -2556,10 +2680,14 @@ const config = {
   - Suporte para diferentes notações
 
 ### **Gestão de Logs**
-- **Biblioteca:** `src/lib/logs.ts`
-- **Tipos:** INFO, WARN, ERROR, SUCCESS
-- **Persistência:** Base de dados Supabase
-- **Contexto:** Metadados estruturados
+- **Biblioteca Principal:** `src/lib/logging-middleware.ts`, `src/lib/user-action-logger.ts`
+- **Tabela:** `logs` (snake_case, campos principais: id, level, category, message, details, user_id, tags, created_at)
+- **Níveis:** INFO, WARN, ERROR, SUCCESS, SECURITY
+- **Categorias:** API, USER, ADMIN, SECURITY, PERFORMANCE, EMAIL
+- **Sistema de Tags:** Array `tags[]` para categorização (ex: `['security']`, `['email']`)
+- **Persistência:** Automática na base de dados Supabase (tabela `logs`)
+- **Contexto:** IP address, user-agent, request_id, correlation_id, environment
+- **Alertas de Segurança:** Logs marcados com `tags: ['security']`, não tabela separada
 
 ### **Geração de Slugs**
 - **Biblioteca:** `src/lib/slugs.ts`

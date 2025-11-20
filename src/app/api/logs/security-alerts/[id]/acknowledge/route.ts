@@ -69,7 +69,7 @@ export async function PATCH(
         previousStatus: existingAlert.details?.alert_status || null
       },
       user_id: session.user.id,
-      user_email: session.user.email
+      user_email: session.user.email || undefined
     }]);
 
     return NextResponse.json({

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { log, logGeneral, logErrors } from '@/lib/logs';
-import { createSecurityLog, createSecurityAlert } from '@/lib/logging-middleware';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { logger } from '@/lib/logger';
+import { logUnauthorizedAccess as logUnauthorizedHelper, logForbiddenAccess, logApiRequestError, toErrorContext } from '@/lib/logging-helpers';
+import { LogCategory } from '@/types/logging';
 
 // ================================================
 // MIDDLEWARE DE PERFORMANCE E MONITORIZAÇÃO
@@ -54,14 +55,7 @@ export async function withPerformanceMonitoring<T>(
     statusCode = 500;
     
     // Log de erro crítico
-    await logErrors('ERROR', 'Erro interno na API', error instanceof Error ? error.message : 'Erro desconhecido', {
-      url,
-      method,
-      ip,
-      userAgent,
-      stack: error instanceof Error ? error.stack : undefined,
-      action: 'api_internal_error'
-    });
+    console.error(`❌ [API ERROR] ${method} ${url}:`, error);
 
     throw error;
   } finally {
@@ -82,52 +76,33 @@ export async function withPerformanceMonitoring<T>(
 
     // Log de performance para requisições lentas
     if (responseTime > SLOW_REQUEST_THRESHOLD) {
-      const level = responseTime > VERY_SLOW_REQUEST_THRESHOLD ? 'ERROR' : 'WARN';
-      const severity = responseTime > VERY_SLOW_REQUEST_THRESHOLD ? 'HIGH' : 'MEDIUM';
-      
-      await logGeneral(level, 'Requisição lenta detectada', `API respondeu em ${responseTime}ms`, {
-        ...metrics,
-        action: 'slow_api_response',
-        threshold: SLOW_REQUEST_THRESHOLD,
-        category: 'PERFORMANCE'
-      });
+      const severity = responseTime > VERY_SLOW_REQUEST_THRESHOLD ? 'CRITICAL' : 'WARNING';
+      console.warn(`⚠️  [PERFORMANCE] Slow API request (${severity}): ${method} ${url} - ${responseTime}ms`);
 
-      // Criar alerta de segurança para requisições muito lentas
+      // Log performance degradation for very slow requests
       if (responseTime > VERY_SLOW_REQUEST_THRESHOLD) {
-        await createSecurityAlert('PERFORMANCE_DEGRADATION', `API muito lenta: ${url}`, {
-          responseTime,
-          threshold: VERY_SLOW_REQUEST_THRESHOLD,
-          url,
-          method,
-          ip,
-          userAgent: userAgent.substring(0, 200) // Limitar tamanho
-        }, session?.user);
+        logger.warn('Very slow API request detected', {
+          category: LogCategory.PERFORMANCE,
+          tags: ['performance', 'slow-request', 'critical'],
+          http: { method: method as any, url, response_time_ms: responseTime },
+          network: { ip_address: ip, user_agent: userAgent?.substring(0, 200) },
+          performance: { 
+            response_time_ms: responseTime,
+            is_very_slow: true,
+            threshold_ms: VERY_SLOW_REQUEST_THRESHOLD
+          },
+          details: {
+            severity,
+            threshold: VERY_SLOW_REQUEST_THRESHOLD
+          }
+        });
       }
     }
 
     // Log de erros HTTP
     if (statusCode >= 400) {
       const level = statusCode >= 500 ? 'ERROR' : 'WARN';
-      const category = statusCode >= 500 ? 'API_ERROR' : 'API_CLIENT_ERROR';
-      
-      await logGeneral(level, `Erro HTTP ${statusCode}`, `${method} ${url} retornou ${statusCode}`, {
-        ...metrics,
-        action: 'api_error_response',
-        category
-      });
-    }
-
-    // Log de métricas gerais (apenas para endpoints importantes, evitar spam)
-    if (shouldLogMetrics(url, method)) {
-      await logGeneral('INFO', 'Métrica de API', `${method} ${url}`, {
-        responseTime,
-        statusCode,
-        url,
-        method,
-        userId: session?.user?.id,
-        action: 'api_metrics',
-        category: 'METRICS'
-      });
+      console.error(`❌ [API ${level}] HTTP ${statusCode}: ${method} ${url}`);
     }
   }
 
@@ -163,28 +138,48 @@ export async function logUnauthorizedAccess(
   const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
   const userAgent = req.headers.get('user-agent') || '';
   
-  await createSecurityLog('UNAUTHORIZED_ACCESS', 'Tentativa de acesso não autorizado', {
-    attemptedResource,
-    reason,
-    ip,
-    userAgent: userAgent.substring(0, 200),
-    userId: session?.user?.id,
-    userEmail: session?.user?.email,
-    method: req.method,
-    referer: req.headers.get('referer') || '',
-    action: 'unauthorized_access_attempt'
-  }, session?.user);
-
-  // Criar alerta se for tentativa de acesso a área admin
-  if (attemptedResource.includes('/admin') || attemptedResource.includes('/api/admin')) {
-    await createSecurityAlert('UNAUTHORIZED_ADMIN_ACCESS', 'Tentativa de acesso a área administrativa', {
-      attemptedResource,
+  logUnauthorizedHelper({
+    event_type: 'unauthorized_access',
+    resource: attemptedResource,
+    user: session?.user ? {
+      user_id: session.user.id,
+      user_email: session.user.email || undefined,
+      user_role: session.user.role
+    } : undefined,
+    network: {
+      ip_address: ip,
+      user_agent: userAgent.substring(0, 200)
+    },
+    details: {
       reason,
-      ip,
-      userAgent: userAgent.substring(0, 200),
-      userId: session?.user?.id || 'anonymous',
-      userEmail: session?.user?.email || 'anonymous'
-    }, session?.user);
+      method: req.method,
+      referer: req.headers.get('referer') || '',
+      action: 'unauthorized_access_attempt',
+      isAdminAttempt: attemptedResource.includes('/admin') || attemptedResource.includes('/api/admin')
+    }
+  });
+
+  // Log additional security warning for admin area access attempts
+  if (attemptedResource.includes('/admin') || attemptedResource.includes('/api/admin')) {
+    logger.security('Unauthorized admin area access attempt', {
+      category: LogCategory.SECURITY,
+      user: session?.user ? {
+        user_id: session.user.id,
+        user_email: session.user.email || undefined,
+        user_role: session.user.role
+      } : undefined,
+      network: {
+        ip_address: ip,
+        user_agent: userAgent.substring(0, 200)
+      },
+      tags: ['security', 'unauthorized', 'admin-attempt'],
+      details: {
+        attemptedResource,
+        reason,
+        userId: session?.user?.id || 'anonymous',
+        userEmail: session?.user?.email || 'anonymous'
+      }
+    });
   }
 }
 
@@ -200,17 +195,7 @@ export async function logCriticalAction(
   req?: NextRequest
 ) {
   const ip = req?.headers.get('x-forwarded-for') || req?.headers.get('x-real-ip') || 'unknown';
-  
-  await logGeneral('INFO', `Ação crítica: ${action}`, description, {
-    ...details,
-    userId: session?.user?.id,
-    userEmail: session?.user?.email,
-    userRole: session?.user?.role,
-    ip,
-    action: `critical_action_${action.toLowerCase().replace(/\s+/g, '_')}`,
-    category: 'CRITICAL_ACTION',
-    timestamp: new Date().toISOString()
-  });
+  console.log(`🔐 [CRITICAL ACTION] ${action} by ${session?.user?.email || 'unknown'}: ${description}`);
 }
 
 // ================================================
@@ -223,15 +208,11 @@ export async function logSystemEvent(
   details: Record<string, any>,
   level: 'INFO' | 'WARN' | 'ERROR' = 'INFO'
 ) {
-  await logGeneral(level, `Evento de sistema: ${event}`, description, {
-    ...details,
-    action: `system_event_${event.toLowerCase().replace(/\s+/g, '_')}`,
-    category: 'SYSTEM',
-    timestamp: new Date().toISOString()
-  });
+  const logFunc = level === 'ERROR' ? console.error : level === 'WARN' ? console.warn : console.log;
+  logFunc(`🖥️  [SYSTEM EVENT] ${event}: ${description}`);
 }
 
-// ================================================
+// ================================================// ================================================
 // LOGS DE UPLOADS E DOWNLOADS
 // ================================================
 
@@ -245,31 +226,30 @@ export async function logFileOperation(
   additionalDetails?: Record<string, any>
 ) {
   const ip = req?.headers.get('x-forwarded-for') || req?.headers.get('x-real-ip') || 'unknown';
-  
-  await logGeneral('INFO', `Operação de ficheiro: ${operation}`, `${operation} de ${fileName}`, {
-    operation,
-    fileName,
-    fileSize,
-    fileType,
-    fileSizeMB: Math.round(fileSize / (1024 * 1024) * 100) / 100,
-    userId: session?.user?.id,
-    userEmail: session?.user?.email,
-    ip,
-    ...additionalDetails,
-    action: `file_${operation}`,
-    category: 'FILE_OPERATION'
-  });
+  const fileSizeMB = Math.round(fileSize / (1024 * 1024) * 100) / 100;
+  console.log(`📁 [FILE ${operation.toUpperCase()}] ${fileName} (${fileSizeMB}MB) by ${session?.user?.email || 'unknown'}`);
 
-  // Alerta para uploads muito grandes (>50MB)
+  // Log large file uploads
   if (operation === 'upload' && fileSize > 50 * 1024 * 1024) {
-    await createSecurityAlert('LARGE_FILE_UPLOAD', 'Upload de ficheiro muito grande', {
-      fileName,
-      fileSize,
-      fileSizeMB: Math.round(fileSize / (1024 * 1024) * 100) / 100,
-      userId: session?.user?.id,
-      userEmail: session?.user?.email,
-      ip
-    }, session?.user);
+    logger.warn('Large file upload detected', {
+      category: LogCategory.SYSTEM,
+      user: session?.user ? {
+        user_id: session.user.id,
+        user_email: session.user.email || undefined,
+        user_role: session.user.role
+      } : undefined,
+      network: {
+        ip_address: ip
+      },
+      tags: ['file-upload', 'large-file', 'security'],
+      details: {
+        fileName,
+        fileSize,
+        fileSizeMB: Math.round(fileSize / (1024 * 1024) * 100) / 100,
+        operation,
+        fileType
+      }
+    });
   }
 }
 
@@ -284,27 +264,30 @@ export async function logDatabaseError(
   query?: string,
   session?: any
 ) {
-  await logErrors('ERROR', 'Erro de base de dados', `Erro em ${operation} na tabela ${table}`, {
-    operation,
-    table,
-    errorCode: error?.code,
-    errorMessage: error?.message,
-    errorHint: error?.hint,
-    errorDetails: error?.details,
-    query: query?.substring(0, 500), // Limitar tamanho da query
-    userId: session?.user?.id,
-    userEmail: session?.user?.email,
-    action: 'database_error',
-    category: 'DATABASE'
+  console.error(`❌ [DATABASE ERROR] ${operation} on ${table}:`, {
+    code: error?.code,
+    message: error?.message,
+    hint: error?.hint
   });
 
-  // Criar alerta para erros críticos de DB
+  // Log critical database errors
   if (error?.code === '08000' || error?.code === '53300' || error?.message?.includes('connection')) {
-    await createSecurityAlert('DATABASE_CONNECTION_ERROR', 'Erro de conexão com base de dados', {
-      operation,
-      table,
-      errorCode: error?.code,
-      errorMessage: error?.message
+    logger.error('Critical database connection error', {
+      category: LogCategory.DATABASE,
+      user: session?.user ? {
+        user_id: session.user.id,
+        user_email: session.user.email || undefined,
+        user_role: session.user.role
+      } : undefined,
+      error: toErrorContext(error),
+      tags: ['database', 'connection-error', 'critical'],
+      details: {
+        operation,
+        table,
+        errorCode: error?.code,
+        errorMessage: error?.message,
+        query: query?.substring(0, 500) // Limit query length
+      }
     });
   }
 }

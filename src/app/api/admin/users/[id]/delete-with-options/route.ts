@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { adminSupabase as supabaseAdmin } from '@/lib/supabase-admin';
-import { logAdminAction } from '@/lib/user-action-logger';
 
 type DeleteOptions = {
   deleteSongs?: boolean;
@@ -22,8 +21,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const body = await req.json();
     const opts: DeleteOptions = body.options || {};
 
-    // Admin action log - started (include admin info)
-    try { await logAdminAction('admin_user_deletion_started', { targetUserId: userId, options: opts, adminId: session.user.id, adminEmail: session.user.email }, true); } catch (e) { console.warn('log start failed', e); }
+    // Remoção de log de início - apenas erros importantes
+    console.log(`Admin ${session.user.email} deleting user ${userId} with options:`, opts);
 
     const results: any = {};
 
@@ -56,7 +55,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // Finally delete user
     await supabaseAdmin.from('User').delete().eq('id', userId);
 
-  try { await logAdminAction('admin_user_deletion_completed', { targetUserId: userId, results, adminId: session.user.id, adminEmail: session.user.email }, true); } catch (e) { console.warn('log completion failed', e); }
+    // Sucesso - remoção de log redundante
+    console.log(`✅ Admin ${session.user.email} deleted user ${userId}. Results:`, results);
 
     return NextResponse.json({ success: true, results });
   } catch (error) {

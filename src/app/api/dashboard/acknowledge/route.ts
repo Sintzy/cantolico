@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
-import { logSystemEvent } from '@/lib/enhanced-logging';
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,12 +38,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Erro ao atualizar alertas' }, { status: 500 });
       }
 
-      await logSystemEvent('acknowledge_all_alerts', `${user.role} reconheceu todos os alertas`, {
-        userId: session.user.id,
-        userRole: user.role,
-        action: 'acknowledge_all_alerts',
-        acknowledgedCount: updatedAlerts?.length || 0
-      });
+      console.log(`✅ ${user.role} acknowledged all alerts: ${updatedAlerts?.length || 0} alerts`);
 
       return NextResponse.json({ 
         success: true, 
@@ -66,13 +60,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Erro ao atualizar alertas' }, { status: 500 });
       }
 
-      await logSystemEvent('acknowledge_specific_alerts', `${user.role} reconheceu alertas específicos`, {
-        userId: session.user.id,
-        userRole: user.role,
-        action: 'acknowledge_specific_alerts',
-        alertIds,
-        acknowledgedCount: updatedAlerts?.length || 0
-      });
+      console.log(`✅ ${user.role} acknowledged specific alerts: ${updatedAlerts?.length || 0} alerts`, alertIds);
 
       return NextResponse.json({ 
         success: true, 

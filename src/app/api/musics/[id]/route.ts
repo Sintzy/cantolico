@@ -1,7 +1,6 @@
-
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase-client";
-import { logGeneral, logErrors } from "@/lib/logs";
+import { logSongViewed, logApiRequestError, toErrorContext } from "@/lib/logging-helpers";
 import { protectApiRoute, applySecurityHeaders } from "@/lib/api-protection";
 import { formatTagsForPostgreSQL, parseTagsFromPostgreSQL, parseMomentsFromPostgreSQL } from "@/lib/utils";
 
@@ -9,11 +8,17 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   // Verifica se a requisição vem de uma origem autorizada
   const unauthorizedResponse = protectApiRoute(req);
   if (unauthorizedResponse) {
-    await logGeneral('WARN', 'Tentativa de acesso não autorizado à API', 'Acesso negado por origem inválida', {
-      action: 'unauthorized_api_access',
-      origin: req.headers.get('origin'),
-      referer: req.headers.get('referer'),
-      endpoint: '/api/musics/[id]'
+    logApiRequestError({
+      method: req.method,
+      url: req.url,
+      path: '/api/musics/[id]',
+      status_code: 401,
+      error: toErrorContext(new Error('Acesso negado por origem inválida')),
+      details: {
+        action: 'unauthorized_api_access',
+        origin: req.headers.get('origin'),
+        referer: req.headers.get('referer'),
+      } as any
     });
     return unauthorizedResponse;
   }
@@ -22,9 +27,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { id } = resolvedParams;
 
   try {
-    await logGeneral('INFO', 'Consulta de música individual', 'Utilizador a consultar música específica', {
-      musicId: id,
-      action: 'fetch_single_music'
+    logSongViewed({
+      song_id: id,
+      details: {
+        action: 'fetch_single_music',
+      }
     });
 
     // Tentar encontrar por ID primeiro, depois por slug
@@ -70,9 +77,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     if (!songs || songs.length === 0) {
-      await logGeneral('WARN', 'Música não encontrada', 'Tentativa de acesso a música inexistente', {
-        musicId: id,
-        action: 'music_not_found'
+      logApiRequestError({
+        method: req.method,
+        url: req.url,
+        path: '/api/musics/[id]',
+        status_code: 404,
+        error: toErrorContext(new Error('Música não encontrada')),
+        details: {
+          song_id: id,
+          action: 'music_not_found',
+        } as any
       });
       const response = NextResponse.json({ error: "Música não encontrada" }, { status: 404 });
       return applySecurityHeaders(response, req);
@@ -90,19 +104,21 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       currentVersion: song.SongVersion || null
     };
 
-    await logGeneral('SUCCESS', 'Música carregada com sucesso', 'Dados da música enviados ao utilizador', {
-      musicId: id,
-      musicTitle: formattedSong.title,
-      action: 'music_loaded'
+    logSongViewed({
+      song_id: id,
+      details: { action: 'music_loaded', title: formattedSong.title }
     });
 
     const response = NextResponse.json(formattedSong);
     return applySecurityHeaders(response, req);
   } catch (error) {
-    await logErrors('ERROR', 'Erro ao carregar música', 'Falha na consulta de música individual', {
-      musicId: id,
-      error: error instanceof Error ? error.message : 'Erro desconhecido',
-      action: 'fetch_single_music_error'
+    logApiRequestError({
+      method: req.method,
+      url: req.url,
+      path: '/api/musics/[id]',
+      status_code: 500,
+      error: toErrorContext(error),
+      details: { song_id: id, action: 'fetch_single_music_error' } as any
     });
     console.error("[GET_MUSIC_BY_ID]", error);
     const response = NextResponse.json({ error: "Erro ao carregar música" }, { status: 500 });
@@ -142,25 +158,30 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       .eq('id', id);
 
     if (error) {
-      await logErrors('ERROR', 'Erro ao atualizar música', 'Falha na atualização de música', {
-        musicId: id,
-        error: error.message,
-        action: 'update_music_error'
+      logApiRequestError({
+        method: req.method,
+        url: req.url,
+        path: '/api/musics/[id]',
+        status_code: 500,
+        error: toErrorContext(error),
+        details: { song_id: id, action: 'update_music_error' } as any
       });
       return NextResponse.json({ error: 'Erro ao atualizar música' }, { status: 500 });
     }
 
-    await logGeneral('SUCCESS', 'Música atualizada com sucesso', 'Dados da música atualizados', {
-      musicId: id,
-      musicTitle: body.title,
-      action: 'music_updated'
+    logSongViewed({
+      song_id: id,
+      details: { action: 'music_updated', title: body.title }
     });
     return NextResponse.json({ success: true });
   } catch (error) {
-    await logErrors('ERROR', 'Erro ao atualizar música', 'Falha na atualização de música', {
-      musicId: id,
-      error: error instanceof Error ? error.message : 'Erro desconhecido',
-      action: 'update_music_error'
+    logApiRequestError({
+      method: req.method,
+      url: req.url,
+      path: '/api/musics/[id]',
+      status_code: 500,
+      error: toErrorContext(error),
+      details: { song_id: id, action: 'update_music_error' } as any
     });
     return NextResponse.json({ error: 'Erro ao atualizar música' }, { status: 500 });
   }

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase-client';
 import { sendPasswordResetEmail } from '@/lib/email';
 import crypto from 'crypto';
-import { logVerificationAction, getUserInfoFromRequest } from '@/lib/user-action-logger';
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,14 +28,6 @@ export async function POST(req: NextRequest) {
       // Don't reveal this to prevent account enumeration
       console.log(`🚫 Password reset blocked for OAuth user: ${email} (providers: ${accounts.map(a => a.provider).join(', ')})`);
       
-      try {
-        await logVerificationAction('password_reset_blocked_oauth', getUserInfoFromRequest(req), true, { 
-          email,
-          providers: accounts.map(a => a.provider),
-          reason: 'OAuth users do not have passwords'
-        });
-      } catch (e) { console.warn('Failed to log OAuth password reset attempt', e); }
-      
       return NextResponse.json({ success: true });
     }
 
@@ -50,10 +41,7 @@ export async function POST(req: NextRequest) {
     // Send email
     await sendPasswordResetEmail(user.name || user.email, resetToken, '24 horas');
 
-    // Log action
-    try {
-      await logVerificationAction('password_reset_requested', getUserInfoFromRequest(req), true, { email });
-    } catch (e) { console.warn('Failed to log password reset request', e); }
+    console.log(`✅ Password reset email sent to ${email}`);
 
     return NextResponse.json({ success: true });
   } catch (error) {

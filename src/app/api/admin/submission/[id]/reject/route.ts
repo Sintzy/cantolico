@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { adminSupabase as supabase } from "@/lib/supabase-admin";
-import { logAdmin, logErrors } from '@/lib/logs';
+import { logApiRequestError, logUnauthorizedAccess, logForbiddenAccess, toErrorContext } from '@/lib/logging-helpers';
 import { sendEmail, createRejectionEmailTemplate } from '@/lib/email';
 
 export async function POST(
@@ -38,38 +38,36 @@ export async function POST(
       .single();
 
     if (fetchError || !submission) {
-      await logAdmin('WARN', 'Tentativa de rejeição de submissão inexistente', 'Admin tentou rejeitar submissão que não existe', {
-        adminId: session.user.id,
-        adminEmail: session.user.email,
-        submissionId: id,
-        action: 'reject_submission_not_found'
+      logUnauthorizedAccess({
+        event_type: 'unauthorized_access',
+        resource: `/api/admin/submission/${id}/reject`,
+        user: { user_id: session.user.id, user_email: session.user.email || undefined, user_role: session.user.role },
+          network: { ip_address: req.headers.get('x-forwarded-for') || 'unknown', user_agent: req.headers.get('user-agent') || undefined },
+        details: {
+          submissionId: id,
+          action: 'reject_submission_not_found'
+        }
       });
       return NextResponse.json({ error: 'Submissão não encontrada' }, { status: 404 });
     }
 
     if (submission.status !== 'PENDING') {
-      await logAdmin('WARN', 'Tentativa de rejeição de submissão já processada', 'Admin tentou rejeitar submissão que já foi processada', {
-        adminId: session.user.id,
-        adminEmail: session.user.email,
-        submissionId: id,
-        submissionTitle: submission.title,
-        currentStatus: submission.status,
-        action: 'reject_submission_already_processed'
+      logForbiddenAccess({
+        event_type: 'forbidden_access',
+        resource: `/api/admin/submission/${id}/reject`,
+        user: { user_id: session.user.id, user_email: session.user.email || undefined, user_role: session.user.role },
+          network: { ip_address: req.headers.get('x-forwarded-for') || 'unknown', user_agent: req.headers.get('user-agent') || undefined },
+        details: {
+          submissionId: id,
+          submissionTitle: submission.title,
+          currentStatus: submission.status,
+          action: 'reject_submission_already_processed'
+        }
       });
       return NextResponse.json({ error: 'Esta submissão já foi processada' }, { status: 400 });
     }
 
-    // Log do início da rejeição
-    await logAdmin('INFO', 'Rejeição de submissão iniciada', 'Admin iniciou processo de rejeição de submissão', {
-      adminId: session.user.id,
-      adminEmail: session.user.email,
-      submissionId: id,
-      submissionTitle: submission.title,
-      submitterId: submission.submitterId,
-      rejectionReason: rejectionReason.trim(),
-      action: 'reject_submission_started',
-      entity: 'song_submission'
-    });
+    // Log - remoção de logs desnecessários, apenas erros serão logados
 
     // Atualizar status da submissão
     const { error: updateError } = await supabase
@@ -83,30 +81,18 @@ export async function POST(
       .eq('id', id);
 
     if (updateError) {
-      await logErrors('ERROR', 'Erro ao rejeitar submissão', 'Erro na base de dados ao marcar submissão como rejeitada', {
-        adminId: session.user.id,
-        adminEmail: session.user.email,
-        submissionId: id,
-        submissionTitle: submission.title,
-        rejectionReason: rejectionReason.trim(),
-        error: updateError.message,
-        action: 'reject_submission_error'
+      logApiRequestError({
+        method: req.method,
+        url: req.url,
+        path: `/api/admin/submission/${id}/reject`,
+        status_code: 500,
+  error: toErrorContext(updateError)
       });
       console.error('Error rejecting submission:', updateError);
       return NextResponse.json({ error: 'Erro ao rejeitar submissão' }, { status: 500 });
     }
 
-    // Log de sucesso da rejeição
-    await logAdmin('SUCCESS', 'Submissão rejeitada com sucesso', 'Admin rejeitou submissão', {
-      adminId: session.user.id,
-      adminEmail: session.user.email,
-      submissionId: id,
-      submissionTitle: submission.title,
-      submitterId: submission.submitterId,
-      rejectionReason: rejectionReason.trim(),
-      action: 'submission_rejected',
-      entity: 'song_submission'
-    });
+    // Sucesso - remoção de log de sucesso, apenas erros importantes
 
     // Enviar email de rejeição para o utilizador
     if (submission.submitter && Array.isArray(submission.submitter) && submission.submitter[0]?.email) {

@@ -8,7 +8,6 @@ import {
   SongType,
   SourceType,
 } from "@/lib/constants";
-import { logQuickAction, getUserInfoFromRequest, USER_ACTIONS } from "@/lib/user-action-logger";
 import { formatTagsForPostgreSQL } from "@/lib/utils";
 
 
@@ -62,16 +61,7 @@ export const POST = withUserProtection<any>(async (req: NextRequest, session: an
     return NextResponse.json({ error: "Utilizador não encontrado" }, { status: 404 });
   }
 
-  // Log submission attempt
-  const userInfo = getUserInfoFromRequest(req, session);
-  await logQuickAction(
-    'SUBMIT_SONG',
-    { ...userInfo, userId: user.id, userEmail: user.email },
-    false, // Will be updated to true if successful
-    {
-      stage: 'started'
-    }
-  );
+  console.log(`🎵 [SONG SUBMIT] User ${user.email} submitting new song`);
 
     const formData = await req.formData();
     console.log("FormData recebido:", formData);
@@ -237,25 +227,7 @@ export const POST = withUserProtection<any>(async (req: NextRequest, session: an
     throw new Error(`Supabase error: ${submissionError?.message}`);
   }
 
-  // Log successful song submission
-  await logQuickAction(
-    'SUBMIT_SONG',
-    { ...userInfo, userId: user.id, userEmail: user.email },
-    true,
-    {
-      submissionId: submission.id,
-      title,
-      type,
-      instrument,
-      hasAudio: !!audioPath,
-      hasPdf: !!pdfPath,
-      hasMarkdown: !!markdown,
-      momentsCount: moments.length,
-      tagsCount: tags?.length || 0,
-      stage: 'completed'
-    }
-  );
-
+  console.log(`✅ [SONG SUBMIT] Song submitted successfully: ${title} (ID: ${submission.id})`);
   console.log("Submissão criada com sucesso:", submission);
 
   return NextResponse.json({ success: true, submissionId });

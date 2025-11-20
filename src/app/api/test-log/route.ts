@@ -1,25 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { logQuickAction, getUserInfoFromRequest } from '@/lib/user-action-logger';
 
-export async function POST(req: NextRequest) {
-  try {
-    const userInfo = {
-      userId: '1',
-      userEmail: 'test@example.com',
-      ipAddress: '127.0.0.1',
-      userAgent: 'Test Agent'
-    };
+import { logger } from '@/lib/logger';
+import { logPerformanceMetric, logSlowRequest } from '@/lib/logging-helpers';
+import { LogCategory } from '@/types/logging';
 
-    // Test log
-    await logQuickAction('STAR_SONG', userInfo, true, {
-      songId: 'test-song-id',
-      songTitle: 'Test Song',
-      test: 'database_save_test'
-    });
+export async function GET(req: NextRequest) {
+  // Log INFO
+  logger.info('Test INFO log', {
+    category: LogCategory.SYSTEM,
+    tags: ['test', 'info'],
+    details: { test: 'info' },
+  });
 
-    return NextResponse.json({ success: true, message: 'Test log created' });
-  } catch (error) {
-    console.error('Test log error:', error);
-    return NextResponse.json({ error: 'Test failed' }, { status: 500 });
-  }
+  // Log WARN
+  logger.warn('Test WARN log', {
+    category: LogCategory.SYSTEM,
+    tags: ['test', 'warn'],
+    details: { test: 'warn' },
+  });
+
+  // Log ERROR
+  logger.error('Test ERROR log', {
+    category: LogCategory.SYSTEM,
+    tags: ['test', 'error'],
+    error: { error_message: 'Erro de teste', stack_trace: 'stack...' },
+    details: { test: 'error' },
+  });
+
+  // Log PERFORMANCE normal
+  logPerformanceMetric({
+    endpoint: '/api/test-log',
+    method: 'GET',
+    response_time_ms: 120,
+    user: { user_id: 'test-user' },
+    tags: ['test', 'performance'],
+    details: { test: 'performance-normal' },
+  });
+
+  // Log PERFORMANCE lenta
+  logSlowRequest({
+    endpoint: '/api/test-log',
+    method: 'GET',
+    response_time_ms: 1200,
+    user: { user_id: 'test-user' },
+    tags: ['test', 'performance', 'slow'],
+    details: { test: 'performance-slow' },
+  });
+
+  return NextResponse.json({ ok: true, message: 'Logs enviados para Loki!' });
 }

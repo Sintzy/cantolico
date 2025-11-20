@@ -3,8 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { supabase } from '@/lib/supabase-client';
 import { z } from 'zod';
-import { logAdminAction, logModerationAction, getUserInfoFromRequest } from '@/lib/user-action-logger';
-import { logAdmin, logErrors } from '@/lib/logs';
+import { logUnauthorizedAccess, logApiRequestError, toErrorContext } from '@/lib/logging-helpers';
 import { sendEmail, createWarningEmailTemplate, createBanEmailTemplate, createSuspensionEmailTemplate } from '@/lib/email';
 
 const ModerateUserSchema = z.object({
@@ -65,48 +64,22 @@ export async function POST(
       .single();
 
     if (userError || !targetUser) {
-      await logAdmin('WARN', 'Tentativa de moderação de utilizador inexistente', 'Admin tentou moderar utilizador que não existe', {
-        adminId: session.user.id,
-        adminEmail: session.user.email,
-        targetUserId: userId,
-        moderationAction: action,
-        reason,
-        action: 'moderate_user_not_found'
+      logUnauthorizedAccess({
+        event_type: 'unauthorized_access',
+        resource: `/api/admin/users/${userId}/moderate`,
+        user: { user_id: session.user.id, user_email: session.user.email || undefined, user_role: session.user.role },
+  network: { ip_address: ipAddress, user_agent: request.headers.get('user-agent') || undefined },
+        details: {
+          targetUserId: userId,
+          moderationAction: action,
+          reason,
+          action: 'moderate_user_not_found'
+        }
       });
       return NextResponse.json({ error: 'Utilizador não encontrado' }, { status: 404 });
     }
 
-    // Log do início da moderação (user-action logger)
-    const moderatorInfo = getUserInfoFromRequest(request, session);
-    await logModerationAction('moderation_started', moderatorInfo, true, {
-      targetUserId: targetUser.id,
-      targetUserEmail: targetUser.email,
-      moderationAction: action,
-      moderationStatus: status,
-      reason,
-      moderatorNote,
-      duration,
-      expiresAt,
-      ipAddress
-    });
-
-    // Also keep previous admin log for backward compatibility
-    await logAdmin('INFO', 'Moderação de utilizador iniciada', 'Admin iniciou processo de moderação de utilizador', {
-      adminId: session.user.id,
-      adminEmail: session.user.email,
-      targetUserId: targetUser.id,
-      targetUserEmail: targetUser.email,
-      targetUserName: targetUser.name,
-      moderationAction: action,
-      moderationStatus: status,
-      reason,
-      moderatorNote,
-      duration,
-      expiresAt,
-      ipAddress,
-      action: 'moderate_user_started',
-      entity: 'user_moderation'
-    });
+    // Remoção de logs de início - apenas erros importantes
 
     // Use custom PostgreSQL function to avoid trigger issues
     const { error: moderationError } = await supabase
@@ -122,14 +95,12 @@ export async function POST(
       });
 
     if (moderationError) {
-      await logErrors('ERROR', 'Erro ao aplicar moderação', 'Erro na base de dados ao aplicar moderação', {
-        adminId: session.user.id,
-        adminEmail: session.user.email,
-        targetUserId: targetUser.id,
-        targetUserEmail: targetUser.email,
-        moderationAction: action,
-        error: moderationError.message,
-        action: 'moderate_user_error'
+      logApiRequestError({
+        method: request.method,
+        url: request.url,
+        path: `/api/admin/users/${userId}/moderate`,
+        status_code: 500,
+        error: toErrorContext(moderationError)
       });
       console.error('Error creating moderation record:', moderationError);
       return NextResponse.json({ error: 'Erro ao aplicar moderação' }, { status: 500 });
@@ -164,36 +135,7 @@ export async function POST(
       ipAddress
     });
 
-    // Log de sucesso da moderação (user-action logger)
-    await logModerationAction('moderation_completed', moderatorInfo, true, {
-      targetUserId: targetUser.id,
-      targetUserEmail: targetUser.email,
-      moderationAction: action,
-      moderationStatus: status,
-      reason,
-      moderatorNote,
-      duration,
-      expiresAt,
-      ipAddress
-    });
-
-    // Also keep previous admin log for backward compatibility
-    await logAdmin('SUCCESS', 'Moderação aplicada com sucesso', 'Admin aplicou moderação a utilizador', {
-      adminId: session.user.id,
-      adminEmail: session.user.email,
-      targetUserId: targetUser.id,
-      targetUserEmail: targetUser.email,
-      targetUserName: targetUser.name,
-      moderationAction: action,
-      moderationStatus: status,
-      reason,
-      moderatorNote,
-      duration,
-      expiresAt,
-      ipAddress,
-      action: 'user_moderated',
-      entity: 'user_moderation'
-    });
+    // Remoção de logs de sucesso redundantes - apenas console.log
 
     // Enviar email de moderação para o utilizador
     if (targetUser.email) {

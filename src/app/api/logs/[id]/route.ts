@@ -70,7 +70,7 @@ export async function GET(
         hasSecurityAlerts: (securityAlerts?.length || 0) > 0
       },
       user_id: session.user.id,
-      user_email: session.user.email,
+      user_email: session.user.email || undefined,
       correlation_id: log.correlation_id
     }]);
 

@@ -22,6 +22,17 @@ const nextConfig: NextConfig = {
     // Set build time during the build process
     NEXT_PUBLIC_BUILD_TIME: new Date().toISOString(),
   },
+  webpack: (config, { isServer }) => {
+    // Exclude native binaries from webpack bundling
+    if (isServer) {
+      config.externals = config.externals || [];
+      config.externals.push({
+        'snappy': 'commonjs snappy',
+        '@napi-rs/snappy-win32-x64-msvc': 'commonjs @napi-rs/snappy-win32-x64-msvc',
+      });
+    }
+    return config;
+  },
 };
 
 module.exports = nextConfig;

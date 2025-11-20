@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase } from '@/lib/supabase-admin';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { logGeneral, logErrors } from '@/lib/logs';
+import { logApiRequestError, logPlaylistSongAdded, toErrorContext } from '@/lib/logging-helpers';
 
 // GET: Get user's playlist invitations
 export async function GET(request: NextRequest) {
@@ -42,8 +42,14 @@ export async function GET(request: NextRequest) {
       .eq('status', 'PENDING')
       .order('invitedAt', { ascending: false });
 
-    if (invitationsError) {
-      logErrors('ERROR', 'Error fetching user invitations', JSON.stringify(invitationsError));
+      if (invitationsError) {
+        logApiRequestError({
+          method: request.method,
+          url: request.url,
+          path: '/api/playlists/invitations',
+          status_code: 500,
+          error: toErrorContext(invitationsError)
+        });
       return NextResponse.json({ error: 'Failed to fetch invitations' }, { status: 500 });
     }
 
@@ -53,7 +59,13 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    logErrors('ERROR', 'Error in invitations GET', String(error));
+    logApiRequestError({
+      method: request.method,
+      url: request.url,
+      path: '/api/playlists/invitations',
+      status_code: 500,
+      error: toErrorContext(error)
+    });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -112,13 +124,28 @@ export async function PATCH(request: NextRequest) {
       .update(updateData)
       .eq('id', invitationId);
 
-    if (updateError) {
-      logErrors('ERROR', 'Error updating invitation', JSON.stringify(updateError));
+      if (updateError) {
+        logApiRequestError({
+          method: request.method,
+          url: request.url,
+          path: '/api/playlists/invitations',
+          status_code: 500,
+          error: toErrorContext(updateError)
+        });
       return NextResponse.json({ error: 'Failed to update invitation' }, { status: 500 });
     }
 
     const actionText = action === 'accept' ? 'accepted' : 'declined';
-    logGeneral('INFO', 'Playlist invitation response', `${session.user.email} ${actionText} invitation to ${invitation.Playlist[0]?.name || 'Unknown Playlist'}`);
+    logPlaylistSongAdded({
+      playlist_id: invitation.playlistId,
+      song_id: invitationId,
+      user: { user_email: session.user.email || undefined },
+      details: {
+        action: `invitation_${actionText}`,
+        playlistName: invitation.Playlist[0]?.name || 'Unknown Playlist',
+        invitedUserEmail: invitation.userEmail
+      }
+    });
 
     return NextResponse.json({
       success: true,
@@ -127,7 +154,13 @@ export async function PATCH(request: NextRequest) {
     });
 
   } catch (error) {
-    logErrors('ERROR', 'Error in invitations PATCH', String(error));
+    logApiRequestError({
+      method: request.method,
+      url: request.url,
+      path: '/api/playlists/invitations',
+      status_code: 500,
+      error: toErrorContext(error)
+    });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase as supabaseAdmin } from '@/lib/supabase-admin';
 import { supabase } from '@/lib/supabase-client';
 import bcrypt from 'bcryptjs';
-import { logVerificationAction, getUserInfoFromRequest } from '@/lib/user-action-logger';
 
 export async function POST(req: NextRequest) {
   try {
@@ -30,7 +29,7 @@ export async function POST(req: NextRequest) {
     await supabaseAdmin.from('Session').delete().eq('user_id', user.id);
     await supabase.from('VerificationToken').delete().eq('token', token);
 
-    try { await logVerificationAction('password_reset_completed', getUserInfoFromRequest(req), true, { userId: user.id }); } catch (e) { console.warn('failed to log reset completion', e); }
+    console.log(`✅ Password reset completed for user ${user.email}`);
 
     return NextResponse.json({ success: true });
   } catch (error) {

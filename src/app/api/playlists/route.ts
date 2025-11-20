@@ -4,7 +4,6 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { withUserProtection, withPublicMonitoring, logPlaylistAction } from '@/lib/enhanced-api-protection';
 import { randomUUID } from 'crypto';
-import { logPlaylistAction as logUserPlaylistAction, getUserInfoFromRequest } from '@/lib/user-action-logger';
 import { requireEmailVerification } from '@/lib/email';
 import { getVisibilityFlags, getVisibilityFromPlaylist } from '@/types/playlist';
 
@@ -141,18 +140,10 @@ export const POST = withUserProtection<any>(async (request: NextRequest, session
     );
   }
 
-  const userInfo = getUserInfoFromRequest(request, session);
-  
-    await logUserPlaylistAction('playlist_create_attempt', userInfo, true, {
-      playlistName: name,
-      visibility: visibility,
-      hasDescription: !!description?.trim()
-    });
+  // Remoção de logs desnecessários - apenas para erros críticos
+  console.log(`Creating playlist: ${name} (visibility: ${visibility})`);
 
     if (!name?.trim()) {
-      await logUserPlaylistAction('playlist_create_no_name', userInfo, false, {
-        error: 'Nome da playlist é obrigatório'
-      });
       return NextResponse.json(
         { error: 'Nome da playlist é obrigatório' },
         { status: 400 }
@@ -189,20 +180,12 @@ export const POST = withUserProtection<any>(async (request: NextRequest, session
       .single();
 
     if (error) {
-      await logUserPlaylistAction('playlist_create_error', userInfo, false, {
-        playlistName: name,
-        error: error.message
-      });
+      console.error('Error creating playlist:', error);
       throw new Error(`Supabase error: ${error.message}`);
     }
 
-    // Log de sucesso
-    await logUserPlaylistAction('playlist_created', userInfo, true, {
-      playlistId: playlist.id,
-      playlistName: playlist.name,
-      visibility: getVisibilityFromPlaylist({ isPublic: playlist.isPublic }),
-      hasDescription: !!playlist.description
-    });
+    // Remoção de log de sucesso redundante
+    console.log(`✅ Playlist created: ${playlist.id} (${playlist.name})`);
 
     // Handle member invitations if provided
     if (memberEmails && memberEmails.length > 0) {
@@ -359,12 +342,8 @@ export const DELETE = withUserProtection<any>(async (request: NextRequest, sessi
       return NextResponse.json({ error: 'Failed to delete playlists' }, { status: 500 });
     }
 
-    // Log da ação
-    const userInfo = getUserInfoFromRequest(request, session);
-    await logUserPlaylistAction('playlists_bulk_delete', userInfo, true, {
-      deletedCount: userPlaylists.length,
-      deletedPlaylists: userPlaylists.map((p: any) => ({ id: p.id, name: p.name }))
-    });
+    // Remoção de logs desnecessários
+    console.log(`✅ Bulk delete successful: ${userPlaylists.length} playlists deleted`);
 
     return NextResponse.json({ 
       success: true, 
@@ -374,10 +353,6 @@ export const DELETE = withUserProtection<any>(async (request: NextRequest, sessi
 
   } catch (error) {
     console.error('Error in bulk delete:', error);
-    const userInfo = getUserInfoFromRequest(request, session);
-    await logUserPlaylistAction('playlists_bulk_delete_error', userInfo, false, {
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
     
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

@@ -189,7 +189,7 @@ export default function AdminDashboard() {
             <Link href="/admin/dashboard/banners">Gestão Banners</Link>
           </Button>
           <Button asChild variant="outline" className="w-full sm:w-auto">
-            <Link href="/logs">Logging <span className="text-xs text-muted-foreground">[Beta]</span></Link>
+            <Link href="http://100.99.107.118:3101/grafana/d/cantolico/cantolico?orgId=1&from=now-6h&to=now&timezone=browser&var-environment=development&var-level=error&var-level=info&var-level=warn&var-category=performance&var-category=system&var-Filters=&var-user_id=app&var-song_id=app&var-playlist_id=app&var-submission_id=app&var-request_id=app&var-correlation_id=app&var-tags=app&var-searchable_pattern=&refresh=1m">Logging <span className="text-xs text-muted-foreground">[Beta]</span></Link>
           </Button>
         </div>
       </div>
