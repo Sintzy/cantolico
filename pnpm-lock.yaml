@@ -47,9 +47,6 @@ importers:
       '@radix-ui/react-tabs':
         specifier: ^1.1.12
         version: 1.1.13(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      '@supabase/supabase-js':
-        specifier: ^2.56.1
-        version: 2.80.0
       '@tombatossals/react-chords':
         specifier: ^0.2.10
         version: 0.2.10
@@ -141,6 +138,9 @@ importers:
         specifier: ^4.1.5
         version: 4.1.12
     devDependencies:
+      '@supabase/supabase-js':
+        specifier: ^2.56.1
+        version: 2.80.0
       '@tailwindcss/postcss':
         specifier: ^4
         version: 4.1.17
@@ -153,6 +153,9 @@ importers:
       '@types/react-dom':
         specifier: ^19
         version: 19.2.2(@types/react@19.2.2)
+      dotenv:
+        specifier: ^17.2.3
+        version: 17.2.3
       tailwindcss:
         specifier: ^4
         version: 4.1.17
@@ -1603,6 +1606,10 @@ packages:
 
   domutils@3.2.2:
     resolution: {integrity: sha512-6kZKyUajlDuqlHKVX1w7gyslj9MPIXzIFiz/rGu35uC1wMi+kMhQwGhl4lt9unC9Vb9INnY9Z3/ZA3+FhASLaw==}
+
+  dotenv@17.2.3:
+    resolution: {integrity: sha512-JVUnt+DUIzu87TABbhPmNfVdBDt18BLOWjMUFJMSi/Qqg7NTYtabbvSNJGOJ7afbRuv9D/lngizHtP7QyLQ+9w==}
+    engines: {node: '>=12'}
 
   easymde@2.20.0:
     resolution: {integrity: sha512-V1Z5f92TfR42Na852OWnIZMbM7zotWQYTddNaLYZFVKj7APBbyZ3FYJ27gBw2grMW3R6Qdv9J8n5Ij7XRSIgXQ==}
@@ -3453,6 +3460,8 @@ snapshots:
       dom-serializer: 2.0.0
       domelementtype: 2.3.0
       domhandler: 5.0.3
+
+  dotenv@17.2.3: {}
 
   easymde@2.20.0:
     dependencies:
