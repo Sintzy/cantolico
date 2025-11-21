@@ -136,6 +136,52 @@ export async function GET(request: NextRequest) {
         songCount: data.count
       }));
 
+    // Novos utilizadores por role (últimos 30 dias)
+    // Use separate count queries per role to avoid parsing large result sets and to be robust to schema differences
+    const [
+      { count: newUsersUSER },
+      { count: newUsersREVIEWER },
+      { count: newUsersADMIN }
+    ] = await Promise.all([
+      supabase.from('User').select('id', { count: 'exact', head: true }).gte('createdAt', thirtyDaysAgo.toISOString()).eq('role', 'USER'),
+      supabase.from('User').select('id', { count: 'exact', head: true }).gte('createdAt', thirtyDaysAgo.toISOString()).eq('role', 'REVIEWER'),
+      supabase.from('User').select('id', { count: 'exact', head: true }).gte('createdAt', thirtyDaysAgo.toISOString()).eq('role', 'ADMIN')
+    ]);
+
+    const newUsersByRole = [
+      { role: 'USER', count: Number(newUsersUSER ?? 0) || 0 },
+      { role: 'REVIEWER', count: Number(newUsersREVIEWER ?? 0) || 0 },
+      { role: 'ADMIN', count: Number(newUsersADMIN ?? 0) || 0 }
+    ];
+
+    // Agrupar músicas por momento litúrgico
+    // Supondo que Song tem um campo moments que é um Postgres array ou jsonb
+    const { data: songsWithMoments } = await supabase
+      .from('Song')
+      .select('id, moments')
+      .limit(2000);
+
+    const songsByMomentMap: Record<string, number> = {};
+    songsWithMoments?.forEach((s: any) => {
+      const moments = s.moments || [];
+      if (Array.isArray(moments)) {
+        moments.forEach((m: string) => {
+          if (!m) return;
+          songsByMomentMap[m] = (songsByMomentMap[m] || 0) + 1;
+        });
+      } else if (typeof moments === 'string') {
+        // fallback if stored as "{a,b}"
+        const cleaned = moments.replace(/[{}]/g, '');
+        cleaned.split(',').map(x => x.trim()).filter(Boolean).forEach((m) => {
+          songsByMomentMap[m] = (songsByMomentMap[m] || 0) + 1;
+        });
+      }
+    });
+
+    const songsByMoment = Object.entries(songsByMomentMap)
+      .map(([moment, count]) => ({ moment, count }))
+      .sort((a, b) => b.count - a.count);
+
     return NextResponse.json({
       totalUsers: totalUsers || 0,
       totalSongs: totalSongs || 0,
@@ -161,8 +207,10 @@ export async function GET(request: NextRequest) {
       ],
       submissionsByMonth: [], // Dados mockados por agora
       recentActivities: [], // Dados mockados por agora
-      topAuthors: topAuthorsList,
-      lastUpdated: new Date().toISOString()
+  topAuthors: topAuthorsList,
+  newUsersByRole,
+  songsByMoment,
+  lastUpdated: new Date().toISOString()
     });
 
   } catch (error) {

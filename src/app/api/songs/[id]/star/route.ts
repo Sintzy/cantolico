@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase-client';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { withAuthApiProtection, withApiProtection } from '@/lib/api-middleware';
-import { logQuickAction, getUserInfoFromRequest, USER_ACTIONS } from '@/lib/user-action-logger';
+import { logSongStarred } from '@/lib/logging-helpers';
 import { requireEmailVerification } from '@/lib/email';
 
 export const POST = withAuthApiProtection(async (
@@ -41,11 +41,7 @@ export const POST = withAuthApiProtection(async (
       .limit(1);
 
     if (songError || !songs || songs.length === 0) {
-      const userInfo = getUserInfoFromRequest(request, session);
-      await logQuickAction('STAR_SONG', userInfo, false, {
-        songIdOrSlug,
-        error: 'Song not found'
-      });
+      console.log('Song not found for star operation:', songIdOrSlug);
       return NextResponse.json(
         { error: 'Song not found' },
         { status: 404 }
@@ -68,13 +64,7 @@ export const POST = withAuthApiProtection(async (
     }
 
     if (existingStars && existingStars.length > 0) {
-      const userInfo = getUserInfoFromRequest(request, session);
-      await logQuickAction('STAR_SONG', userInfo, false, {
-        songId: song.id,
-        songTitle: song.title,
-        songSlug: song.slug,
-        error: 'Song already starred'
-      });
+      console.log('Song already starred:', { songId: song.id, songTitle: song.title });
       return NextResponse.json(
         { error: 'Song already starred' },
         { status: 400 }
@@ -90,21 +80,18 @@ export const POST = withAuthApiProtection(async (
       });
 
     if (createError) {
-      const userInfo = getUserInfoFromRequest(request, session);
-      await logQuickAction('STAR_SONG', userInfo, false, {
-        songId: song.id,
-        songTitle: song.title,
-        error: createError.message
-      });
+      console.error('Error creating star:', createError);
       throw createError;
     }
 
-    // Log de sucesso
-    const userInfo = getUserInfoFromRequest(request, session);
-    await logQuickAction('STAR_SONG', userInfo, true, {
-      songId: song.id,
-      songTitle: song.title,
-      songSlug: song.slug
+    // Log de sucesso usando o novo sistema
+    await logSongStarred({
+      song_id: song.id,
+      details: {
+        song_title: song.title,
+        song_slug: song.slug,
+        user_id: userId
+      }
     });
 
     // Retornar contagem atualizada
@@ -167,11 +154,7 @@ export const DELETE = withAuthApiProtection(async (
       .limit(1);
 
     if (songError || !songs || songs.length === 0) {
-      const userInfo = getUserInfoFromRequest(request, session);
-      await logQuickAction('UNSTAR_SONG', userInfo, false, {
-        songIdOrSlug,
-        error: 'Song not found'
-      });
+      console.log('Song not found for unstar operation:', songIdOrSlug);
       return NextResponse.json(
         { error: 'Song not found' },
         { status: 404 }
@@ -189,22 +172,11 @@ export const DELETE = withAuthApiProtection(async (
       .eq('songId', songId);
 
     if (deleteError) {
-      const userInfo = getUserInfoFromRequest(request, session);
-      await logQuickAction('UNSTAR_SONG', userInfo, false, {
-        songId: song.id,
-        songTitle: song.title,
-        error: deleteError.message
-      });
+      console.error('Error removing star:', deleteError);
       throw deleteError;
     }
 
-    // Log de sucesso
-    const userInfo = getUserInfoFromRequest(request, session);
-    await logQuickAction('UNSTAR_SONG', userInfo, true, {
-      songId: song.id,
-      songTitle: song.title,
-      songSlug: song.slug
-    });
+    console.log('Song unstarred successfully:', { songId: song.id, songTitle: song.title });
 
     // Retornar contagem atualizada
     const { count: starCount, error: countError } = await supabase

@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { adminSupabase as supabase } from "@/lib/supabase-admin";
 import { randomUUID } from 'crypto';
 import { formatTagsForPostgreSQL } from '@/lib/utils';
-import { logQuickAction, getUserInfoFromRequest, USER_ACTIONS } from '@/lib/user-action-logger';
+import { logApiRequestError } from '@/lib/logging-helpers';
 
 export async function POST(
   req: NextRequest,
@@ -174,20 +174,12 @@ export async function POST(
       return NextResponse.json({ error: 'Erro ao atualizar submissão' }, { status: 500 });
     }
 
-    // Log successful instant approval
-    const userInfo = getUserInfoFromRequest(req, session);
-    await logQuickAction(
-      'APPROVE_SUBMISSION',
-      { ...userInfo, userId: session.user.id, userEmail: session.user.email },
-      true,
-      {
-        submissionId: id,
-        submissionTitle: submission.title,
-        songId: newSong.id,
-        approvalType: 'instant',
-        submitterId: submission.submitterId
-      }
-    );
+    // Remoção de log de sucesso - apenas erros importantes
+    console.log('✅ Submissão aprovada instantaneamente:', {
+      submissionId: id,
+      songId: newSong.id,
+      title: submission.title
+    });
 
     return NextResponse.json({ 
       success: true, 

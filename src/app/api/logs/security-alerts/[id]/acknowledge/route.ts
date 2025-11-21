@@ -26,10 +26,11 @@ export async function PATCH(
       return NextResponse.json({ error: 'ID do alerta é obrigatório' }, { status: 400 });
     }
 
-    // Verificar se o alerta existe
+    // Verificar se o alerta existe como um log marcado com tag 'security'
     const { data: existingAlert, error: fetchError } = await supabase
-      .from('security_alerts')
-      .select('id, status')
+      .from('logs')
+      .select('id, details')
+      .contains('tags', ['security'])
       .eq('id', alertId)
       .single();
 
@@ -37,13 +38,16 @@ export async function PATCH(
       return NextResponse.json({ error: 'Alerta não encontrado' }, { status: 404 });
     }
 
-    // Atualizar o status do alerta para ACKNOWLEDGED
+    // Atualizar o status do alerta para ACKNOWLEDGED no próprio log
     const { data, error } = await supabase
-      .from('security_alerts')
+      .from('logs')
       .update({
-        status: 'ACKNOWLEDGED',
-        acknowledged_by: session.user.id, // Usar ID do utilizador, não email
-        acknowledged_at: new Date().toISOString()
+        details: {
+          ...(existingAlert.details || {}),
+          alert_status: 'ACKNOWLEDGED',
+          acknowledged_by: session.user.id,
+          acknowledged_at: new Date().toISOString()
+        }
       })
       .eq('id', alertId)
       .select()
@@ -62,10 +66,10 @@ export async function PATCH(
       details: {
         alertId,
         acknowledgedBy: session.user.email,
-        previousStatus: existingAlert.status
+        previousStatus: existingAlert.details?.alert_status || null
       },
       user_id: session.user.id,
-      user_email: session.user.email
+      user_email: session.user.email || undefined
     }]);
 
     return NextResponse.json({

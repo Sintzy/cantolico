@@ -263,7 +263,7 @@ export async function DELETE(req: NextRequest) {
         executedBy: session.user.email
       },
       user_id: session.user.id,
-      user_email: session.user.email
+      user_email: session.user.email || undefined
     }]);
 
     return NextResponse.json({

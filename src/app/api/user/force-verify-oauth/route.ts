@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { supabase } from "@/lib/supabase-client";
-import { logSystemEvent } from "@/lib/enhanced-logging";
 
 export async function POST(req: NextRequest) {
   try {
@@ -46,20 +45,12 @@ export async function POST(req: NextRequest) {
       throw updateError;
     }
 
-    // Log do evento
-    await logSystemEvent(
-      'oauth_email_force_verified',
-      'Verificação forçada de email OAuth',
-      {
-        userId: session.user.id,
-        userEmail: session.user.email,
-        verifiedAt: updatedUser.emailVerified,
-        provider: 'google',
-        timestamp: new Date().toISOString()
-      }
-    );
-
-    console.log(`✅ [FORCE VERIFY] Email verificado para ${session.user.email}`);
+    // Remoção de logs redundantes - apenas console
+    console.log(`✅ [FORCE VERIFY] Email verificado para ${session.user.email}`, {
+      userId: session.user.id,
+      verifiedAt: updatedUser.emailVerified,
+      provider: 'google'
+    });
 
     return NextResponse.json({
       success: true,

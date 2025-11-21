@@ -15,7 +15,7 @@ import chords from "markdown-it-chords";
 import { ChordGuideButton } from "@/components/ChordGuidePopup";
 import BannerDisplay from "@/components/BannerDisplay";
 
-import { Instrument, LiturgicalMoment, SongType } from "@/lib/constants";
+import { Instrument, InstrumentLabels, LiturgicalMoment, LiturgicalMomentLabels, SongType } from "@/lib/constants";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -476,7 +476,7 @@ export default function CreateNewMusicPage() {
                       </SelectTrigger>
                       <SelectContent>
                         {Object.values(Instrument).map((i) => (
-                          <SelectItem key={i} value={i}>{i}</SelectItem>
+                          <SelectItem key={i} value={i}>{InstrumentLabels[i]}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -533,7 +533,7 @@ export default function CreateNewMusicPage() {
                             : "hover:bg-primary/10 hover:text-primary hover:border-primary/50"
                         }`}
                       >
-                        {m.replaceAll("_", " ")}
+                        {LiturgicalMomentLabels[m]}
                       </Button>
                     ))}
                   </div>
@@ -944,7 +944,7 @@ export default function CreateNewMusicPage() {
                       <div className="flex flex-wrap gap-2">
                         {form.moments.map((moment) => (
                           <Badge key={moment} variant="secondary" className="text-xs">
-                            {moment.replaceAll("_", " ")}
+                            {LiturgicalMomentLabels[moment]}
                           </Badge>
                         ))}
                       </div>

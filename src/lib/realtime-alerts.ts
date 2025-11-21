@@ -287,13 +287,17 @@ class RealTimeAlertSystem {
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
       );
 
-      await supabase.from('security_alerts').insert([{
-        alert_type: `REALTIME_${alert.type}`,
-        severity: alert.severity,
-        title: alert.title,
-        description: alert.message,
-        details: alert.details,
-        status: 'OPEN'
+      // Persistir como log com tag 'security' em vez de tabela dedicada
+      await supabase.from('logs').insert([{
+        level: 'SECURITY',
+        category: 'SECURITY',
+        message: alert.title,
+        details: {
+          description: alert.message,
+          ...alert.details
+        },
+        ip_address: alert.details?.ip || null,
+        tags: ['security']
       }]);
 
     } catch (error) {

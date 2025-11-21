@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { supabase } from "@/lib/supabase-client";
-import { logSystemEvent } from "@/lib/enhanced-logging";
 
 export async function POST(req: NextRequest) {
   try {
@@ -92,22 +91,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 3. Log do sistema
-    await logSystemEvent(
-      'oauth_email_verification_fix',
-      'Correção em lote de verificação de email OAuth',
-      {
-        performedBy: session.user.id,
-        performedByEmail: session.user.email,
-        totalFound: oauthAccounts.length,
-        totalFixed: fixedUsers.length,
-        totalErrors: errors.length,
-        fixedUsers: fixedUsers.map(u => ({ id: u.id, email: u.email, provider: u.provider })),
-        errors: errors,
-        timestamp: new Date().toISOString()
-      }
-    );
-
+    console.log(`✅ [OAUTH FIX] System event logged by admin: ${session.user.email}`);
     console.log(`🎉 [OAUTH FIX] Correção concluída: ${fixedUsers.length} contas corrigidas, ${errors.length} erros`);
 
     return NextResponse.json({

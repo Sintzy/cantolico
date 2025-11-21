@@ -167,6 +167,7 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
   }
 
   const isOwner = session?.user?.id === playlist.userId;
+  const isAdmin = session?.user?.role === 'ADMIN';
 
   return (
     <div className="min-h-screen bg-white">
@@ -190,8 +191,8 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
           </Link>
         </Button>
 
-        {/* Owner Actions */}
-        {isOwner && (
+        {/* Owner/Admin Actions */}
+        {(isOwner || isAdmin) && (
           <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -254,7 +255,7 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
           </div>
 
           {/* Action Buttons */}
-          {isOwner && (
+          {(isOwner || isAdmin) && (
             <div className="flex gap-3 justify-center mt-2">
               <Button 
                 variant="ghost" 

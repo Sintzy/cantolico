@@ -336,17 +336,11 @@ async function createSecurityAlert(alertType: string, title: string, details: an
     }
 
     if (logData) {
-      // Criar alerta
-      const { data: alertData, error: alertError } = await supabase.from('security_alerts').insert([{
-        log_id: logData.id,
-        alert_type: alertType,
-        severity,
-        title,
-        description: `Evento de segurança detectado automaticamente: ${JSON.stringify(details)}`
-      }]);
-
-      if (alertError) {
-        console.error('❌ [SECURITY ALERT] Erro ao criar alerta:', alertError);
+      // Atualizar o log inserido para marcar como alerta de segurança (tags)
+      try {
+        await supabase.from('logs').update({ tags: ['security'] }).eq('id', logData.id);
+      } catch (updateError) {
+        console.error('❌ [SECURITY ALERT] Erro ao marcar log com tag security:', updateError);
       }
 
       // Enviar email se severidade >= 3

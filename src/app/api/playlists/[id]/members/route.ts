@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase } from '@/lib/supabase-admin';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { logGeneral, logErrors } from '@/lib/logs';
+import { logApiRequestError, logPlaylistSongAdded, logPlaylistSongRemoved, toErrorContext } from '@/lib/logging-helpers';
 
 // GET: List playlist members
 export async function GET(
@@ -28,7 +28,7 @@ export async function GET(
       return NextResponse.json({ error: 'Playlist not found' }, { status: 404 });
     }
 
-    if (playlist.userId !== session.user.id) {
+    if (playlist.userId !== session.user.id && session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
@@ -52,7 +52,14 @@ export async function GET(
       .order('invitedAt', { ascending: false });
 
     if (membersError) {
-      logErrors('ERROR', 'Error fetching playlist members', JSON.stringify(membersError));
+      logApiRequestError({
+        method: request.method,
+        url: request.url,
+        path: '/api/playlists/[id]/members',
+        status_code: 500,
+        error: toErrorContext(membersError),
+        details: { action: 'fetch_members', playlistId } as any
+      });
       return NextResponse.json({ error: 'Failed to fetch members' }, { status: 500 });
     }
 
@@ -102,7 +109,14 @@ export async function GET(
     return NextResponse.json(allMembers);
 
   } catch (error) {
-    logErrors('ERROR', 'Error in playlist members GET', String(error));
+    logApiRequestError({
+      method: request.method,
+      url: request.url,
+      path: '/api/playlists/[id]/members',
+      status_code: 500,
+      error: toErrorContext(error),
+      details: { action: 'members_get_error' }
+    });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -140,7 +154,7 @@ export async function POST(
       return NextResponse.json({ error: 'Playlist not found' }, { status: 404 });
     }
 
-    if (playlist.userId !== session.user.id) {
+    if (playlist.userId !== session.user.id && session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
@@ -196,11 +210,27 @@ export async function POST(
       .single();
 
     if (invitationError) {
-      logErrors('ERROR', 'Error creating playlist invitation', JSON.stringify(invitationError));
+      logApiRequestError({
+        method: request.method,
+        url: request.url,
+        path: '/api/playlists/[id]/members',
+        status_code: 500,
+        error: toErrorContext(invitationError),
+        details: { action: 'create_invitation_error', userEmail } as any
+      });
       return NextResponse.json({ error: 'Failed to send invitation' }, { status: 500 });
     }
 
-    logGeneral('INFO', 'Playlist invitation sent', `${playlistId} -> ${userEmail} by ${session.user.email}`);
+    logPlaylistSongAdded({
+      playlist_id: playlistId,
+      song_id: invitation.id,
+      user: { user_email: session.user.email || undefined },
+      details: {
+        action: 'invitation_sent',
+        invitedUserEmail: userEmail,
+        role
+      }
+    });
 
     return NextResponse.json({
       success: true,
@@ -209,7 +239,14 @@ export async function POST(
     });
 
   } catch (error) {
-    logErrors('ERROR', 'Error in playlist members POST', String(error));
+    logApiRequestError({
+      method: request.method,
+      url: request.url,
+      path: '/api/playlists/[id]/members',
+      status_code: 500,
+      error: toErrorContext(error),
+      details: { action: 'members_post_error' } as any
+    });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -244,7 +281,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Playlist not found' }, { status: 404 });
     }
 
-    if (playlist.userId !== session.user.id) {
+    if (playlist.userId !== session.user.id && session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
@@ -256,11 +293,26 @@ export async function DELETE(
       .eq('playlistId', playlistId);
 
     if (deleteError) {
-      logErrors('ERROR', 'Error removing playlist member', JSON.stringify(deleteError));
+      logApiRequestError({
+        method: request.method,
+        url: request.url,
+        path: '/api/playlists/[id]/members',
+        status_code: 500,
+        error: toErrorContext(deleteError),
+        details: { action: 'remove_member_error', memberId }
+      });
       return NextResponse.json({ error: 'Failed to remove member' }, { status: 500 });
     }
 
-    logGeneral('INFO', 'Playlist member removed', `${memberId} from ${playlistId} by ${session.user.email}`);
+    logPlaylistSongRemoved({
+      playlist_id: playlistId,
+      song_id: memberId,
+      user: { user_email: session.user.email || undefined },
+      details: {
+        action: 'member_removed',
+        memberId
+      }
+    });
 
     return NextResponse.json({
       success: true,
@@ -268,7 +320,14 @@ export async function DELETE(
     });
 
   } catch (error) {
-    logErrors('ERROR', 'Error in playlist members DELETE', String(error));
+    logApiRequestError({
+      method: request.method,
+      url: request.url,
+      path: '/api/playlists/[id]/members',
+      status_code: 500,
+      error: toErrorContext(error),
+      details: { action: 'members_delete_error' }
+    });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

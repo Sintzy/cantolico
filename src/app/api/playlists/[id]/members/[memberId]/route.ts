@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase } from '@/lib/supabase-admin';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { logGeneral, logErrors } from '@/lib/logs';
+import { logApiRequestError, logPlaylistSongRemoved, toErrorContext } from '@/lib/logging-helpers';
 
 export async function DELETE(
   request: NextRequest,
@@ -27,7 +27,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Playlist not found' }, { status: 404 });
     }
 
-    if (playlist.userId !== session.user.id) {
+    if (playlist.userId !== session.user.id && session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
@@ -51,11 +51,29 @@ export async function DELETE(
       .eq('playlistId', playlistId);
 
     if (deleteError) {
-      logErrors('ERROR', 'Error removing playlist member', JSON.stringify(deleteError));
+      const errorContext = toErrorContext(deleteError);
+      logApiRequestError({
+        method: request.method,
+        url: request.url,
+        path: '/api/playlists/[id]/members/[memberId]',
+        status_code: 500,
+        error: errorContext,
+        details: { action: 'remove_member' }
+      });
       return NextResponse.json({ error: 'Failed to remove member' }, { status: 500 });
     }
 
-    logGeneral('INFO', 'Playlist member removed', `Member ${member.userEmail} removed from playlist ${playlist.name} by ${session.user.email}`);
+    logPlaylistSongRemoved({
+      playlist_id: playlistId,
+      song_id: memberId,
+      user: { user_email: session.user.email || undefined },
+      details: {
+        memberEmail: member.userEmail,
+        playlistName: playlist.name,
+        action: 'member_removed',
+        removedBy: session.user.email || undefined
+      }
+    });
 
     return NextResponse.json({
       success: true,
@@ -63,7 +81,14 @@ export async function DELETE(
     });
 
   } catch (error) {
-    logErrors('ERROR', 'Error in playlist member DELETE', String(error));
+    logApiRequestError({
+      method: request.method,
+      url: request.url,
+      path: '/api/playlists/[id]/members/[memberId]',
+      status_code: 500,
+      error: toErrorContext(error),
+      details: { action: 'member_delete_error' }
+    });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

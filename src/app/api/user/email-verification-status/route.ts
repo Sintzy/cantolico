@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { supabase } from "@/lib/supabase-client";
+import { supabase } from '@/lib/supabase-client';
 
 export async function GET(req: NextRequest) {
   try {
@@ -27,6 +27,8 @@ export async function GET(req: NextRequest) {
         error: "Utilizador não encontrado" 
       }, { status: 404 });
     }
+
+    // Remoção de log de acesso desnecessário
 
     return NextResponse.json({ 
       success: true, 

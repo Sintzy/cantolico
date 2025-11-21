@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { supabase } from "@/lib/supabase-client";
 import { sendEmailConfirmation, generateEmailVerificationToken, createEmailVerificationData } from "@/lib/email";
-import { logGeneral, logErrors } from "@/lib/logs";
+import { logApiRequestError, toErrorContext } from "@/lib/logging-helpers";
 
 export async function POST(req: NextRequest) {
   try {
@@ -101,10 +101,13 @@ export async function POST(req: NextRequest) {
       });
 
     if (tokenError) {
-      await logErrors('ERROR', 'Erro ao criar token de verificação (reenvio)', 'Falha ao armazenar token de verificação', {
-        userId: user.id,
-        email: user.email,
-        error: tokenError.message
+      logApiRequestError({
+        method: req.method,
+        url: req.url,
+        path: '/api/auth/resend-verification',
+        status_code: 500,
+        error: toErrorContext(tokenError),
+        details: { userId: user.id, email: user.email, action: 'token_creation_error' } as any
       });
       
       return NextResponse.json({ 
@@ -121,10 +124,13 @@ export async function POST(req: NextRequest) {
     );
 
     if (!emailResult.success) {
-      await logErrors('ERROR', 'Erro ao reenviar email de verificação', 'Falha no envio do email', {
-        userId: user.id,
-        email: user.email,
-        error: emailResult.error
+      logApiRequestError({
+        method: req.method,
+        url: req.url,
+        path: '/api/auth/resend-verification',
+        status_code: 500,
+        error: toErrorContext(new Error(emailResult.error || 'Email send failed')),
+        details: { userId: user.id, email: user.email, action: 'email_send_error' } as any
       });
       
       return NextResponse.json({ 
@@ -133,12 +139,7 @@ export async function POST(req: NextRequest) {
       }, { status: 500 });
     }
 
-    // Log do reenvio
-    await logGeneral('INFO', 'Email de verificação reenviado', 'Utilizador solicitou reenvio de email de verificação', {
-      userId: user.id,
-      email: user.email,
-      action: 'resend_verification_email'
-    });
+    console.log(`📧 [EMAIL VERIFY] Verification email resent to: ${user.email}`);
 
     return NextResponse.json({ 
       success: true, 
@@ -148,9 +149,13 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Erro ao reenviar email de verificação:', error);
     
-    await logErrors('ERROR', 'Erro no reenvio de email de verificação', 'Erro interno no processo de reenvio', {
-      error: error instanceof Error ? error.message : 'Erro desconhecido',
-      stack: error instanceof Error ? error.stack : undefined
+    logApiRequestError({
+      method: req.method,
+      url: req.url,
+      path: '/api/auth/resend-verification',
+      status_code: 500,
+      error: toErrorContext(error),
+      details: { action: 'resend_verification_error' } as any
     });
     
     return NextResponse.json({ 

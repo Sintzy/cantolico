@@ -224,9 +224,44 @@ export function useLogger() {
         return;
       }
 
-      // Processar alerta de segurança se fornecido
+      // Process security alert by creating a SECURITY log entry with tag 'security'
       if (securityAlert && logResult?.id) {
-        await processSecurityAlert(logResult.id, securityAlert);
+        try {
+          const alertLog = {
+            level: 'SECURITY' as const,
+            category: 'SECURITY' as const,
+            status: 'SUCCESS',
+            message: securityAlert.title,
+            details: {
+              description: securityAlert.description,
+              alertType: securityAlert.alertType,
+              severity: securityAlert.severity,
+              emailRecipients: securityAlert.emailRecipients || []
+            },
+            stackTrace: null,
+            user_id: session?.user?.id || null,
+            user_email: session?.user?.email || null,
+            user_role: session?.user?.role || null,
+            session_id: getSessionId(),
+            ip_address: await getClientIP(),
+            user_agent: clientInfo.userAgent,
+            url: entry.url || clientInfo.url,
+            method: entry.method || null,
+            status_code: entry.statusCode || null,
+            response_time_ms: entry.responseTimeMs || null,
+            server_instance: entry.serverInstance || LOG_CONFIG.SERVER_INSTANCE,
+            environment: entry.environment || LOG_CONFIG.DEFAULT_ENVIRONMENT,
+            version: entry.version || LOG_CONFIG.VERSION,
+            tags: [...(entry.tags || []), 'security'],
+            correlation_id: entry.correlationId || generateCorrelationId(),
+            parent_log_id: logResult.id,
+            expires_at: calculateExpirationDate('SECURITY')
+          };
+
+          await supabase.from('logs').insert([alertLog]);
+        } catch (err) {
+          console.error('Erro ao persistir alerta de segurança como log:', err);
+        }
       }
 
       // Auto-detectar alertas de segurança críticos
@@ -473,12 +508,43 @@ export function useLogger() {
         email_recipients: alert.emailRecipients || []
       };
 
-      const { error } = await supabase
-        .from('security_alerts')
-        .insert([alertData]);
+      // Persistir alerta como um log com tag 'security' em vez de tabela dedicada
+      const alertLog = {
+        level: 'SECURITY' as const,
+        category: 'SECURITY' as const,
+        status: 'SUCCESS',
+        message: alert.title,
+        details: {
+          description: alert.description,
+          alertType: alert.alertType,
+          severity: alert.severity,
+          emailRecipients: alert.emailRecipients || []
+        },
+        user_id: session?.user?.id || null,
+        user_email: session?.user?.email || null,
+        user_role: session?.user?.role || null,
+        session_id: getSessionId(),
+        ip_address: await getClientIP(),
+        user_agent: getClientInfo().userAgent,
+        url: undefined,
+        method: undefined,
+        status_code: undefined,
+        response_time_ms: undefined,
+        server_instance: LOG_CONFIG.SERVER_INSTANCE,
+        environment: LOG_CONFIG.DEFAULT_ENVIRONMENT,
+        version: LOG_CONFIG.VERSION,
+        tags: ['security'],
+        correlation_id: generateCorrelationId(),
+        parent_log_id: logId || null,
+        expires_at: calculateExpirationDate('SECURITY')
+      };
 
-      if (error) {
-        console.error('Erro ao criar alerta de segurança:', error);
+      const { error: insertError } = await supabase
+        .from('logs')
+        .insert([alertLog]);
+
+      if (insertError) {
+        console.error('Erro ao criar alerta de segurança como log:', insertError);
       }
     } catch (error) {
       console.error('Erro ao processar alerta de segurança:', error);
@@ -594,14 +660,16 @@ export function useLogAnalytics() {
 
   const getSecurityAlerts = useCallback(async (status = 'ACTIVE') => {
     try {
+      // NOTE: security alerts are now stored as logs with the tag 'security'.
+      // The `status` parameter is kept for compatibility but currently ignored.
       const { data, error } = await supabase
-        .from('security_alerts')
-        .select('*, logs(*)')
-        .eq('status', status)
+        .from('logs')
+        .select('*')
+        .contains('tags', ['security'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data;
+      return data || [];
     } catch (error) {
       console.error('Erro ao buscar alertas de segurança:', error);
       return [];

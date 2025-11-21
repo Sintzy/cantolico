@@ -52,7 +52,7 @@ export async function POST(
       );
     }
 
-    if (playlist.userId !== session.user.id) {
+    if (playlist.userId !== session.user.id && session.user.role !== 'ADMIN') {
       return NextResponse.json(
         { error: 'Apenas o criador da playlist pode convidar membros' },
         { status: 403 }
@@ -165,6 +165,8 @@ export async function POST(
         subject: `🎵 Convite para colaborar na playlist "${playlist.name}"`,
         html: emailTemplate
       });
+
+      console.log('Playlist invitation sent successfully:', { playlistId, inviteEmail });
 
       return NextResponse.json({
         success: true,

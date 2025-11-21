@@ -86,15 +86,17 @@ export function useStableData<T>(
   const fetchData = useCallback(async (force = false) => {
     const now = Date.now();
     
-    // Evita fetch se foi feito recentemente (< 30 segundos) e não é forçado
-    if (!force && now - lastFetch < 30000) {
+    // Se tem cacheKey, verifica se mudou (nova página/filtros)
+    const cachedData = getCachedData();
+    
+    // Se não é forçado e tem cache válido para esta key específica, usa
+    if (!force && cachedData) {
+      setData(cachedData);
       return;
     }
 
-    // Tenta usar cache primeiro
-    const cachedData = getCachedData();
-    if (cachedData && !force) {
-      setData(cachedData);
+    // Evita fetch duplicado em menos de 1 segundo (proteção contra double-click)
+    if (!force && now - lastFetch < 1000) {
       return;
     }
 
@@ -113,13 +115,10 @@ export function useStableData<T>(
     }
   }, [fetchFunction, lastFetch, getCachedData, setCachedData]);
 
-  // Auto-fetch apenas na primeira vez ou quando dependencies mudam
+  // Auto-fetch na primeira vez ou quando dependencies mudam
   useEffect(() => {
-    if (!data || dependencies.some((dep, index) => 
-      dep !== dependencies[index]
-    )) {
-      fetchData();
-    }
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, dependencies);
 
   // Manual refresh function

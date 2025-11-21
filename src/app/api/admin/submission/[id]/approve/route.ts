@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { adminSupabase as supabase } from "@/lib/supabase-admin";
 import { randomUUID } from 'crypto';
-import { logAdmin, logErrors } from '@/lib/logs';
+import { logApiRequestError, logUnauthorizedAccess, logForbiddenAccess, toErrorContext } from '@/lib/logging-helpers';
 import { sendEmail, createApprovalEmailTemplate } from '@/lib/email';
 import { formatTagsForPostgreSQL, formatMomentsForPostgreSQL } from '@/lib/utils';
 
@@ -88,37 +88,36 @@ export async function POST(
       .single();
 
     if (fetchError || !submission) {
-      await logAdmin('WARN', 'Tentativa de aprovação de submissão inexistente', 'Admin tentou aprovar submissão que não existe', {
-        adminId: session.user.id,
-        adminEmail: session.user.email,
-        submissionId: id,
-        action: 'approve_submission_not_found'
+      logUnauthorizedAccess({
+        event_type: 'unauthorized_access',
+        resource: `/api/admin/submission/${id}/approve`,
+        user: { user_id: session.user.id, user_email: session.user.email || undefined, user_role: session.user.role },
+        network: { ip_address: req.headers.get('x-forwarded-for') || 'unknown', user_agent: req.headers.get('user-agent') || undefined },
+        details: {
+          submissionId: id,
+          action: 'approve_submission_not_found'
+        }
       });
       return NextResponse.json({ error: 'Submissão não encontrada' }, { status: 404 });
     }
 
     if (submission.status !== 'PENDING') {
-      await logAdmin('WARN', 'Tentativa de aprovação de submissão já processada', 'Admin tentou aprovar submissão que já foi processada', {
-        adminId: session.user.id,
-        adminEmail: session.user.email,
-        submissionId: id,
-        submissionTitle: submission.title,
-        currentStatus: submission.status,
-        action: 'approve_submission_already_processed'
+      logForbiddenAccess({
+        event_type: 'forbidden_access',
+        resource: `/api/admin/submission/${id}/approve`,
+        user: { user_id: session.user.id, user_email: session.user.email || undefined, user_role: session.user.role },
+  network: { ip_address: req.headers.get('x-forwarded-for') || 'unknown', user_agent: req.headers.get('user-agent') || undefined },
+        details: {
+          submissionId: id,
+          submissionTitle: submission.title,
+          currentStatus: submission.status,
+          action: 'approve_submission_already_processed'
+        }
       });
       return NextResponse.json({ error: 'Esta submissão já foi processada' }, { status: 400 });
     }
 
-    // Log do início da aprovação
-    await logAdmin('INFO', 'Aprovação de submissão iniciada', 'Admin iniciou processo de aprovação de submissão', {
-      adminId: session.user.id,
-      adminEmail: session.user.email,
-      submissionId: id,
-      submissionTitle: submission.title,
-      submitterId: submission.submitterId,
-      action: 'approve_submission_started',
-      entity: 'song_submission'
-    });
+    // Remoção de log de início - apenas erros importantes
 
     // Gerar slug único
     const baseSlug = title.toLowerCase()
@@ -213,35 +212,18 @@ export async function POST(
       .eq('id', id);
 
     if (updateSubmissionError) {
-      await logErrors('ERROR', 'Erro ao atualizar status da submissão aprovada', 'Erro na base de dados ao marcar submissão como aprovada', {
-        adminId: session.user.id,
-        adminEmail: session.user.email,
-        submissionId: id,
-        submissionTitle: submission.title,
-        error: updateSubmissionError.message,
-        action: 'approve_submission_update_error'
+      logApiRequestError({
+        method: req.method,
+        url: req.url,
+        path: `/api/admin/submission/${id}/approve`,
+        status_code: 500,
+        error: toErrorContext(updateSubmissionError)
       });
       console.error('Error updating submission:', updateSubmissionError);
       return NextResponse.json({ error: 'Erro ao atualizar submissão' }, { status: 500 });
     }
 
-    // Log de sucesso da aprovação
-    await logAdmin('SUCCESS', 'Submissão aprovada com sucesso', 'Admin aprovou submissão e música foi criada', {
-      adminId: session.user.id,
-      adminEmail: session.user.email,
-      submissionId: id,
-      submissionTitle: submission.title,
-      submitterId: submission.submitterId,
-      newSongId: newSong.id,
-      newSongSlug: newSong.slug,
-      newSongTitle: title,
-      instrument: instrument,
-      momentsCount: moments.length,
-      hasSpotifyLink: !!spotifyLink,
-      hasYoutubeLink: !!youtubeLink,
-      action: 'submission_approved',
-      entity: 'song_submission'
-    });
+    // Remoção de log de sucesso - apenas erros importantes
 
     // Enviar email de aprovação para o utilizador
     if (submission.submitter && Array.isArray(submission.submitter) && submission.submitter[0]?.email) {

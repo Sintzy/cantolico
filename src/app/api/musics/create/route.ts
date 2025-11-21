@@ -8,7 +8,6 @@ import {
   SongType,
   SourceType,
 } from "@/lib/constants";
-import { logQuickAction, getUserInfoFromRequest, USER_ACTIONS } from "@/lib/user-action-logger";
 import { formatTagsForPostgreSQL } from "@/lib/utils";
 
 
@@ -62,16 +61,7 @@ export const POST = withUserProtection<any>(async (req: NextRequest, session: an
     return NextResponse.json({ error: "Utilizador não encontrado" }, { status: 404 });
   }
 
-  // Log submission attempt
-  const userInfo = getUserInfoFromRequest(req, session);
-  await logQuickAction(
-    'SUBMIT_SONG',
-    { ...userInfo, userId: user.id, userEmail: user.email },
-    false, // Will be updated to true if successful
-    {
-      stage: 'started'
-    }
-  );
+  console.log(`🎵 [SONG SUBMIT] User ${user.email} submitting new song`);
 
     const formData = await req.formData();
     console.log("FormData recebido:", formData);
@@ -90,7 +80,19 @@ export const POST = withUserProtection<any>(async (req: NextRequest, session: an
     const title = formData.get("title")?.toString() ?? "";
     const author = formData.get("author")?.toString() || null;
     const type = formData.get("type")?.toString() as SongType;
-    const instrument = formData.get("instrument")?.toString() as Instrument;
+    const instrumentRaw = formData.get("instrument")?.toString() ?? "";
+    
+    // Convert instrument from Portuguese label to database enum value
+    const instrumentMap: Record<string, string> = {
+      "Guitarra": "GUITARRA",
+      "Piano": "PIANO",
+      "Órgão": "ORGAO",
+      "Coro": "CORO",
+      "Outro": "OUTRO",
+    };
+    
+    const instrument = (instrumentMap[instrumentRaw] || instrumentRaw.toUpperCase()) as Instrument;
+    
     const markdown = formData.get("markdown")?.toString() ?? "";
 
     const tagString = formData.get("tags")?.toString() ?? "";
@@ -105,11 +107,37 @@ export const POST = withUserProtection<any>(async (req: NextRequest, session: an
         .filter((t) => t.length > 0)
     );
 
+    // Convert moments from Portuguese labels to database enum values
+    const momentMap: Record<string, string> = {
+      "Entrada": "ENTRADA",
+      "Ato Penitencial": "ATO_PENITENCIAL",
+      "Glória": "GLORIA",
+      "Salmo": "SALMO",
+      "Aclamação": "ACLAMACAO",
+      "Ofertório": "OFERTORIO",
+      "Santo": "SANTO",
+      "Comunhão": "COMUNHAO",
+      "Ação de Graças": "ACAO_DE_GRACAS",
+      "Final": "FINAL",
+      "Adoração": "ADORACAO",
+      "Aspersão": "ASPERSAO",
+      "Baptismo": "BAPTISMO",
+      "Bênção das Alianças": "BENCAO_DAS_ALIANCAS",
+      "Cordeiro de Deus": "CORDEIRO_DE_DEUS",
+      "Crisma": "CRISMA",
+      "Introdução da Palavra": "INTRODUCAO_DA_PALAVRA",
+      "Louvor": "LOUVOR",
+      "Pai Nosso": "PAI_NOSSO",
+      "Reflexão": "REFLEXAO",
+      "Terço Mistério": "TERCO_MISTERIO",
+      "Outros": "OUTROS",
+    };
+
     let moments: LiturgicalMoment[] = [];
     try {
       const parsed = JSON.parse(momentsRaw);
       if (Array.isArray(parsed)) {
-        moments = parsed as LiturgicalMoment[];
+        moments = parsed.map(m => momentMap[m] || m) as LiturgicalMoment[];
       }
     } catch (error) {
       console.error("Erro ao analisar momentos:", error);
@@ -199,25 +227,7 @@ export const POST = withUserProtection<any>(async (req: NextRequest, session: an
     throw new Error(`Supabase error: ${submissionError?.message}`);
   }
 
-  // Log successful song submission
-  await logQuickAction(
-    'SUBMIT_SONG',
-    { ...userInfo, userId: user.id, userEmail: user.email },
-    true,
-    {
-      submissionId: submission.id,
-      title,
-      type,
-      instrument,
-      hasAudio: !!audioPath,
-      hasPdf: !!pdfPath,
-      hasMarkdown: !!markdown,
-      momentsCount: moments.length,
-      tagsCount: tags?.length || 0,
-      stage: 'completed'
-    }
-  );
-
+  console.log(`✅ [SONG SUBMIT] Song submitted successfully: ${title} (ID: ${submission.id})`);
   console.log("Submissão criada com sucesso:", submission);
 
   return NextResponse.json({ success: true, submissionId });

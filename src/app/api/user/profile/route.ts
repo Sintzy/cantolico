@@ -24,6 +24,8 @@ export async function GET(req: NextRequest) {
       throw error;
     }
 
+    // Remoção de log de acesso desnecessário
+
     return NextResponse.json({ 
       success: true,
       accounts: accounts || [],

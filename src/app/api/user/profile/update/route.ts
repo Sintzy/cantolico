@@ -2,22 +2,19 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { supabase } from "@/lib/supabase-client";
 import { NextRequest, NextResponse } from "next/server";
-import { logProfileAction, getUserInfoFromRequest } from "@/lib/user-action-logger";
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    const userInfo = getUserInfoFromRequest(req, session);
     
     if (!session?.user?.id) {
-      await logProfileAction('profile_update_unauthorized', userInfo, false, {
-        reason: 'User not authenticated'
-      });
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const data = await req.json();
     const { name, bio, image } = data;
+
+    console.log(`👤 [PROFILE UPDATE] Updating profile for user: ${session.user.email}`);
 
     // Buscar dados atuais do utilizador para comparação
     const { data: currentUser } = await supabase
@@ -38,11 +35,6 @@ export async function POST(req: NextRequest) {
       Object.entries(changes).filter(([_, value]) => value !== null)
     );
 
-    await logProfileAction('profile_update_started', userInfo, true, {
-      changes: actualChanges,
-      requestData: { name, bio, image }
-    });
-
     const { error: updateError } = await supabase
       .from('User')
       .update({ name, bio, image })
@@ -52,20 +44,10 @@ export async function POST(req: NextRequest) {
       throw new Error(`Supabase error: ${updateError.message}`);
     }
 
-    await logProfileAction('profile_updated', userInfo, true, {
-      changes: actualChanges,
-      updatedFields: Object.keys(actualChanges)
-    });
+    console.log(`✅ [PROFILE UPDATE] Profile updated successfully for: ${session.user.email}`);
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    const session = await getServerSession(authOptions);
-    const userInfo = getUserInfoFromRequest(req, session);
-    
-    await logProfileAction('profile_update_error', userInfo, false, {
-      error: err instanceof Error ? err.message : 'Unknown error'
-    });
-    
     console.error("Erro ao atualizar perfil:", err);
     return NextResponse.json({ error: "Erro ao atualizar perfil" }, { status: 500 });
   }

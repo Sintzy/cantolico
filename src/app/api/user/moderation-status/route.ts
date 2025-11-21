@@ -50,6 +50,9 @@ export async function GET() {
           })
           .eq('userId', session.user.id);
 
+        // Remoção de log de reativação automática
+        console.log(`♻️ Auto-reativated user ${session.user.id} after suspension expiry`);
+
         return NextResponse.json({
           status: 'ACTIVE',
           type: null,

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase-client";
-import { logGeneral, logErrors } from "@/lib/logs";
+import { logApiRequestError, toErrorContext } from "@/lib/logging-helpers";
 import { protectApiRoute, applySecurityHeaders } from "@/lib/api-protection";
 import { parseTagsFromPostgreSQL, parseMomentsFromPostgreSQL } from "@/lib/utils";
 
@@ -8,19 +8,11 @@ export async function GET(request: NextRequest) {
   // Verifica se a requisição vem de uma origem autorizada
   const unauthorizedResponse = protectApiRoute(request);
   if (unauthorizedResponse) {
-    await logGeneral('WARN', 'Tentativa de acesso não autorizado à API', 'Acesso negado por origem inválida', {
-      action: 'unauthorized_api_access',
-      origin: request.headers.get('origin'),
-      referer: request.headers.get('referer'),
-      userAgent: request.headers.get('user-agent'),
-      ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
-    });
+    console.warn(`⚠️  [API] Unauthorized access attempt to /api/musics/getmusics`);
     return unauthorizedResponse;
   }
   try {
-    await logGeneral('INFO', 'Busca de músicas iniciada', 'Utilizador a consultar lista de músicas', {
-      action: 'fetch_musics_attempt'
-    });
+    console.log(`🎵 [GET MUSICS] Fetching music list`);
 
     const { data: songs, error } = await supabase
       .from('Song')
@@ -69,17 +61,18 @@ export async function GET(request: NextRequest) {
       versions: song.SongVersion ? [song.SongVersion] : []
     }));
 
-    await logGeneral('SUCCESS', 'Músicas carregadas com sucesso', `${formattedSongs.length} músicas encontradas`, {
-      action: 'musics_fetched',
-      musicCount: formattedSongs.length
-    });
+    console.log(`✅ [GET MUSICS] Found ${formattedSongs.length} songs`);
 
     const response = NextResponse.json({ songs: formattedSongs });
     return applySecurityHeaders(response, request);
   } catch (error) {
-    await logErrors('ERROR', 'Erro ao buscar músicas', 'Falha na consulta de músicas', {
-      error: error instanceof Error ? error.message : 'Erro desconhecido',
-      action: 'fetch_musics_error'
+    logApiRequestError({
+      method: request.method,
+      url: request.url,
+      path: '/api/musics/getmusics',
+      status_code: 500,
+      error: toErrorContext(error),
+      details: { action: 'fetch_musics_error' } as any
     });
     console.error("[GET_MUSICS]", error);
     const response = NextResponse.json({ error: "Erro ao buscar músicas." }, { status: 500 });

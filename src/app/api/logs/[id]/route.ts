@@ -51,11 +51,13 @@ export async function GET(
       relatedLogs = related || [];
     }
 
-    // Buscar alertas de segurança associados
+    // Buscar alertas de segurança associados (agora armazenados como logs com tag 'security')
     const { data: securityAlerts } = await supabase
-      .from('security_alerts')
+      .from('logs')
       .select('*')
-      .eq('log_id', logId);
+      .or(`parent_log_id.eq.${logId},correlation_id.eq.${log.correlation_id}`)
+      .contains('tags', ['security'])
+      .order('created_at', { ascending: false });
 
     // Log da visualização
     await supabase.from('logs').insert([{
@@ -68,7 +70,7 @@ export async function GET(
         hasSecurityAlerts: (securityAlerts?.length || 0) > 0
       },
       user_id: session.user.id,
-      user_email: session.user.email,
+      user_email: session.user.email || undefined,
       correlation_id: log.correlation_id
     }]);
 

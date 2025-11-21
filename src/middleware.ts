@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { createClient } from '@supabase/supabase-js';
+import {
+  logUnauthorizedAccess,
+  logForbiddenAccess,
+} from "@/lib/middleware-logging";
+import { runWithCorrelationContextAsync, createCorrelationContext } from "@/lib/correlation-context";
 
 // Create Supabase client for middleware
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -9,42 +14,44 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export async function middleware(req: NextRequest) {
-  const url = req.nextUrl.clone();
-  const pathname = url.pathname;
+  const context = createCorrelationContext({
+    ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown',
+    user_agent: req.headers.get('user-agent') || 'unknown',
+  });
   
-  // ==========================================
-  // REDIRECIONAMENTO SEO - MÚSICAS PARA SLUG
-  // ==========================================
-  // Redirecionar /musics/[uuid] para /musics/[slug] se slug existir
-  // Isto evita conteúdo duplicado e melhora SEO
-  if (pathname.startsWith('/musics/') && !pathname.includes('/create')) {
-    const musicId = pathname.split('/musics/')[1];
+  return runWithCorrelationContextAsync(context, async () => {
+    const url = req.nextUrl.clone();
+    const pathname = url.pathname;
     
-    // Verificar se parece com um UUID (36 caracteres com hífens)
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    const cuidRegex = /^c[a-z0-9]{24}$/; // CUID format
-    
-    if (uuidRegex.test(musicId) || cuidRegex.test(musicId)) {
-      try {
-        console.log(`🔄 [SEO] Verificando slug para música ID: ${musicId.substring(0, 8)}...`);
-        
-        const { data: song, error } = await supabase
-          .from('Song')
-          .select('id, slug')
-          .eq('id', musicId)
-          .single();
-          
-        if (!error && song && song.slug) {
-          console.log(`✅ [SEO] Redirecionando ${musicId.substring(0, 8)}... → ${song.slug}`);
-          url.pathname = `/musics/${song.slug}`;
-          return NextResponse.redirect(url, 301); // Redirect permanente para SEO
+    // ==========================================
+    // REDIRECIONAMENTO SEO - MÚSICAS PARA SLUG
+    // ==========================================
+    // Redirecionar /musics/[uuid] para /musics/[slug] se slug existir
+    // Isto evita conteúdo duplicado e melhora SEO
+    if (pathname.startsWith('/musics/') && !pathname.includes('/create')) {
+      const musicId = pathname.split('/musics/')[1];
+      
+      // Verificar se parece com um UUID (36 caracteres com hífens)
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const cuidRegex = /^c[a-z0-9]{24}$/; // CUID format
+      
+      if (uuidRegex.test(musicId) || cuidRegex.test(musicId)) {
+        try {
+          const { data: song, error } = await supabase
+            .from('Song')
+            .select('id, slug')
+            .eq('id', musicId)
+            .single();
+            
+          if (!error && song && song.slug) {
+            url.pathname = `/musics/${song.slug}`;
+            return NextResponse.redirect(url, 301); // Redirect permanente para SEO
+          }
+        } catch (error) {
+          // Continuar sem redirecionar em caso de erro
         }
-      } catch (error) {
-        console.log(`❌ [SEO] Erro ao buscar slug para ${musicId.substring(0, 8)}...:`, error);
-        // Continuar sem redirecionar em caso de erro
       }
     }
-  }
   
   // ==========================================
   // VERIFICAÇÕES DE AUTENTICAÇÃO
@@ -70,6 +77,12 @@ export async function middleware(req: NextRequest) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
     
     if (!token || !token.sub) {
+      logUnauthorizedAccess({
+        user: { user_email: 'unknown' },
+        network: { ip_address: context.ip_address, user_agent: context.user_agent },
+        resource: pathname,
+        details: { reason: 'No authentication token' },
+      });
       url.pathname = '/login';
       url.searchParams.set('callbackUrl', pathname);
       return NextResponse.redirect(url);
@@ -80,8 +93,6 @@ export async function middleware(req: NextRequest) {
     let emailVerified = token.emailVerified;
     
     if ((!userRole || emailVerified === undefined) && token.sub) {
-      console.log('🔄 [MIDDLEWARE] Token sem role/emailVerified, buscando na BD...');
-      
       try {
         const { data: user, error } = await supabase
           .from('User')
@@ -130,7 +141,13 @@ export async function middleware(req: NextRequest) {
       }
       
       if (!emailVerified) {
-        console.log(`�🚨 [MIDDLEWARE] Acesso admin negado - email não verificado: ${pathname}`);
+        logForbiddenAccess({
+            user: { user_id: token.sub, user_email: token.email || undefined },
+          network: { ip_address: context.ip_address, user_agent: context.user_agent },
+          resource: pathname,
+          required_role: 'email_verified',
+          details: { reason: 'Email not verified for admin access' },
+        });
         url.pathname = '/';
         url.searchParams.set('message', 'email-verification-required');
         return NextResponse.redirect(url);
@@ -139,6 +156,13 @@ export async function middleware(req: NextRequest) {
     
     // Verificar se tem permissões de ADMIN ou REVIEWER para áreas protegidas
     if (userRole !== 'ADMIN' && userRole !== 'REVIEWER') {
+      logForbiddenAccess({
+        user: { user_id: token.sub, user_email: token.email || undefined, user_role: userRole },
+        network: { ip_address: context.ip_address, user_agent: context.user_agent },
+        resource: pathname,
+        required_role: 'ADMIN or REVIEWER',
+        details: { current_role: userRole },
+      });
       url.pathname = '/';
       return NextResponse.redirect(url);
     }
@@ -148,16 +172,16 @@ export async function middleware(req: NextRequest) {
     const isAdminOnlyPath = adminOnlyPaths.some(path => pathname.startsWith(path));
     
     if (isAdminOnlyPath && userRole !== 'ADMIN') {
+      logForbiddenAccess({
+        user: { user_id: token.sub, user_email: token.email || undefined, user_role: userRole },
+        network: { ip_address: context.ip_address, user_agent: context.user_agent },
+        resource: pathname,
+        required_role: 'ADMIN',
+        details: { current_role: userRole },
+      });
       url.pathname = '/';
       return NextResponse.redirect(url);
     }
-    
-    // Log específico para REVIEWER acessando páginas de review
-    if (userRole === 'REVIEWER' && pathname.startsWith('/admin/review')) {
-      console.log(`📝 [MIDDLEWARE] REVIEWER acessando: ${pathname}`);
-    }
-    
-    console.log(`✅ [MIDDLEWARE] Acesso admin autorizado para: ${pathname} (${userRole})`);
   }
   
   // Verificar acesso a páginas que requerem conta verificada
@@ -249,7 +273,12 @@ export async function middleware(req: NextRequest) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
     
     if (!token || !token.sub) {
-      console.log(`🚨 Tentativa de acesso a logs sem autenticação: ${pathname}`);
+      logUnauthorizedAccess({
+        user: { user_email: 'unknown' },
+        network: { ip_address: context.ip_address, user_agent: context.user_agent },
+        resource: pathname,
+        details: { reason: 'No authentication token for logs access' },
+      });
       url.pathname = '/login';
       url.searchParams.set('callbackUrl', pathname);
       return NextResponse.redirect(url);
@@ -278,14 +307,26 @@ export async function middleware(req: NextRequest) {
     
     // Verificar se email está verificado
     if (!emailVerified) {
-      console.log(`🚨 [MIDDLEWARE] Acesso a logs negado - email não verificado: ${pathname}`);
+      logForbiddenAccess({
+        user: { user_id: token.sub, user_email: token.email || undefined },
+        network: { ip_address: context.ip_address, user_agent: context.user_agent },
+        resource: pathname,
+        required_role: 'email_verified',
+        details: { reason: 'Email not verified for logs access' },
+      });
       url.pathname = '/';
       url.searchParams.set('message', 'email-verification-required');
       return NextResponse.redirect(url);
     }
     
     if (userRole !== 'ADMIN') {
-      console.log(`🚨 Tentativa de acesso a logs com nível insuficiente: ${userRole}`);
+      logForbiddenAccess({
+        user: { user_id: token.sub, user_email: token.email || undefined, user_role: userRole },
+        network: { ip_address: context.ip_address, user_agent: context.user_agent },
+        resource: pathname,
+        required_role: 'ADMIN',
+        details: { current_role: userRole, reason: 'Insufficient permissions for logs access' },
+      });
       url.pathname = '/';
       return NextResponse.redirect(url);
     }
@@ -309,6 +350,7 @@ export async function middleware(req: NextRequest) {
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   
   return response;
+  });
 }
 
 export const config = {

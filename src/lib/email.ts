@@ -1,5 +1,8 @@
 import { Resend } from 'resend';
 import crypto from 'crypto';
+import { logEmailSent, logEmailFailed } from '@/lib/logging-helpers';
+import { logger } from '@/lib/logger';
+import { LogCategory } from '@/types/logging';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -363,7 +366,10 @@ ${buttonsHtml}
 export async function sendEmail(template: EmailTemplate): Promise<{ success: boolean; error?: string }> {
   try {
     if (!process.env.RESEND_API_KEY) {
-      console.warn('RESEND_API_KEY não configurado. Email não será enviado.');
+      logger.warn('RESEND_API_KEY not configured. Email will not be sent.', {
+        category: LogCategory.EMAIL,
+        user: { user_email: template.to },
+      });
       return { success: false, error: 'Serviço de email não configurado' };
     }
 
@@ -374,9 +380,27 @@ export async function sendEmail(template: EmailTemplate): Promise<{ success: boo
       html: template.html,
     });
 
+    logger.info('Email sent successfully', {
+      category: LogCategory.EMAIL,
+      user: { user_email: template.to },
+      details: {
+        subject: template.subject,
+      },
+    });
+
     return { success: true };
   } catch (error) {
-    console.error('Erro ao enviar email:', error);
+    logger.error('Failed to send email', {
+      category: LogCategory.EMAIL,
+      user: { user_email: template.to },
+      error: {
+        error_message: error instanceof Error ? error.message : 'Unknown error',
+        error_type: error instanceof Error ? error.constructor.name : 'Unknown',
+      },
+      details: {
+        subject: template.subject,
+      },
+    });
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Erro desconhecido'
@@ -739,7 +763,7 @@ export function createSecurityAlertTemplate(
     content,
     {
       text: 'Ver Logs de Segurança',
-      url: 'https://cantolico.pt/logs/security-alerts',
+      url: 'https://cantolico.pt/logs',
       color: severityColor
     }
   );
@@ -795,7 +819,7 @@ export function createAdminLoginAlertTemplate(
     },
     {
       text: 'Ver Logs de Segurança',
-      url: 'https://cantolico.pt/logs/security-alerts',
+      url: 'https://cantolico.pt/logs',
       color: '#6c757d'
     }
   );
@@ -938,7 +962,7 @@ export function createLoginAlertEmailTemplate(
 
   const secondaryButton = isAdmin ? {
     text: 'Ver Logs de Segurança',
-    url: 'https://cantolico.pt/logs/security-alerts',
+    url: 'https://cantolico.pt/logs',
     color: '#6c757d'
   } : {
     text: 'Alterar Palavra-passe',
@@ -1034,9 +1058,37 @@ export async function sendWelcomeEmail(
       html: createWelcomeEmailTemplate(userName)
     };
 
-    return await sendEmail(template);
+    const result = await sendEmail(template);
+    
+    if (result.success) {
+      logEmailSent({
+        user: { user_email: userEmail, user_name: userName },
+        email_type: 'welcome',
+        email_to: userEmail,
+        email_status: 'sent',
+      });
+    } else {
+      logEmailFailed({
+        user: { user_email: userEmail, user_name: userName },
+        email_type: 'welcome',
+        email_to: userEmail,
+        email_status: 'failed',
+        error: { error_message: result.error || 'Unknown error' },
+      });
+    }
+    
+    return result;
   } catch (error) {
-    console.error('Erro ao enviar email de boas-vindas:', error);
+    logEmailFailed({
+      user: { user_email: userEmail, user_name: userName },
+      email_type: 'welcome',
+      email_to: userEmail,
+      email_status: 'failed',
+      error: {
+        error_message: error instanceof Error ? error.message : 'Unknown error',
+        error_type: error instanceof Error ? error.constructor.name : 'Unknown',
+      },
+    });
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Erro desconhecido' 

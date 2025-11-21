@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { supabase } from "@/lib/supabase-client";
-import { logAuthAction, logAdminAction, getUserInfoFromRequest } from "@/lib/user-action-logger";
-import { logSystemEvent } from "@/lib/enhanced-logging";
-import { logErrors } from "@/lib/logs";
+import { logApiRequestError, logUnauthorizedAccess, logForbiddenAccess, toErrorContext } from "@/lib/logging-helpers";
 
 export async function DELETE(req: NextRequest) {
   try {
@@ -38,13 +36,17 @@ export async function DELETE(req: NextRequest) {
     // Se é ação de admin, verificar permissões
     if (isAdminAction) {
       if (session.user.role !== 'ADMIN') {
-        await logErrors('WARN', 'Tentativa de eliminação não autorizada', 'Utilizador sem permissões tentou eliminar conta de outro utilizador', {
-          attemptedBy: session.user.id,
-          targetUser: userIdToDelete,
-          userRole: session.user.role,
-          ip,
-          userAgent
-        });
+          logUnauthorizedAccess({
+            event_type: 'unauthorized_access',
+            resource: `/api/user/delete-account`,
+            user: { user_id: session.user.id, user_role: session.user.role },
+            network: { ip_address: ip, user_agent: userAgent },
+            details: {
+              attemptedBy: session.user.id,
+              targetUser: userIdToDelete,
+              userRole: session.user.role
+            }
+          });
 
         return NextResponse.json(
           { error: "Acesso negado. Apenas administradores podem eliminar contas de outros utilizadores." },
@@ -67,12 +69,16 @@ export async function DELETE(req: NextRequest) {
       }
 
       if (targetUser.role === 'ADMIN') {
-        await logErrors('WARN', 'Tentativa de eliminação de admin', 'Admin tentou eliminar conta de outro admin', {
-          attemptedBy: session.user.id,
-          targetUser: userIdToDelete,
-          targetUserRole: targetUser.role,
-          ip,
-          userAgent
+        logForbiddenAccess({
+          event_type: 'forbidden_access',
+          resource: `/api/user/delete-account`,
+          user: { user_id: session.user.id, user_role: session.user.role },
+          network: { ip_address: ip, user_agent: userAgent },
+          details: {
+            attemptedBy: session.user.id,
+            targetUser: userIdToDelete,
+            targetUserRole: targetUser.role
+          }
         });
 
         return NextResponse.json(
@@ -90,12 +96,17 @@ export async function DELETE(req: NextRequest) {
       .single();
 
     if (userFetchError || !userToDelete) {
-      await logErrors('ERROR', 'Utilizador não encontrado para eliminação', 'Tentativa de eliminar utilizador inexistente', {
-        targetUserId: userIdToDelete,
-        performedBy: session.user.id,
-        isAdminAction,
-        ip,
-        userAgent
+      logApiRequestError({
+        method: req.method,
+        url: req.url,
+        path: '/api/user/delete-account',
+        status_code: 404,
+        error: toErrorContext(userFetchError),
+        details: {
+          targetUserId: userIdToDelete,
+          performedBy: session.user.id,
+          isAdminAction
+        }
       });
 
       return NextResponse.json(
@@ -125,23 +136,25 @@ export async function DELETE(req: NextRequest) {
     };
 
     // Log do evento antes da eliminação
-    await logSystemEvent(
-      'account_deletion_initiated',
-      `${isAdminAction ? 'Admin' : 'Utilizador'} iniciou eliminação de conta`,
-      {
+    logUnauthorizedAccess({
+      event_type: 'unauthorized_access',
+      resource: `/api/user/delete-account`,
+      user: { 
+        user_id: session.user.id, 
+        user_email: session.user.email || undefined,
+        user_role: session.user.role 
+      },
+      network: { ip_address: ip, user_agent: userAgent },
+      details: {
         targetUserId: userIdToDelete,
         targetUserEmail: userToDelete.email,
         targetUserName: userToDelete.name,
-        performedBy: session.user.id,
-        performedByEmail: session.user.email,
         isAdminAction,
         reason: reason || (isAdminAction ? 'Eliminação administrativa' : 'Auto-eliminação'),
         userStats: stats,
-        ip,
-        userAgent,
         timestamp: new Date().toISOString()
       }
-    );
+    });
 
     // Iniciar transação de eliminação
     console.log('🗑️ Iniciando eliminação de dados relacionados...');
@@ -204,15 +217,19 @@ export async function DELETE(req: NextRequest) {
     if (deleteUserError) {
       console.error('❌ Erro ao eliminar utilizador:', deleteUserError);
       
-      await logErrors('ERROR', 'Falha na eliminação de conta', 'Erro ao eliminar utilizador da base de dados', {
-        targetUserId: userIdToDelete,
-        performedBy: session.user.id,
-        isAdminAction,
-        error: deleteUserError.message,
-        errorCode: deleteUserError.code,
-        userStats: stats,
-        ip,
-        userAgent
+      logApiRequestError({
+        method: req.method,
+        url: req.url,
+        path: '/api/user/delete-account',
+        status_code: 500,
+        error: toErrorContext(deleteUserError),
+        details: {
+          targetUserId: userIdToDelete,
+          performedBy: session.user.id,
+          isAdminAction,
+          errorCode: deleteUserError.code,
+          userStats: stats
+        }
       });
 
       return NextResponse.json(
@@ -222,19 +239,21 @@ export async function DELETE(req: NextRequest) {
     }
 
     // Log final de sucesso
-    await logSystemEvent(
-      'account_deletion_completed',
-      `Conta eliminada com sucesso ${isAdminAction ? 'por admin' : 'pelo próprio utilizador'}`,
-      {
+    logUnauthorizedAccess({
+      event_type: 'unauthorized_access',
+      resource: `/api/user/delete-account`,
+      user: { 
+        user_id: session.user.id, 
+        user_email: session.user.email || undefined,
+        user_role: session.user.role 
+      },
+      network: { ip_address: ip, user_agent: userAgent },
+      details: {
         deletedUserId: userIdToDelete,
         deletedUserEmail: userToDelete.email,
         deletedUserName: userToDelete.name,
-        performedBy: session.user.id,
-        performedByEmail: session.user.email,
         isAdminAction,
         reason: reason || (isAdminAction ? 'Eliminação administrativa' : 'Auto-eliminação'),
-        
-        // Estatísticas da eliminação
         eliminationStats: {
           ...stats,
           deletedMusics: deletedMusics?.length || 0,
@@ -242,16 +261,11 @@ export async function DELETE(req: NextRequest) {
           deletedPlaylistsCount: stats.totalPlaylists,
           deletedStarredSongsCount: stats.totalStarredSongs
         },
-        
-        // Detalhes das músicas afetadas
         deletedMusicsList: deletedMusics?.map(m => ({ id: m.id, title: m.title, status: m.status })) || [],
         preservedMusicsList: updatedMusics?.map(m => ({ id: m.id, title: m.title })) || [],
-        
-        ip,
-        userAgent,
         completedAt: new Date().toISOString()
       }
-    );
+    });
 
     console.log(`✅ Conta eliminada com sucesso: ${userToDelete.email}`, {
       deletedMusics: deletedMusics?.length || 0,
@@ -280,12 +294,16 @@ export async function DELETE(req: NextRequest) {
     console.error('Stack:', error instanceof Error ? error.stack : 'N/A');
 
     try {
-      await logErrors('ERROR', 'Erro crítico na eliminação de conta', 'Erro inesperado durante processo de eliminação', {
-        error: error instanceof Error ? error.message : 'Erro desconhecido',
-        stack: error instanceof Error ? error.stack : undefined,
-        performedBy: 'session?.user?.id',
-        ip: 'req.headers IP',
-        userAgent: 'req.headers user-agent'
+      logApiRequestError({
+        method: req.method,
+        url: req.url,
+        path: '/api/user/delete-account',
+        status_code: 500,
+        error: toErrorContext(error),
+        details: {
+          action: 'delete_account_critical_error',
+          stack: error instanceof Error ? error.stack : undefined
+        }
       });
     } catch (logError) {
       console.warn('Erro no logging final (não crítico):', logError);

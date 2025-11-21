@@ -105,7 +105,7 @@ const allMoments = [
   "ENTRADA", "ATO_PENITENCIAL", "GLORIA", "SALMO", "ACLAMACAO", "OFERTORIO",
   "SANTO", "COMUNHAO", "ACAO_DE_GRACAS", "FINAL", "ADORACAO", "ASPERSAO",
   "BAPTISMO", "BENCAO_DAS_ALIANCAS", "CORDEIRO_DE_DEUS", "CRISMA",
-  "INTRODUCAO_DA_PALAVRA", "LOUVOR", "PAI_NOSSO", "REFLEXAO", "TERCO_MISTERIO",
+  "INTRODUCAO_DA_PALAVRA", "LOUVOR", "PAI_NOSSO", "REFLEXAO", "TERCO_MISTERIO", "OUTROS",
 ];
 
 interface SongData {
@@ -164,7 +164,8 @@ const liturgicalMomentLabels: Record<LiturgicalMoment, string> = {
   [LiturgicalMoment.LOUVOR]: 'Louvor',
   [LiturgicalMoment.PAI_NOSSO]: 'Pai Nosso',
   [LiturgicalMoment.REFLEXAO]: 'Reflexão',
-  [LiturgicalMoment.TERCO_MISTERIO]: 'Terço/Mistério'
+  [LiturgicalMoment.TERCO_MISTERIO]: 'Terço/Mistério',
+  [LiturgicalMoment.OUTROS]: 'Outros'
 };
 
 const instrumentLabels: Record<Instrument, string> = {

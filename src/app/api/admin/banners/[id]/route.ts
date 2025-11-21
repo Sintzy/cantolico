@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase-client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { logAdmin, logErrors } from '@/lib/logs';
+import { logApiRequestError, logUnauthorizedAccess } from '@/lib/logging-helpers';
 
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
@@ -80,27 +80,16 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
       .single();
 
     if (fetchError || !banner) {
-      await logAdmin('WARN', 'Tentativa de eliminar banner inexistente', 'Admin tentou eliminar banner que não existe', {
-        adminId: session.user.id,
-        adminEmail: session.user.email,
-        bannerId: id,
-        action: 'banner_delete_not_found'
+      await logUnauthorizedAccess({
+        event_type: 'unauthorized_access',
+        resource: `/api/admin/banners/${id}`,
+        user: { user_id: session.user.id, user_email: session.user.email || undefined, user_role: session.user.role },
+        details: { bannerId: id, action: 'banner_delete_not_found' }
       });
       return NextResponse.json({ error: 'Banner não encontrado' }, { status: 404 });
     }
 
-    await logAdmin('INFO', 'Eliminação de banner iniciada', 'Admin iniciou eliminação de banner', {
-      adminId: session.user.id,
-      adminEmail: session.user.email,
-      bannerId: banner.id,
-      bannerTitle: banner.title,
-      bannerType: banner.type,
-      wasActive: banner.isActive,
-      ipAddress: ip,
-      userAgent: userAgent,
-      action: 'banner_delete_attempt',
-      entity: 'banner'
-    });
+    console.log('Banner delete initiated:', { bannerId: banner.id, title: banner.title });
 
     const { error: deleteError } = await supabase
       .from('Banner')
@@ -108,30 +97,16 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
       .eq('id', id);
 
     if (deleteError) {
-      await logErrors('ERROR', 'Erro ao eliminar banner', 'Erro na base de dados ao eliminar banner', {
-        adminId: session.user.id,
-        adminEmail: session.user.email,
-        bannerId: banner.id,
-        bannerTitle: banner.title,
-        error: deleteError.message,
-        action: 'banner_delete_error'
+      await logApiRequestError({
+        method: 'DELETE',
+        url: `/api/admin/banners/${id}`,
+        status_code: 500,
+        error: { error_message: deleteError.message, error_code: deleteError.code }
       });
       return NextResponse.json({ error: 'Erro ao eliminar banner' }, { status: 500 });
     }
 
-    // Log de sucesso
-    await logAdmin('SUCCESS', 'Banner eliminado com sucesso', 'Admin eliminou banner', {
-      adminId: session.user.id,
-      adminEmail: session.user.email,
-      bannerId: banner.id,
-      bannerTitle: banner.title,
-      bannerType: banner.type,
-      wasActive: banner.isActive,
-      ipAddress: ip,
-      userAgent: userAgent,
-      action: 'banner_deleted',
-      entity: 'banner'
-    });
+    console.log('Banner deleted successfully:', { bannerId: banner.id, title: banner.title });
 
     return NextResponse.json({ success: true });
   } catch (error) {

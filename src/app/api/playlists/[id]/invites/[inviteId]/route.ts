@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase } from '@/lib/supabase-admin';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { logGeneral, logErrors } from '@/lib/logs';
+import { logApiRequestError, logPlaylistSongRemoved, toErrorContext } from '@/lib/logging-helpers';
 
 export async function DELETE(
   request: NextRequest,
@@ -27,7 +27,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Playlist not found' }, { status: 404 });
     }
 
-    if (playlist.userId !== session.user.id) {
+    if (playlist.userId !== session.user.id && session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Access denied - only playlist owner can cancel invites' }, { status: 403 });
     }
 
@@ -48,16 +48,17 @@ export async function DELETE(
     }
 
     // Log the cancellation
-    await logGeneral('INFO', 'Convite de playlist cancelado', 'Proprietário cancelou convite pendente', {
-      userId: session.user.id,
-      userEmail: session.user.email,
-      playlistId,
-      playlistName: playlist.name,
-      inviteId,
-      invitedUserEmail: invite.userEmail,
-      invitedAt: invite.invitedAt,
-      action: 'playlist_invite_cancelled',
-      entity: 'playlist'
+    logPlaylistSongRemoved({
+      playlist_id: playlistId,
+      song_id: inviteId,
+      user: { user_id: session.user.id, user_email: session.user.email || undefined },
+      details: {
+        playlistName: playlist.name,
+        invitedUserEmail: invite.userEmail,
+        invitedAt: invite.invitedAt,
+        action: 'playlist_invite_cancelled',
+        entity: 'playlist'
+      }
     });
 
     // Delete the invite
@@ -68,18 +69,27 @@ export async function DELETE(
       .eq('playlistId', playlistId);
 
     if (deleteError) {
-      logErrors('ERROR', 'Error cancelling playlist invite', JSON.stringify(deleteError));
+      logApiRequestError({
+        method: request.method,
+        url: request.url,
+        path: '/api/playlists/[id]/invites/[inviteId]',
+        status_code: 500,
+        error: toErrorContext(deleteError),
+        details: { action: 'cancel_invite' }
+      });
       return NextResponse.json({ error: 'Failed to cancel invite' }, { status: 500 });
     }
 
-    await logGeneral('SUCCESS', 'Convite cancelado com sucesso', 'Convite de playlist foi cancelado pelo proprietário', {
-      userId: session.user.id,
-      userEmail: session.user.email,
-      playlistId,
-      inviteId,
-      invitedUserEmail: invite.userEmail,
-      action: 'playlist_invite_cancelled_success',
-      entity: 'playlist'
+    logPlaylistSongRemoved({
+      playlist_id: playlistId,
+      song_id: inviteId,
+      user: { user_id: session.user.id, user_email: session.user.email || undefined },
+      details: {
+        invitedUserEmail: invite.userEmail,
+        action: 'playlist_invite_cancelled_success',
+        entity: 'playlist',
+        status: 'cancelled'
+      }
     });
 
     return NextResponse.json({ 
@@ -88,7 +98,14 @@ export async function DELETE(
     });
 
   } catch (error) {
-    logErrors('ERROR', 'Error in playlist invite cancellation', String(error));
+    logApiRequestError({
+      method: request.method,
+      url: request.url,
+      path: '/api/playlists/[id]/invites/[inviteId]',
+      status_code: 500,
+      error: toErrorContext(error),
+      details: { action: 'invite_cancellation_error' }
+    });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

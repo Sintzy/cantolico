@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { EmailVerificationMaintenanceService } from "@/lib/email-verification-maintenance";
-import { logGeneral, logErrors } from "@/lib/logs";
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,11 +9,7 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
     
     if (!session?.user || session.user.role !== 'ADMIN') {
-      await logErrors('WARN', 'Acesso negado à manutenção', 'Tentativa de acesso não autorizado', {
-        userId: session?.user?.id || 'unknown',
-        ip: req.headers.get('x-forwarded-for') || 'unknown',
-        action: 'email_maintenance_unauthorized'
-      });
+      console.warn(`⚠️  [EMAIL MAINTENANCE] Unauthorized access attempt by: ${session?.user?.email || 'unknown'}`);
       
       return NextResponse.json(
         { error: 'Acesso negado. Apenas administradores podem executar manutenção.' },
@@ -24,6 +19,8 @@ export async function POST(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const action = searchParams.get('action') || 'full';
+
+    console.log(`🔧 [EMAIL MAINTENANCE] Running ${action} maintenance by admin: ${session.user.email}`);
 
     let result;
 
@@ -50,12 +47,7 @@ export async function POST(req: NextRequest) {
         break;
     }
 
-    await logGeneral('INFO', 'Manutenção de email executada', `Ação: ${action}`, {
-      adminId: session.user.id,
-      action: `email_maintenance_${action}`,
-      success: result.success,
-      timestamp: new Date().toISOString()
-    });
+    console.log(`✅ [EMAIL MAINTENANCE] ${action} completed successfully by admin: ${session.user.email}`);
 
     return NextResponse.json({
       success: result.success,
@@ -68,12 +60,7 @@ export async function POST(req: NextRequest) {
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-    
-    await logErrors('ERROR', 'Erro na API de manutenção', 'Falha na execução da manutenção', {
-      error: errorMessage,
-      action: 'email_maintenance_api_error',
-      stack: error instanceof Error ? error.stack : undefined
-    });
+    console.error('❌ [EMAIL MAINTENANCE] Error:', error);
 
     return NextResponse.json(
       {

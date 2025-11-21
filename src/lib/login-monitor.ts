@@ -1,7 +1,6 @@
 import { supabase } from '@/lib/supabase-client';
 import { createSecurityAlert, createSecurityLog } from '@/lib/logging-middleware';
 import { triggerFailedLoginEvent } from '@/lib/realtime-alerts';
-import { logGeneral, logErrors } from '@/lib/logs';
 
 // ================================================
 // SISTEMA APRIMORADO DE MONITORAMENTO DE LOGIN
@@ -62,18 +61,8 @@ function blockIp(ip: string): void {
 }
 
 async function logLoginAttempt(attempt: LoginAttempt): Promise<void> {
-  const level = attempt.success ? 'INFO' : 'WARN';
-  const message = attempt.success ? 'Login bem-sucedido' : 'Tentativa de login falhada';
-  
-  await logGeneral(level, message, `${attempt.email} de ${attempt.ip}`, {
-    email: attempt.email,
-    ip: attempt.ip,
-    success: attempt.success,
-    userAgent: attempt.userAgent,
-    reason: attempt.reason,
-    action: attempt.success ? 'login_success' : 'login_failure',
-    category: 'AUTHENTICATION'
-  });
+  const message = attempt.success ? '✅ Login successful' : '⚠️  Login failed';
+  console.log(`${message}: ${attempt.email} from ${attempt.ip}${attempt.reason ? ` - ${attempt.reason}` : ''}`);
 }
 
 async function handleSuccessfulLogin(attempt: LoginAttempt, attempts: LoginAttempt[]): Promise<void> {
@@ -81,14 +70,7 @@ async function handleSuccessfulLogin(attempt: LoginAttempt, attempts: LoginAttem
   
   // Se houve falhas recentes antes do sucesso, logar padrão suspeito
   if (recentFailures.length >= 3) {
-    await logGeneral('WARN', 'Login bem-sucedido após múltiplas falhas', `${attempt.email} conseguiu fazer login após ${recentFailures.length} tentativas falhadas`, {
-      email: attempt.email,
-      ip: attempt.ip,
-      previousFailures: recentFailures.length,
-      userAgent: attempt.userAgent,
-      action: 'suspicious_login_success',
-      category: 'SECURITY'
-    });
+    console.warn(`🔐 [SECURITY] Suspicious login pattern: ${attempt.email} logged in after ${recentFailures.length} failed attempts from ${attempt.ip}`);
     
     // Criar alerta de segurança para padrão suspeito
     await createSecurityAlert('SUSPICIOUS_LOGIN_PATTERN', 'Login bem-sucedido após múltiplas falhas', {
@@ -116,13 +98,7 @@ async function handleCriticalSuspiciousActivity(attempt: LoginAttempt, failedAtt
     action_taken: 'IP blocked'
   });
   
-  await logGeneral('ERROR', 'IP bloqueado por ataque de força bruta', `IP ${attempt.ip} bloqueado após ${failedAttempts.length} tentativas falhadas`, {
-    email: attempt.email,
-    ip: attempt.ip,
-    failedAttempts: failedAttempts.length,
-    action: 'ip_blocked_brute_force',
-    category: 'SECURITY'
-  });
+  console.error(`🚫 [SECURITY] IP blocked for brute force: ${attempt.ip} - ${failedAttempts.length} failed attempts for ${attempt.email}`);
 }
 
 async function handleSuspiciousActivity(attempt: LoginAttempt, failedAttempts: LoginAttempt[]): Promise<void> {
@@ -192,13 +168,7 @@ export async function trackLoginAttempt(attempt: LoginAttempt): Promise<LoginRes
     
     // Verificar se IP está bloqueado
     if (isIpBlocked(attempt.ip)) {
-      await logGeneral('WARN', 'Tentativa de login de IP bloqueado', `IP ${attempt.ip} tentou fazer login estando bloqueado`, {
-        email: attempt.email,
-        ip: attempt.ip,
-        userAgent: attempt.userAgent,
-        action: 'blocked_ip_login_attempt',
-        category: 'SECURITY'
-      });
+      console.warn(`🚫 [SECURITY] Blocked IP attempted login: ${attempt.ip} - ${attempt.email}`);
       return { blocked: true, reason: 'IP bloqueado temporariamente' };
     }
     
@@ -247,11 +217,7 @@ export async function trackLoginAttempt(attempt: LoginAttempt): Promise<LoginRes
     return { success: false, attempts: failedAttempts.length };
     
   } catch (error) {
-    await logErrors('ERROR', 'Erro no sistema de monitoramento de login', error instanceof Error ? error.message : 'Erro desconhecido', {
-      email: attempt.email,
-      ip: attempt.ip,
-      action: 'login_monitoring_error'
-    });
+    console.error('❌ [LOGIN MONITOR] Error tracking login attempt:', error);
     return { error: true, reason: 'Erro interno' };
   }
 }
@@ -285,11 +251,7 @@ export async function clearLoginAttempts(email: string, ip: string): Promise<voi
 
 export async function unblockIP(ip: string): Promise<void> {
   ipBlacklist.delete(ip);
-  await logGeneral('INFO', 'IP desbloqueado', `IP ${ip} removido da lista de bloqueio`, {
-    ip,
-    action: 'ip_unblocked',
-    category: 'SECURITY'
-  });
+  console.log(`🔓 [SECURITY] IP unblocked: ${ip}`);
 }
 
 export async function getBlockedIPs(): Promise<string[]> {

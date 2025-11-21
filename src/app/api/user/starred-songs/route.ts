@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase-client';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { withAuthApiProtection } from '@/lib/api-middleware';
-import { logGeneral, logErrors } from '@/lib/logs';
+import { logApiRequestError, toErrorContext } from '@/lib/logging-helpers';
 import { parseTagsFromPostgreSQL, parseMomentsFromPostgreSQL } from '@/lib/utils';
 
 export const GET = withAuthApiProtection(async (request: NextRequest) => {
@@ -35,11 +35,12 @@ export const GET = withAuthApiProtection(async (request: NextRequest) => {
 
     if (starError) {
       console.error('Error fetching stars:', starError);
-      await logErrors('ERROR', 'Erro ao buscar stars', 'Falha na query inicial de stars', {
-        userId,
-        userEmail: session.user.email,
-        error: starError.message,
-        action: 'get_starred_songs_step1'
+      logApiRequestError({
+        method: request.method,
+        url: request.url,
+        path: '/api/user/starred-songs',
+        status_code: 500,
+        error: toErrorContext(starError)
       });
       
       return NextResponse.json(
@@ -82,12 +83,12 @@ export const GET = withAuthApiProtection(async (request: NextRequest) => {
 
     if (songsError) {
       console.error('Error fetching songs:', songsError);
-      await logErrors('ERROR', 'Erro ao buscar detalhes das músicas', 'Falha na query de músicas', {
-        userId,
-        userEmail: session.user.email,
-        error: songsError.message,
-        songIds,
-        action: 'get_starred_songs_step2'
+      logApiRequestError({
+        method: request.method,
+        url: request.url,
+        path: '/api/user/starred-songs',
+        status_code: 500,
+        error: toErrorContext(songsError)
       });
       
       return NextResponse.json(
@@ -108,12 +109,7 @@ export const GET = withAuthApiProtection(async (request: NextRequest) => {
 
     if (countError) {
       console.error('Error counting stars:', countError);
-      await logErrors('ERROR', 'Erro ao contar músicas favoritas', 'Falha na query de contagem', {
-        userId,
-        userEmail: session.user.email,
-        error: countError.message,
-        action: 'count_starred_songs'
-      });
+      // Não falha a requisição se a contagem falhar
     }
 
     // Combinar dados
@@ -147,17 +143,8 @@ export const GET = withAuthApiProtection(async (request: NextRequest) => {
       };
     }).filter(Boolean);
 
-
-
-    await logGeneral('INFO', 'Músicas favoritas listadas', 'Utilizador visualizou suas músicas favoritas', {
-      userId,
-      userEmail: session.user.email,
-      count: songs.length,
-      page,
-      limit,
-      action: 'list_starred_songs',
-      entity: 'starred_songs'
-    });
+    // Remoção de log de sucesso redundante - apenas console
+    console.log(`✅ Starred songs fetched: ${songs.length} songs for user ${userId}`);
 
     return NextResponse.json({
       songs,
@@ -171,12 +158,12 @@ export const GET = withAuthApiProtection(async (request: NextRequest) => {
 
   } catch (error) {
     console.error('Unexpected error in starred songs API:', error);
-    const session = await getServerSession(authOptions);
-    await logErrors('ERROR', 'Erro inesperado ao buscar músicas favoritas', error instanceof Error ? error.message : 'Unknown error', {
-      userId: session?.user?.id,
-      userEmail: session?.user?.email,
-      errorMessage: error instanceof Error ? error.message : 'Unknown error',
-      action: 'get_starred_songs_unexpected'
+    logApiRequestError({
+      method: request.method,
+      url: request.url,
+      path: '/api/user/starred-songs',
+      status_code: 500,
+      error: toErrorContext(error)
     });
 
     return NextResponse.json(
