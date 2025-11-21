@@ -223,7 +223,6 @@ async function sendToLoki(event: LogEvent, labels: Record<string, string>): Prom
 
     const url = `${LOKI_URL}/loki/api/v1/push`;
     
-    // Usar fetch nativo (disponível no Next.js)
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -250,9 +249,6 @@ async function sendToLoki(event: LogEvent, labels: Record<string, string>): Prom
   }
 }
 
-/**
- * Criar transports do Winston
- */
 function createTransports(): winston.transport[] {
   const transports: winston.transport[] = [];
 
