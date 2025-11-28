@@ -17,6 +17,7 @@ import { Spinner, type SpinnerProps } from '@/components/ui/shadcn-io/spinner';
 import StarButton from '@/components/StarButton';
 import AddToPlaylistButton from '@/components/AddToPlaylistButton';
 import { LiturgicalMoment, getInstrumentLabel, getLiturgicalMomentLabel } from '@/lib/constants';
+import { SongFilesViewer } from '@/components/SongFilesViewer';
 
 // Small badge with hover/click notice for BETA warning
 function BetaBadgeWithNotice() {
@@ -771,6 +772,9 @@ export default function SongPage() {
               </div>
             </section>
           )}
+
+          {/* Novo Sistema de Ficheiros - Partituras e Áudio */}
+          <SongFilesViewer songId={id as string} />
 
           {/* Banner Horizontal Final removido */}
 

@@ -46,6 +46,8 @@ import {
   Search as SearchIcon
 } from "lucide-react";
 import "../../../../../public/styles/chords.css";
+import { MultiFileUploader } from '@/components/MultiFileUploader';
+import { SongFilesViewer } from '@/components/SongFilesViewer';
 
 const SimpleMDE = dynamic(() => import("react-simplemde-editor"), { ssr: false });
 
@@ -933,10 +935,42 @@ export default function ReviewSubmissionPage() {
           </TabsContent>
 
           <TabsContent value="media" className="space-y-6">
+            {/* Novo Sistema de Ficheiros */}
+            {submission?.song?.id && (
+              <>
+                <MultiFileUploader 
+                  songId={submission.song.id}
+                  autoUpload={true}
+                  onDeleteExisting={async (fileId) => {
+                    const response = await fetch(`/api/admin/songs/${submission.song.id}/files?fileId=${fileId}`, {
+                      method: 'DELETE'
+                    });
+                    if (!response.ok) {
+                      throw new Error('Erro ao eliminar ficheiro');
+                    }
+                  }}
+                />
+
+                <SongFilesViewer songId={submission.song.id} showTitle={false} />
+
+                <Separator className="my-6" />
+              </>
+            )}
+
+            {/* Sistema Legado de PDF e MP3 */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Sistema Legado (Descontinuado)</CardTitle>
+                <CardDescription>
+                  Use o sistema de upload acima. Este sistema será removido em breve.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
             {/* PDF Section */}
             <Card>
               <CardHeader>
-                <CardTitle>Partitura (PDF)</CardTitle>
+                <CardTitle>Partitura (PDF) - Legado</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {pdfPreviewUrl && (

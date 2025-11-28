@@ -30,6 +30,8 @@ import { ArrowLeft, Save, Music, Edit3, Tag, Clock, Settings, Eye, Search as Sea
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { LiturgicalMoment, Instrument, SongType } from '@/lib/constants';
+import { MultiFileUploader } from '@/components/MultiFileUploader';
+import { SongFilesViewer } from '@/components/SongFilesViewer';
 
 const SimpleMDE = dynamic(() => import("react-simplemde-editor"), { ssr: false });
 
@@ -753,10 +755,32 @@ export default function EditMusicPage() {
           </TabsContent>
 
           <TabsContent value="media" className="space-y-6">
+            {/* Sistema de Upload de Ficheiros */}
+            <MultiFileUploader 
+              songId={songId}
+              autoUpload={true}
+              onDeleteExisting={async (fileId) => {
+                const response = await fetch(`/api/admin/songs/${songId}/files?fileId=${fileId}`, {
+                  method: 'DELETE'
+                });
+                if (!response.ok) {
+                  throw new Error('Erro ao eliminar ficheiro');
+                }
+              }}
+            />
+
+            {/* Visualização de Ficheiros Existentes */}
+            <SongFilesViewer songId={songId} showTitle={false} />
+
+            <Separator className="my-6" />
+
             {/* URL Sections */}
             <Card>
               <CardHeader>
-                <CardTitle>URLs de Mídia</CardTitle>
+                <CardTitle>URLs de Mídia (Legado)</CardTitle>
+                <CardDescription>
+                  Sistema antigo de URLs. Recomenda-se usar o sistema de upload acima.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
