@@ -9,6 +9,7 @@ import {
   SourceType,
 } from "@/lib/constants";
 import { formatTagsForPostgreSQL } from "@/lib/utils";
+import { FileType } from "@/types/song-files";
 
 
 async function uploadToSupabase(
@@ -147,6 +148,24 @@ export const POST = withUserProtection<any>(async (req: NextRequest, session: an
     const pdfFile = formData.get("pdf") as File | null;
     const audioFile = formData.get("audio") as File | null;
 
+    // Novo sistema de ficheiros: processar array de ficheiros com descrições
+    const filesJson = formData.get("files")?.toString();
+    let filesData: Array<{fileType: FileType, fileName: string, description: string, file: File}> = [];
+    
+    if (filesJson) {
+      try {
+        const parsedFiles = JSON.parse(filesJson);
+        filesData = parsedFiles.map((f: any, index: number) => ({
+          fileType: f.fileType,
+          fileName: f.fileName,
+          description: f.description,
+          file: formData.get(`file_${index}`) as File
+        })).filter((f: any) => f.file !== null);
+      } catch (error) {
+        console.error("Erro ao processar ficheiros:", error);
+      }
+    }
+
     const spotifyLink = formData.get("spotifyLink")?.toString() ?? null;
     const youtubeLink = formData.get("youtubeLink")?.toString() ?? null;
 
@@ -225,6 +244,46 @@ export const POST = withUserProtection<any>(async (req: NextRequest, session: an
 
   if (submissionError || !submission) {
     throw new Error(`Supabase error: ${submissionError?.message}`);
+  }
+
+  // Processar e guardar novos ficheiros com descrições
+  if (filesData.length > 0) {
+    console.log(`📁 Processando ${filesData.length} ficheiros...`);
+    
+    for (const fileData of filesData) {
+      if (!fileData.file) continue;
+      
+      const buffer = Buffer.from(await fileData.file.arrayBuffer());
+      const fileExtension = fileData.file.name.split('.').pop();
+      const storagePath = `songs/${submissionId}/${randomUUID()}.${fileExtension}`;
+      
+      // Upload para Storage
+      const uploadSuccess = await uploadToSupabase(
+        storagePath, 
+        buffer, 
+        fileData.file.type
+      );
+      
+      if (uploadSuccess) {
+        // Criar entrada na tabela SongFile
+        const { error: fileError } = await supabase
+          .from('SongFile')
+          .insert({
+            songId: submission.song?.id || null, // Will be null for submission, linked after approval
+            fileType: fileData.fileType,
+            storageKey: storagePath,
+            fileName: fileData.fileName,
+            description: fileData.description,
+            fileSize: fileData.file.size
+          });
+        
+        if (fileError) {
+          console.error(`Erro ao guardar ficheiro ${fileData.fileName}:`, fileError);
+        } else {
+          console.log(`✅ Ficheiro guardado: ${fileData.fileName}`);
+        }
+      }
+    }
   }
 
   console.log(`✅ [SONG SUBMIT] Song submitted successfully: ${title} (ID: ${submission.id})`);

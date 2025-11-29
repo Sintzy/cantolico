@@ -17,7 +17,8 @@ import { Spinner, type SpinnerProps } from '@/components/ui/shadcn-io/spinner';
 import StarButton from '@/components/StarButton';
 import AddToPlaylistButton from '@/components/AddToPlaylistButton';
 import { LiturgicalMoment, getInstrumentLabel, getLiturgicalMomentLabel } from '@/lib/constants';
-import { SongFilesViewer } from '@/components/SongFilesViewer';
+import { FileViewer } from '@/components/FileViewer';
+import { FileType } from '@/types/song-files';
 
 // Small badge with hover/click notice for BETA warning
 function BetaBadgeWithNotice() {
@@ -117,6 +118,14 @@ export default function SongPage() {
   const [showChords, setShowChords] = React.useState<boolean>(true);
   const [loading, setLoading] = React.useState(true);
   const [diagramInstrument, setDiagramInstrument] = React.useState<'guitar'|'ukulele'|'piano'>('guitar');
+  const [files, setFiles] = React.useState<Array<{
+    id: string;
+    fileType: FileType;
+    fileName: string;
+    description: string;
+    fileSize?: number;
+    signedUrl?: string;
+  }>>([]);
 
   // Função para voltar preservando o estado da página
   const handleBackToList = React.useCallback(() => {
@@ -139,6 +148,20 @@ export default function SongPage() {
 
         setSong(data);
 
+        // Buscar ficheiros do novo sistema
+        try {
+          const filesRes = await fetch(`/api/admin/songs/${id}/files`);
+          if (filesRes.ok) {
+            const filesData = await filesRes.json();
+            if (filesData.success && filesData.files) {
+              setFiles(filesData.files);
+            }
+          }
+        } catch (err) {
+          console.error('Erro ao carregar ficheiros:', err);
+        }
+
+        // Sistema antigo (manter por enquanto para compatibilidade)
         if (data.currentVersion?.sourcePdfKey) {
           const { data: signedPdfUrlData, error: pdfError } = await supabase
             .storage
@@ -774,7 +797,12 @@ export default function SongPage() {
           )}
 
           {/* Novo Sistema de Ficheiros - Partituras e Áudio */}
-          <SongFilesViewer songId={id as string} />
+          {files.length > 0 && (
+            <section className="bg-white/90 rounded-2xl shadow-lg p-6 md:p-10 border border-blue-100">
+              <SectionTitle>Partituras e Áudios</SectionTitle>
+              <FileViewer files={files} />
+            </section>
+          )}
 
           {/* Banner Horizontal Final removido */}
 

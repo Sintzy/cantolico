@@ -30,8 +30,8 @@ import { ArrowLeft, Save, Music, Edit3, Tag, Clock, Settings, Eye, Search as Sea
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { LiturgicalMoment, Instrument, SongType } from '@/lib/constants';
-import { MultiFileUploader } from '@/components/MultiFileUploader';
-import { SongFilesViewer } from '@/components/SongFilesViewer';
+import { FileManager } from '@/components/FileManager';
+import { FileType, FileUploadData } from '@/types/song-files';
 
 const SimpleMDE = dynamic(() => import("react-simplemde-editor"), { ssr: false });
 
@@ -755,22 +755,11 @@ export default function EditMusicPage() {
           </TabsContent>
 
           <TabsContent value="media" className="space-y-6">
-            {/* Sistema de Upload de Ficheiros */}
-            <MultiFileUploader 
+            {/* Sistema Moderno de Upload de Ficheiros */}
+            <FileManager 
+              mode="edit"
               songId={songId}
-              autoUpload={true}
-              onDeleteExisting={async (fileId) => {
-                const response = await fetch(`/api/admin/songs/${songId}/files?fileId=${fileId}`, {
-                  method: 'DELETE'
-                });
-                if (!response.ok) {
-                  throw new Error('Erro ao eliminar ficheiro');
-                }
-              }}
             />
-
-            {/* Visualização de Ficheiros Existentes */}
-            <SongFilesViewer songId={songId} showTitle={false} />
 
             <Separator className="my-6" />
 

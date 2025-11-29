@@ -37,15 +37,21 @@ export interface SongFileWithUrl extends SongFile {
 }
 
 export interface FileUploadData {
-  id: string;
+  id?: string; // Optional - só existe após upload
   file: File;
   fileType: FileType;
   description: string; // Descrição personalizada
-  uploading: boolean;
-  uploaded: boolean;
+  uploading?: boolean;
+  uploaded?: boolean;
   progress?: number;
   error?: string;
   fileId?: string; // ID do ficheiro após upload bem-sucedido
+  fileName?: string; // Cache do nome do ficheiro
+  fileSize?: number; // Cache do tamanho
+  signedUrl?: string; // URL assinada para preview/download
+  uploadedAt?: string; // Data de upload
+  isUploading?: boolean; // Flag de upload em progresso
+  uploadProgress?: number; // Progresso 0-100
 }
 
 // Helper functions

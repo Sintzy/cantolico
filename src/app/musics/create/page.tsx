@@ -8,6 +8,8 @@ import dynamic from "next/dynamic";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { TurnstileCaptcha } from "@/components/TurnstileCaptcha";
+import { FileManager } from "@/components/FileManager";
+import { FileUploadData } from "@/types/song-files";
 
 import MarkdownIt from "markdown-it";
 import chords from "markdown-it-chords";
@@ -101,12 +103,11 @@ export default function CreateNewMusicPage() {
     type: "ACORDES" as SongType, // Sempre definido como ACORDES
     instrument: "" as Instrument,
     markdown: "",
-    pdfFile: null as File | null,
-    mp3File: null as File | null,
     youtubeLink: "",
     spotifyLink: "",
   });
 
+  const [files, setFiles] = useState<FileUploadData[]>([]);
   const [preview, setPreview] = useState("");
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -263,10 +264,23 @@ export default function CreateNewMusicPage() {
       formData.append("tags", form.tags.join(","));
       formData.append("moments", JSON.stringify(form.moments));
       formData.append("captchaToken", captchaToken);
-      if (form.pdfFile) formData.append("pdf", form.pdfFile);
-      if (form.mp3File) formData.append("audio", form.mp3File);
       formData.append("youtubeLink", form.youtubeLink);
       formData.append("spotifyLink", form.spotifyLink);
+      
+      // Enviar ficheiros do novo sistema
+      formData.append("files", JSON.stringify(files.map(f => ({
+        fileType: f.fileType,
+        fileName: f.file.name,
+        description: f.description,
+        fileSize: f.file.size
+      }))));
+      
+      // Adicionar os ficheiros reais
+      files.forEach((fileData, index) => {
+        if (fileData.file) {
+          formData.append(`file_${index}`, fileData.file);
+        }
+      });
 
       const res = await fetch("/api/musics/create", {
         method: "POST",
@@ -734,62 +748,36 @@ export default function CreateNewMusicPage() {
             </div>
 
             <div className="space-y-6">
-              {/* Anexos */}
+              {/* Ficheiros - Novo Sistema */}
               <Card className="border border-border/50 shadow-lg bg-card/80 backdrop-blur-sm">
-                <CardHeader className="border-b border-border/50 bg-gradient-to-r from-primary/5 to-transparent">
+                <CardHeader className="border-b border-border/50 bg-linear-to-r from-primary/5 to-transparent">
                   <CardTitle className="flex items-center gap-2 text-lg">
                     <UploadIcon className="h-5 w-5 text-primary" />
-                    Anexos Opcionais
+                    Partituras e Áudios
                   </CardTitle>
                   <CardDescription>
-                    Adiciona ficheiros PDF, MP3 e links externos
+                    Adiciona até 10 PDFs e 10 MP3s com descrições personalizadas
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <FileManager
+                    mode="create"
+                    maxPdfs={10}
+                    maxAudios={10}
+                    onChange={(updatedFiles) => setFiles(updatedFiles)}
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Links Externos */}
+              <Card className="border border-border/50 shadow-lg bg-card/80 backdrop-blur-sm">
+                <CardHeader className="border-b border-border/50 bg-linear-to-r from-primary/5 to-transparent">
+                  <CardTitle className="text-lg">Links Externos</CardTitle>
+                  <CardDescription>
+                    Adiciona links do YouTube e Spotify (opcional)
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 sm:space-y-6 pt-6">
-                  <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
-                    <div className="space-y-3">
-                      <Label htmlFor="pdf" className="text-base font-medium flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-primary" />
-                        PDF (opcional)
-                      </Label>
-                      <Input 
-                        id="pdf"
-                        type="file" 
-                        accept="application/pdf" 
-                        onChange={(e) => setForm({ ...form, pdfFile: e.target.files?.[0] || null })}
-                        className="h-10 sm:h-12 border-dashed border-2 hover:border-primary/50 transition-colors"
-                      />
-                      {form.pdfFile && (
-                        <div className="flex items-center gap-2 p-2 bg-primary/10 rounded text-xs sm:text-sm">
-                          <FileText className="w-4 h-4 text-primary flex-shrink-0" />
-                          <span className="truncate">{form.pdfFile.name}</span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <Label htmlFor="mp3" className="text-base font-medium flex items-center gap-2">
-                        <Music className="w-4 h-4 text-primary" />
-                        MP3 (opcional)
-                      </Label>
-                      <Input 
-                        id="mp3"
-                        type="file" 
-                        accept="audio/mpeg" 
-                        onChange={(e) => setForm({ ...form, mp3File: e.target.files?.[0] || null })}
-                        className="h-10 sm:h-12 border-dashed border-2 hover:border-primary/50 transition-colors"
-                      />
-                      {form.mp3File && (
-                        <div className="flex items-center gap-2 p-2 bg-primary/10 rounded text-xs sm:text-sm">
-                          <Music className="w-4 h-4 text-primary flex-shrink-0" />
-                          <span className="truncate">{form.mp3File.name}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <Separator />
-
                   <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
                     <div className="space-y-3">
                       <Label htmlFor="youtube" className="text-base font-medium flex items-center gap-2">
@@ -921,10 +909,10 @@ export default function CreateNewMusicPage() {
                       <div className="flex justify-between items-start gap-4">
                         <span className="font-medium text-muted-foreground">Anexos:</span>
                         <span className="text-foreground text-right flex items-center gap-1">
-                          {(form.pdfFile || form.mp3File || form.youtubeLink || form.spotifyLink) ? (
+                          {(files.length > 0 || form.youtubeLink || form.spotifyLink) ? (
                             <>
                               <span className="text-primary">✓</span>
-                              Adicionados
+                              Adicionados ({files.length} ficheiros)
                             </>
                           ) : (
                             "📎 Opcional"

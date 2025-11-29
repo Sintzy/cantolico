@@ -344,7 +344,7 @@ export function MultiFileUploader({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => removeFile(fileUpload.id)}
+                        onClick={() => removeFile(fileUpload.id || '')}
                         disabled={fileUpload.uploading}
                       >
                         <X className="h-4 w-4" />

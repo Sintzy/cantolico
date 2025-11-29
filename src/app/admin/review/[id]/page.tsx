@@ -46,8 +46,8 @@ import {
   Search as SearchIcon
 } from "lucide-react";
 import "../../../../../public/styles/chords.css";
-import { MultiFileUploader } from '@/components/MultiFileUploader';
-import { SongFilesViewer } from '@/components/SongFilesViewer';
+import { FileManager } from '@/components/FileManager';
+import { FileType, FileUploadData } from '@/types/song-files';
 
 const SimpleMDE = dynamic(() => import("react-simplemde-editor"), { ssr: false });
 
@@ -938,20 +938,10 @@ export default function ReviewSubmissionPage() {
             {/* Novo Sistema de Ficheiros */}
             {submission?.song?.id && (
               <>
-                <MultiFileUploader 
+                <FileManager 
+                  mode="edit"
                   songId={submission.song.id}
-                  autoUpload={true}
-                  onDeleteExisting={async (fileId) => {
-                    const response = await fetch(`/api/admin/songs/${submission.song.id}/files?fileId=${fileId}`, {
-                      method: 'DELETE'
-                    });
-                    if (!response.ok) {
-                      throw new Error('Erro ao eliminar ficheiro');
-                    }
-                  }}
                 />
-
-                <SongFilesViewer songId={submission.song.id} showTitle={false} />
 
                 <Separator className="my-6" />
               </>
