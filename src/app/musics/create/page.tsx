@@ -196,11 +196,16 @@ export default function CreateNewMusicPage() {
   const isStepComplete = (step: number) => {
     switch (step) {
       case 1:
-        return form.title.trim() && form.instrument; // Removido form.type pois é sempre ACORDES
+        return form.title.trim() && form.type && form.instrument;
       case 2:
         return form.moments.length > 0;
       case 3:
-        return form.markdown.trim();
+        // ACORDES precisa de markdown, PARTITURA precisa de ficheiros (PDFs)
+        if (form.type === SongType.ACORDES) {
+          return form.markdown.trim().length > 0;
+        } else {
+          return files.length > 0;
+        }
       case 4:
         return captchaToken;
       default:
@@ -241,8 +246,13 @@ export default function CreateNewMusicPage() {
       return;
     }
     
-    if (!form.markdown.trim()) {
+    if (form.type === SongType.ACORDES && !form.markdown.trim()) {
       toast.error("Por favor, insere a letra da música em Markdown");
+      return;
+    }
+    
+    if (form.type === SongType.PARTITURA && files.length === 0) {
+      toast.error("Por favor, carrega pelo menos um ficheiro PDF para a partitura");
       return;
     }
     
@@ -267,25 +277,38 @@ export default function CreateNewMusicPage() {
       formData.append("youtubeLink", form.youtubeLink);
       formData.append("spotifyLink", form.spotifyLink);
       
-      // Enviar ficheiros do novo sistema
-      formData.append("files", JSON.stringify(files.map(f => ({
-        fileType: f.fileType,
-        fileName: f.file.name,
-        description: f.description,
-        fileSize: f.file.size
-      }))));
+      // Enviar ficheiros do novo sistema (apenas os que têm descrição)
+      const validFiles = files.filter(f => f.description && f.description.trim().length > 0);
       
-      // Adicionar os ficheiros reais
-      files.forEach((fileData, index) => {
-        if (fileData.file) {
+      if (validFiles.length > 0) {
+        formData.append("files", JSON.stringify(validFiles.map(f => ({
+          fileType: f.fileType,
+          fileName: f.file.name,
+          description: f.description.trim(),
+          fileSize: f.file.size
+        }))));
+        
+        // Adicionar os ficheiros reais
+        validFiles.forEach((fileData, index) => {
           formData.append(`file_${index}`, fileData.file);
-        }
-      });
+        });
+      } else {
+        // Enviar array vazio se não há ficheiros
+        formData.append("files", JSON.stringify([]));
+      }
 
       const res = await fetch("/api/musics/create", {
         method: "POST",
         body: formData,
       });
+
+      // Verificar se a resposta é JSON válido
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await res.text();
+        console.error("Resposta não-JSON recebida:", text);
+        throw new Error("Resposta inválida do servidor");
+      }
 
       const data = await res.json();
       if (data.success) {
@@ -297,7 +320,7 @@ export default function CreateNewMusicPage() {
       }
     } catch (error) {
       console.error("Erro na submissão:", error);
-      toast.error("Erro de conexão ao submeter a música");
+      toast.error(error instanceof Error ? error.message : "Erro de conexão ao submeter a música");
       setCaptchaToken(null);
     } finally {
       setIsSubmitting(false);
@@ -470,12 +493,23 @@ export default function CreateNewMusicPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label>Tipo</Label>
-                    <div className="h-10 px-3 py-2 border border-input rounded-md bg-muted text-muted-foreground flex items-center">
-                      ACORDES (Fixo)
-                    </div>
+                    <Label htmlFor="type">Tipo de Música *</Label>
+                    <Select
+                      value={form.type}
+                      onValueChange={(value) => setForm({ ...form, type: value as SongType })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecionar tipo..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ACORDES">Acordes (com letra e acordes)</SelectItem>
+                        <SelectItem value="PARTITURA">Partitura (apenas PDF)</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <p className="text-xs text-muted-foreground">
-                      Todas as músicas são do tipo acordes por padrão
+                      {form.type === SongType.ACORDES 
+                        ? "Escreve a letra com acordes em Markdown" 
+                        : "Faz upload de ficheiros PDF com a partitura"}
                     </p>
                   </div>
                   
@@ -628,91 +662,97 @@ export default function CreateNewMusicPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="space-y-8">
             <div>
-              <h2 className="text-2xl font-bold tracking-tight">Letra e Acordes</h2>
+              <h2 className="text-2xl font-bold tracking-tight">
+                {form.type === SongType.ACORDES ? "Letra e Acordes" : "Ficheiros e Partitura"}
+              </h2>
               <p className="text-muted-foreground">
-                Escreve a letra da música com os acordes em formato Markdown
+                {form.type === SongType.ACORDES 
+                  ? "Escreve a letra da música com os acordes em formato Markdown"
+                  : "Carrega os ficheiros PDF com a partitura"}
               </p>
             </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Conteúdo Musical</CardTitle>
-                <CardDescription>
-                  Usa o editor Markdown para escrever a letra com acordes
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid gap-6 lg:grid-cols-2">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="markdown">Editor Markdown *</Label>
-                      <ChordGuideButton />
+            {form.type === SongType.ACORDES ? (
+              /* Step 3 para ACORDES - Editor de Markdown */
+              <Card>
+                <CardHeader>
+                  <CardTitle>Conteúdo Musical</CardTitle>
+                  <CardDescription>
+                    Usa o editor Markdown para escrever a letra com acordes
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid gap-6 lg:grid-cols-2">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="markdown">Editor Markdown *</Label>
+                        <ChordGuideButton />
+                      </div>
+                      
+                      <div className="text-sm text-muted-foreground space-y-3">
+                        <Card className="p-3 bg-muted/50">
+                          <h4 className="font-medium mb-3 text-sm flex items-center gap-2">
+                            🎵 Formatos suportados:
+                          </h4>
+                          <ul className="text-xs space-y-2">
+                            <li className="flex items-start gap-2">
+                              <span className="font-semibold text-primary">Acordes:</span> 
+                              <div>
+                                <code className="bg-background px-1.5 py-0.5 rounded text-xs border">[C][Am][F][G]</code> numa linha e <code className="bg-background px-1.5 py-0.5 rounded text-xs border">Canto Aleluia ao senhor</code> na seguinte
+                              </div>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="font-semibold text-primary">Intro/Bridge:</span>
+                              <div>
+                                <code className="bg-background px-1.5 py-0.5 rounded text-xs border">Intro:</code> seguido de <code className="bg-background px-1.5 py-0.5 rounded text-xs border">[A][Em][G][C]</code> na linha seguinte
+                              </div>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="font-semibold text-primary">Exemplo:</span>
+                              <div>
+                                <code className="bg-background px-1.5 py-0.5 rounded text-xs border">[D][A][F][G]</code> numa linha, <code className="bg-background px-1.5 py-0.5 rounded text-xs border">Aleluia sim ao senhor</code> na próxima
+                              </div>
+                            </li>
+                          </ul>
+                          <div className="mt-3 p-2 bg-primary/10 rounded border border-primary/20">
+                            <p className="text-xs text-primary font-medium">💡 Dica: Usa o preview em tempo real para ver como fica o resultado!</p>
+                          </div>
+                        </Card>
+                      </div>
+
+                      <div className="border border-border rounded-md overflow-hidden">
+                        <SimpleMDE
+                          value={form.markdown}
+                          onChange={(val) => setForm({ ...form, markdown: val })}
+                          getMdeInstance={(instance) => (editorRef.current = instance)}
+                          options={simpleMDEOptions}
+                        />
+                      </div>
                     </div>
-                    
-                    <div className="text-sm text-muted-foreground space-y-3">
-                      <Card className="p-3 bg-muted/50">
-                        <h4 className="font-medium mb-3 text-sm flex items-center gap-2">
-                          🎵 Formatos suportados:
-                        </h4>
-                        <ul className="text-xs space-y-2">
-                          <li className="flex items-start gap-2">
-                            <span className="font-semibold text-primary">Acordes:</span> 
-                            <div>
-                              <code className="bg-background px-1.5 py-0.5 rounded text-xs border">[C][Am][F][G]</code> numa linha e <code className="bg-background px-1.5 py-0.5 rounded text-xs border">Canto Aleluia ao senhor</code> na seguinte
-                            </div>
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <span className="font-semibold text-primary">Intro/Bridge:</span>
-                            <div>
-                              <code className="bg-background px-1.5 py-0.5 rounded text-xs border">Intro:</code> seguido de <code className="bg-background px-1.5 py-0.5 rounded text-xs border">[A][Em][G][C]</code> na linha seguinte
-                            </div>
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <span className="font-semibold text-primary">Exemplo:</span>
-                            <div>
-                              <code className="bg-background px-1.5 py-0.5 rounded text-xs border">[D][A][F][G]</code> numa linha, <code className="bg-background px-1.5 py-0.5 rounded text-xs border">Aleluia sim ao senhor</code> na próxima
-                            </div>
-                          </li>
-                        </ul>
-                        <div className="mt-3 p-2 bg-primary/10 rounded border border-primary/20">
-                          <p className="text-xs text-primary font-medium">💡 Dica: Usa o preview em tempo real para ver como fica o resultado!</p>
-                        </div>
+
+                    <div className="space-y-4">
+                      <Label className="flex items-center gap-2">
+                        <Eye className="w-4 h-4 text-primary" />
+                        Preview em Tempo Real
+                      </Label>
+                      <Card className="p-4 overflow-auto max-h-[500px]">
+                        {form.markdown.trim() ? (
+                          <div
+                            className="font-mono text-sm"
+                            style={{ lineHeight: '1.8' }}
+                            dangerouslySetInnerHTML={{ __html: preview }}
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+                            <Music className="w-12 h-12 mb-3 opacity-50" />
+                            <p className="text-sm">O preview aparecerá aqui conforme escreves</p>
+                            <p className="text-xs mt-1">Começa a escrever no editor para ver o resultado</p>
+                          </div>
+                        )}
                       </Card>
                     </div>
-
-                    <div className="border border-border rounded-md overflow-hidden">
-                      <SimpleMDE
-                        value={form.markdown}
-                        onChange={(val) => setForm({ ...form, markdown: val })}
-                        getMdeInstance={(instance) => (editorRef.current = instance)}
-                        options={simpleMDEOptions}
-                      />
-                    </div>
                   </div>
-
-                  <div className="space-y-4">
-                    <Label className="flex items-center gap-2">
-                      <Eye className="w-4 h-4 text-primary" />
-                      Preview em Tempo Real
-                    </Label>
-                    <Card className="p-4 overflow-auto max-h-[500px]">
-                      {form.markdown.trim() ? (
-                        <div
-                          className="font-mono text-sm"
-                          style={{ lineHeight: '1.8' }}
-                          dangerouslySetInnerHTML={{ __html: preview }}
-                        />
-                      ) : (
-                        <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
-                          <Music className="w-12 h-12 mb-3 opacity-50" />
-                          <p className="text-sm">O preview aparecerá aqui conforme escreves</p>
-                          <p className="text-xs mt-1">Começa a escrever no editor para ver o resultado</p>
-                        </div>
-                      )}
-                    </Card>
-                  </div>
-                </div>
-              </CardContent>
+                </CardContent>
               <CardFooter className="flex justify-between">
                 <Button
                   onClick={handlePrevious}
@@ -732,6 +772,43 @@ export default function CreateNewMusicPage() {
                 </Button>
               </CardFooter>
             </Card>
+            ) : (
+              /* Step 3 para PARTITURA - Upload de PDFs e MP3s */
+              <Card>
+                <CardHeader>
+                  <CardTitle>Partitura e Áudio</CardTitle>
+                  <CardDescription>
+                    Carrega os ficheiros PDF com a partitura e ficheiros MP3 com o áudio. Podes marcar um PDF como principal.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <FileManager
+                    mode="create"
+                    maxPdfs={10}
+                    maxAudios={10}
+                    onChange={(updatedFiles) => setFiles(updatedFiles)}
+                  />
+                </CardContent>
+                <CardFooter className="flex justify-between">
+                  <Button
+                    onClick={handlePrevious}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Anterior
+                  </Button>
+                  <Button
+                    onClick={handleNext}
+                    disabled={!isStepComplete(3)}
+                    className="flex items-center gap-2"
+                  >
+                    Próximo
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </CardFooter>
+              </Card>
+            )}
           </div>
         </div>
       )}
@@ -748,26 +825,28 @@ export default function CreateNewMusicPage() {
             </div>
 
             <div className="space-y-6">
-              {/* Ficheiros - Novo Sistema */}
-              <Card className="border border-border/50 shadow-lg bg-card/80 backdrop-blur-sm">
-                <CardHeader className="border-b border-border/50 bg-linear-to-r from-primary/5 to-transparent">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <UploadIcon className="h-5 w-5 text-primary" />
-                    Partituras e Áudios
-                  </CardTitle>
-                  <CardDescription>
-                    Adiciona até 10 PDFs e 10 MP3s com descrições personalizadas
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <FileManager
-                    mode="create"
-                    maxPdfs={10}
-                    maxAudios={10}
-                    onChange={(updatedFiles) => setFiles(updatedFiles)}
-                  />
-                </CardContent>
-              </Card>
+              {/* Ficheiros - Novo Sistema (apenas para ACORDES, PARTITURA usa Step 3) */}
+              {form.type === SongType.ACORDES && (
+                <Card className="border border-border/50 shadow-lg bg-card/80 backdrop-blur-sm">
+                  <CardHeader className="border-b border-border/50 bg-linear-to-r from-primary/5 to-transparent">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <UploadIcon className="h-5 w-5 text-primary" />
+                      Partituras e Áudios
+                    </CardTitle>
+                    <CardDescription>
+                      Adiciona até 10 PDFs e 10 MP3s com descrições personalizadas
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    <FileManager
+                      mode="create"
+                      maxPdfs={10}
+                      maxAudios={10}
+                      onChange={(updatedFiles) => setFiles(updatedFiles)}
+                    />
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Links Externos */}
               <Card className="border border-border/50 shadow-lg bg-card/80 backdrop-blur-sm">

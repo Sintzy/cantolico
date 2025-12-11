@@ -359,31 +359,6 @@ export default function MusicsPage() {
 
   const renderFilterContent = () => (
     <div className="space-y-4">
-      {/* Search */}
-      <div className="space-y-2">
-        <Label className="text-sm font-medium text-foreground">Pesquisar</Label>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={searchTerm}
-            onChange={(e) => {
-              const newValue = e.target.value;
-              setSearchTerm(newValue);
-              if (saveState) {
-                saveState({ 
-                  ...state,
-                  searchTerm: newValue, 
-                  currentPage: 1, 
-                  scrollPosition: 0 
-                });
-              }
-            }}
-            placeholder="Nome do cântico..."
-            className="pl-10 h-9"
-          />
-        </div>
-      </div>
-
       {/* Momento Litúrgico */}
       <div className="space-y-2">
         <Label className="text-sm font-medium text-foreground">Momento Litúrgico</Label>
@@ -511,28 +486,28 @@ export default function MusicsPage() {
         {/* Background decoration */}
         <div className="pointer-events-none absolute inset-0" aria-hidden="true">
           <div className="absolute left-1/2 top-0 -translate-x-1/2">
-            <div className="h-60 w-60 rounded-full bg-gradient-to-br from-blue-50 via-white to-purple-50" />
+            <div className="h-60 w-60 rounded-full bg-linear-to-br from-blue-50 via-white to-purple-50" />
           </div>
         </div>
         
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 md:py-12 relative z-10">
           <div className="text-center mb-6 sm:mb-8 md:mb-12">
             {/* Decorative border */}
-            <div className="mb-4 border-y [border-image:linear-gradient(to_right,transparent,theme(colors.slate.300/.8),transparent)1]">
+            <div className="mb-4 border-y [border-image:linear-gradient(to_right,transparent,--theme(--color-slate-300/.8),transparent)1]">
               <div className="-mx-0.5 flex justify-center -space-x-2 py-2">
-                <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                <div className="w-6 h-6 bg-linear-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
                   <Music className="text-white text-xs w-3 h-3" />
                 </div>
-                <div className="w-6 h-6 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center">
+                <div className="w-6 h-6 bg-linear-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center">
                   <Search className="text-white text-xs w-3 h-3" />
                 </div>
-                <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                <div className="w-6 h-6 bg-linear-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
                   <Filter className="text-white text-xs w-3 h-3" />
                 </div>
               </div>
             </div>
             
-            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 sm:mb-4 border-y [border-image:linear-gradient(to_right,transparent,theme(colors.slate.300/.8),transparent)1] leading-tight">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 sm:mb-4 border-y [border-image:linear-gradient(to_right,transparent,--theme(--color-slate-300/.8),transparent)1] leading-tight">
               Biblioteca de Cânticos
             </h1>
             <p className="text-base sm:text-lg text-gray-700 max-w-2xl mx-auto px-4">
@@ -562,6 +537,30 @@ export default function MusicsPage() {
       {/* Main Content */}
       <section className="bg-white min-h-screen">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6 lg:py-8">
+          {/* Mobile Search Bar */}
+          <div className="lg:hidden mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={searchTerm}
+                onChange={(e) => {
+                  const newValue = e.target.value;
+                  setSearchTerm(newValue);
+                  if (saveState) {
+                    saveState({ 
+                      ...state,
+                      searchTerm: newValue, 
+                      currentPage: 1, 
+                      scrollPosition: 0 
+                    });
+                  }
+                }}
+                placeholder="Pesquisar cântico..."
+                className="pl-10 h-10 w-full"
+              />
+            </div>
+          </div>
+
           {/* Mobile Filter Button */}
           <div className="lg:hidden mb-4">
             <Dialog open={isMobileFiltersOpen} onOpenChange={setIsMobileFiltersOpen}>
@@ -569,9 +568,9 @@ export default function MusicsPage() {
                 <Button variant="outline" size="sm" className="w-full justify-start">
                   <SlidersHorizontal className="h-4 w-4 mr-2" />
                   Filtros
-                  {(searchTerm || selectedMoment || tagFilter) && (
+                  {(selectedMoment || tagFilter) && (
                     <Badge variant="secondary" className="ml-auto">
-                      {[searchTerm, selectedMoment, tagFilter].filter(Boolean).length}
+                      {[selectedMoment, tagFilter].filter(Boolean).length}
                     </Badge>
                   )}
                 </Button>
@@ -592,8 +591,30 @@ export default function MusicsPage() {
 
           <div className="flex gap-6 lg:gap-8">
             {/* Desktop Sidebar - Filtros */}
-            <aside className="hidden lg:block w-80 flex-shrink-0">
-              <div className="sticky top-8 space-y-6">
+            <aside className="hidden lg:block w-80 shrink-0">
+              <div className="sticky top-8 space-y-4">
+                {/* Search Bar */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    value={searchTerm}
+                    onChange={(e) => {
+                      const newValue = e.target.value;
+                      setSearchTerm(newValue);
+                      if (saveState) {
+                        saveState({ 
+                          ...state,
+                          searchTerm: newValue, 
+                          currentPage: 1, 
+                          scrollPosition: 0 
+                        });
+                      }
+                    }}
+                    placeholder="Pesquisar cântico..."
+                    className="pl-10 h-10 w-full"
+                  />
+                </div>
+
                 <Card className="border border-border shadow-sm bg-background">
                   <CardHeader className="pb-4 border-b border-border">
                     <div className="flex items-center gap-3">
@@ -642,8 +663,8 @@ export default function MusicsPage() {
                         <CardContent className="p-4 sm:p-5">
                           <div className="flex items-start gap-3 sm:gap-4">
                             {/* Icon/Avatar */}
-                            <div className="flex-shrink-0">
-                              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg flex items-center justify-center border border-border">
+                            <div className="shrink-0">
+                              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-linear-to-br from-primary/10 to-primary/5 rounded-lg flex items-center justify-center border border-border">
                                 <Music className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
                               </div>
                             </div>

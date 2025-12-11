@@ -206,7 +206,7 @@ export function withLogging(
       // Atualizar contexto de correlação com dados do usuário
       if (userContext) {
         correlationContext.user_id = userContext.user_id;
-        correlationContext.user_email = userContext.user_email;
+        correlationContext.user_email = userContext.user_email || undefined;
         correlationContext.user_role = userContext.user_role;
       }
 

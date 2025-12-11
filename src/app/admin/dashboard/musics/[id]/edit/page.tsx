@@ -392,7 +392,7 @@ export default function EditMusicPage() {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center space-y-6">
-          <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-tr from-blue-500 to-blue-400 shadow-lg flex items-center justify-center">
+          <div className="w-16 h-16 mx-auto rounded-full bg-linear-to-tr from-blue-500 to-blue-400 shadow-lg flex items-center justify-center">
             <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
           </div>
           <div>

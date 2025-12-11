@@ -285,23 +285,58 @@ export function MultiFileUploader({
             <Label htmlFor="file-upload">
               Selecionar Ficheiro(s)
             </Label>
-            <Input
-              ref={fileInputRef}
-              id="file-upload"
-              type="file"
-              accept={accept}
-              multiple
-              onChange={handleFileSelect}
-              disabled={!description.trim()}
-            />
+            <div 
+              className="relative border-2 border-dashed border-gray-300 rounded-lg p-8 transition-colors hover:border-blue-500 hover:bg-blue-50 cursor-pointer"
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.add('border-blue-500', 'bg-blue-50');
+              }}
+              onDragLeave={(e) => {
+                e.currentTarget.classList.remove('border-blue-500', 'bg-blue-50');
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.remove('border-blue-500', 'bg-blue-50');
+                
+                const droppedFiles = Array.from(e.dataTransfer.files || []);
+                if (fileInputRef.current) {
+                  const dt = new DataTransfer();
+                  droppedFiles.forEach(file => dt.items.add(file));
+                  fileInputRef.current.files = dt.files;
+                  const event = new Event('change', { bubbles: true });
+                  fileInputRef.current.dispatchEvent(event);
+                }
+              }}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Input
+                ref={fileInputRef}
+                id="file-upload"
+                type="file"
+                accept={accept}
+                multiple
+                onChange={handleFileSelect}
+                disabled={!description.trim()}
+                className="hidden"
+              />
+              <div className="text-center">
+                <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                <p className="font-medium text-gray-700">
+                  Arraste e solte aqui para enviar
+                </p>
+                <p className="text-sm text-gray-500 mt-1">
+                  ou <span className="text-blue-600 font-medium">clique para selecionar</span> ficheiros
+                </p>
+                <p className="text-xs text-gray-400 mt-2">
+                  Tamanho máximo: {isPdfType ? '50MB' : '20MB'} por ficheiro
+                </p>
+              </div>
+            </div>
             {!description.trim() && (
               <p className="text-xs text-amber-600">
                 ⚠️ Por favor, insere uma descrição antes de selecionar ficheiros
               </p>
             )}
-            <p className="text-xs text-muted-foreground">
-              Tamanho máximo: {isPdfType ? '50MB' : '20MB'} por ficheiro
-            </p>
           </div>
         </div>
 

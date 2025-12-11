@@ -658,6 +658,59 @@ export interface Database {
           created_at?: string
         }
       }
+      SongFile: {
+        Row: {
+          id: string
+          songVersionId: string
+          fileType: 'PDF' | 'AUDIO'
+          fileName: string
+          fileKey: string
+          fileSize: number
+          mimeType: string
+          description: string
+          isPrincipal: boolean
+          uploadedById: number
+          uploadedAt: string
+          deletedAt: string | null
+          deletionReason: string | null
+          createdAt: string
+          updatedAt: string
+        }
+        Insert: {
+          id?: string
+          songVersionId: string
+          fileType: 'PDF' | 'AUDIO'
+          fileName: string
+          fileKey: string
+          fileSize: number
+          mimeType: string
+          description: string
+          isPrincipal?: boolean
+          uploadedById: number
+          uploadedAt?: string
+          deletedAt?: string | null
+          deletionReason?: string | null
+          createdAt?: string
+          updatedAt?: string
+        }
+        Update: {
+          id?: string
+          songVersionId?: string
+          fileType?: 'PDF' | 'AUDIO'
+          fileName?: string
+          fileKey?: string
+          fileSize?: number
+          mimeType?: string
+          description?: string
+          isPrincipal?: boolean
+          uploadedById?: number
+          uploadedAt?: string
+          deletedAt?: string | null
+          deletionReason?: string | null
+          createdAt?: string
+          updatedAt?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never

@@ -8,8 +8,10 @@ import {
   SongType,
   SourceType,
 } from "@/lib/constants";
-import { formatTagsForPostgreSQL } from "@/lib/utils";
+import { formatTagsForPostgreSQL, getClientIP } from "@/lib/utils";
 import { FileType } from "@/types/song-files";
+import { logger } from "@/lib/logger";
+import { LogCategory } from "@/types/logging";
 
 
 async function uploadToSupabase(
@@ -49,7 +51,17 @@ async function validateTurnstileToken(token: string): Promise<boolean> {
 }
 
 export const POST = withUserProtection<any>(async (req: NextRequest, session: any) => {
+  const clientIp = getClientIP(req.headers);
+  const startTime = Date.now();
+  
   console.log('🎵 Nova submissão de música iniciada');
+
+  logger.info('Music submission started', {
+    category: LogCategory.SUBMISSION,
+    user: { id: session.user.id, email: session.user.email, role: session.user.role },
+    network: { ip_address: clientIp },
+    http: { method: 'POST', url: '/api/musics/create' }
+  });
 
   const { data: user, error: userError } = await supabase
     .from('User')
@@ -58,6 +70,12 @@ export const POST = withUserProtection<any>(async (req: NextRequest, session: an
     .single();
 
   if (userError || !user) {
+    logger.error('User not found for submission', {
+      category: LogCategory.SUBMISSION,
+      user: { email: session.user.email },
+      network: { ip_address: clientIp },
+      error: { error_message: userError?.message }
+    });
     console.error("Erro: Utilizador não encontrado.");
     return NextResponse.json({ error: "Utilizador não encontrado" }, { status: 404 });
   }
@@ -150,17 +168,61 @@ export const POST = withUserProtection<any>(async (req: NextRequest, session: an
 
     // Novo sistema de ficheiros: processar array de ficheiros com descrições
     const filesJson = formData.get("files")?.toString();
-    let filesData: Array<{fileType: FileType, fileName: string, description: string, file: File}> = [];
+    let filesData: Array<{fileType: FileType, fileName: string, description: string, file: File, fileBuffer: Buffer}> = [];
     
     if (filesJson) {
       try {
         const parsedFiles = JSON.parse(filesJson);
-        filesData = parsedFiles.map((f: any, index: number) => ({
-          fileType: f.fileType,
-          fileName: f.fileName,
-          description: f.description,
-          file: formData.get(`file_${index}`) as File
-        })).filter((f: any) => f.file !== null);
+        filesData = await Promise.all(
+          parsedFiles.map(async (f: any, index: number) => {
+            const file = formData.get(`file_${index}`) as File;
+            if (!file) return null;
+
+            // Validação rigorosa de ficheiros (anti-XSS)
+            const isPdf = f.fileType === 'PDF';
+            const isAudio = f.fileType === 'AUDIO';
+
+            const fileBuffer = Buffer.from(await file.arrayBuffer());
+
+            if (isPdf) {
+              // Verificar PDF magic bytes
+              const pdfMagic = fileBuffer.slice(0, 5).toString('ascii');
+              if (pdfMagic !== '%PDF-') {
+                console.error(`Ficheiro ${file.name} rejeitado: não é um PDF válido`);
+                return null;
+              }
+            }
+
+            if (isAudio) {
+              // Verificar magic bytes de áudio
+              let isValidAudio = false;
+              if ((fileBuffer[0] === 0x49 && fileBuffer[1] === 0x44 && fileBuffer[2] === 0x33) ||
+                  (fileBuffer[0] === 0xFF && (fileBuffer[1] === 0xFB || fileBuffer[1] === 0xF3 || fileBuffer[1] === 0xF2)) ||
+                  (fileBuffer[0] === 0x52 && fileBuffer[1] === 0x49 && fileBuffer[2] === 0x46 && fileBuffer[3] === 0x46) ||
+                  (fileBuffer[0] === 0x4F && fileBuffer[1] === 0x67 && fileBuffer[2] === 0x67 && fileBuffer[3] === 0x53) ||
+                  (fileBuffer[4] === 0x66 && fileBuffer[5] === 0x74 && fileBuffer[6] === 0x79 && fileBuffer[7] === 0x70)) {
+                isValidAudio = true;
+              }
+              
+              if (!isValidAudio) {
+                console.error(`Ficheiro ${file.name} rejeitado: não é um áudio válido`);
+                return null;
+              }
+            }
+
+            return {
+              fileType: f.fileType,
+              fileName: f.fileName,
+              description: f.description,
+              file: file,
+              fileBuffer: fileBuffer
+            };
+          })
+        );
+        
+        // Filtrar nulls (ficheiros inválidos)
+        filesData = filesData.filter((f): f is NonNullable<typeof f> => f !== null);
+        
       } catch (error) {
         console.error("Erro ao processar ficheiros:", error);
       }
@@ -248,43 +310,153 @@ export const POST = withUserProtection<any>(async (req: NextRequest, session: an
 
   // Processar e guardar novos ficheiros com descrições
   if (filesData.length > 0) {
-    console.log(`📁 Processando ${filesData.length} ficheiros...`);
+    console.log(`📁 Processando ${filesData.length} ficheiros validados...`);
+    
+    logger.info('Processing submission files', {
+      category: LogCategory.UPLOAD,
+      user: { id: user.id, email: user.email },
+      network: { ip_address: clientIp },
+      domain: { submission_id: submissionId },
+      details: {
+        file_count: filesData.length,
+        pdf_count: filesData.filter(f => f.fileType === FileType.PDF).length,
+        audio_count: filesData.filter(f => f.fileType === FileType.AUDIO).length
+      }
+    });
+    
+    let uploadedCount = 0;
+    let failedCount = 0;
+    const fileMetadata: Record<string, { fileName: string; fileType: string; description: string }> = {};
     
     for (const fileData of filesData) {
-      if (!fileData.file) continue;
+      if (!fileData.fileBuffer) continue;
       
-      const buffer = Buffer.from(await fileData.file.arrayBuffer());
-      const fileExtension = fileData.file.name.split('.').pop();
-      const storagePath = `songs/${submissionId}/${randomUUID()}.${fileExtension}`;
+      // Usar buffer já validado
+      const fileExtension = fileData.fileName.split('.').pop();
+      const uniqueFileName = `${randomUUID()}.${fileExtension}`;
+      const storagePath = `songs/${submissionId}/${uniqueFileName}`;
       
-      // Upload para Storage
+      logger.info('Uploading submission file', {
+        category: LogCategory.UPLOAD,
+        user: { id: user.id, email: user.email },
+        network: { ip_address: clientIp },
+        domain: { submission_id: submissionId },
+        details: {
+          file_name: fileData.fileName,
+          file_type: fileData.fileType,
+          file_size: fileData.file.size,
+          storage_path: storagePath,
+          description: fileData.description
+        }
+      });
+      
+      // Upload para Storage usando buffer já validado
       const uploadSuccess = await uploadToSupabase(
         storagePath, 
-        buffer, 
+        fileData.fileBuffer, 
         fileData.file.type
       );
       
       if (uploadSuccess) {
-        // Criar entrada na tabela SongFile
-        const { error: fileError } = await supabase
-          .from('SongFile')
-          .insert({
-            songId: submission.song?.id || null, // Will be null for submission, linked after approval
-            fileType: fileData.fileType,
-            storageKey: storagePath,
-            fileName: fileData.fileName,
-            description: fileData.description,
-            fileSize: fileData.file.size
-          });
+        uploadedCount++;
         
-        if (fileError) {
-          console.error(`Erro ao guardar ficheiro ${fileData.fileName}:`, fileError);
-        } else {
-          console.log(`✅ Ficheiro guardado: ${fileData.fileName}`);
-        }
+        // Guardar metadados da descrição
+        fileMetadata[uniqueFileName] = {
+          fileName: fileData.fileName,
+          fileType: fileData.fileType,
+          description: fileData.description || ''
+        };
+        
+        logger.success('Submission file uploaded', {
+          category: LogCategory.UPLOAD,
+          user: { id: user.id, email: user.email },
+          network: { ip_address: clientIp },
+          domain: { submission_id: submissionId },
+          details: {
+            file_name: fileData.fileName,
+            file_type: fileData.fileType,
+            storage_path: storagePath,
+            description: fileData.description
+          },
+          tags: ['submission-file', fileData.fileType.toLowerCase()]
+        });
+        console.log(`✅ Ficheiro guardado: ${fileData.fileName}`);
+      } else {
+        failedCount++;
+        logger.error('Failed to upload submission file', {
+          category: LogCategory.UPLOAD,
+          user: { id: user.id, email: user.email },
+          network: { ip_address: clientIp },
+          domain: { submission_id: submissionId },
+          details: {
+            file_name: fileData.fileName,
+            file_type: fileData.fileType
+          }
+        });
+        console.error(`❌ Erro ao guardar ficheiro ${fileData.fileName}`);
       }
     }
+    
+    // Guardar metadados das descrições como JSON
+    if (Object.keys(fileMetadata).length > 0) {
+      const metadataPath = `songs/${submissionId}/.metadata.json`;
+      const metadataJson = JSON.stringify(fileMetadata, null, 2);
+      
+      const metadataSuccess = await uploadToSupabase(
+        metadataPath,
+        metadataJson,
+        'application/json'
+      );
+      
+      if (metadataSuccess) {
+        console.log('✅ Metadados de ficheiros guardados');
+        logger.success('File metadata saved', {
+          category: LogCategory.UPLOAD,
+          domain: { submission_id: submissionId },
+          details: { metadata_file_count: Object.keys(fileMetadata).length }
+        });
+      } else {
+        console.warn('⚠️ Erro ao guardar metadados');
+        logger.warn('Failed to save file metadata', {
+          category: LogCategory.UPLOAD,
+          domain: { submission_id: submissionId }
+        });
+      }
+    }
+    
+    logger.info('Submission files processing completed', {
+      category: LogCategory.UPLOAD,
+      user: { id: user.id, email: user.email },
+      network: { ip_address: clientIp },
+      domain: { submission_id: submissionId },
+      details: {
+        total_files: filesData.length,
+        uploaded: uploadedCount,
+        failed: failedCount,
+        files_with_descriptions: Object.keys(fileMetadata).length
+      }
+    });
   }
+
+  const duration = Date.now() - startTime;
+  
+  logger.success('Music submission created successfully', {
+    category: LogCategory.SUBMISSION,
+    user: { id: user.id, email: user.email, role: session.user.role },
+    network: { ip_address: clientIp },
+    http: { method: 'POST', status_code: 200 },
+    performance: { response_time_ms: duration },
+    domain: { submission_id: submissionId },
+    details: {
+      title: title,
+      type: type,
+      instrument: instrument,
+      moments: moments,
+      has_files: filesData.length > 0,
+      file_count: filesData.length
+    },
+    tags: ['music-submission', 'pending-review']
+  });
 
   console.log(`✅ [SONG SUBMIT] Song submitted successfully: ${title} (ID: ${submission.id})`);
   console.log("Submissão criada com sucesso:", submission);

@@ -30,11 +30,32 @@ export interface SongFile {
   description: string; // Descrição personalizada (obrigatório)
   uploadedAt: string;
   uploadedById: number;
+  deletedAt?: string | null; // Data de marcação para eliminação (soft delete)
+  deletionReason?: string | null; // Razão da eliminação
 }
 
 export interface SongFileWithUrl extends SongFile {
   signedUrl: string;
 }
+
+/**
+ * Razões possíveis para eliminação de ficheiros
+ */
+export enum FileDeletionReason {
+  SUBMISSION_REJECTED = 'SUBMISSION_REJECTED',        // Submissão rejeitada
+  SONG_DELETED = 'SONG_DELETED',                      // Música apagada
+  FILE_REMOVED_BY_ADMIN = 'FILE_REMOVED_BY_ADMIN',    // Ficheiro removido manualmente
+  FILE_REPLACED = 'FILE_REPLACED',                    // Ficheiro substituído por outro
+  ORPHANED = 'ORPHANED'                               // Ficheiro órfão (sem música associada)
+}
+
+export const FileDeletionReasonLabels: Record<FileDeletionReason, string> = {
+  [FileDeletionReason.SUBMISSION_REJECTED]: 'Submissão rejeitada',
+  [FileDeletionReason.SONG_DELETED]: 'Música eliminada',
+  [FileDeletionReason.FILE_REMOVED_BY_ADMIN]: 'Removido por administrador',
+  [FileDeletionReason.FILE_REPLACED]: 'Ficheiro substituído',
+  [FileDeletionReason.ORPHANED]: 'Ficheiro órfão'
+};
 
 export interface FileUploadData {
   id?: string; // Optional - só existe após upload
@@ -52,6 +73,7 @@ export interface FileUploadData {
   uploadedAt?: string; // Data de upload
   isUploading?: boolean; // Flag de upload em progresso
   uploadProgress?: number; // Progresso 0-100
+  isMainPdf?: boolean; // Flag para indicar se é a partitura principal (apenas para PDFs)
 }
 
 // Helper functions

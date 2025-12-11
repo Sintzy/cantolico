@@ -36,6 +36,7 @@ interface FileManagerProps {
   onUpload?: (file: FileUploadData) => Promise<void>; // Para modo edit
   onDelete?: (fileId: string) => Promise<void>; // Para modo edit
   onUpdateDescription?: (fileId: string, newDescription: string) => Promise<void>;
+  onlyPdf?: boolean; // Se true, só permite upload de PDFs (para partitura)
 }
 
 export function FileManager({ 
@@ -46,7 +47,8 @@ export function FileManager({
   onChange,
   onUpload,
   onDelete,
-  onUpdateDescription
+  onUpdateDescription,
+  onlyPdf = false
 }: FileManagerProps) {
   const [files, setFiles] = useState<FileUploadData[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -54,6 +56,7 @@ export function FileManager({
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(mode === 'edit');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
   const audioRefs = useRef<Map<string, HTMLAudioElement>>(new Map());
 
   // Buscar ficheiros existentes em modo edit
@@ -73,6 +76,7 @@ export function FileManager({
                 fileSize: f.fileSize,
                 signedUrl: f.signedUrl,
                 uploadedAt: f.uploadedAt,
+                isMainPdf: f.isPrincipal, // Mapear isPrincipal do servidor para isMainPdf
                 file: null as any, // Não temos o File object em modo edit
                 uploading: false,
                 uploaded: true
@@ -94,6 +98,77 @@ export function FileManager({
   const pdfs = files.filter(f => f.fileType === FileType.PDF);
   const audios = files.filter(f => f.fileType === FileType.AUDIO);
 
+  // Validação rigorosa de PDFs usando magic bytes (anti-XSS)
+  const validatePDF = async (file: File): Promise<boolean> => {
+    try {
+      // Verificar extensão e MIME type
+      if (!file.name.toLowerCase().endsWith('.pdf')) {
+        return false;
+      }
+      if (file.type !== 'application/pdf' && file.type !== '') {
+        return false;
+      }
+
+      // Ler os primeiros bytes para verificar PDF magic bytes: %PDF-
+      const buffer = await file.slice(0, 5).arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      const magicString = String.fromCharCode(...bytes);
+      
+      return magicString === '%PDF-';
+    } catch (error) {
+      console.error('Erro ao validar PDF:', error);
+      return false;
+    }
+  };
+
+  // Validação rigorosa de áudio usando magic bytes (anti-XSS)
+  const validateAudio = async (file: File): Promise<boolean> => {
+    try {
+      // Verificar extensão
+      const ext = file.name.toLowerCase();
+      const validExtensions = ['.mp3', '.wav', '.ogg', '.m4a', '.aac'];
+      if (!validExtensions.some(e => ext.endsWith(e))) {
+        return false;
+      }
+
+      // Verificar MIME type
+      const validMimes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/mp4', 'audio/aac'];
+      if (file.type && !validMimes.includes(file.type)) {
+        return false;
+      }
+
+      // Ler os primeiros bytes para verificar magic bytes de áudio
+      const buffer = await file.slice(0, 12).arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+
+      // MP3: ID3 (0x49 0x44 0x33) ou MPEG Frame Sync (0xFF 0xFB ou 0xFF 0xF3)
+      if ((bytes[0] === 0x49 && bytes[1] === 0x44 && bytes[2] === 0x33) || // ID3
+          (bytes[0] === 0xFF && (bytes[1] === 0xFB || bytes[1] === 0xF3 || bytes[1] === 0xF2))) { // MPEG
+        return true;
+      }
+
+      // WAV: RIFF (0x52 0x49 0x46 0x46)
+      if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46) {
+        return true;
+      }
+
+      // OGG: OggS (0x4F 0x67 0x67 0x53)
+      if (bytes[0] === 0x4F && bytes[1] === 0x67 && bytes[2] === 0x67 && bytes[3] === 0x53) {
+        return true;
+      }
+
+      // M4A/AAC: ftyp (0x66 0x74 0x79 0x70) at position 4
+      if (bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70) {
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Erro ao validar áudio:', error);
+      return false;
+    }
+  };
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>, type: FileType) => {
     const selectedFiles = Array.from(e.target.files || []);
     if (selectedFiles.length === 0) return;
@@ -106,16 +181,26 @@ export function FileManager({
       return;
     }
 
+    // Validar e processar todos os ficheiros
+    const validFiles: FileUploadData[] = [];
+    
     for (const file of selectedFiles) {
-      // Validar tipo
       const isPdf = type === FileType.PDF;
-      const isValid = isPdf 
-        ? (file.type === 'application/pdf' || file.name.endsWith('.pdf'))
-        : (file.type.startsWith('audio/') || file.name.endsWith('.mp3'));
-
-      if (!isValid) {
-        toast.error(`Ficheiro inválido: ${file.name}`);
-        continue;
+      
+      // Validação rigorosa com magic bytes
+      let isValid = false;
+      if (isPdf) {
+        isValid = await validatePDF(file);
+        if (!isValid) {
+          toast.error(`${file.name} não é um PDF válido (proteção anti-XSS)`);
+          continue;
+        }
+      } else {
+        isValid = await validateAudio(file);
+        if (!isValid) {
+          toast.error(`${file.name} não é um ficheiro de áudio válido (proteção anti-XSS)`);
+          continue;
+        }
       }
 
       // Validar tamanho
@@ -125,6 +210,7 @@ export function FileManager({
         continue;
       }
 
+      // Adicionar à lista de ficheiros válidos
       const newFile: FileUploadData = {
         file,
         fileType: type,
@@ -134,22 +220,39 @@ export function FileManager({
         uploadProgress: 0,
         isUploading: false,
       };
+      
+      validFiles.push(newFile);
+    }
 
-      if (mode === 'create') {
-        // Modo create: adiciona à lista local
-        const updatedFiles = [...files, newFile];
-        setFiles(updatedFiles);
-        onChange?.(updatedFiles);
-      } else if (mode === 'edit') {
-        // Modo edit: faz upload automático
+    // Se não há ficheiros válidos, retornar
+    if (validFiles.length === 0) {
+      toast.error('Nenhum ficheiro válido selecionado');
+      return;
+    }
+
+    // Processar todos os ficheiros válidos
+    if (mode === 'create') {
+      // Modo create: adiciona todos à lista local de uma vez
+      const updatedFiles = [...files, ...validFiles];
+      setFiles(updatedFiles);
+      onChange?.(updatedFiles);
+      toast.success(`${validFiles.length} ficheiro(s) adicionado(s)`);
+    } else if (mode === 'edit') {
+      // Modo edit: faz upload de todos
+      toast.info(`A carregar ${validFiles.length} ficheiro(s)...`);
+      
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const newFile of validFiles) {
         if (onUpload) {
           try {
             newFile.isUploading = true;
             setFiles(prev => [...prev, newFile]);
             await onUpload(newFile);
-            toast.success('Ficheiro carregado!');
+            successCount++;
           } catch (error) {
-            toast.error('Erro ao carregar ficheiro');
+            errorCount++;
             setFiles(prev => prev.filter(f => f !== newFile));
           }
         } else if (songId) {
@@ -159,9 +262,9 @@ export function FileManager({
             setFiles(prev => [...prev, newFile]);
 
             const formData = new FormData();
-            formData.append('file', file);
+            formData.append('file', newFile.file);
             formData.append('fileType', type);
-            formData.append('description', 'Novo ficheiro'); // Descrição temporária
+            formData.append('description', `Ficheiro ${newFile.fileName}`);
 
             const response = await fetch(`/api/admin/songs/${songId}/files`, {
               method: 'POST',
@@ -183,12 +286,20 @@ export function FileManager({
               } : f
             ));
             
-            toast.success('Ficheiro carregado!');
+            successCount++;
           } catch (error) {
-            toast.error('Erro ao carregar ficheiro');
+            errorCount++;
             setFiles(prev => prev.filter(f => f !== newFile));
           }
         }
+      }
+
+      // Mostrar resultado final
+      if (successCount > 0) {
+        toast.success(`${successCount} ficheiro(s) carregado(s) com sucesso!`);
+      }
+      if (errorCount > 0) {
+        toast.error(`${errorCount} ficheiro(s) falharam`);
       }
     }
 
@@ -371,9 +482,18 @@ export function FileManager({
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground mb-2">
-                  {file.description || 'Sem descrição'}
-                </p>
+                <div className="mb-2">
+                  <p className={`text-sm ${!file.description || !file.description.trim() ? 'text-orange-600 flex items-center gap-1' : 'text-muted-foreground'}`}>
+                    {!file.description || !file.description.trim() ? (
+                      <>
+                        <AlertCircle className="w-3 h-3" />
+                        Adicione uma descrição!
+                      </>
+                    ) : (
+                      file.description
+                    )}
+                  </p>
+                </div>
               )}
 
               {/* Tamanho */}
@@ -421,6 +541,50 @@ export function FileManager({
                   <a href={file.signedUrl} download={file.fileName}>
                     <Download className="w-4 h-4" />
                   </a>
+                </Button>
+              )}
+
+              {/* Botão Marcar como Principal (só para PDFs) */}
+              {isPdf && (
+                <Button
+                  size="sm"
+                  variant={file.isMainPdf ? "default" : "outline"}
+                  onClick={async () => {
+                    try {
+                      // Em modo edit com songId, fazer update no servidor
+                      if (mode === 'edit' && songId && file.id) {
+                        const response = await fetch(`/api/admin/songs/${songId}/files`, {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            fileId: file.id,
+                            isPrincipal: !file.isMainPdf
+                          })
+                        });
+                        
+                        if (!response.ok) {
+                          toast.error('Erro ao atualizar ficheiro');
+                          return;
+                        }
+                      }
+                      
+                      // Atualizar localmente
+                      const updatedFiles = files.map((f, idx) => ({
+                        ...f,
+                        isMainPdf: (f.id || f.fileName) === (file.id || file.fileName)
+                      }));
+                      setFiles(updatedFiles);
+                      onChange?.(updatedFiles);
+                      toast.success(file.isMainPdf ? 'Removido como principal' : 'Marcado como principal');
+                    } catch (error) {
+                      console.error('Erro ao marcar como principal:', error);
+                      toast.error('Erro ao atualizar ficheiro');
+                    }
+                  }}
+                  className="h-8 px-2 text-xs"
+                  title={file.isMainPdf ? "Remover como principal" : "Marcar como principal"}
+                >
+                  {file.isMainPdf ? "★ Principal" : "☆ Principal"}
                 </Button>
               )}
 
@@ -482,13 +646,12 @@ export function FileManager({
           <Button
             onClick={() => {
               fileInputRef.current?.click();
-              fileInputRef.current?.setAttribute('data-type', 'PDF');
             }}
             disabled={pdfs.length >= maxPdfs}
             size="sm"
           >
             <Upload className="w-4 h-4 mr-2" />
-            Adicionar PDF
+            Adicionar PDFs
           </Button>
         </div>
 
@@ -519,14 +682,13 @@ export function FileManager({
           </div>
           <Button
             onClick={() => {
-              fileInputRef.current?.click();
-              fileInputRef.current?.setAttribute('data-type', 'AUDIO');
+              audioInputRef.current?.click();
             }}
             disabled={audios.length >= maxAudios}
             size="sm"
           >
             <Upload className="w-4 h-4 mr-2" />
-            Adicionar Áudio
+            Adicionar Áudios
           </Button>
         </div>
 
@@ -545,21 +707,26 @@ export function FileManager({
           </Card>
         )}
       </div>
-      </>
-      )}
 
-      {/* Input oculto para selecionar ficheiros */}
+      {/* Inputs ocultos para selecionar ficheiros (separados para segurança) */}
       <input
         ref={fileInputRef}
         type="file"
         multiple
-        accept=".pdf,application/pdf,.mp3,audio/mpeg,audio/*"
+        accept="application/pdf"
         className="hidden"
-        onChange={(e) => {
-          const type = fileInputRef.current?.getAttribute('data-type') as FileType;
-          handleFileSelect(e, type);
-        }}
+        onChange={(e) => handleFileSelect(e, FileType.PDF)}
       />
+      <input
+        ref={audioInputRef}
+        type="file"
+        multiple
+        accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/mp4,audio/aac"
+        className="hidden"
+        onChange={(e) => handleFileSelect(e, FileType.AUDIO)}
+      />
+      </>
+      )}
     </div>
   );
 }

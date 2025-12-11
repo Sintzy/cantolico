@@ -59,6 +59,7 @@ type SongData = {
   tags: string[];
   moments: string[];
   mainInstrument: string;
+  type: 'ACORDES' | 'PARTITURA';
   author?: string | null;
   currentVersion: {
     sourceText: string | null;
@@ -492,7 +493,7 @@ export default function SongPage() {
         
         <div className="absolute inset-0">
           <img src="/banner.jpg" alt="Banner" className="w-full h-full object-cover object-center scale-110 blur-sm brightness-75" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/60 to-transparent" />
+          <div className="absolute inset-0 bg-linear-to-b from-black/60 to-transparent" />
         </div>
         <div className="relative z-10 flex flex-col items-center justify-center w-full">
           <h1 className="text-3xl md:text-5xl font-extrabold text-white drop-shadow-lg tracking-tight text-center mb-2 md:mb-4">
@@ -549,50 +550,174 @@ export default function SongPage() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-14 flex flex-col md:flex-row gap-10 md:gap-16">
-        {/* Sidebar Controls */}
-        <aside className="w-full md:w-80 flex-shrink-0 space-y-8 md:sticky md:top-24">
-          {/* Transpose Controls */}
-          <div className="bg-white/80 rounded-xl shadow p-5 flex flex-col gap-3 border border-blue-100">
-            <SidebarTitle>Transpor Tom</SidebarTitle>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => setTransposition(transposition - 1)}>-</Button>
-              <span className="text-lg font-bold flex-1 text-center select-none">
-                {transposition >= 0 ? `+${transposition}` : transposition}
-              </span>
-              <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => setTransposition(transposition + 1)}>+</Button>
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-14 flex flex-col gap-10">
+        {/* Mobile/Tablet: Information and Controls BEFORE Lyrics */}
+        <div className="lg:hidden space-y-6">
+          {/* Transpose Controls - Only for ACORDES type */}
+          {song?.type === 'ACORDES' && (
+            <div className="bg-white/80 rounded-xl shadow p-5 flex flex-col gap-3 border border-blue-100">
+              <SidebarTitle>Transpor Tom</SidebarTitle>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => setTransposition(transposition - 1)}>-</Button>
+                <span className="text-lg font-bold flex-1 text-center select-none">
+                  {transposition >= 0 ? `+${transposition}` : transposition}
+                </span>
+                <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => setTransposition(transposition + 1)}>+</Button>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="gap-2 mt-2 w-full">
+                    <Guitar className="h-4 w-4" />
+                    {showChords ? 'Com acordes' : 'Sem acordes'}
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-40">
+                  <DropdownMenuLabel>Visualização</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => setShowChords(true)}>
+                    Com acordes
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowChords(false)}>
+                    Sem acordes
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {/* Botão PDF com transposição */}
+              <Button 
+                className="w-full mt-2" 
+                variant="outline"
+                onClick={() => {
+                  const pdfUrl = `/api/musics/${id}/pdf?transposition=${transposition}`;
+                  window.open(pdfUrl, '_blank');
+                }}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Gerar PDF
+              </Button>
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="gap-2 mt-2 w-full">
-                  <Guitar className="h-4 w-4" />
-                  {showChords ? 'Com acordes' : 'Sem acordes'}
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-40">
-                <DropdownMenuLabel>Visualização</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => setShowChords(true)}>
-                  Com acordes
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setShowChords(false)}>
-                  Sem acordes
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            {/* Botão PDF com transposição */}
-            <Button 
-              className="w-full mt-2" 
-              variant="outline"
-              onClick={() => {
-                const pdfUrl = `/api/musics/${id}/pdf?transposition=${transposition}`;
-                window.open(pdfUrl, '_blank');
-              }}
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Gerar PDF
-            </Button>
+          )}
+
+          {/* Song Info */}
+          <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100 space-y-3">
+            <SidebarTitle>Informações</SidebarTitle>
+            <div className="flex items-center gap-2 text-sm text-blue-900/80">
+              <FileText className="h-4 w-4 mr-1" />
+              <span className="font-medium">Enviado por:</span> {currentVersion?.createdBy?.name || 'Desconhecido'}
+            </div>
+            <div className="flex items-center gap-2 text-sm text-blue-900/80">
+              <Music className="h-4 w-4 mr-1" />
+              <span className="font-medium">Instrumento:</span> {getInstrumentLabel(mainInstrument)}
+            </div>
+            {author && (
+              <div className="flex items-center gap-2 text-sm text-blue-900/80">
+                <FileText className="h-4 w-4 mr-1" />
+                <span className="font-medium">Autor:</span> {author}
+              </div>
+            )}
           </div>
+
+          {/* Tags */}
+          {tags?.length > 0 && (
+            <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100">
+              <SidebarTitle>Tags</SidebarTitle>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {tags.map((t, tagIndex) => (
+                  <Badge key={tagIndex} className="bg-blue-100 text-blue-800 font-semibold px-3 py-1 text-xs">
+                    {t}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Separate Chords box - Only for ACORDES type */}
+          {currentVersion?.sourceText && song?.type === 'ACORDES' && (
+            <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100">
+                <div className="flex items-center justify-between">
+                  <SidebarTitle>Acordes</SidebarTitle>
+                  {/* Beta badge with hover/click notice */}
+                  <BetaBadgeWithNotice />
+                </div>
+                <div className="mt-4">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button className="w-full justify-between" variant="outline">
+                      {diagramInstrument === 'guitar' ? 'Guitarra' : diagramInstrument === 'ukulele' ? 'Ukulele' : 'Piano'}
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem onClick={() => setDiagramInstrument('guitar')}>Guitarra</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setDiagramInstrument('ukulele')}>Ukulele</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setDiagramInstrument('piano')}>Piano</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <div className="mt-4">
+                  {/* Pass transposed text so diagrams follow the transposition control */}
+                  <ChordDiagrams text={(showChords ? transposeMarkdownChords(currentVersion.sourceText || '', transposition) : currentVersion.sourceText) || ''} size={120} instrument={diagramInstrument} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Download PDF */}
+          {pdfUrl && (
+            <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100">
+              <SidebarTitle>PDF</SidebarTitle>
+              <Button asChild className="w-full" variant="outline">
+                <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
+                  <Download className="h-4 w-4 mr-2" /> Baixar PDF
+                </a>
+              </Button>
+            </div>
+          )}
+        </div>
+        {/* Desktop: Sidebar Controls */}
+        <aside className="hidden lg:flex lg:flex-col lg:w-80 shrink-0 space-y-8 lg:sticky lg:top-24">
+          {/* Transpose Controls - Only for ACORDES type */}
+          {song?.type === 'ACORDES' && (
+            <div className="bg-white/80 rounded-xl shadow p-5 flex flex-col gap-3 border border-blue-100">
+              <SidebarTitle>Transpor Tom</SidebarTitle>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => setTransposition(transposition - 1)}>-</Button>
+                <span className="text-lg font-bold flex-1 text-center select-none">
+                  {transposition >= 0 ? `+${transposition}` : transposition}
+                </span>
+                <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => setTransposition(transposition + 1)}>+</Button>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="gap-2 mt-2 w-full">
+                    <Guitar className="h-4 w-4" />
+                    {showChords ? 'Com acordes' : 'Sem acordes'}
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-40">
+                  <DropdownMenuLabel>Visualização</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => setShowChords(true)}>
+                    Com acordes
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowChords(false)}>
+                    Sem acordes
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {/* Botão PDF com transposição */}
+              <Button 
+                className="w-full mt-2" 
+                variant="outline"
+                onClick={() => {
+                  const pdfUrl = `/api/musics/${id}/pdf?transposition=${transposition}`;
+                  window.open(pdfUrl, '_blank');
+                }}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Gerar PDF
+              </Button>
+            </div>
+          )}
 
           {/* Song Info */}
           <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100 space-y-3">
@@ -674,9 +799,9 @@ export default function SongPage() {
         </aside>
 
         {/* Main Song Content */}
-        <main className="flex-1 min-w-0 space-y-10">
-          {/* Lyrics Section */}
-          {currentVersion?.sourceText && (
+        <main className="w-full space-y-10">
+          {/* Lyrics Section - Only for ACORDES type */}
+          {currentVersion?.sourceText && song?.type === 'ACORDES' && (
             <section className="bg-white/90 rounded-2xl shadow-lg p-6 md:p-10 border border-blue-100">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-6">
                 <SectionTitle>Letra</SectionTitle>
@@ -702,64 +827,15 @@ export default function SongPage() {
             </section>
           )}
 
-              {/* Mobile controls: move sidebar controls below lyrics on small screens */}
-              <div className="md:hidden mt-6 space-y-4">
-                {/* Transpose Controls (mobile) */}
-                <div className="bg-white/90 rounded-xl shadow p-4 border border-blue-100">
-                  <div className="flex items-center justify-between mb-2">
-                    <SidebarTitle>Transpor Tom</SidebarTitle>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => setTransposition(transposition - 1)}>-</Button>
-                    <span className="text-lg font-bold flex-1 text-center select-none">{transposition >= 0 ? `+${transposition}` : transposition}</span>
-                    <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => setTransposition(transposition + 1)}>+</Button>
-                  </div>
-                  <div className="mt-3">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button className="w-full justify-between" variant="outline">
-                          {diagramInstrument === 'guitar' ? 'Guitarra' : diagramInstrument === 'ukulele' ? 'Ukulele' : 'Piano'}
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start">
-                        <DropdownMenuItem onClick={() => setDiagramInstrument('guitar')}>Guitarra</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setDiagramInstrument('ukulele')}>Ukulele</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setDiagramInstrument('piano')}>Piano</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-
-                {/* Tags (mobile) */}
-                {tags?.length > 0 && (
-                  <div className="bg-white/90 rounded-xl shadow p-4 border border-blue-100">
-                    <SidebarTitle>Tags</SidebarTitle>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {tags.map((t, tagIndex) => (
-                        <Badge key={tagIndex} className="bg-blue-100 text-blue-800 font-semibold px-3 py-1 text-xs">
-                          {t}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Chord diagrams (mobile) */}
-                {currentVersion?.sourceText && (
-                  <div className="bg-white/90 rounded-xl shadow p-4 border border-blue-100">
-                    <div className="flex items-center justify-between">
-                      <SidebarTitle>Acordes</SidebarTitle>
-                      <BetaBadgeWithNotice />
-                    </div>
-                    <div className="mt-3">
-                      <ChordDiagrams text={(showChords ? transposeMarkdownChords(currentVersion.sourceText || '', transposition) : currentVersion.sourceText) || ''} size={90} instrument={diagramInstrument} />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-          {/* Banner de Anúncios Mobile removido */}
+          {/* Partitura Section Message - Only for PARTITURA type */}
+          {song?.type === 'PARTITURA' && (
+            <section className="bg-blue-50 rounded-2xl shadow-lg p-6 md:p-10 border border-blue-200">
+              <SectionTitle>Partitura</SectionTitle>
+              <p className="text-blue-900 mt-4">
+                Visualize a partitura e ficheiros de áudio na secção <strong>"Partituras e Áudios"</strong> abaixo.
+              </p>
+            </section>
+          )}
 
           {/* YouTube Section */}
           {currentVersion?.youtubeLink && (

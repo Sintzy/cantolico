@@ -22,7 +22,7 @@ export async function POST(
     
     // Try to parse as JSON first, fallback to FormData if needed
     let body;
-    let title, author, markdown, spotifyLink, youtubeLink, instrument, moments, tags;
+    let title, author, markdown, spotifyLink, youtubeLink, instrument, moments, tags, fileDescriptions;
     
     try {
       const contentType = req.headers.get('content-type');
@@ -30,7 +30,7 @@ export async function POST(
       if (contentType?.includes('application/json')) {
         // Handle JSON payload
         body = await req.json();
-        ({ title, author, markdown, spotifyLink, youtubeLink, instrument, moments = [], tags = [] } = body);
+        ({ title, author, markdown, spotifyLink, youtubeLink, instrument, moments = [], tags = [], fileDescriptions = {} } = body);
       } else {
         // Handle FormData payload
         const formData = await req.formData();
@@ -44,6 +44,9 @@ export async function POST(
         
         const tagsString = formData.get('tags') as string;
         tags = tagsString?.split(',').map((t: string) => t.trim()).filter(Boolean) || [];
+        
+        const fileDescriptionsString = formData.get('fileDescriptions') as string;
+        fileDescriptions = fileDescriptionsString ? JSON.parse(fileDescriptionsString) : {};
       }
     } catch (error) {
       console.error('Error parsing request body:', error);
@@ -59,10 +62,6 @@ export async function POST(
     // Validações
     if (!title?.trim()) {
       return NextResponse.json({ error: 'Título é obrigatório' }, { status: 400 });
-    }
-
-    if (!markdown?.trim()) {
-      return NextResponse.json({ error: 'Letra da música é obrigatória' }, { status: 400 });
     }
 
     if (!instrument) {
@@ -99,6 +98,11 @@ export async function POST(
         }
       });
       return NextResponse.json({ error: 'Submissão não encontrada' }, { status: 404 });
+    }
+
+    // Para ACORDES, a letra é obrigatória. Para PARTITURA, não precisa.
+    if (submission.type === "ACORDES" && !markdown?.trim()) {
+      return NextResponse.json({ error: 'Letra da música é obrigatória' }, { status: 400 });
     }
 
     if (submission.status !== 'PENDING') {
@@ -165,16 +169,22 @@ export async function POST(
     }
 
     // Criar versão da música
+    // Para ACORDES: criar com markdown
+    // Para PARTITURA: criar versão vazia (será preenchida pelos ficheiros)
     const versionId = randomUUID();
+    const sourceText = submission.type === "ACORDES" ? (markdown?.trim() || '') : '';
+    const lyricsPlain = submission.type === "ACORDES" ? (markdown?.trim() || '') : '';
+    const sourceTypeValue = submission.type === "ACORDES" ? 'MARKDOWN' : 'PDF';
+    
     const { data: newVersion, error: versionError } = await supabase
       .from('SongVersion')
       .insert({
         id: versionId,
         songId: newSong.id,
         versionNumber: 1,
-        sourceType: 'MARKDOWN',
-        sourceText: markdown.trim(),
-        lyricsPlain: markdown.trim(),
+        sourceType: sourceTypeValue,
+        sourceText: sourceText,
+        lyricsPlain: lyricsPlain,
         renderedHtml: '', // Será processado depois se necessário
         createdById: submission.submitterId,
         spotifyLink: spotifyLink?.trim() || null,
@@ -199,6 +209,92 @@ export async function POST(
     if (updateSongError) {
       console.error('Error updating song with current version:', updateSongError);
       return NextResponse.json({ error: 'Erro ao atualizar música com versão atual' }, { status: 500 });
+    }
+
+    // Copiar ficheiros da submissão para a música aprovada
+    try {
+      // Listar ficheiros no storage da submissão
+      const { data: submissionFiles, error: listError } = await supabase.storage
+        .from('songs')
+        .list(`songs/${id}`, {
+          limit: 100,
+          sortBy: { column: 'name', order: 'asc' }
+        });
+
+      if (submissionFiles && submissionFiles.length > 0) {
+        console.log(`📁 Encontrados ${submissionFiles.length} ficheiros para copiar da submissão ${id}`);
+
+        for (const file of submissionFiles) {
+          try {
+            const sourcePath = `songs/${id}/${file.name}`;
+            
+            // Download do ficheiro
+            const { data: fileData, error: downloadError } = await supabase.storage
+              .from('songs')
+              .download(sourcePath);
+
+            if (downloadError || !fileData) {
+              console.error(`❌ Erro ao fazer download de ${sourcePath}:`, downloadError);
+              continue;
+            }
+
+            // Determinar tipo de ficheiro
+            const ext = file.name.toLowerCase();
+            let fileType: 'PDF' | 'AUDIO' = 'PDF';
+            if (ext.endsWith('.mp3') || ext.endsWith('.wav') || ext.endsWith('.ogg') || ext.endsWith('.m4a')) {
+              fileType = 'AUDIO';
+            }
+
+            // Upload para o path da música aprovada
+            const newFileId = randomUUID();
+            const destPath = `songs/${newSong.id}/${newFileId}_${file.name}`;
+            
+            const { error: uploadError } = await supabase.storage
+              .from('songs')
+              .upload(destPath, fileData, {
+                contentType: fileType === 'PDF' ? 'application/pdf' : 'audio/mpeg',
+                upsert: false,
+                cacheControl: '3600'
+              });
+
+            if (uploadError) {
+              console.error(`❌ Erro ao fazer upload de ${destPath}:`, uploadError);
+              continue;
+            }
+
+            // Inserir registo na tabela SongFile com descrição
+            const description = fileDescriptions?.[file.id] || file.name;
+            
+            const { error: dbError } = await supabase
+              .from('SongFile')
+              .insert({
+                id: newFileId,
+                songVersionId: newVersion.id,
+                fileType: fileType,
+                fileName: file.name,
+                description: description,
+                fileKey: destPath,
+                fileSize: file.metadata?.size || 0,
+                mimeType: fileType === 'PDF' ? 'application/pdf' : 'audio/mpeg',
+                uploadedById: session.user.id
+              });
+
+            if (dbError) {
+              console.error(`❌ Erro ao inserir registo de ficheiro ${file.name}:`, dbError);
+              continue;
+            }
+
+            console.log(`✅ Ficheiro copiado: ${file.name} (${description})`);
+          } catch (fileError) {
+            console.error(`❌ Erro ao processar ficheiro ${file.name}:`, fileError);
+          }
+        }
+
+        console.log(`✅ Processamento de ficheiros concluído para música ${newSong.id}`);
+      }
+    } catch (filesError) {
+      console.error('❌ Erro ao processar ficheiros da submissão:', filesError);
+      // Não falhar a operação se o processamento de ficheiros falhar
     }
 
     // Atualizar status da submissão
