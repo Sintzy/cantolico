@@ -48,10 +48,11 @@ export async function GET(
       return NextResponse.json({ error: 'Música não encontrada' }, { status: 404 });
     }
 
-    // Buscar todos os ficheiros da versão atual
+    // Buscar ficheiros da versão atual - OTIMIZADO: apenas campos necessários
+    // Frontend usa: id, fileName, description, fileType, fileKey (para gerar signedUrl)
     const { data: files, error: filesError } = await supabase
       .from('SongFile')
-      .select('*')
+      .select('id, fileName, description, fileType, fileKey')
       .eq('songVersionId', song.currentVersionId)
       .order('uploadedAt', { ascending: false });
 
@@ -70,6 +71,7 @@ export async function GET(
     }
 
     // Gerar URLs assinadas para cada ficheiro (válidas por 1 hora)
+    // OTIMIZADO: Retornar apenas campos necessários para o frontend
     const filesWithUrls = await Promise.all(
       (files || []).map(async (file) => {
         try {
@@ -78,13 +80,19 @@ export async function GET(
             .createSignedUrl(file.fileKey, 3600);
 
           return {
-            ...file,
+            id: file.id,
+            fileName: file.fileName,
+            description: file.description,
+            fileType: file.fileType,
             signedUrl: signedUrlData?.signedUrl || null
           };
         } catch (error) {
           console.error(`Error creating signed URL for ${file.fileKey}:`, error);
           return {
-            ...file,
+            id: file.id,
+            fileName: file.fileName,
+            description: file.description,
+            fileType: file.fileType,
             signedUrl: null
           };
         }

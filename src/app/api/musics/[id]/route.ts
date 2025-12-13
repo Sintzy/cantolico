@@ -35,6 +35,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     });
 
     // Tentar encontrar por ID primeiro, depois por slug
+    // OTIMIZADO: Retornar apenas campos necessários para o frontend
     const { data: songs, error } = await supabase
       .from('Song')
       .select(`
@@ -47,23 +48,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         tags,
         author,
         currentVersionId,
-        createdAt,
-        updatedAt,
         SongVersion!Song_currentVersionId_fkey (
-          id,
-          songId,
-          versionNumber,
-          sourceType,
           sourcePdfKey,
           sourceText,
-          renderedHtml,
-          keyOriginal,
-          lyricsPlain,
           mediaUrl,
           youtubeLink,
-          spotifyLink,
-          createdAt,
-          createdById,
           createdBy:User!SongVersion_createdById_fkey (
             name
           )

@@ -14,6 +14,8 @@ export async function GET(request: NextRequest) {
   try {
     console.log(`🎵 [GET MUSICS] Fetching music list`);
 
+    // OTIMIZADO: Retornar apenas campos necessários para listagem
+    // Frontend usa: id, title, slug, moments, tags, mainInstrument
     const { data: songs, error } = await supabase
       .from('Song')
       .select(`
@@ -23,27 +25,7 @@ export async function GET(request: NextRequest) {
         moments,
         type,
         mainInstrument,
-        tags,
-        author,
-        currentVersionId,
-        createdAt,
-        updatedAt,
-        SongVersion!Song_currentVersionId_fkey (
-          id,
-          songId,
-          versionNumber,
-          sourceType,
-          sourcePdfKey,
-          sourceText,
-          renderedHtml,
-          keyOriginal,
-          lyricsPlain,
-          mediaUrl,
-          youtubeLink,
-          spotifyLink,
-          createdAt,
-          createdById
-        )
+        tags
       `)
       .order('title', { ascending: true });
 
@@ -51,14 +33,15 @@ export async function GET(request: NextRequest) {
       throw new Error(`Supabase error: ${error.message}`);
     }
 
-    // Reformatar dados para manter compatibilidade
+    // Reformatar dados - apenas processar tags e moments
     const formattedSongs = (songs || []).map(song => ({
-      ...song,
-      // Processar tags usando a função utilitária
+      id: song.id,
+      title: song.title,
+      slug: song.slug,
+      type: song.type,
+      mainInstrument: song.mainInstrument,
       tags: parseTagsFromPostgreSQL(song.tags),
-      // Processar moments usando a função utilitária
-      moments: parseMomentsFromPostgreSQL(song.moments),
-      versions: song.SongVersion ? [song.SongVersion] : []
+      moments: parseMomentsFromPostgreSQL(song.moments)
     }));
 
     console.log(`✅ [GET MUSICS] Found ${formattedSongs.length} songs`);

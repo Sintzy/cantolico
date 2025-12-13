@@ -1,7 +1,7 @@
 "use client";
 
 import "easymde/dist/easymde.min.css";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
@@ -122,7 +122,7 @@ export default function ReviewSubmissionPage() {
   const [instrument, setInstrument] = useState("ORGAO");
   const [moments, setMoments] = useState<string[]>([]);
   const [tags, setTags] = useState<string>("");
-  const [fileDescriptions, setFileDescriptions] = useState<Record<string, string>>({});
+  const [fileDescriptions, setFileDescriptions] = useState<Record<string, { description: string; fileName: string }>>({});
 
   // Estados para modais de ações
   const [showRejectDialog, setShowRejectDialog] = useState(false);
@@ -199,12 +199,14 @@ export default function ReviewSubmissionPage() {
 
   const [approving, setApproving] = useState(false);
 
-  const handleFileDescriptionChange = (fileId: string, description: string) => {
+  // fileDescriptions agora usa o nome do ficheiro no storage como chave
+  // e guarda { description, fileName } para ser usado na API de aprovação
+  const handleFileDescriptionChange = useCallback((storageFileName: string, description: string, originalFileName: string) => {
     setFileDescriptions(prev => ({
       ...prev,
-      [fileId]: description
+      [storageFileName]: { description, fileName: originalFileName }
     }));
-  };
+  }, []);
 
   const handleApprove = async () => {
     // Validações

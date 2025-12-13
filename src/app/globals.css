@@ -269,3 +269,22 @@ body {
 [data-slot="dialog-content"].playlist-dialog-blur .rounded-lg {
   border-radius: 0.5rem !important;
 }
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Touch manipulation for mobile buttons */
+.touch-manipulation {
+  touch-action: manipulation;
+}
+
+/* Safe area for iPhone notch/home indicator */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}

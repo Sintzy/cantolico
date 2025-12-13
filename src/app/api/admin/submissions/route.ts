@@ -35,19 +35,23 @@ export async function GET(req: NextRequest) {
     const sortBy = searchParams.get("sortBy") || "createdAt";
     const sortOrder = searchParams.get("sortOrder") || "desc";
 
-    // Build query for submissions
+    // Build query for submissions (apenas campos necessários para a lista)
     let query = supabase
       .from('SongSubmission')
       .select(`
-        *,
+        id,
+        title,
+        status,
+        type,
+        mainInstrument,
+        tags,
+        createdAt,
+        submitterId,
         submitter:User!SongSubmission_submitterId_fkey (
           id,
           name,
           email,
-          role,
-          createdAt,
-          image,
-          bio
+          role
         )
       `, { count: 'exact' });
 

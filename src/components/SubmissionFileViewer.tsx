@@ -35,7 +35,7 @@ interface SubmissionFile {
 
 interface SubmissionFileViewerProps {
   submissionId: string;
-  onDescriptionChange?: (fileId: string, description: string) => void;
+  onDescriptionChange?: (storageFileName: string, description: string, originalFileName: string) => void;
   onFileDelete?: (fileId: string, storageKey: string) => Promise<void>;
 }
 
@@ -57,7 +57,18 @@ export function SubmissionFileViewer({ submissionId, onDescriptionChange, onFile
         const response = await fetch(`/api/admin/submission/${submissionId}/files`);
         if (response.ok) {
           const data = await response.json();
-          setFiles(data.files || []);
+          const loadedFiles = data.files || [];
+          setFiles(loadedFiles);
+          
+          // Notificar o componente pai sobre as descrições iniciais
+          if (onDescriptionChange) {
+            loadedFiles.forEach((file: SubmissionFile) => {
+              if (file.description) {
+                const storageFileName = file.storageKey.split('/').pop() || file.fileName;
+                onDescriptionChange(storageFileName, file.description, file.fileName);
+              }
+            });
+          }
         } else {
           toast.error('Erro ao carregar ficheiros');
         }
@@ -72,7 +83,7 @@ export function SubmissionFileViewer({ submissionId, onDescriptionChange, onFile
     if (submissionId) {
       fetchFiles();
     }
-  }, [submissionId]);
+  }, [submissionId, onDescriptionChange]);
 
   const pdfs = files.filter(f => f.fileType === 'PDF');
   const audios = files.filter(f => f.fileType === 'AUDIO');
@@ -83,6 +94,13 @@ export function SubmissionFileViewer({ submissionId, onDescriptionChange, onFile
   };
 
   const handleSaveDescription = (fileId: string) => {
+    // Encontrar o ficheiro para obter o storageKey
+    const file = files.find(f => f.id === fileId);
+    if (!file) return;
+    
+    // Extrair o nome do ficheiro do storageKey (última parte do path)
+    const storageFileName = file.storageKey.split('/').pop() || file.fileName;
+    
     // Atualizar no estado local
     setFiles(prevFiles => 
       prevFiles.map(f => 
@@ -92,7 +110,7 @@ export function SubmissionFileViewer({ submissionId, onDescriptionChange, onFile
 
     // Notificar componente pai se callback fornecido
     if (onDescriptionChange) {
-      onDescriptionChange(fileId, editDescription);
+      onDescriptionChange(storageFileName, editDescription, file.fileName);
     }
 
     setEditingId(null);

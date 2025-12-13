@@ -213,6 +213,22 @@ export async function POST(
 
     // Copiar ficheiros da submissão para a música aprovada
     try {
+      // Carregar metadados originais da submissão (.metadata.json)
+      let originalMetadata: Record<string, { fileName?: string; fileType?: string; description?: string }> = {};
+      const { data: metadataFile } = await supabase.storage
+        .from('songs')
+        .download(`songs/${id}/.metadata.json`);
+
+      if (metadataFile) {
+        try {
+          const metadataText = await metadataFile.text();
+          originalMetadata = JSON.parse(metadataText);
+          console.log('📋 Metadados originais carregados:', Object.keys(originalMetadata).length, 'ficheiros');
+        } catch (e) {
+          console.warn('⚠️ Falha ao processar ficheiro de metadados:', e);
+        }
+      }
+
       // Listar ficheiros no storage da submissão
       const { data: submissionFiles, error: listError } = await supabase.storage
         .from('songs')
@@ -222,9 +238,20 @@ export async function POST(
         });
 
       if (submissionFiles && submissionFiles.length > 0) {
-        console.log(`📁 Encontrados ${submissionFiles.length} ficheiros para copiar da submissão ${id}`);
+        // Filtrar ficheiros válidos (ignorar .metadata.json e ficheiros ocultos)
+        const validFiles = submissionFiles.filter(file => 
+          !file.name.startsWith('.') && 
+          !file.name.endsWith('.json') &&
+          (file.name.toLowerCase().endsWith('.pdf') || 
+           file.name.toLowerCase().endsWith('.mp3') || 
+           file.name.toLowerCase().endsWith('.wav') || 
+           file.name.toLowerCase().endsWith('.ogg') || 
+           file.name.toLowerCase().endsWith('.m4a'))
+        );
+        
+        console.log(`📁 Encontrados ${validFiles.length} ficheiros válidos para copiar da submissão ${id}`);
 
-        for (const file of submissionFiles) {
+        for (const file of validFiles) {
           try {
             const sourcePath = `songs/${id}/${file.name}`;
             
@@ -263,7 +290,16 @@ export async function POST(
             }
 
             // Inserir registo na tabela SongFile com descrição
-            const description = fileDescriptions?.[file.id] || file.name;
+            // Primeiro, tenta usar fileDescriptions do frontend (edições manuais)
+            // Se não existir, usa os metadados originais da submissão (.metadata.json)
+            const frontendMetadata = fileDescriptions?.[file.name];
+            const originalFileMetadata = originalMetadata?.[file.name];
+            
+            // Prioridade: frontend > metadados originais > nome do ficheiro
+            const description = frontendMetadata?.description || originalFileMetadata?.description || file.name;
+            const originalFileName = frontendMetadata?.fileName || originalFileMetadata?.fileName || file.name;
+            
+            console.log(`📝 Ficheiro ${file.name}: desc="${description}", fileName="${originalFileName}"`);
             
             const { error: dbError } = await supabase
               .from('SongFile')
@@ -271,7 +307,7 @@ export async function POST(
                 id: newFileId,
                 songVersionId: newVersion.id,
                 fileType: fileType,
-                fileName: file.name,
+                fileName: originalFileName,
                 description: description,
                 fileKey: destPath,
                 fileSize: file.metadata?.size || 0,

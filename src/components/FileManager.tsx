@@ -383,7 +383,7 @@ export function FileManager({
       } else if (songId) {
         // Delete default usando API
         try {
-          const response = await fetch(`/api/admin/songs/${songId}/files?fileId=${fileId}`, {
+          const response = await fetch(`/api/admin/songs/${songId}/files/${fileId}`, {
             method: 'DELETE'
           });
 
