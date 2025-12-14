@@ -685,9 +685,12 @@ export default function SongPage() {
           )}
         </div>
         )}
-        {/* Desktop: Sidebar Controls - Only for ACORDES type */}
+
+        {/* Desktop Layout para ACORDES: Sidebar + Main lado a lado */}
         {song?.type === 'ACORDES' && (
-        <aside className="hidden lg:flex lg:flex-col lg:w-80 shrink-0 space-y-8 lg:sticky lg:top-24">
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+        {/* Desktop: Sidebar Controls - Only for ACORDES type */}
+        <aside className="hidden lg:flex lg:flex-col lg:w-80 shrink-0 space-y-5 lg:sticky lg:top-24 lg:self-start">
           {/* Transpose Controls - Only for ACORDES type */}
           {song?.type === 'ACORDES' && (
             <div className="bg-white/80 rounded-xl shadow p-5 flex flex-col gap-3 border border-blue-100">
@@ -810,12 +813,11 @@ export default function SongPage() {
             </div>
           )}
         </aside>
-        )}
 
-        {/* Main Song Content */}
-        <main className="w-full space-y-10">
-          {/* Lyrics Section - Only for ACORDES type */}
-          {currentVersion?.sourceText && song?.type === 'ACORDES' && (
+        {/* Main Song Content para ACORDES */}
+        <main className="flex-1 min-w-0 space-y-10">
+          {/* Lyrics Section */}
+          {currentVersion?.sourceText && (
             <section className="bg-white/90 rounded-2xl shadow-lg p-6 md:p-10 border border-blue-100">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-6">
                 <SectionTitle>Letra</SectionTitle>
@@ -836,25 +838,63 @@ export default function SongPage() {
               ) : (
                 <div><div dangerouslySetInnerHTML={{ __html: leftColumn || renderedHtml }} /></div>
               )}
-
-              {/* Diagramas removed from here — moved to sidebar control */}
             </section>
           )}
 
-          {/* Partitura Section - Layout responsivo otimizado */}
-          {song?.type === 'PARTITURA' && (
-            <div className="flex flex-col gap-6">
-              {/* Mobile/Tablet: Informações em cards horizontais compactos */}
-              <div className="lg:hidden space-y-4">
-                {/* Info compacta em linha */}
-                <div className="bg-white/80 rounded-xl shadow p-4 border border-blue-100">
-                  <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-blue-900/80">
-                    <div className="flex items-center gap-1">
-                      <FileText className="h-4 w-4" />
-                      <span className="font-medium">Por:</span> {currentVersion?.createdBy?.name || 'Desconhecido'}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Music className="h-4 w-4" />
+          {/* YouTube Section */}
+          {currentVersion?.youtubeLink && (
+            <section className="bg-white/90 rounded-2xl shadow-lg p-6 md:p-10 border border-blue-100">
+              <SectionTitle>YouTube</SectionTitle>
+              <div className="aspect-video max-w-2xl mx-auto rounded-lg overflow-hidden shadow">
+                <YouTube videoId={getYoutubeId(currentVersion.youtubeLink)} className="w-full h-full" />
+              </div>
+              <a href={currentVersion.youtubeLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-700 mt-2 text-sm hover:underline"><Youtube className="h-4 w-4" /> Abrir no YouTube</a>
+            </section>
+          )}
+
+          {/* Audio Section */}
+          {audioUrl && (
+            <section className="bg-white/90 rounded-2xl shadow-lg p-6 md:p-10 border border-blue-100">
+              <SectionTitle>Áudio</SectionTitle>
+              <div className="flex flex-col items-center gap-2">
+                <audio controls className="w-full max-w-lg">
+                  <source src={audioUrl} type="audio/mpeg" />
+                  O seu navegador não suporta o elemento de áudio.
+                </audio>
+              </div>
+            </section>
+          )}
+
+          {/* Novo Sistema de Ficheiros - Partituras e Áudio */}
+          {files.length > 0 && (
+            <section className="bg-white/90 rounded-2xl shadow-lg p-6 md:p-10 border border-blue-100">
+              <SectionTitle>Partituras e Áudios</SectionTitle>
+              <FileViewer files={files} />
+            </section>
+          )}
+
+          {/* Song ID */}
+          <div className="w-full text-center pt-6">
+            <p className="text-xs text-gray-400">ID: {song.id}</p>
+          </div>
+        </main>
+        </div>
+        )}
+
+        {/* ========== LAYOUT PARTITURA ========== */}
+        {song?.type === 'PARTITURA' && (
+          <div className="flex flex-col gap-6">
+            {/* Mobile/Tablet: Informações em cards horizontais compactos */}
+            <div className="lg:hidden space-y-4">
+              {/* Info compacta em linha */}
+              <div className="bg-white/80 rounded-xl shadow p-4 border border-blue-100">
+                <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-blue-900/80">
+                  <div className="flex items-center gap-1">
+                    <FileText className="h-4 w-4" />
+                    <span className="font-medium">Por:</span> {currentVersion?.createdBy?.name || 'Desconhecido'}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Music className="h-4 w-4" />
                       <span className="font-medium">Instr.:</span> {getInstrumentLabel(mainInstrument)}
                     </div>
                     {author && (
@@ -999,7 +1039,7 @@ export default function SongPage() {
                                 variant={selectedPdfIndex === index ? "default" : "outline"}
                                 size="sm"
                                 onClick={() => setSelectedPdfIndex(index)}
-                                className={`shrink-0 text-xs md:text-sm px-3 md:px-4 py-2 min-h-[40px] touch-manipulation ${
+                                className={`shrink-0 text-xs md:text-sm px-3 md:px-4 py-2 min-h-10 touch-manipulation ${
                                   selectedPdfIndex === index 
                                     ? "bg-blue-600 text-white" 
                                     : "text-blue-700 border-blue-200 hover:bg-blue-50"
@@ -1049,56 +1089,6 @@ export default function SongPage() {
             </div>
           )}
 
-          {/* YouTube Section */}
-          {currentVersion?.youtubeLink && (
-            <section className="bg-white/90 rounded-2xl shadow-lg p-6 md:p-10 border border-blue-100">
-              <SectionTitle>YouTube</SectionTitle>
-              <div className="aspect-video max-w-2xl mx-auto rounded-lg overflow-hidden shadow">
-                <YouTube videoId={getYoutubeId(currentVersion.youtubeLink)} className="w-full h-full" />
-              </div>
-              <a href={currentVersion.youtubeLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-700 mt-2 text-sm hover:underline"><Youtube className="h-4 w-4" /> Abrir no YouTube</a>
-            </section>
-          )}
-
-          {/* Audio Section */}
-          {audioUrl && (
-            <section className="bg-white/90 rounded-2xl shadow-lg p-6 md:p-10 border border-blue-100">
-              <SectionTitle>Áudio</SectionTitle>
-              <div className="flex flex-col items-center gap-2">
-                <audio controls className="w-full max-w-lg">
-                  <source src={audioUrl} type="audio/mpeg" />
-                  O seu navegador não suporta o elemento de áudio.
-                </audio>
-              </div>
-            </section>
-          )}
-
-          {/* PDF Section */}
-          {pdfUrl && (
-            <section className="bg-white/90 rounded-2xl shadow-lg p-6 md:p-10 border border-blue-100">
-              <SectionTitle>Partitura PDF</SectionTitle>
-              <div className="flex flex-col gap-2">
-                <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-700 text-sm hover:underline"><Download className="h-4 w-4" /> Baixar PDF</a>
-                <iframe src={pdfUrl} className="w-full h-[400px] md:h-[500px] border rounded-lg" title="Pré-visualização do PDF" />
-              </div>
-            </section>
-          )}
-
-          {/* Novo Sistema de Ficheiros - Partituras e Áudio (apenas para ACORDES) */}
-          {files.length > 0 && song?.type === 'ACORDES' && (
-            <section className="bg-white/90 rounded-2xl shadow-lg p-6 md:p-10 border border-blue-100">
-              <SectionTitle>Partituras e Áudios</SectionTitle>
-              <FileViewer files={files} />
-            </section>
-          )}
-
-          {/* Banner Horizontal Final removido */}
-
-          {/* Song ID at the bottom */}
-          <div className="w-full text-center pt-6">
-            <p className="text-xs text-gray-400">ID: {song.id}</p>
-          </div>
-        </main>
         {/* Botão para ir ao topo da página */}
         <ScrollToTopButton />
       </div>
