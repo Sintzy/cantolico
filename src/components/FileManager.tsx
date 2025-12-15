@@ -42,8 +42,8 @@ interface FileManagerProps {
 export function FileManager({ 
   songId,
   mode = 'create',
-  maxPdfs = 10,
-  maxAudios = 10,
+  maxPdfs = 20,
+  maxAudios = 20,
   onChange,
   onUpload,
   onDelete,

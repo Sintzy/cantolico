@@ -784,8 +784,8 @@ export default function CreateNewMusicPage() {
                 <CardContent className="space-y-6">
                   <FileManager
                     mode="create"
-                    maxPdfs={10}
-                    maxAudios={10}
+                    maxPdfs={20}
+                    maxAudios={20}
                     onChange={(updatedFiles) => setFiles(updatedFiles)}
                   />
                 </CardContent>
@@ -834,14 +834,14 @@ export default function CreateNewMusicPage() {
                       Partituras e Áudios
                     </CardTitle>
                     <CardDescription>
-                      Adiciona até 10 PDFs e 10 MP3s com descrições personalizadas
+                      Adiciona até 20 PDFs e 20 MP3s com descrições personalizadas
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="pt-6">
                     <FileManager
                       mode="create"
-                      maxPdfs={10}
-                      maxAudios={10}
+                      maxPdfs={20}
+                      maxAudios={20}
                       onChange={(updatedFiles) => setFiles(updatedFiles)}
                     />
                   </CardContent>
