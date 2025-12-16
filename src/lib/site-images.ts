@@ -3,6 +3,8 @@
  * URLs do Supabase Storage para assets do Cantólico
  */
 
+// Preferimos assets locais (public/) para máxima performance via CDN da Vercel.
+// O HAR mostrou que o logo remoto tinha ~1s de latência.
 const BASE_URL = "https://truenas-scale.fold-pence.ts.net/storage/v1/object/public/assets";
 
 export const SITE_IMAGES = {
@@ -16,17 +18,18 @@ export const SITE_IMAGES = {
   androidChrome192: `${BASE_URL}/cantolicoimagens/transparentes/android-chrome-192x192.png`,
   androidChrome512: `${BASE_URL}/cantolicoimagens/transparentes/android-chrome-512x512.png`,
   
-  // Logo principal do site - Cantólico Quadrado SVG transparente para interface
-  logo: `${BASE_URL}/cantolicoimagens/cantolico quadrado svg.svg`,
-  logoIcon: `${BASE_URL}/cantolicoimagens/cantolico.svg`,
+  // Logo principal do site (local em public/)
+  logo: "/cantolicoemail.png",
+  logoIcon: "/cantolicoemail.png",
+  // Mantém jump remoto por enquanto (não aparece no HAR como gargalo)
   logoJump: `${BASE_URL}/cantolicoimagens/jump.png`,
   
   // Imagens para redes sociais (Open Graph) - com fundo branco para SEO/Google
-  ogImage: `${BASE_URL}/cantolicoimagens/cantolico quadrado svg.svg`,
-  twitterImage: `${BASE_URL}/cantolicoimagens/cantolico quadrado svg.svg`,
+  ogImage: "/cantolicoemail.png",
+  twitterImage: "/cantolicoemail.png",
   
   // Imagem específica para SEO (Google Search) - com fundo branco
-  seoImage: `${BASE_URL}/cantolicoimagens/cantolico quadrado svg.svg`,
+  seoImage: "/cantolicoemail.png",
   
   // Placeholder para utilizadores sem foto
   defaultProfile: "/default-profile.png", // Mantido local no public/

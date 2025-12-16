@@ -30,6 +30,10 @@ export function createMetadata(config: MetadataConfig = {}): Metadata {
     canonical
   } = config;
 
+  // Para redes sociais (OG/Twitter) é melhor fornecer URL absoluta.
+  // Se vier relativo (ex: /cantolicoemail.png), prefixamos com SITE_CONFIG.url.
+  const absoluteImage = image?.startsWith('http') ? image : `${SITE_CONFIG.url}${image || ''}`;
+
   // O título será processado pelo template do layout raiz
   const fullTitle = title || SITE_CONFIG.name;
   
@@ -72,7 +76,7 @@ export function createMetadata(config: MetadataConfig = {}): Metadata {
       siteName: SITE_CONFIG.name,
       images: [
         {
-          url: image,
+          url: absoluteImage,
           width: 1200,
           height: 630,
           alt: fullTitle,
@@ -86,7 +90,7 @@ export function createMetadata(config: MetadataConfig = {}): Metadata {
       card: "summary_large_image",
       title: fullTitle,
       description,
-      images: [image],
+      images: [absoluteImage],
       creator: "@cantolico",
     },
 

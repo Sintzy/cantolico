@@ -11,6 +11,7 @@ import EmailVerificationBanner from "@/components/EmailVerificationBanner";
 import JsonLd from "@/components/JsonLd";
 import { generateHomeSEO } from "@/lib/seo";
 import { Analytics } from "@vercel/analytics/next"
+import MaintenanceGate from "@/components/MaintenanceGate";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -26,21 +27,21 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt">
-      <head>
-        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-      </head>
+      <head />
       <body className={inter.className + " flex flex-col min-h-screen"}>
         <JsonLd />
         <CacheProvider>
           <AuthSessionProvider>
-            <Navbar />
-            <EmailVerificationBanner />
-            <main className="flex-1">
-              {children}
-              <Analytics />
-            </main>
-            <Toaster />
-            <Footer />
+            <MaintenanceGate>
+              <Navbar />
+              <EmailVerificationBanner />
+              <main className="flex-1">
+                {children}
+                <Analytics />
+              </main>
+              <Toaster />
+              <Footer />
+            </MaintenanceGate>
           </AuthSessionProvider>
         </CacheProvider>
       </body>
