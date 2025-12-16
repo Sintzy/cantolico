@@ -17,6 +17,8 @@ import { Spinner, type SpinnerProps } from '@/components/ui/shadcn-io/spinner';
 import StarButton from '@/components/StarButton';
 import AddToPlaylistButton from '@/components/AddToPlaylistButton';
 import { LiturgicalMoment, getInstrumentLabel, getLiturgicalMomentLabel } from '@/lib/constants';
+import { FileViewer } from '@/components/FileViewer';
+import { FileType } from '@/types/song-files';
 
 // Small badge with hover/click notice for BETA warning
 function BetaBadgeWithNotice() {
@@ -57,6 +59,7 @@ type SongData = {
   tags: string[];
   moments: string[];
   mainInstrument: string;
+  type: 'ACORDES' | 'PARTITURA';
   author?: string | null;
   currentVersion: {
     sourceText: string | null;
@@ -116,14 +119,22 @@ export default function SongPage() {
   const [showChords, setShowChords] = React.useState<boolean>(true);
   const [loading, setLoading] = React.useState(true);
   const [diagramInstrument, setDiagramInstrument] = React.useState<'guitar'|'ukulele'|'piano'>('guitar');
+  const [selectedPdfIndex, setSelectedPdfIndex] = React.useState(0);
+  const [files, setFiles] = React.useState<Array<{
+    id: string;
+    fileType: FileType;
+    fileName: string;
+    description: string;
+    fileSize?: number;
+    signedUrl?: string;
+  }>>([]);
 
-  // Função para voltar preservando o estado da página
+
   const handleBackToList = React.useCallback(() => {
-    // Marca que estamos retornando da página individual
     sessionStorage.setItem('returningFromSong', 'true');
     router.push('/musics');
   }, [router]);
-
+  
   React.useEffect(() => {
     const fetchSong = async () => {
       try {
@@ -138,6 +149,26 @@ export default function SongPage() {
 
         setSong(data);
 
+        // Buscar ficheiros do novo sistema
+        try {
+          const filesRes = await fetch(`/api/admin/songs/${id}/files`);
+          if (filesRes.ok) {
+            const filesData = await filesRes.json();
+            if (filesData.success && filesData.files) {
+              // Filtrar ficheiros de metadados e ficheiros ocultos
+              const validFiles = filesData.files.filter((f: { fileName: string }) => 
+                !f.fileName.startsWith('.') && 
+                !f.fileName.endsWith('.json') &&
+                f.fileName !== '.metadata.json'
+              );
+              setFiles(validFiles);
+            }
+          }
+        } catch (err) {
+          console.error('Erro ao carregar ficheiros:', err);
+        }
+
+        // Sistema antigo (manter por enquanto para compatibilidade)
         if (data.currentVersion?.sourcePdfKey) {
           const { data: signedPdfUrlData, error: pdfError } = await supabase
             .storage
@@ -462,26 +493,28 @@ export default function SongPage() {
             onClick={handleBackToList}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar à Lista
+            <span className="hidden sm:inline">Voltar à Lista</span>
+            <span className="sm:hidden">Voltar</span>
           </Button>
         </div>
         
         <div className="absolute inset-0">
           <img src="/banner.jpg" alt="Banner" className="w-full h-full object-cover object-center scale-110 blur-sm brightness-75" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/60 to-transparent" />
+          <div className="absolute inset-0 bg-linear-to-b from-black/60 to-transparent" />
         </div>
-        <div className="relative z-10 flex flex-col items-center justify-center w-full">
-          <h1 className="text-3xl md:text-5xl font-extrabold text-white drop-shadow-lg tracking-tight text-center mb-2 md:mb-4">
+        <div className="relative z-10 flex flex-col items-center justify-center w-full px-4">
+          <h1 className="text-2xl sm:text-3xl md:text-5xl font-extrabold text-white drop-shadow-lg tracking-tight text-center mb-2 md:mb-4 leading-tight">
             {title}
           </h1>
-          <div className="flex flex-wrap gap-2 justify-center mb-2">
+          <div className="flex flex-wrap gap-1.5 sm:gap-2 justify-center mb-2 max-w-full">
             {moments.map((m: string, i: number) => (
-              <Badge key={i} className="bg-white/80 text-blue-900 font-semibold px-3 py-1 text-xs shadow-sm">
+              <Badge key={i} className="bg-white/80 text-blue-900 font-semibold px-2 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs shadow-sm">
                 {getMomentDisplayName(m)}
               </Badge>
             ))}
           </div>
-          <div className="flex gap-3 justify-center mt-2">
+          {/* Botões do header - escondidos em mobile pois temos floating bar */}
+          <div className="hidden sm:flex gap-3 justify-center mt-2">
             <StarButton songId={id as string} className="bg-white/20 hover:bg-white/40 text-white border-white/30 shadow" />
             <AddToPlaylistButton songId={id as string} className="bg-white/20 hover:bg-white/40 text-white border-white/30 shadow" />
             <Button 
@@ -503,72 +536,77 @@ export default function SongPage() {
         </div>
       </div>
 
-      {/* Floating Action Bar (mobile) */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 md:hidden bg-white/90 backdrop-blur border-t border-blue-100 flex justify-around py-2 shadow-lg">
-        <StarButton songId={id as string} className="text-blue-700" />
-        <AddToPlaylistButton songId={id as string} className="text-blue-700" />
-        <Button 
-          variant="ghost" 
-          className="text-blue-700"
-          onClick={() => {
-            const pdfUrl = `/api/musics/${id}/pdf?transposition=${transposition}`;
-            window.open(pdfUrl, '_blank');
-          }}
-        >
-          <FileText className="h-5 w-5" />
-        </Button>
-        {pdfUrl && (
-          <Button asChild variant="ghost" className="text-blue-700">
-            <a href={pdfUrl} target="_blank" rel="noopener noreferrer"><Download className="h-5 w-5" /></a>
+      {/* Floating Action Bar (mobile/tablet) - mais espaçoso e tocável */}
+      <div className="fixed bottom-0 left-0 right-0 z-30 sm:hidden bg-white/95 backdrop-blur-md border-t border-blue-100 shadow-lg safe-area-pb">
+        <div className="flex justify-around items-center py-2 px-2">
+          <StarButton songId={id as string} className="text-blue-700 p-3 touch-manipulation" />
+          <AddToPlaylistButton songId={id as string} className="text-blue-700 p-3 touch-manipulation" />
+          <Button 
+            variant="ghost" 
+            className="text-blue-700 p-3 touch-manipulation"
+            onClick={() => {
+              const pdfUrl = `/api/musics/${id}/pdf?transposition=${transposition}`;
+              window.open(pdfUrl, '_blank');
+            }}
+          >
+            <FileText className="h-5 w-5" />
           </Button>
-        )}
+          {pdfUrl && (
+            <Button asChild variant="ghost" className="text-blue-700 p-3 touch-manipulation">
+              <a href={pdfUrl} target="_blank" rel="noopener noreferrer"><Download className="h-5 w-5" /></a>
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-14 flex flex-col md:flex-row gap-10 md:gap-16">
-        {/* Sidebar Controls */}
-        <aside className="w-full md:w-80 flex-shrink-0 space-y-8 md:sticky md:top-24">
-          {/* Transpose Controls */}
-          <div className="bg-white/80 rounded-xl shadow p-5 flex flex-col gap-3 border border-blue-100">
-            <SidebarTitle>Transpor Tom</SidebarTitle>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => setTransposition(transposition - 1)}>-</Button>
-              <span className="text-lg font-bold flex-1 text-center select-none">
-                {transposition >= 0 ? `+${transposition}` : transposition}
-              </span>
-              <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => setTransposition(transposition + 1)}>+</Button>
+      {/* Main Content - padding inferior para não sobrepor floating bar em mobile */}
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-8 py-6 sm:py-8 md:py-14 pb-20 sm:pb-8 flex flex-col gap-6 sm:gap-8 md:gap-10">
+        {/* Mobile/Tablet: Information and Controls BEFORE Lyrics - Only for ACORDES */}
+        {song?.type === 'ACORDES' && (
+        <div className="lg:hidden space-y-6">
+          {/* Transpose Controls - Only for ACORDES type */}
+          {song?.type === 'ACORDES' && (
+            <div className="bg-white/80 rounded-xl shadow p-5 flex flex-col gap-3 border border-blue-100">
+              <SidebarTitle>Transpor Tom</SidebarTitle>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => setTransposition(transposition - 1)}>-</Button>
+                <span className="text-lg font-bold flex-1 text-center select-none">
+                  {transposition >= 0 ? `+${transposition}` : transposition}
+                </span>
+                <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => setTransposition(transposition + 1)}>+</Button>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="gap-2 mt-2 w-full">
+                    <Guitar className="h-4 w-4" />
+                    {showChords ? 'Com acordes' : 'Sem acordes'}
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-40">
+                  <DropdownMenuLabel>Visualização</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => setShowChords(true)}>
+                    Com acordes
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowChords(false)}>
+                    Sem acordes
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {/* Botão PDF com transposição */}
+              <Button 
+                className="w-full mt-2" 
+                variant="outline"
+                onClick={() => {
+                  const pdfUrl = `/api/musics/${id}/pdf?transposition=${transposition}`;
+                  window.open(pdfUrl, '_blank');
+                }}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Gerar PDF
+              </Button>
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="gap-2 mt-2 w-full">
-                  <Guitar className="h-4 w-4" />
-                  {showChords ? 'Com acordes' : 'Sem acordes'}
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-40">
-                <DropdownMenuLabel>Visualização</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => setShowChords(true)}>
-                  Com acordes
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setShowChords(false)}>
-                  Sem acordes
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            {/* Botão PDF com transposição */}
-            <Button 
-              className="w-full mt-2" 
-              variant="outline"
-              onClick={() => {
-                const pdfUrl = `/api/musics/${id}/pdf?transposition=${transposition}`;
-                window.open(pdfUrl, '_blank');
-              }}
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Gerar PDF
-            </Button>
-          </div>
+          )}
 
           {/* Song Info */}
           <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100 space-y-3">
@@ -603,8 +641,135 @@ export default function SongPage() {
             </div>
           )}
 
-          {/* Separate Chords box */}
-          {currentVersion?.sourceText && (
+          {/* Separate Chords box - Only for ACORDES type */}
+          {currentVersion?.sourceText && song?.type === 'ACORDES' && (
+            <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100">
+                <div className="flex items-center justify-between">
+                  <SidebarTitle>Acordes</SidebarTitle>
+                  {/* Beta badge with hover/click notice */}
+                  <BetaBadgeWithNotice />
+                </div>
+                <div className="mt-4">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button className="w-full justify-between" variant="outline">
+                      {diagramInstrument === 'guitar' ? 'Guitarra' : diagramInstrument === 'ukulele' ? 'Ukulele' : 'Piano'}
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem onClick={() => setDiagramInstrument('guitar')}>Guitarra</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setDiagramInstrument('ukulele')}>Ukulele</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setDiagramInstrument('piano')}>Piano</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <div className="mt-4">
+                  {/* Pass transposed text so diagrams follow the transposition control */}
+                  <ChordDiagrams text={(showChords ? transposeMarkdownChords(currentVersion.sourceText || '', transposition) : currentVersion.sourceText) || ''} size={120} instrument={diagramInstrument} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Download PDF */}
+          {pdfUrl && (
+            <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100">
+              <SidebarTitle>PDF</SidebarTitle>
+              <Button asChild className="w-full" variant="outline">
+                <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
+                  <Download className="h-4 w-4 mr-2" /> Baixar PDF
+                </a>
+              </Button>
+            </div>
+          )}
+        </div>
+        )}
+
+        {/* Desktop Layout para ACORDES: Sidebar + Main lado a lado */}
+        {song?.type === 'ACORDES' && (
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+        {/* Desktop: Sidebar Controls - Only for ACORDES type */}
+        <aside className="hidden lg:flex lg:flex-col lg:w-80 shrink-0 space-y-5 lg:sticky lg:top-24 lg:self-start">
+          {/* Transpose Controls - Only for ACORDES type */}
+          {song?.type === 'ACORDES' && (
+            <div className="bg-white/80 rounded-xl shadow p-5 flex flex-col gap-3 border border-blue-100">
+              <SidebarTitle>Transpor Tom</SidebarTitle>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => setTransposition(transposition - 1)}>-</Button>
+                <span className="text-lg font-bold flex-1 text-center select-none">
+                  {transposition >= 0 ? `+${transposition}` : transposition}
+                </span>
+                <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => setTransposition(transposition + 1)}>+</Button>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="gap-2 mt-2 w-full">
+                    <Guitar className="h-4 w-4" />
+                    {showChords ? 'Com acordes' : 'Sem acordes'}
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-40">
+                  <DropdownMenuLabel>Visualização</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => setShowChords(true)}>
+                    Com acordes
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowChords(false)}>
+                    Sem acordes
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {/* Botão PDF com transposição */}
+              <Button 
+                className="w-full mt-2" 
+                variant="outline"
+                onClick={() => {
+                  const pdfUrl = `/api/musics/${id}/pdf?transposition=${transposition}`;
+                  window.open(pdfUrl, '_blank');
+                }}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Gerar PDF
+              </Button>
+            </div>
+          )}
+
+          {/* Song Info */}
+          <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100 space-y-3">
+            <SidebarTitle>Informações</SidebarTitle>
+            <div className="flex items-center gap-2 text-sm text-blue-900/80">
+              <FileText className="h-4 w-4 mr-1" />
+              <span className="font-medium">Enviado por:</span> {currentVersion?.createdBy?.name || 'Desconhecido'}
+            </div>
+            <div className="flex items-center gap-2 text-sm text-blue-900/80">
+              <Music className="h-4 w-4 mr-1" />
+              <span className="font-medium">Instrumento:</span> {getInstrumentLabel(mainInstrument)}
+            </div>
+            {author && (
+              <div className="flex items-center gap-2 text-sm text-blue-900/80">
+                <FileText className="h-4 w-4 mr-1" />
+                <span className="font-medium">Autor:</span> {author}
+              </div>
+            )}
+          </div>
+
+          {/* Tags */}
+          {tags?.length > 0 && (
+            <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100">
+              <SidebarTitle>Tags</SidebarTitle>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {tags.map((t, tagIndex) => (
+                  <Badge key={tagIndex} className="bg-blue-100 text-blue-800 font-semibold px-3 py-1 text-xs">
+                    {t}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Separate Chords box - Only for ACORDES type */}
+          {currentVersion?.sourceText && song?.type === 'ACORDES' && (
             <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100">
                 <div className="flex items-center justify-between">
                   <SidebarTitle>Acordes</SidebarTitle>
@@ -649,7 +814,7 @@ export default function SongPage() {
           )}
         </aside>
 
-        {/* Main Song Content */}
+        {/* Main Song Content para ACORDES */}
         <main className="flex-1 min-w-0 space-y-10">
           {/* Lyrics Section */}
           {currentVersion?.sourceText && (
@@ -673,69 +838,8 @@ export default function SongPage() {
               ) : (
                 <div><div dangerouslySetInnerHTML={{ __html: leftColumn || renderedHtml }} /></div>
               )}
-
-              {/* Diagramas removed from here — moved to sidebar control */}
             </section>
           )}
-
-              {/* Mobile controls: move sidebar controls below lyrics on small screens */}
-              <div className="md:hidden mt-6 space-y-4">
-                {/* Transpose Controls (mobile) */}
-                <div className="bg-white/90 rounded-xl shadow p-4 border border-blue-100">
-                  <div className="flex items-center justify-between mb-2">
-                    <SidebarTitle>Transpor Tom</SidebarTitle>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => setTransposition(transposition - 1)}>-</Button>
-                    <span className="text-lg font-bold flex-1 text-center select-none">{transposition >= 0 ? `+${transposition}` : transposition}</span>
-                    <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => setTransposition(transposition + 1)}>+</Button>
-                  </div>
-                  <div className="mt-3">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button className="w-full justify-between" variant="outline">
-                          {diagramInstrument === 'guitar' ? 'Guitarra' : diagramInstrument === 'ukulele' ? 'Ukulele' : 'Piano'}
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start">
-                        <DropdownMenuItem onClick={() => setDiagramInstrument('guitar')}>Guitarra</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setDiagramInstrument('ukulele')}>Ukulele</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setDiagramInstrument('piano')}>Piano</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-
-                {/* Tags (mobile) */}
-                {tags?.length > 0 && (
-                  <div className="bg-white/90 rounded-xl shadow p-4 border border-blue-100">
-                    <SidebarTitle>Tags</SidebarTitle>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {tags.map((t, tagIndex) => (
-                        <Badge key={tagIndex} className="bg-blue-100 text-blue-800 font-semibold px-3 py-1 text-xs">
-                          {t}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Chord diagrams (mobile) */}
-                {currentVersion?.sourceText && (
-                  <div className="bg-white/90 rounded-xl shadow p-4 border border-blue-100">
-                    <div className="flex items-center justify-between">
-                      <SidebarTitle>Acordes</SidebarTitle>
-                      <BetaBadgeWithNotice />
-                    </div>
-                    <div className="mt-3">
-                      <ChordDiagrams text={(showChords ? transposeMarkdownChords(currentVersion.sourceText || '', transposition) : currentVersion.sourceText) || ''} size={90} instrument={diagramInstrument} />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-          {/* Banner de Anúncios Mobile removido */}
 
           {/* YouTube Section */}
           {currentVersion?.youtubeLink && (
@@ -761,24 +865,335 @@ export default function SongPage() {
             </section>
           )}
 
-          {/* PDF Section */}
-          {pdfUrl && (
+          {/* Novo Sistema de Ficheiros - Partituras e Áudio */}
+          {files.length > 0 && (
             <section className="bg-white/90 rounded-2xl shadow-lg p-6 md:p-10 border border-blue-100">
-              <SectionTitle>Partitura PDF</SectionTitle>
-              <div className="flex flex-col gap-2">
-                <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-700 text-sm hover:underline"><Download className="h-4 w-4" /> Baixar PDF</a>
-                <iframe src={pdfUrl} className="w-full h-[400px] md:h-[500px] border rounded-lg" title="Pré-visualização do PDF" />
-              </div>
+              {(() => {
+                const pdfFiles = files.filter(f => f.fileType === FileType.PDF);
+                const audioFiles = files.filter(f => f.fileType === FileType.AUDIO);
+                const selectedPdf = pdfFiles[selectedPdfIndex] || pdfFiles[0];
+
+                // Se não houver anexos reais, não renderizamos nada.
+                if (pdfFiles.length === 0 && audioFiles.length === 0) return null;
+
+                return (
+                  <div className="space-y-8">
+                    {/* PDFs (UI igual ao PARTITURA) */}
+                    {pdfFiles.length > 0 && (
+                      <div className="space-y-4">
+                        <SectionTitle>Partituras</SectionTitle>
+
+                        {pdfFiles.length > 1 && (
+                          <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+                            {pdfFiles.map((file, index) => (
+                              <Button
+                                key={file.id}
+                                variant={selectedPdfIndex === index ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setSelectedPdfIndex(index)}
+                                className={`shrink-0 text-xs md:text-sm px-3 md:px-4 py-2 min-h-10 touch-manipulation ${
+                                  selectedPdfIndex === index
+                                    ? "bg-blue-600 text-white"
+                                    : "text-blue-700 border-blue-200 hover:bg-blue-50"
+                                }`}
+                              >
+                                {file.description || `PDF ${index + 1}`}
+                              </Button>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between gap-2">
+                          <h3 className="text-base md:text-lg font-semibold text-blue-900 truncate">
+                            {selectedPdf?.description || 'Partitura'}
+                          </h3>
+                          {selectedPdf?.signedUrl && (
+                            <Button asChild variant="outline" size="sm" className="gap-1.5 shrink-0 text-xs md:text-sm">
+                              <a href={selectedPdf.signedUrl} target="_blank" rel="noopener noreferrer" download>
+                                <Download className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                                <span className="hidden sm:inline">Download</span>
+                              </a>
+                            </Button>
+                          )}
+                        </div>
+
+                        {selectedPdf?.signedUrl && (
+                          <div className="rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
+                            <iframe
+                              src={`${selectedPdf.signedUrl}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`}
+                              className="w-full"
+                              style={{
+                                height: 'calc(100vh - 280px)',
+                                minHeight: '400px',
+                                maxHeight: '900px'
+                              }}
+                              title={selectedPdf.description || 'Partitura'}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Áudios (manter sistema atual) */}
+                    {audioFiles.length > 0 && (
+                      <div className="space-y-4">
+                        <SectionTitle>Áudios</SectionTitle>
+                        <div className="space-y-3">
+                          {audioFiles.map((file) => (
+                            <div key={file.id} className="bg-white/80 rounded-xl shadow p-4 border border-blue-100">
+                              <div className="flex items-center justify-between gap-3">
+                                <p className="text-sm font-medium text-gray-900 truncate flex-1">
+                                  {file.description || file.fileName}
+                                </p>
+                                {file.signedUrl && (
+                                  <a
+                                    href={file.signedUrl}
+                                    download
+                                    className="text-gray-500 hover:text-gray-700 shrink-0"
+                                    aria-label="Download do áudio"
+                                  >
+                                    <Download className="h-4 w-4" />
+                                  </a>
+                                )}
+                              </div>
+
+                              {file.signedUrl && (
+                                <audio
+                                  controls
+                                  preload="metadata"
+                                  className="w-full mt-3"
+                                >
+                                  <source src={file.signedUrl} type="audio/mpeg" />
+                                  O seu navegador não suporta o elemento de áudio.
+                                </audio>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </section>
           )}
 
-          {/* Banner Horizontal Final removido */}
-
-          {/* Song ID at the bottom */}
+          {/* Song ID */}
           <div className="w-full text-center pt-6">
             <p className="text-xs text-gray-400">ID: {song.id}</p>
           </div>
         </main>
+        </div>
+        )}
+
+        {/* ========== LAYOUT PARTITURA ========== */}
+        {song?.type === 'PARTITURA' && (
+          <div className="flex flex-col gap-6">
+            {/* Mobile/Tablet: Informações em cards horizontais compactos */}
+            <div className="lg:hidden space-y-4">
+              {/* Info compacta em linha */}
+              <div className="bg-white/80 rounded-xl shadow p-4 border border-blue-100">
+                <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-blue-900/80">
+                  <div className="flex items-center gap-1">
+                    <FileText className="h-4 w-4" />
+                    <span className="font-medium">Por:</span> {currentVersion?.createdBy?.name || 'Desconhecido'}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Music className="h-4 w-4" />
+                      <span className="font-medium">Instr.:</span> {getInstrumentLabel(mainInstrument)}
+                    </div>
+                    {author && (
+                      <div className="flex items-center gap-1">
+                        <span className="font-medium">Autor:</span> {author}
+                      </div>
+                    )}
+                  </div>
+                  {/* Tags inline */}
+                  {tags?.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-3">
+                      {tags.map((t, tagIndex) => (
+                        <Badge key={tagIndex} className="bg-blue-100 text-blue-800 font-semibold px-2 py-0.5 text-xs">
+                          {t}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Áudios em mobile - player compacto */}
+                {files.filter(f => f.fileType === 'AUDIO').length > 0 && (
+                  <div className="bg-white/80 rounded-xl shadow p-4 border border-blue-100">
+                    <h3 className="text-sm font-semibold text-blue-900 mb-3">Áudios</h3>
+                    <div className="space-y-3">
+                      {files.filter(f => f.fileType === 'AUDIO').map((file) => (
+                        <div key={file.id} className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs font-medium text-gray-700 truncate flex-1">
+                              {file.description || file.fileName}
+                            </p>
+                            {file.signedUrl && (
+                              <a href={file.signedUrl} download className="text-gray-500 hover:text-gray-700 ml-2">
+                                <Download className="h-4 w-4" />
+                              </a>
+                            )}
+                          </div>
+                          {file.signedUrl && (
+                            <audio controls className="w-full h-8" preload="metadata">
+                              <source src={file.signedUrl} type="audio/mpeg" />
+                            </audio>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Layout principal: Sidebar (desktop) + PDF */}
+              <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+                {/* Sidebar Esquerda - Só visível em desktop */}
+                <aside className="hidden lg:block lg:w-72 xl:w-80 shrink-0 space-y-5">
+                  {/* Song Info */}
+                  <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100 space-y-3">
+                    <SidebarTitle>Informações</SidebarTitle>
+                    <div className="flex items-center gap-2 text-sm text-blue-900/80">
+                      <FileText className="h-4 w-4 mr-1" />
+                      <span className="font-medium">Enviado por:</span> {currentVersion?.createdBy?.name || 'Desconhecido'}
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-blue-900/80">
+                      <Music className="h-4 w-4 mr-1" />
+                      <span className="font-medium">Instrumento:</span> {getInstrumentLabel(mainInstrument)}
+                    </div>
+                    {author && (
+                      <div className="flex items-center gap-2 text-sm text-blue-900/80">
+                        <FileText className="h-4 w-4 mr-1" />
+                        <span className="font-medium">Autor:</span> {author}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Tags */}
+                  {tags?.length > 0 && (
+                    <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100">
+                      <SidebarTitle>Tags</SidebarTitle>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {tags.map((t, tagIndex) => (
+                          <Badge key={tagIndex} className="bg-blue-100 text-blue-800 font-semibold px-3 py-1 text-xs">
+                            {t}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Áudios na Sidebar desktop */}
+                  {files.filter(f => f.fileType === 'AUDIO').length > 0 && (
+                    <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100">
+                      <SidebarTitle>Áudios</SidebarTitle>
+                      <div className="space-y-4 mt-3">
+                        {files.filter(f => f.fileType === 'AUDIO').map((file) => (
+                          <div key={file.id} className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {file.description || file.fileName}
+                              </p>
+                              {file.signedUrl && (
+                                <a href={file.signedUrl} download className="text-gray-500 hover:text-gray-700">
+                                  <Download className="h-4 w-4" />
+                                </a>
+                              )}
+                            </div>
+                            {file.signedUrl && (
+                              <audio controls className="w-full h-10" preload="metadata">
+                                <source src={file.signedUrl} type="audio/mpeg" />
+                              </audio>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </aside>
+
+                {/* Conteúdo Principal - PDFs com seletor */}
+                <main className="flex-1 min-w-0">
+                  {(() => {
+                    const pdfFiles = files.filter(f => f.fileType === 'PDF');
+                    const selectedPdf = pdfFiles[selectedPdfIndex] || pdfFiles[0];
+
+                    if (pdfFiles.length === 0) {
+                      return (
+                        <div className="bg-amber-50 rounded-2xl shadow-lg p-6 md:p-8 border border-amber-200 text-center">
+                          <Music className="h-10 w-10 md:h-12 md:w-12 text-amber-400 mx-auto mb-3 md:mb-4" />
+                          <h3 className="text-base md:text-lg font-semibold text-amber-800">Partituras em processamento</h3>
+                          <p className="text-amber-700 mt-2 text-sm md:text-base">
+                            Os ficheiros desta música estão a ser processados.
+                          </p>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <section className="bg-white/90 rounded-2xl shadow-lg p-4 md:p-6 border border-blue-100">
+                        {/* Seletor de PDFs - scrollable em mobile */}
+                        {pdfFiles.length > 1 && (
+                          <div className="flex gap-2 mb-4 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+                            {pdfFiles.map((file, index) => (
+                              <Button
+                                key={file.id}
+                                variant={selectedPdfIndex === index ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setSelectedPdfIndex(index)}
+                                className={`shrink-0 text-xs md:text-sm px-3 md:px-4 py-2 min-h-10 touch-manipulation ${
+                                  selectedPdfIndex === index 
+                                    ? "bg-blue-600 text-white" 
+                                    : "text-blue-700 border-blue-200 hover:bg-blue-50"
+                                }`}
+                              >
+                                {file.description || `PDF ${index + 1}`}
+                              </Button>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Header do PDF selecionado */}
+                        <div className="flex items-center justify-between mb-3 md:mb-4 gap-2">
+                          <h2 className="text-base md:text-lg font-semibold text-blue-900 truncate">
+                            {selectedPdf?.description || 'Partitura'}
+                          </h2>
+                          {selectedPdf?.signedUrl && (
+                            <Button asChild variant="outline" size="sm" className="gap-1.5 shrink-0 text-xs md:text-sm">
+                              <a href={selectedPdf.signedUrl} target="_blank" rel="noopener noreferrer" download>
+                                <Download className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                                <span className="hidden sm:inline">Download</span>
+                              </a>
+                            </Button>
+                          )}
+                        </div>
+
+                        {/* PDF Embebido - otimizado para diferentes ecrãs */}
+                        {selectedPdf?.signedUrl && (
+                          <div className="rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
+                            <iframe 
+                              src={`${selectedPdf.signedUrl}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`} 
+                              className="w-full"
+                              style={{ 
+                                height: 'calc(100vh - 280px)',
+                                minHeight: '400px',
+                                maxHeight: '900px'
+                              }}
+                              title={selectedPdf.description || 'Partitura'}
+                            />
+                          </div>
+                        )}
+                      </section>
+                    );
+                  })()}
+                </main>
+              </div>
+            </div>
+          )}
+
         {/* Botão para ir ao topo da página */}
         <ScrollToTopButton />
       </div>

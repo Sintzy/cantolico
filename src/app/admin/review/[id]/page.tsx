@@ -1,7 +1,7 @@
 "use client";
 
 import "easymde/dist/easymde.min.css";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
@@ -46,6 +46,9 @@ import {
   Search as SearchIcon
 } from "lucide-react";
 import "../../../../../public/styles/chords.css";
+import { FileManager } from '@/components/FileManager';
+import { SubmissionFileViewer } from '@/components/SubmissionFileViewer';
+import { FileType, FileUploadData } from '@/types/song-files';
 
 const SimpleMDE = dynamic(() => import("react-simplemde-editor"), { ssr: false });
 
@@ -114,13 +117,12 @@ export default function ReviewSubmissionPage() {
   const [preview, setPreview] = useState("");
   const [spotifyLink, setSpotifyLink] = useState("");
   const [youtubeLink, setYoutubeLink] = useState("");
-  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
-  const [mp3PreviewUrl, setMp3PreviewUrl] = useState<string | null>(null);
   const [newPdf, setNewPdf] = useState<File | null>(null);
   const [newMp3, setNewMp3] = useState<File | null>(null);
   const [instrument, setInstrument] = useState("ORGAO");
   const [moments, setMoments] = useState<string[]>([]);
   const [tags, setTags] = useState<string>("");
+  const [fileDescriptions, setFileDescriptions] = useState<Record<string, { description: string; fileName: string }>>({});
 
   // Estados para modais de ações
   const [showRejectDialog, setShowRejectDialog] = useState(false);
@@ -183,8 +185,6 @@ export default function ReviewSubmissionPage() {
         setMarkdown(data.tempText || "");
         setSpotifyLink(data.spotifyLink || "");
         setYoutubeLink(data.youtubeLink || "");
-        setPdfPreviewUrl(data.tempPdfUrl || null);
-        setMp3PreviewUrl(data.mediaUrl || null);
         setInstrument(data.mainInstrument || "ORGAO");
         setMoments(data.moment || []);
         setTags((data.tags || []).join(", "));
@@ -199,6 +199,15 @@ export default function ReviewSubmissionPage() {
 
   const [approving, setApproving] = useState(false);
 
+  // fileDescriptions agora usa o nome do ficheiro no storage como chave
+  // e guarda { description, fileName } para ser usado na API de aprovação
+  const handleFileDescriptionChange = useCallback((storageFileName: string, description: string, originalFileName: string) => {
+    setFileDescriptions(prev => ({
+      ...prev,
+      [storageFileName]: { description, fileName: originalFileName }
+    }));
+  }, []);
+
   const handleApprove = async () => {
     // Validações
     if (!title.trim()) {
@@ -206,7 +215,8 @@ export default function ReviewSubmissionPage() {
       return;
     }
     
-    if (!markdown.trim()) {
+    // Para ACORDES, a letra é obrigatória. Para PARTITURA, não precisa.
+    if (submission?.type === "ACORDES" && !markdown.trim()) {
       toast.error("Letra da música é obrigatória");
       return;
     }
@@ -224,12 +234,16 @@ export default function ReviewSubmissionPage() {
     const formData = new FormData();
     formData.append("title", title);
     formData.append("author", author);
-    formData.append("markdown", markdown);
+    // Apenas adicionar markdown se for ACORDES (para PARTITURA não é necessário)
+    if (submission?.type === "ACORDES") {
+      formData.append("markdown", markdown);
+    }
     formData.append("spotifyLink", spotifyLink);
     formData.append("youtubeLink", youtubeLink);
     formData.append("instrument", instrument);
     formData.append("moments", JSON.stringify(moments));
     formData.append("tags", `{${tags}}`);
+    formData.append("fileDescriptions", JSON.stringify(fileDescriptions));
     if (newPdf) formData.append("pdf", newPdf);
     if (newMp3) formData.append("mp3", newMp3);
 
@@ -453,7 +467,7 @@ export default function ReviewSubmissionPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
                     <Label className="text-sm font-medium text-gray-500">Nome</Label>
-                    <p className="text-gray-900 break-words">{submission.submitter?.name || "Nome não disponível"}</p>
+                    <p className="text-gray-900 wrap-break-word">{submission.submitter?.name || "Nome não disponível"}</p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-500">Email</Label>
@@ -701,6 +715,11 @@ export default function ReviewSubmissionPage() {
             <TabsTrigger value="media" className="flex items-center gap-2">
               <Music className="h-4 w-4" />
               Mídia
+              {submission?.filesMetadata?.files?.length > 0 && (
+                <Badge className="ml-2 bg-blue-100 text-blue-700 hover:bg-blue-100">
+                  📎 {submission.filesMetadata.files.length}
+                </Badge>
+              )}
             </TabsTrigger>
           </TabsList>
 
@@ -807,7 +826,8 @@ export default function ReviewSubmissionPage() {
               </CardContent>
             </Card>
 
-            {/* Editor e Preview lado a lado */}
+            {/* Editor e Preview lado a lado - Apenas para ACORDES */}
+            {submission?.type === "ACORDES" ? (
             <div className="grid md:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
@@ -895,9 +915,27 @@ export default function ReviewSubmissionPage() {
                 </CardContent>
               </Card>
             </div>
+            ) : (
+            /* Para PARTITURA - apenas mostrar a aba de mídia */
+            <Card>
+              <CardHeader>
+                <CardTitle>Tipo: Partitura</CardTitle>
+                <CardDescription>
+                  Esta música é do tipo Partitura. Os ficheiros PDFs devem ser configurados na aba "Mídia".
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="text-center py-8">
+                <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">
+                  Configure a partitura principal e os ficheiros adicionais na aba "Mídia" abaixo.
+                </p>
+              </CardContent>
+            </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="preview">
+            {submission?.type === "ACORDES" ? (
             <Card>
               <CardHeader>
                 <CardTitle>Preview da Música</CardTitle>
@@ -930,94 +968,32 @@ export default function ReviewSubmissionPage() {
                 </div>
               </CardContent>
             </Card>
+            ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Tipo: Partitura</CardTitle>
+                <CardDescription>
+                  Para partituras, o preview mostra a partitura PDF principal.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="text-center py-8">
+                <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">
+                  A partitura será exibida na aba "Mídia"
+                </p>
+              </CardContent>
+            </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="media" className="space-y-6">
-            {/* PDF Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Partitura (PDF)</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {pdfPreviewUrl && (
-                  <div>
-                    <Label>Preview PDF Atual</Label>
-                    <div className="border rounded-lg overflow-hidden bg-white">
-                      <iframe 
-                        src={pdfPreviewUrl} 
-                        className="w-full h-[500px]" 
-                        title="Preview PDF"
-                      />
-                    </div>
-                    <div className="flex gap-2 mt-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => window.open(pdfPreviewUrl, '_blank')}
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Descarregar PDF
-                      </Button>
-                      <Button 
-                        variant="destructive" 
-                        size="sm"
-                        onClick={() => setPdfPreviewUrl(null)}
-                      >
-                        Remover PDF
-                      </Button>
-                    </div>
-                  </div>
-                )}
+            {/* Novo Sistema de Visualização de Ficheiros da Submissão */}
+            <SubmissionFileViewer 
+              submissionId={submissionId}
+              onDescriptionChange={handleFileDescriptionChange}
+            />
 
-                <div>
-                  <Label>Substituir PDF (opcional)</Label>
-                  <Input 
-                    type="file" 
-                    accept="application/pdf" 
-                    onChange={(e) => setNewPdf(e.target.files?.[0] || null)}
-                    className="bg-white"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* MP3 Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Áudio (MP3)</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {mp3PreviewUrl && (
-                  <div>
-                    <Label>Preview Áudio Atual</Label>
-                    <div className="bg-white border rounded-lg p-4">
-                      <audio controls className="w-full">
-                        <source src={mp3PreviewUrl} type="audio/mpeg" />
-                        O seu browser não suporta áudio.
-                      </audio>
-                    </div>
-                    <Button 
-                      variant="destructive" 
-                      size="sm"
-                      className="mt-2"
-                      onClick={() => setMp3PreviewUrl(null)}
-                    >
-                      Remover MP3
-                    </Button>
-                  </div>
-                )}
-
-                <div>
-                  <Label>Substituir MP3 (opcional)</Label>
-                  <Input 
-                    type="file" 
-                    accept="audio/mpeg" 
-                    onChange={(e) => setNewMp3(e.target.files?.[0] || null)}
-                    className="bg-white"
-                  />
-                </div>
-              </CardContent>
-            </Card>
+            <Separator className="my-6" />
           </TabsContent>
         </Tabs>
 

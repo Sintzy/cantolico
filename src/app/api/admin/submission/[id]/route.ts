@@ -17,19 +17,29 @@ export async function GET(
 
     const { id } = await params;
 
-    // Buscar a submissão com dados do submissor
+    // Buscar a submissão com dados do submissor (apenas campos necessários)
     const { data: submission, error } = await supabase
       .from('SongSubmission')
       .select(`
-        *,
+        id,
+        title,
+        author,
+        tempText,
+        spotifyLink,
+        youtubeLink,
+        mainInstrument,
+        moment,
+        tags,
+        type,
+        status,
+        submitterId,
+        filesMetadata,
+        createdAt,
         submitter:User!SongSubmission_submitterId_fkey (
           id,
           name,
           email,
-          role,
-          createdAt,
-          image,
-          bio
+          role
         )
       `)
       .eq('id', id)
@@ -43,8 +53,9 @@ export async function GET(
     // Buscar dados de moderação do submissor
     let moderationData = null;
     let moderationHistory: any[] = [];
+    const submitter = submission.submitter as unknown as { id: string; name: string; email: string; role: string } | null;
 
-    if (submission.submitter?.id) {
+    if (submitter?.id) {
       // Moderação atual
       const { data: currentModeration } = await supabase
         .from('UserModeration')
@@ -60,7 +71,7 @@ export async function GET(
             name
           )
         `)
-        .eq('userId', submission.submitter.id)
+        .eq('userId', submitter.id)
         .order('moderatedAt', { ascending: false })
         .limit(1)
         .single();
@@ -82,7 +93,7 @@ export async function GET(
             name
           )
         `)
-        .eq('userId', submission.submitter.id)
+        .eq('userId', submitter.id)
         .order('moderatedAt', { ascending: false });
 
       moderationHistory = history || [];
@@ -92,7 +103,7 @@ export async function GET(
     const response = {
       ...submission,
       submitter: {
-        ...submission.submitter,
+        ...submitter,
         currentModeration: moderationData,
         moderationHistory: moderationHistory
       }

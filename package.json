@@ -21,6 +21,7 @@
     "@radix-ui/react-dropdown-menu": "^2.1.15",
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-popover": "^1.1.15",
+    "@radix-ui/react-progress": "^1.1.8",
     "@radix-ui/react-select": "^2.2.5",
     "@radix-ui/react-separator": "^1.1.7",
     "@radix-ui/react-slot": "^1.2.4",
@@ -34,11 +35,12 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
+    "easymde": "^2.20.0",
     "fontkit": "^2.0.4",
     "lucide-react": "^0.525.0",
     "markdown-it": "^14.1.0",
     "markdown-it-chords": "^1.0.3",
-    "next": "15.4.8",
+    "next": "^16.0.8",
     "next-auth": "^4.24.11",
     "next-themes": "^0.4.6",
     "pdf-lib": "^1.17.1",
@@ -67,5 +69,13 @@
     "tailwindcss": "^4",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2"
-  }
+  },
+  "description": "[![Next.js](https://img.shields.io/badge/Next.js-15.4.2-black?style=flat-square&logo=next.js)](https://nextjs.org/)\r [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)\r [![Supabase](https://img.shields.io/badge/Supabase-green?style=flat-square&logo=supabase)](https://supabase.com/)\r [![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38B2AC?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }

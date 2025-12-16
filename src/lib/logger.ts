@@ -58,6 +58,21 @@ const CUSTOM_COLORS = {
  * Formatar evento de log para envio ao Loki
  */
 function formatLogEventForLoki(event: LogEvent): Record<string, any> {
+  // Normalizar user context (garantir que user_id, user_email, user_role estão presentes)
+  let normalizedUser: Record<string, any> | undefined = undefined;
+  if (event.user && Object.keys(event.user).length > 0) {
+    normalizedUser = {
+      user_id: event.user.user_id || event.user.id,
+      user_email: event.user.user_email || event.user.email,
+      user_role: event.user.user_role || event.user.role,
+      ...(event.user.user_name && { user_name: event.user.user_name })
+    };
+    // Remover campos undefined
+    Object.keys(normalizedUser).forEach(key => {
+      if (normalizedUser![key] === undefined) delete normalizedUser![key];
+    });
+  }
+  
   return {
     timestamp: event.timestamp || new Date().toISOString(),
     level: event.level,
@@ -66,7 +81,7 @@ function formatLogEventForLoki(event: LogEvent): Record<string, any> {
     environment: event.environment || ENVIRONMENT,
     
     // Contextos
-    ...(event.user && Object.keys(event.user).length > 0 && { user: event.user }),
+    ...(normalizedUser && { user: normalizedUser }),
     ...(event.http && Object.keys(event.http).length > 0 && { http: event.http }),
     ...(event.network && Object.keys(event.network).length > 0 && { network: event.network }),
     ...(event.correlation && Object.keys(event.correlation).length > 0 && { correlation: event.correlation }),
@@ -91,19 +106,27 @@ function extractLokiLabels(event: LogEvent): Record<string, string> {
     category: event.category,
   };
 
-  // Adicionar user_id como label se existir
-  if (event.user?.user_id) {
-    labels.user_id = String(event.user.user_id);
+  // Adicionar user_id como label se existir (suporta user_id ou id)
+  const userId = event.user?.user_id || event.user?.id;
+  if (userId) {
+    labels.user_id = String(userId);
   }
 
-  // Adicionar user_email como label se existir
-  if (event.user?.user_email) {
-    labels.user_email = event.user.user_email;
+  // Adicionar user_email como label se existir (suporta user_email ou email)
+  const userEmail = event.user?.user_email || event.user?.email;
+  if (userEmail) {
+    labels.user_email = userEmail;
   }
 
-  // Adicionar user_role como label se existir
-  if (event.user?.user_role) {
-    labels.user_role = event.user.user_role;
+  // Adicionar user_role como label se existir (suporta user_role ou role)
+  const userRole = event.user?.user_role || event.user?.role;
+  if (userRole) {
+    labels.user_role = userRole;
+  }
+
+  // Adicionar IP como label se existir
+  if (event.network?.ip_address) {
+    labels.ip_address = event.network.ip_address;
   }
 
   // Adicionar IDs de domínio como labels quando presentes
@@ -159,9 +182,16 @@ const consoleFormat = winston.format.printf((info: any) => {
   
   let output = `${timestamp} [${level.toUpperCase()}] ${message}`;
   
-  // Adicionar contexto user se existir
-  if (meta.user?.user_id || meta.user?.user_email) {
-    output += ` | User: ${meta.user.user_email || meta.user.user_id}`;
+  // Adicionar contexto user se existir (suporta múltiplos formatos)
+  const userId = meta.user?.user_id || meta.user?.id;
+  const userEmail = meta.user?.user_email || meta.user?.email;
+  if (userId || userEmail) {
+    output += ` | User: ${userEmail || userId}`;
+  }
+  
+  // Adicionar IP se existir
+  if (meta.network?.ip_address) {
+    output += ` | IP: ${meta.network.ip_address}`;
   }
   
   // Adicionar request_id se existir

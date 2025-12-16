@@ -13,7 +13,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const context = createCorrelationContext({
     ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown',
     user_agent: req.headers.get('user-agent') || 'unknown',

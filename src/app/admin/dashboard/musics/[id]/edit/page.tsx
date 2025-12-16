@@ -30,6 +30,8 @@ import { ArrowLeft, Save, Music, Edit3, Tag, Clock, Settings, Eye, Search as Sea
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { LiturgicalMoment, Instrument, SongType } from '@/lib/constants';
+import { FileManager } from '@/components/FileManager';
+import { FileType, FileUploadData } from '@/types/song-files';
 
 const SimpleMDE = dynamic(() => import("react-simplemde-editor"), { ssr: false });
 
@@ -390,7 +392,7 @@ export default function EditMusicPage() {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center space-y-6">
-          <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-tr from-blue-500 to-blue-400 shadow-lg flex items-center justify-center">
+          <div className="w-16 h-16 mx-auto rounded-full bg-linear-to-tr from-blue-500 to-blue-400 shadow-lg flex items-center justify-center">
             <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
           </div>
           <div>
@@ -403,7 +405,7 @@ export default function EditMusicPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen   ">
       <style dangerouslySetInnerHTML={{ __html: chordsCSS }} />
       <div className="max-w-7xl mx-auto py-6 px-4 space-y-6">
         {/* Header */}
@@ -753,10 +755,21 @@ export default function EditMusicPage() {
           </TabsContent>
 
           <TabsContent value="media" className="space-y-6">
+            {/* Sistema Moderno de Upload de Ficheiros */}
+            <FileManager 
+              mode="edit"
+              songId={songId}
+            />
+
+            <Separator className="my-6" />
+
             {/* URL Sections */}
             <Card>
               <CardHeader>
-                <CardTitle>URLs de Mídia</CardTitle>
+                <CardTitle>URLs de Mídia (Legado)</CardTitle>
+                <CardDescription>
+                  Sistema antigo de URLs. Recomenda-se usar o sistema de upload acima.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>

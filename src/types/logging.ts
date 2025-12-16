@@ -32,15 +32,19 @@ export enum LogCategory {
   MODERATION = 'moderation',
   SUBMISSION = 'submission',
   PLAYLIST = 'playlist',
-  SONG = 'song'
+  SONG = 'song',
+  UPLOAD = 'upload'
 }
 
 /**
  * Contexto de utilizador
  */
 export interface UserContext {
+  id?: string | number; // Alias para user_id (compatibilidade)
   user_id?: string | number;
-  user_email?: string;
+  email?: string | null; // Alias para user_email (compatibilidade) - aceita null
+  user_email?: string | null;
+  role?: 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN' | 'SUPER_ADMIN'; // Alias para user_role (compatibilidade)
   user_role?: 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN' | 'SUPER_ADMIN';
   user_name?: string;
 }

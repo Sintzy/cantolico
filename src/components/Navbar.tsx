@@ -102,7 +102,7 @@ export default function Navbar() {
     return (
         <>
             <nav className="bg-white/95 backdrop-blur-sm border-b border-gray-200/80 sticky top-0 z-50">
-                <div className="max-w-screen-xl mx-auto px-4 py-3 flex items-center justify-between">
+                <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
                     {/* Logo */}
                     <Link href="/" className="flex items-center space-x-3 group">
                         <div className="relative">
@@ -457,7 +457,7 @@ export default function Navbar() {
 
             {/* Mobile Sidebar Overlay */}
             {mobileMenuOpen && (
-                <div className="fixed inset-0 z-[60] lg:hidden">
+                <div className="fixed inset-0 z-60 lg:hidden">
                     {/* Backdrop */}
                     <div 
                         className="fixed inset-0 bg-black/50 backdrop-blur-sm"
@@ -475,7 +475,7 @@ export default function Navbar() {
                                     width={24} 
                                     height={24} 
                                 />
-                                <span className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                                <span className="text-lg font-bold bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                                     Can♱ólico!
                                 </span>
                             </div>
@@ -511,15 +511,56 @@ export default function Navbar() {
                         {/* Search */}
                         <div className="p-4 border-b border-gray-200">
                             <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                                 <input
                                     type="text"
                                     placeholder="Pesquisar músicas..."
                                     value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    onChange={(e) => {
+                                        const newValue = e.target.value;
+                                        setSearchQuery(newValue);
+                                        handleSearchChange({ target: { value: newValue } } as any);
+                                    }}
+                                    className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                                    autoCapitalize="off"
+                                    autoCorrect="off"
+                                    spellCheck="false"
+                                    autoComplete="off"
                                 />
                             </div>
+                            
+                            {/* Search Results Mobile */}
+                            {searchQuery.trim() !== "" && (
+                                <div className="mt-2 bg-white border border-gray-200 rounded-lg shadow-md max-h-80 overflow-y-auto">
+                                    {isSearching ? (
+                                        <div className="px-4 py-3 text-sm text-gray-500 text-center">A procurar...</div>
+                                    ) : searchResults.length > 0 ? (
+                                        <>
+                                            {searchResults.slice(0, 8).map((result) => (
+                                                <Link
+                                                    key={result.id}
+                                                    href={`/musics/${result.id}`}
+                                                    className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors border-b last:border-b-0"
+                                                    onClick={() => {
+                                                        setSearchQuery("");
+                                                        closeMobileMenu();
+                                                    }}
+                                                >
+                                                    <Music className="h-4 w-4 text-gray-400 shrink-0" />
+                                                    <span className="truncate">{result.title}</span>
+                                                </Link>
+                                            ))}
+                                            {searchResults.length > 8 && (
+                                                <div className="px-4 py-2 text-xs text-gray-500 bg-gray-50 text-center">
+                                                    +{searchResults.length - 8} mais resultados...
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <div className="px-4 py-3 text-sm text-gray-500 text-center">Nenhum resultado encontrado.</div>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         {/* Navigation */}
