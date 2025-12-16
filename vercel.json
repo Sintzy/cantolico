@@ -3,6 +3,18 @@
     "NEXT_PUBLIC_COMMIT_SHA": "VERCEL_GIT_COMMIT_SHA",
     "NEXT_PUBLIC_BRANCH": "VERCEL_GIT_COMMIT_REF"
   },
+  "redirects": [
+    {
+      "source": "https://www.cantolico.pt/:path*",
+      "destination": "https://cantolico.pt/:path*",
+      "permanent": true
+    },
+    {
+      "source": "http://www.cantolico.pt/:path*",
+      "destination": "https://cantolico.pt/:path*",
+      "permanent": true
+    }
+  ],
   "crons": [
     {
       "path": "/api/admin/cleanup/files",
