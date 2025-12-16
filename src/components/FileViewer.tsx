@@ -141,6 +141,20 @@ export function FileViewer({ files }: FileViewerProps) {
 
   const currentAudioFile = getCurrentAudioFile();
 
+  const getDisplayTitle = (file: SongFile, index?: number) => {
+    const desc = (file.description || '').trim();
+    if (desc) return desc;
+    return typeof index === 'number' ? `Ficheiro ${index + 1}` : file.fileName;
+  };
+
+  const getDisplaySubtitle = (file: SongFile) => {
+    const desc = (file.description || '').trim();
+    // Se existe descrição, escondemos nome original e tamanho: o user quer ver só o que escreveu.
+    if (desc) return null;
+    if (!file.fileName && !file.fileSize) return null;
+    return `${file.fileName}${file.fileSize ? ` • ${formatFileSize(file.fileSize)}` : ''}`;
+  };
+
   if (pdfs.length === 0 && audios.length === 0) {
     return null;
   }
@@ -161,7 +175,7 @@ export function FileViewer({ files }: FileViewerProps) {
 
         {/* Tab PDFs */}
         <TabsContent value="pdfs" className="space-y-3 mt-4">
-          {pdfs.map((pdf) => (
+          {pdfs.map((pdf, index) => (
             <Card key={pdf.id} className="overflow-hidden">
               <CardContent className="p-4">
                 <div className="flex items-center gap-4">
@@ -170,10 +184,12 @@ export function FileViewer({ files }: FileViewerProps) {
                   </div>
                   
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-sm mb-1">{pdf.description}</h4>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {pdf.fileName} • {formatFileSize(pdf.fileSize || 0)}
-                    </p>
+                    <h4 className="font-medium text-sm mb-1">{getDisplayTitle(pdf, index)}</h4>
+                    {getDisplaySubtitle(pdf) && (
+                      <p className="text-xs text-muted-foreground truncate">
+                        {getDisplaySubtitle(pdf)}
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex gap-2 shrink-0">
@@ -232,10 +248,12 @@ export function FileViewer({ files }: FileViewerProps) {
                     </Button>
 
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-sm mb-1">{audio.description}</h4>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {audio.fileName} • {formatFileSize(audio.fileSize || 0)}
-                      </p>
+                      <h4 className="font-medium text-sm mb-1">{getDisplayTitle(audio)}</h4>
+                      {getDisplaySubtitle(audio) && (
+                        <p className="text-xs text-muted-foreground truncate">
+                          {getDisplaySubtitle(audio)}
+                        </p>
+                      )}
                     </div>
 
                     {audio.signedUrl && (

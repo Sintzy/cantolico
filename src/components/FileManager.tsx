@@ -76,7 +76,7 @@ export function FileManager({
                 fileSize: f.fileSize,
                 signedUrl: f.signedUrl,
                 uploadedAt: f.uploadedAt,
-                isMainPdf: f.isPrincipal, // Mapear isPrincipal do servidor para isMainPdf
+                isMainPdf: f.isPrincipal,
                 file: null as any, // Não temos o File object em modo edit
                 uploading: false,
                 uploaded: true

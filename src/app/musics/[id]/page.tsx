@@ -868,8 +868,113 @@ export default function SongPage() {
           {/* Novo Sistema de Ficheiros - Partituras e Áudio */}
           {files.length > 0 && (
             <section className="bg-white/90 rounded-2xl shadow-lg p-6 md:p-10 border border-blue-100">
-              <SectionTitle>Partituras e Áudios</SectionTitle>
-              <FileViewer files={files} />
+              {(() => {
+                const pdfFiles = files.filter(f => f.fileType === FileType.PDF);
+                const audioFiles = files.filter(f => f.fileType === FileType.AUDIO);
+                const selectedPdf = pdfFiles[selectedPdfIndex] || pdfFiles[0];
+
+                // Se não houver anexos reais, não renderizamos nada.
+                if (pdfFiles.length === 0 && audioFiles.length === 0) return null;
+
+                return (
+                  <div className="space-y-8">
+                    {/* PDFs (UI igual ao PARTITURA) */}
+                    {pdfFiles.length > 0 && (
+                      <div className="space-y-4">
+                        <SectionTitle>Partituras</SectionTitle>
+
+                        {pdfFiles.length > 1 && (
+                          <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+                            {pdfFiles.map((file, index) => (
+                              <Button
+                                key={file.id}
+                                variant={selectedPdfIndex === index ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setSelectedPdfIndex(index)}
+                                className={`shrink-0 text-xs md:text-sm px-3 md:px-4 py-2 min-h-10 touch-manipulation ${
+                                  selectedPdfIndex === index
+                                    ? "bg-blue-600 text-white"
+                                    : "text-blue-700 border-blue-200 hover:bg-blue-50"
+                                }`}
+                              >
+                                {file.description || `PDF ${index + 1}`}
+                              </Button>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between gap-2">
+                          <h3 className="text-base md:text-lg font-semibold text-blue-900 truncate">
+                            {selectedPdf?.description || 'Partitura'}
+                          </h3>
+                          {selectedPdf?.signedUrl && (
+                            <Button asChild variant="outline" size="sm" className="gap-1.5 shrink-0 text-xs md:text-sm">
+                              <a href={selectedPdf.signedUrl} target="_blank" rel="noopener noreferrer" download>
+                                <Download className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                                <span className="hidden sm:inline">Download</span>
+                              </a>
+                            </Button>
+                          )}
+                        </div>
+
+                        {selectedPdf?.signedUrl && (
+                          <div className="rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
+                            <iframe
+                              src={`${selectedPdf.signedUrl}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`}
+                              className="w-full"
+                              style={{
+                                height: 'calc(100vh - 280px)',
+                                minHeight: '400px',
+                                maxHeight: '900px'
+                              }}
+                              title={selectedPdf.description || 'Partitura'}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Áudios (manter sistema atual) */}
+                    {audioFiles.length > 0 && (
+                      <div className="space-y-4">
+                        <SectionTitle>Áudios</SectionTitle>
+                        <div className="space-y-3">
+                          {audioFiles.map((file) => (
+                            <div key={file.id} className="bg-white/80 rounded-xl shadow p-4 border border-blue-100">
+                              <div className="flex items-center justify-between gap-3">
+                                <p className="text-sm font-medium text-gray-900 truncate flex-1">
+                                  {file.description || file.fileName}
+                                </p>
+                                {file.signedUrl && (
+                                  <a
+                                    href={file.signedUrl}
+                                    download
+                                    className="text-gray-500 hover:text-gray-700 shrink-0"
+                                    aria-label="Download do áudio"
+                                  >
+                                    <Download className="h-4 w-4" />
+                                  </a>
+                                )}
+                              </div>
+
+                              {file.signedUrl && (
+                                <audio
+                                  controls
+                                  preload="metadata"
+                                  className="w-full mt-3"
+                                >
+                                  <source src={file.signedUrl} type="audio/mpeg" />
+                                  O seu navegador não suporta o elemento de áudio.
+                                </audio>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </section>
           )}
 

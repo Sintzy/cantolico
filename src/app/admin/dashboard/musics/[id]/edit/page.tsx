@@ -405,7 +405,7 @@ export default function EditMusicPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen   ">
       <style dangerouslySetInnerHTML={{ __html: chordsCSS }} />
       <div className="max-w-7xl mx-auto py-6 px-4 space-y-6">
         {/* Header */}
