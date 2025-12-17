@@ -381,28 +381,28 @@ export default function CreateNewMusicPage() {
             {/* Background decoration */}
             <div className="pointer-events-none absolute inset-0" aria-hidden="true">
               <div className="absolute left-1/2 top-0 -translate-x-1/2">
-                <div className="h-60 w-60 rounded-full bg-gradient-to-br from-blue-50 via-white to-purple-50" />
+                <div className="h-60 w-60 rounded-full bg-linear-to-br from-blue-50 via-white to-purple-50" />
               </div>
             </div>
             
             <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 md:py-12 relative z-10">
               <div className="text-center mb-6 sm:mb-8 md:mb-12">
                 {/* Decorative border */}
-                <div className="mb-4 border-y [border-image:linear-gradient(to_right,transparent,theme(colors.slate.300/.8),transparent)1]">
+                <div className="mb-4 border-y [border-image:linear-gradient(to_right,transparent,--theme(--color-slate-300/.8),transparent)1]">
                   <div className="-mx-0.5 flex justify-center -space-x-2 py-2">
-                    <div className="w-6 h-6 bg-gradient-to-r from-green-500 to-blue-600 rounded-full flex items-center justify-center">
+                    <div className="w-6 h-6 bg-linear-to-r from-green-500 to-blue-600 rounded-full flex items-center justify-center">
                       <Music className="text-white text-xs w-3 h-3" />
                     </div>
-                    <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                    <div className="w-6 h-6 bg-linear-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
                       <FileText className="text-white text-xs w-3 h-3" />
                     </div>
-                    <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                    <div className="w-6 h-6 bg-linear-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
                       <Upload className="text-white text-xs w-3 h-3" />
                     </div>
                   </div>
                 </div>
                 
-                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 sm:mb-4 border-y [border-image:linear-gradient(to_right,transparent,theme(colors.slate.300/.8),transparent)1] leading-tight">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 sm:mb-4 border-y [border-image:linear-gradient(to_right,transparent,--theme(--color-slate-300/.8),transparent)1] leading-tight">
                   Criar Nova Música
                 </h1>
                 <p className="text-base sm:text-lg text-gray-700 max-w-2xl mx-auto px-4">
@@ -417,7 +417,7 @@ export default function CreateNewMusicPage() {
                     const isCompleted = currentStep > step.number;
                     
                     return (
-                      <div key={step.number} className="flex items-center flex-shrink-0">
+                      <div key={step.number} className="flex items-center shrink-0">
                         <div className="flex items-center space-x-2">
                           <div
                             className={`flex h-8 w-8 items-center justify-center rounded-full border-2 ${
@@ -728,6 +728,21 @@ export default function CreateNewMusicPage() {
                           options={simpleMDEOptions}
                         />
                       </div>
+
+                      {/* Anexos para ACORDES também (PDFs/MP3) */}
+                      <Separator className="my-2" />
+                      <div className="space-y-2">
+                        <Label className="text-sm">Anexos (opcional)</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Podes adicionar PDFs (partituras) e MP3s (áudio) também em músicas de acordes.
+                        </p>
+                        <FileManager
+                          mode="create"
+                          maxPdfs={20}
+                          maxAudios={20}
+                          onChange={(updatedFiles) => setFiles(updatedFiles)}
+                        />
+                      </div>
                     </div>
 
                     <div className="space-y-4">
@@ -825,28 +840,10 @@ export default function CreateNewMusicPage() {
             </div>
 
             <div className="space-y-6">
-              {/* Ficheiros - Novo Sistema (apenas para ACORDES, PARTITURA usa Step 3) */}
-              {form.type === SongType.ACORDES && (
-                <Card className="border border-border/50 shadow-lg bg-card/80 backdrop-blur-sm">
-                  <CardHeader className="border-b border-border/50 bg-linear-to-r from-primary/5 to-transparent">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <UploadIcon className="h-5 w-5 text-primary" />
-                      Partituras e Áudios
-                    </CardTitle>
-                    <CardDescription>
-                      Adiciona até 20 PDFs e 20 MP3s com descrições personalizadas
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    <FileManager
-                      mode="create"
-                      maxPdfs={20}
-                      maxAudios={20}
-                      onChange={(updatedFiles) => setFiles(updatedFiles)}
-                    />
-                  </CardContent>
-                </Card>
-              )}
+              {/*
+                Nota: para ACORDES, o FileManager já aparece no Passo 3 junto do editor.
+                Aqui no Passo 4 ficam apenas links + captcha + resumo.
+              */}
 
               {/* Links Externos */}
               <Card className="border border-border/50 shadow-lg bg-card/80 backdrop-blur-sm">
@@ -903,7 +900,7 @@ export default function CreateNewMusicPage() {
 
               {/* Resumo */}
               <Card className="border border-border/50 shadow-lg bg-card/80 backdrop-blur-sm">
-                <CardHeader className="border-b border-border/50 bg-gradient-to-r from-primary/5 to-transparent">
+                <CardHeader className="border-b border-border/50 bg-linear-to-r from-primary/5 to-transparent">
                   <CardTitle className="text-lg">Resumo da Música</CardTitle>
                   <CardDescription>
                     Revê os dados antes de submeter
@@ -917,7 +914,7 @@ export default function CreateNewMusicPage() {
                           <FileText className="w-4 h-4" />
                           Título:
                         </span>
-                        <span className="text-foreground text-right max-w-[60%] break-words font-medium">
+                        <span className="text-foreground text-right max-w-[60%] wrap-break-word font-medium">
                           {form.title || "❌ Não definido"}
                         </span>
                       </div>
@@ -927,7 +924,7 @@ export default function CreateNewMusicPage() {
                             <User className="w-4 h-4" />
                             Autor:
                           </span>
-                          <span className="text-foreground text-right max-w-[60%] break-words">
+                          <span className="text-foreground text-right max-w-[60%] wrap-break-word">
                             {form.author}
                           </span>
                         </div>
@@ -1036,7 +1033,7 @@ export default function CreateNewMusicPage() {
 
               {/* Captcha */}
               <Card className="border border-border/50 shadow-lg bg-card/80 backdrop-blur-sm">
-                <CardHeader className="border-b border-border/50 bg-gradient-to-r from-primary/5 to-transparent">
+                <CardHeader className="border-b border-border/50 bg-linear-to-r from-primary/5 to-transparent">
                   <CardTitle className="text-lg">Verificação de Segurança</CardTitle>
                   <CardDescription>
                     Complete a verificação antes de submeter
