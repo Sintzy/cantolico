@@ -11,7 +11,6 @@ import EmailVerificationBanner from "@/components/EmailVerificationBanner";
 import JsonLd from "@/components/JsonLd";
 import { generateHomeSEO } from "@/lib/seo";
 import { Analytics } from "@vercel/analytics/next"
-import MaintenanceGate from "@/components/MaintenanceGate";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -32,16 +31,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <JsonLd />
         <CacheProvider>
           <AuthSessionProvider>
-            <MaintenanceGate>
-              <Navbar />
-              <EmailVerificationBanner />
-              <main className="flex-1">
-                {children}
-                <Analytics />
-              </main>
-              <Toaster />
-              <Footer />
-            </MaintenanceGate>
+            <Navbar />
+            <EmailVerificationBanner />
+            <main className="flex-1">
+              {children}
+              <Analytics />
+            </main>
+            <Toaster />
+            <Footer />
           </AuthSessionProvider>
         </CacheProvider>
       </body>

@@ -9,6 +9,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { TurnstileCaptcha } from "@/components/TurnstileCaptcha";
 import { FileManager } from "@/components/FileManager";
+import MarkdownEditor from "@/components/MarkdownEditor";
 import { FileUploadData } from "@/types/song-files";
 
 import MarkdownIt from "markdown-it";
@@ -30,7 +31,7 @@ import { toast } from "sonner";
 import { Plus, Music, FileText, Upload, Youtube, ChevronRight, ChevronLeft, Info, Clock, User, Upload as UploadIcon, Eye, Check, AlertCircle, Search, Filter } from "lucide-react";
 import { FaSpotify } from "react-icons/fa";
 
-const SimpleMDE = dynamic(() => import("react-simplemde-editor"), { ssr: false });
+// Editor é renderizado via wrapper `MarkdownEditor` (fallback incluído)
 const mdParser = new MarkdownIt({ breaks: true }).use(chords);
 
 
@@ -721,7 +722,8 @@ export default function CreateNewMusicPage() {
                       </div>
 
                       <div className="border border-border rounded-md overflow-hidden">
-                        <SimpleMDE
+                        <MarkdownEditor
+                          id="markdown"
                           value={form.markdown}
                           onChange={(val) => setForm({ ...form, markdown: val })}
                           getMdeInstance={(instance) => (editorRef.current = instance)}
