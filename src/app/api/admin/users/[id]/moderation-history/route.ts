@@ -1,23 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { supabase } from '@/lib/supabase-client';
+import { requireReviewer } from '@/lib/admin-auth';
+import { adminSupabase } from '@/lib/supabase-admin';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'REVIEWER')) {
-      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
-    }
+    const { error: authError } = await requireReviewer();
+    if (authError) return authError;
 
     const { id: userId } = await params;
 
     // Get moderation history for user
-    const { data: history, error } = await supabase
+    const { data: history, error } = await adminSupabase
       .from('ModerationHistory')
       .select(`
         id,
@@ -38,25 +34,23 @@ export async function GET(
       return NextResponse.json({ error: 'Erro ao carregar histórico' }, { status: 500 });
     }
 
-    // Get moderator names for each entry
-    const historyWithModerators = await Promise.all(
-      (history || []).map(async (item: any) => {
-        let moderatorInfo = null;
-        if (item.moderatedById) {
-          const { data: moderator } = await supabase
-            .from('User')
-            .select('name, email')
-            .eq('id', item.moderatedById)
-            .single();
-          moderatorInfo = moderator;
-        }
+    // Bulk fetch moderator names to avoid N+1
+    const moderatorIds = Array.from(new Set(
+      (history || []).map((h: any) => h.moderatedById).filter(Boolean)
+    ));
+    
+    const { data: moderators } = await adminSupabase
+      .from('User')
+      .select('id, name, email')
+      .in('id', moderatorIds);
 
-        return {
-          ...item,
-          moderatedBy: moderatorInfo
-        };
-      })
-    );
+    const moderatorMap = new Map(moderators?.map((m: any) => [m.id, m]) || []);
+
+    // Enrich history with moderator info
+    const historyWithModerators = (history || []).map((item: any) => ({
+      ...item,
+      moderatedBy: item.moderatedById ? moderatorMap.get(item.moderatedById) || null : null
+    }));
 
     return NextResponse.json({
       history: historyWithModerators

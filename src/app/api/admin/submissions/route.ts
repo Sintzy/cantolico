@@ -91,40 +91,47 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Erro ao buscar submissões' }, { status: 500 });
     }
 
-    // For each submission, get moderation data for submitter
-    let submissions = await Promise.all(
-      (rawSubmissions || []).map(async (submission: any) => {
-        let moderationData = null;
-        if (submission.submitter?.id) {
-          const { data: moderation } = await supabase
-            .from('UserModeration')
-            .select(`
-              id,
-              status,
-              type,
-              reason,
-              moderatorNote,
-              moderatedAt,
-              expiresAt,
-              moderatedBy
-            `)
-            .eq('userId', submission.submitter.id)
-            .order('moderatedAt', { ascending: false })
-            .limit(1)
-            .single();
+    // Bulk fetch moderation data for all submitters to avoid N+1 queries
+    const submitterIds = (rawSubmissions || [])
+      .map((s: any) => s.submitter?.id)
+      .filter(Boolean);
+    
+    let moderationByUser = new Map();
+    if (submitterIds.length > 0) {
+      const { data: moderationRecords } = await supabase
+        .from('UserModeration')
+        .select(`
+          userId,
+          id,
+          status,
+          type,
+          reason,
+          moderatorNote,
+          moderatedAt,
+          expiresAt,
+          moderatedBy
+        `)
+        .in('userId', submitterIds)
+        .order('moderatedAt', { ascending: false });
 
-          moderationData = moderation;
+      // Group by userId (latest only)
+      moderationRecords?.forEach((mod: any) => {
+        if (!moderationByUser.has(mod.userId)) {
+          moderationByUser.set(mod.userId, mod);
         }
+      });
+    }
 
-        return {
-          ...submission,
-          submitter: {
-            ...submission.submitter,
-            currentModeration: moderationData
-          }
-        };
-      })
-    );
+    // Enrich submissions with moderation data
+    let submissions = (rawSubmissions || []).map((submission: any) => ({
+      ...submission,
+      submitter: {
+        ...submission.submitter,
+        currentModeration: submission.submitter?.id 
+          ? moderationByUser.get(submission.submitter.id) || null
+          : null
+      }
+    }));
 
     // Apply filters that couldn't be done in the database query
     if (userRole && userRole !== "all") {

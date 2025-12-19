@@ -69,8 +69,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.log(`📄 Sitemap: ${songs?.length || 0} músicas encontradas`);
 
     // Dynamic music pages - PRIORIDADE MÁXIMA para SEO agressivo
-    const musicPages = (songs || []).map((song: any, index: number) => {
-      const url = `${baseUrl}/musics/${song.slug || song.id}`;
+    // Filter out songs without slug to avoid duplicate content issues
+    const musicPages = (songs || [])
+      .filter((song: any) => song.slug) // Only include songs with valid slugs
+      .map((song: any, index: number) => {
+      const url = `${baseUrl}/musics/${song.slug}`;
       const isRecent = (Date.now() - new Date(song.createdAt).getTime()) < (30 * 24 * 60 * 60 * 1000); // 30 dias
       const isVeryRecent = (Date.now() - new Date(song.createdAt).getTime()) < (7 * 24 * 60 * 60 * 1000); // 7 dias
       
