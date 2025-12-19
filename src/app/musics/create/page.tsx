@@ -9,6 +9,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { TurnstileCaptcha } from "@/components/TurnstileCaptcha";
 import { FileManager } from "@/components/FileManager";
+import MarkdownEditor from "@/components/MarkdownEditor";
 import { FileUploadData } from "@/types/song-files";
 
 import MarkdownIt from "markdown-it";
@@ -30,7 +31,7 @@ import { toast } from "sonner";
 import { Plus, Music, FileText, Upload, Youtube, ChevronRight, ChevronLeft, Info, Clock, User, Upload as UploadIcon, Eye, Check, AlertCircle, Search, Filter } from "lucide-react";
 import { FaSpotify } from "react-icons/fa";
 
-const SimpleMDE = dynamic(() => import("react-simplemde-editor"), { ssr: false });
+// Editor é renderizado via wrapper `MarkdownEditor` (fallback incluído)
 const mdParser = new MarkdownIt({ breaks: true }).use(chords);
 
 
@@ -100,7 +101,7 @@ export default function CreateNewMusicPage() {
     moments: [] as LiturgicalMoment[],
     tags: [] as string[],
     tagsInput: "",
-    type: "ACORDES" as SongType, // Sempre definido como ACORDES
+    type: SongType.ACORDES,
     instrument: "" as Instrument,
     markdown: "",
     youtubeLink: "",
@@ -200,7 +201,7 @@ export default function CreateNewMusicPage() {
       case 2:
         return form.moments.length > 0;
       case 3:
-        // ACORDES precisa de markdown, PARTITURA precisa de ficheiros (PDFs)
+        // ACORDES precisa de markdown. PARTITURA precisa de ficheiros (PDFs).
         if (form.type === SongType.ACORDES) {
           return form.markdown.trim().length > 0;
         } else {
@@ -355,7 +356,7 @@ export default function CreateNewMusicPage() {
     { number: 1, title: "Informações Básicas", icon: Info },
     { number: 2, title: "Momentos e Tags", icon: Clock },
     { number: 3, title: "Letra e Acordes", icon: FileText },
-    { number: 4, title: "Finalização", icon: UploadIcon }
+    { number: 4, title: "Anexos e Finalização", icon: UploadIcon }
   ];
 
   return (
@@ -381,28 +382,28 @@ export default function CreateNewMusicPage() {
             {/* Background decoration */}
             <div className="pointer-events-none absolute inset-0" aria-hidden="true">
               <div className="absolute left-1/2 top-0 -translate-x-1/2">
-                <div className="h-60 w-60 rounded-full bg-gradient-to-br from-blue-50 via-white to-purple-50" />
+                <div className="h-60 w-60 rounded-full bg-linear-to-br from-blue-50 via-white to-purple-50" />
               </div>
             </div>
             
             <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 md:py-12 relative z-10">
               <div className="text-center mb-6 sm:mb-8 md:mb-12">
                 {/* Decorative border */}
-                <div className="mb-4 border-y [border-image:linear-gradient(to_right,transparent,theme(colors.slate.300/.8),transparent)1]">
+                <div className="mb-4 border-y [border-image:linear-gradient(to_right,transparent,--theme(--color-slate-300/.8),transparent)1]">
                   <div className="-mx-0.5 flex justify-center -space-x-2 py-2">
-                    <div className="w-6 h-6 bg-gradient-to-r from-green-500 to-blue-600 rounded-full flex items-center justify-center">
+                    <div className="w-6 h-6 bg-linear-to-r from-green-500 to-blue-600 rounded-full flex items-center justify-center">
                       <Music className="text-white text-xs w-3 h-3" />
                     </div>
-                    <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                    <div className="w-6 h-6 bg-linear-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
                       <FileText className="text-white text-xs w-3 h-3" />
                     </div>
-                    <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                    <div className="w-6 h-6 bg-linear-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
                       <Upload className="text-white text-xs w-3 h-3" />
                     </div>
                   </div>
                 </div>
                 
-                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 sm:mb-4 border-y [border-image:linear-gradient(to_right,transparent,theme(colors.slate.300/.8),transparent)1] leading-tight">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 sm:mb-4 border-y [border-image:linear-gradient(to_right,transparent,--theme(--color-slate-300/.8),transparent)1] leading-tight">
                   Criar Nova Música
                 </h1>
                 <p className="text-base sm:text-lg text-gray-700 max-w-2xl mx-auto px-4">
@@ -417,7 +418,7 @@ export default function CreateNewMusicPage() {
                     const isCompleted = currentStep > step.number;
                     
                     return (
-                      <div key={step.number} className="flex items-center flex-shrink-0">
+                      <div key={step.number} className="flex items-center shrink-0">
                         <div className="flex items-center space-x-2">
                           <div
                             className={`flex h-8 w-8 items-center justify-center rounded-full border-2 ${
@@ -502,8 +503,8 @@ export default function CreateNewMusicPage() {
                         <SelectValue placeholder="Selecionar tipo..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="ACORDES">Acordes (com letra e acordes)</SelectItem>
-                        <SelectItem value="PARTITURA">Partitura (apenas PDF)</SelectItem>
+                        <SelectItem value={SongType.ACORDES}>Acordes (com letra e acordes)</SelectItem>
+                        <SelectItem value={SongType.PARTITURA}>Partitura (apenas PDF)</SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
@@ -721,7 +722,8 @@ export default function CreateNewMusicPage() {
                       </div>
 
                       <div className="border border-border rounded-md overflow-hidden">
-                        <SimpleMDE
+                        <MarkdownEditor
+                          id="markdown"
                           value={form.markdown}
                           onChange={(val) => setForm({ ...form, markdown: val })}
                           getMdeInstance={(instance) => (editorRef.current = instance)}
@@ -813,31 +815,34 @@ export default function CreateNewMusicPage() {
         </div>
       )}
 
-      {/* Passo 4: Finalização */}
+  {/* Passo 4: Anexos e Finalização */}
       {currentStep === 4 && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="space-y-8">
             <div>
               <h2 className="text-2xl font-bold tracking-tight">Anexos e Finalização</h2>
               <p className="text-muted-foreground">
-                Adiciona ficheiros opcionais e submete a música
+                {form.type === SongType.ACORDES
+                  ? "Anexos são opcionais em músicas de acordes. Depois completa os links e submete."
+                  : "Adiciona ficheiros opcionais e submete a música"}
               </p>
             </div>
 
             <div className="space-y-6">
-              {/* Ficheiros - Novo Sistema (apenas para ACORDES, PARTITURA usa Step 3) */}
+              {/*
+                Nota: para ACORDES, o editor fica no Passo 3.
+                Os anexos (opcionais) ficam aqui no Passo 4.
+              */}
+
               {form.type === SongType.ACORDES && (
                 <Card className="border border-border/50 shadow-lg bg-card/80 backdrop-blur-sm">
                   <CardHeader className="border-b border-border/50 bg-linear-to-r from-primary/5 to-transparent">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <UploadIcon className="h-5 w-5 text-primary" />
-                      Partituras e Áudios
-                    </CardTitle>
+                    <CardTitle className="text-lg">Anexos (opcional)</CardTitle>
                     <CardDescription>
-                      Adiciona até 20 PDFs e 20 MP3s com descrições personalizadas
+                      Podes adicionar PDFs (partituras) e MP3s (áudio) também em músicas de acordes.
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="pt-6">
+                  <CardContent className="space-y-6 pt-6">
                     <FileManager
                       mode="create"
                       maxPdfs={20}
@@ -903,7 +908,7 @@ export default function CreateNewMusicPage() {
 
               {/* Resumo */}
               <Card className="border border-border/50 shadow-lg bg-card/80 backdrop-blur-sm">
-                <CardHeader className="border-b border-border/50 bg-gradient-to-r from-primary/5 to-transparent">
+                <CardHeader className="border-b border-border/50 bg-linear-to-r from-primary/5 to-transparent">
                   <CardTitle className="text-lg">Resumo da Música</CardTitle>
                   <CardDescription>
                     Revê os dados antes de submeter
@@ -917,7 +922,7 @@ export default function CreateNewMusicPage() {
                           <FileText className="w-4 h-4" />
                           Título:
                         </span>
-                        <span className="text-foreground text-right max-w-[60%] break-words font-medium">
+                        <span className="text-foreground text-right max-w-[60%] wrap-break-word font-medium">
                           {form.title || "❌ Não definido"}
                         </span>
                       </div>
@@ -927,7 +932,7 @@ export default function CreateNewMusicPage() {
                             <User className="w-4 h-4" />
                             Autor:
                           </span>
-                          <span className="text-foreground text-right max-w-[60%] break-words">
+                          <span className="text-foreground text-right max-w-[60%] wrap-break-word">
                             {form.author}
                           </span>
                         </div>
@@ -1036,7 +1041,7 @@ export default function CreateNewMusicPage() {
 
               {/* Captcha */}
               <Card className="border border-border/50 shadow-lg bg-card/80 backdrop-blur-sm">
-                <CardHeader className="border-b border-border/50 bg-gradient-to-r from-primary/5 to-transparent">
+                <CardHeader className="border-b border-border/50 bg-linear-to-r from-primary/5 to-transparent">
                   <CardTitle className="text-lg">Verificação de Segurança</CardTitle>
                   <CardDescription>
                     Complete a verificação antes de submeter

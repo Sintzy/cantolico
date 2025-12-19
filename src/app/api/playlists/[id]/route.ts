@@ -85,6 +85,7 @@ export async function GET(
     let songsData: any[] = [];
     let usersData: any[] = [];
     let starCounts: { [key: string]: number } = {};
+    let userStarredIds = new Set<string>();
 
     if (playlistItems && playlistItems.length > 0) {
       const songIds = playlistItems.map(item => item.songId);
@@ -151,6 +152,17 @@ export async function GET(
           starCounts[star.songId] = (starCounts[star.songId] || 0) + 1;
         });
       }
+
+      // Flag songs already starred by the current user to avoid client-side lookups
+      if (session?.user?.id) {
+        const { data: userStars } = await supabase
+          .from('Star')
+          .select('songId')
+          .eq('userId', session.user.id)
+          .in('songId', songIds);
+
+        (userStars || []).forEach(star => userStarredIds.add(star.songId));
+      }
     }
 
     // Get playlist members if user is owner or member
@@ -187,7 +199,9 @@ export async function GET(
             ...song,
             _count: {
               stars: starCounts[item.songId] || 0
-            }
+            },
+            starCount: starCounts[item.songId] || 0,
+            isStarred: userStarredIds.has(item.songId),
           } : null, // Explicitly handle missing songs
           addedBy: addedBy || null
         };

@@ -213,8 +213,10 @@ export async function POST(
 
     // Copiar ficheiros da submissão para a música aprovada
     try {
-      // Carregar metadados originais da submissão (.metadata.json)
-      let originalMetadata: Record<string, { fileName?: string; fileType?: string; description?: string }> = {};
+  // Carregar metadados originais da submissão (.metadata.json)
+  // Key = storage filename inside the submission folder (e.g. "<uuid>.pdf").
+  // Value stores how it should appear publicly when approved.
+  let originalMetadata: Record<string, { fileName?: string; fileType?: string; description?: string; isPrincipal?: boolean }> = {};
       const { data: metadataFile } = await supabase.storage
         .from('songs')
         .download(`songs/${id}/.metadata.json`);
@@ -298,6 +300,7 @@ export async function POST(
             // Prioridade: frontend > metadados originais > nome do ficheiro
             const description = frontendMetadata?.description || originalFileMetadata?.description || file.name;
             const originalFileName = frontendMetadata?.fileName || originalFileMetadata?.fileName || file.name;
+            const isPrincipal = Boolean(frontendMetadata?.isPrincipal ?? originalFileMetadata?.isPrincipal);
             
             console.log(`📝 Ficheiro ${file.name}: desc="${description}", fileName="${originalFileName}"`);
             
@@ -312,6 +315,7 @@ export async function POST(
                 fileKey: destPath,
                 fileSize: file.metadata?.size || 0,
                 mimeType: fileType === 'PDF' ? 'application/pdf' : 'audio/mpeg',
+                isPrincipal: isPrincipal,
                 uploadedById: session.user.id
               });
 

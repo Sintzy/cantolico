@@ -1,13 +1,18 @@
 import { LoginForm } from "@/components/forms/LoginForm";
 import { AuthWrapper } from "@/components/AuthWrapper";
 import { AuthStatus } from "@/components/AuthStatus";
-import { PAGE_METADATA } from "@/lib/metadata";
 import Link from "next/link";
 import { Music } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Suspense } from "react";
+import { buildMetadata } from "@/lib/seo";
 
-export const metadata = PAGE_METADATA.login();
+export const metadata = buildMetadata({
+  title: "Iniciar Sessão",
+  description: "Entra na tua conta Cantólico para gerir cânticos e playlists.",
+  path: "/login",
+  index: false,
+});
 
 export default function LoginPage() {
   return (
@@ -17,10 +22,10 @@ export default function LoginPage() {
           {/* Background decoration */}
           <div className="pointer-events-none absolute inset-0" aria-hidden="true">
             <div className="absolute left-1/2 top-0 -translate-x-1/2">
-              <div className="h-80 w-80 rounded-full bg-gradient-to-tr from-blue-500/20 to-purple-500/20 blur-[120px]" />
+              <div className="h-80 w-80 rounded-full bg-linear-to-tr from-blue-500/20 to-purple-500/20 blur-[120px]" />
             </div>
             <div className="absolute bottom-0 right-0">
-              <div className="h-60 w-60 rounded-full bg-gradient-to-tl from-purple-500/20 to-pink-500/20 blur-[100px]" />
+              <div className="h-60 w-60 rounded-full bg-linear-to-tl from-purple-500/20 to-pink-500/20 blur-[100px]" />
             </div>
           </div>
           
@@ -28,14 +33,14 @@ export default function LoginPage() {
             <div className="max-w-md w-full space-y-8">
               {/* Header */}
               <div className="text-center">
-                <div className="mb-4 border-y [border-image:linear-gradient(to_right,transparent,theme(colors.slate.300/.8),transparent)1]">
+                <div className="mb-4 border-y [border-image:linear-gradient(to_right,transparent,--theme(--color-slate-300/.8),transparent)1]">
                   <div className="-mx-0.5 flex justify-center py-2">
-                    <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <div className="w-12 h-12 bg-linear-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
                       <Music className="h-6 w-6 text-white" />
                     </div>
                   </div>
                 </div>
-                <h2 className="text-3xl font-bold tracking-tight text-gray-900 border-y [border-image:linear-gradient(to_right,transparent,theme(colors.slate.300/.8),transparent)1] leading-tight">
+                <h2 className="text-3xl font-bold tracking-tight text-gray-900 border-y [border-image:linear-gradient(to_right,transparent,--theme(--color-slate-300/.8),transparent)1] leading-tight">
                   Entrar na conta
                 </h2>
                 <p className="mt-4 text-sm text-gray-700">

@@ -1,9 +1,11 @@
-import { Metadata } from "next";
+import { buildMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Revisão de Submissões",
-  description: "Revisar e aprovar submissões de cânticos católicos no Cantólico!",
-};
+export const metadata = buildMetadata({
+  title: "Admin | Revisão",
+  description: "Revisar e aprovar submissões de cânticos católicos.",
+  path: "/admin/review",
+  index: false,
+});
 
 export default function ReviewLayout({
   children,

@@ -98,7 +98,18 @@ export const POST = withUserProtection<any>(async (req: NextRequest, session: an
 
     const title = formData.get("title")?.toString() ?? "";
     const author = formData.get("author")?.toString() || null;
-    const type = formData.get("type")?.toString() as SongType;
+    // O DB usa enum 'ACORDES' | 'PARTITURA'.
+    // O frontend pode enviar labels ('Acordes'/'Partitura') ou os valores do enum legado ('ACORDES'/'PARTITURA').
+    const rawType = formData.get("type")?.toString() ?? "";
+    const typeMap: Record<string, string> = {
+      // UI labels (constants.ts)
+      [SongType.ACORDES]: "ACORDES",
+      [SongType.PARTITURA]: "PARTITURA",
+      // legacy
+      ACORDES: "ACORDES",
+      PARTITURA: "PARTITURA",
+    };
+    const type = (typeMap[rawType] || rawType.toUpperCase()) as unknown as SongType;
     const instrumentRaw = formData.get("instrument")?.toString() ?? "";
     
     // Convert instrument from Portuguese label to database enum value

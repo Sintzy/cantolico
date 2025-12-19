@@ -4,17 +4,18 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Music, Search, Heart, Users, Smartphone, Globe, Shield } from 'lucide-react';
-import { useSession } from 'next-auth/react';
+interface HomePageClientProps {
+  hasUser: boolean;
+}
 
-export default function HomePageClient() {
-  const { data: session, status } = useSession();
+export default function HomePageClient({ hasUser }: HomePageClientProps) {
   return (
   <>
   <section className="relative">
       {/* Background decoration */}
       <div className="pointer-events-none absolute inset-0" aria-hidden="true">
         <div className="absolute left-1/2 top-0 -translate-x-1/2">
-          <div className="h-80 w-80 rounded-full bg-gradient-to-tr from-blue-500/20 to-purple-500/20 blur-[120px]" />
+          <div className="h-80 w-80 rounded-full bg-linear-to-tr from-blue-500/20 to-purple-500/20 blur-[120px]" />
         </div>
       </div>
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -23,32 +24,32 @@ export default function HomePageClient() {
           {/* Section header */}
           <div className="pb-8 text-center md:pb-16">
             <div
-              className="mb-4 md:mb-6 border-y [border-image:linear-gradient(to_right,transparent,theme(colors.slate.300/.8),transparent)1]"
+              className="mb-4 md:mb-6 border-y [border-image:linear-gradient(to_right,transparent,--theme(--color-slate-300/.8),transparent)1]"
               data-aos="zoom-y-out"
             >
               <div className="-mx-0.5 flex justify-center -space-x-2 md:-space-x-3 py-2 md:py-3">
-                <div className="w-6 h-6 md:w-8 md:h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                <div className="w-6 h-6 md:w-8 md:h-8 bg-linear-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
                   <span className="text-white text-xs md:text-sm font-bold">♱</span>
                 </div>
-                <div className="w-6 h-6 md:w-8 md:h-8 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center">
+                <div className="w-6 h-6 md:w-8 md:h-8 bg-linear-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center">
                   <span className="text-white text-xs md:text-sm font-bold">🎵</span>
                 </div>
-                <div className="w-6 h-6 md:w-8 md:h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                <div className="w-6 h-6 md:w-8 md:h-8 bg-linear-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
                   <span className="text-white text-xs md:text-sm font-bold">📖</span>
                 </div>
-                <div className="w-6 h-6 md:w-8 md:h-8 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full flex items-center justify-center">
+                <div className="w-6 h-6 md:w-8 md:h-8 bg-linear-to-r from-yellow-500 to-orange-500 rounded-full flex items-center justify-center">
                   <span className="text-white text-xs md:text-sm font-bold">✨</span>
                 </div>
-                <div className="w-6 h-6 md:w-8 md:h-8 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-full flex items-center justify-center">
+                <div className="w-6 h-6 md:w-8 md:h-8 bg-linear-to-r from-indigo-500 to-blue-500 rounded-full flex items-center justify-center">
                   <span className="text-white text-xs md:text-sm font-bold">🎼</span>
                 </div>
-                <div className="w-6 h-6 md:w-8 md:h-8 bg-gradient-to-r from-pink-500 to-red-500 rounded-full flex items-center justify-center">
+                <div className="w-6 h-6 md:w-8 md:h-8 bg-linear-to-r from-pink-500 to-red-500 rounded-full flex items-center justify-center">
                   <span className="text-white text-xs md:text-sm font-bold">🙏</span>
                 </div>
               </div>
             </div>
             <h1
-              className="mb-4 md:mb-6 border-y text-3xl md:text-5xl lg:text-6xl font-bold [border-image:linear-gradient(to_right,transparent,theme(colors.slate.300/.8),transparent)1] leading-tight"
+              className="mb-4 md:mb-6 border-y text-3xl md:text-5xl lg:text-6xl font-bold [border-image:linear-gradient(to_right,transparent,--theme(--color-slate-300/.8),transparent)1] leading-tight"
               data-aos="zoom-y-out"
               data-aos-delay={150}
             >
@@ -64,7 +65,7 @@ export default function HomePageClient() {
                 O Cantólico! é uma plataforma digital e gratuita criada para centralizar e organizar 
                 os cânticos católicos de língua portuguesa. Construída pela comunidade, para a comunidade.
               </p>
-              <div className="relative before:absolute before:inset-0 before:border-y before:[border-image:linear-gradient(to_right,transparent,theme(colors.slate.300/.8),transparent)1]">
+              <div className="relative before:absolute before:inset-0 before:border-y before:[border-image:linear-gradient(to_right,transparent,--theme(--color-slate-300/.8),transparent)1]">
                 <div
                   className="mx-auto max-w-xs sm:flex sm:max-w-none sm:justify-center gap-3 md:gap-4 px-4 sm:px-0 relative z-10"
                   data-aos="zoom-y-out"
@@ -73,14 +74,14 @@ export default function HomePageClient() {
                   <Button 
                     asChild 
                     size="lg" 
-                    className="mb-3 sm:mb-0 w-full bg-gradient-to-t from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600 sm:w-auto text-base md:text-lg px-6 md:px-8 py-4 md:py-6 relative z-10 pointer-events-auto"
+                    className="mb-3 sm:mb-0 w-full bg-linear-to-t from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600 sm:w-auto text-base md:text-lg px-6 md:px-8 py-4 md:py-6 relative z-10 pointer-events-auto"
                   >
                     <Link href="/musics" className="relative z-10">
                       Explorar Cânticos →
                     </Link>
                   </Button>
                   {/* Só mostra o botão de criar conta se não estiver logado */}
-                  {(!session || !session.user) && (
+                  {!hasUser && (
                     <Button 
                       asChild 
                       variant="outline" 
@@ -114,7 +115,7 @@ export default function HomePageClient() {
         <div className="grid gap-6 md:gap-8 sm:grid-cols-2 lg:grid-cols-3">
           <Card className="group text-center sm:text-left border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardContent className="p-6">
-              <div className="flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-500 to-blue-400 shadow-lg mb-3 md:mb-4 mx-auto sm:mx-0">
+              <div className="flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-2xl bg-linear-to-tr from-blue-500 to-blue-400 shadow-lg mb-3 md:mb-4 mx-auto sm:mx-0">
                 <Search className="h-5 w-5 md:h-6 md:w-6 text-white" />
               </div>
               <h3 className="mb-2 text-lg md:text-xl font-semibold">Pesquisa Inteligente</h3>
@@ -125,7 +126,7 @@ export default function HomePageClient() {
           </Card>
           <Card className="group text-center sm:text-left border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardContent className="p-6">
-              <div className="flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-green-500 to-green-400 shadow-lg mb-3 md:mb-4 mx-auto sm:mx-0">
+              <div className="flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-2xl bg-linear-to-tr from-green-500 to-green-400 shadow-lg mb-3 md:mb-4 mx-auto sm:mx-0">
                 <Music className="h-5 w-5 md:h-6 md:w-6 text-white" />
               </div>
               <h3 className="mb-2 text-lg md:text-xl font-semibold">Playlists Personalizadas</h3>
@@ -136,7 +137,7 @@ export default function HomePageClient() {
           </Card>
           <Card className="group text-center sm:text-left border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardContent className="p-6">
-              <div className="flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-purple-500 to-purple-400 shadow-lg mb-3 md:mb-4 mx-auto sm:mx-0">
+              <div className="flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-2xl bg-linear-to-tr from-purple-500 to-purple-400 shadow-lg mb-3 md:mb-4 mx-auto sm:mx-0">
                 <Smartphone className="h-5 w-5 md:h-6 md:w-6 text-white" />
               </div>
               <h3 className="mb-2 text-lg md:text-xl font-semibold">Mobile Friendly</h3>
@@ -147,7 +148,7 @@ export default function HomePageClient() {
           </Card>
           <Card className="group text-center sm:text-left border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardContent className="p-6">
-              <div className="flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-orange-500 to-orange-400 shadow-lg mb-3 md:mb-4 mx-auto sm:mx-0">
+              <div className="flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-2xl bg-linear-to-tr from-orange-500 to-orange-400 shadow-lg mb-3 md:mb-4 mx-auto sm:mx-0">
                 <Shield className="h-5 w-5 md:h-6 md:w-6 text-white" />
               </div>
               <h3 className="mb-2 text-lg md:text-xl font-semibold">Conteúdo Verificado</h3>
@@ -158,7 +159,7 @@ export default function HomePageClient() {
           </Card>
           <Card className="group text-center sm:text-left border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardContent className="p-6">
-              <div className="flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-pink-500 to-pink-400 shadow-lg mb-3 md:mb-4 mx-auto sm:mx-0">
+              <div className="flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-2xl bg-linear-to-tr from-pink-500 to-pink-400 shadow-lg mb-3 md:mb-4 mx-auto sm:mx-0">
                 <Globe className="h-5 w-5 md:h-6 md:w-6 text-white" />
               </div>
               <h3 className="mb-2 text-lg md:text-xl font-semibold">Acesso Livre</h3>
@@ -169,7 +170,7 @@ export default function HomePageClient() {
           </Card>
           <Card className="group text-center sm:text-left border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardContent className="p-6">
-              <div className="flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-500 to-indigo-400 shadow-lg mb-3 md:mb-4 mx-auto sm:mx-0">
+              <div className="flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-2xl bg-linear-to-tr from-indigo-500 to-indigo-400 shadow-lg mb-3 md:mb-4 mx-auto sm:mx-0">
                 <Users className="h-5 w-5 md:h-6 md:w-6 text-white" />
               </div>
               <h3 className="mb-2 text-lg md:text-xl font-semibold">Colaboração</h3>
@@ -203,19 +204,19 @@ export default function HomePageClient() {
             </p>
             <div className="space-y-3 md:space-y-4">
               <div className="flex items-center gap-3 justify-center lg:justify-start">
-                <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
+                <div className="w-2 h-2 bg-blue-500 rounded-full shrink-0"></div>
                 <span className="text-sm md:text-base text-gray-800">Cânticos organizados por momentos litúrgicos</span>
               </div>
               <div className="flex items-center gap-3 justify-center lg:justify-start">
-                <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
+                <div className="w-2 h-2 bg-blue-500 rounded-full shrink-0"></div>
                 <span className="text-sm md:text-base text-gray-800">Música cuidada e preparada para a celebração</span>
               </div>
               <div className="flex items-center gap-3 justify-center lg:justify-start">
-                <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
+                <div className="w-2 h-2 bg-blue-500 rounded-full shrink-0"></div>
                 <span className="text-sm md:text-base text-gray-800">Transformando o canto em oração verdadeira</span>
               </div>
             </div>
-            <div className="mt-6 md:mt-8 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-100">
+            <div className="mt-6 md:mt-8 p-4 bg-linear-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-100">
               <p className="text-sm md:text-base text-gray-600 italic text-center">
                 "Quem canta reza duas vezes" - Santo Agostinho
               </p>
@@ -276,7 +277,7 @@ export default function HomePageClient() {
         </div>
         <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-8 md:gap-8 lg:gap-12">
           <div className="text-center space-y-3 md:space-y-4">
-            <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-tr from-blue-500 to-blue-400 rounded-full flex items-center justify-center mx-auto shadow-lg">
+            <div className="w-14 h-14 md:w-16 md:h-16 bg-linear-to-tr from-blue-500 to-blue-400 rounded-full flex items-center justify-center mx-auto shadow-lg">
               <span className="text-xl md:text-2xl font-bold text-white">1</span>
             </div>
             <h3 className="text-lg md:text-xl font-semibold text-gray-900">Submissão</h3>
@@ -285,7 +286,7 @@ export default function HomePageClient() {
             </p>
           </div>
           <div className="text-center space-y-3 md:space-y-4">
-            <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-tr from-green-500 to-green-400 rounded-full flex items-center justify-center mx-auto shadow-lg">
+            <div className="w-14 h-14 md:w-16 md:h-16 bg-linear-to-tr from-green-500 to-green-400 rounded-full flex items-center justify-center mx-auto shadow-lg">
               <span className="text-xl md:text-2xl font-bold text-white">2</span>
             </div>
             <h3 className="text-lg md:text-xl font-semibold text-gray-900">Revisão</h3>
@@ -294,7 +295,7 @@ export default function HomePageClient() {
             </p>
           </div>
           <div className="text-center space-y-3 md:space-y-4 sm:col-span-2 md:col-span-1">
-            <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-tr from-purple-500 to-purple-400 rounded-full flex items-center justify-center mx-auto shadow-lg">
+            <div className="w-14 h-14 md:w-16 md:h-16 bg-linear-to-tr from-purple-500 to-purple-400 rounded-full flex items-center justify-center mx-auto shadow-lg">
               <span className="text-xl md:text-2xl font-bold text-white">3</span>
             </div>
             <h3 className="text-lg md:text-xl font-semibold text-gray-900">Publicação</h3>
@@ -314,7 +315,7 @@ export default function HomePageClient() {
           <div className="relative mx-auto max-w-3xl text-center">
             <div className="pointer-events-none absolute inset-0 -z-10" aria-hidden="true">
               <div className="absolute left-1/2 top-0 -translate-x-1/2">
-                <div className="h-60 w-60 md:h-80 md:w-80 rounded-full bg-gradient-to-tr from-blue-500/20 to-purple-500/20 blur-[120px]" />
+                <div className="h-60 w-60 md:h-80 md:w-80 rounded-full bg-linear-to-tr from-blue-500/20 to-purple-500/20 blur-[120px]" />
               </div>
             </div>
             <h2 className="mb-4 md:mb-6 text-2xl md:text-3xl lg:text-4xl font-bold">
@@ -328,14 +329,14 @@ export default function HomePageClient() {
               <Button
                 asChild
                 size="lg"
-                className="mb-3 sm:mb-0 w-full bg-gradient-to-t from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600 sm:w-auto text-base md:text-lg px-6 md:px-8 py-4 md:py-6 relative z-10 pointer-events-auto"
+                className="mb-3 sm:mb-0 w-full bg-linear-to-t from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600 sm:w-auto text-base md:text-lg px-6 md:px-8 py-4 md:py-6 relative z-10 pointer-events-auto"
               >
                 <Link href="/musics" className="relative z-10">
                   Explorar Cânticos →
                 </Link>
               </Button>
               {/* Só mostra o botão de criar conta se não estiver logado */}
-              {(!session || !session.user) && (
+              {!hasUser && (
                 <Button
                   asChild
                   variant="outline"

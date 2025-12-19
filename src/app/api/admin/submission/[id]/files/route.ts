@@ -82,8 +82,10 @@ export async function GET(
       return NextResponse.json({ files: [] }, { status: 200 });
     }
 
-    // Tentar carregar metadados (ficheiro .metadata.json)
-    let fileMetadata: Record<string, { description: string }> = {};
+  // Tentar carregar metadados (ficheiro .metadata.json)
+  // Key: storage filename in the submission folder
+  // Value: { fileName, description, isPrincipal, ... }
+  let fileMetadata: Record<string, { description?: string; fileName?: string; isPrincipal?: boolean }> = {};
     const { data: metadataFile } = await supabase.storage
       .from('songs')
       .download(`songs/${submissionId}/.metadata.json`);
@@ -117,18 +119,23 @@ export async function GET(
             fileType = 'AUDIO';
           }
 
-          // Obter descrição do metadado
-          const description = fileMetadata[file.name]?.description || '';
+          // Obter metadata do ficheiro (para edição na UI)
+          const meta = fileMetadata[file.name] || {};
+          const description = meta.description || '';
+          const displayFileName = meta.fileName || file.name;
+          const isPrincipal = Boolean(meta.isPrincipal);
 
           return {
             id: file.id,
-            fileName: file.name,
+            fileName: displayFileName,
             fileType,
             fileSize: file.metadata?.size || 0,
             signedUrl: signedUrlData?.signedUrl || null,
             uploadedAt: file.created_at,
             storageKey: filePath,
-            description: description
+            description: description,
+            isPrincipal: isPrincipal,
+            storageFileName: file.name
           };
         })
     );

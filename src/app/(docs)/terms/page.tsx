@@ -1,7 +1,12 @@
-import { PAGE_METADATA } from "@/lib/metadata";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { buildMetadata } from "@/lib/seo";
 
-export const metadata = PAGE_METADATA.terms();
+export const metadata = buildMetadata({
+  title: "Termos de Utilização",
+  description: "Termos e condições de uso do Cantólico.",
+  path: "/terms",
+  type: "article",
+});
 
 export default function TermsPage() {
   return (

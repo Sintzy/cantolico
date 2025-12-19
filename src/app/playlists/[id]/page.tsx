@@ -175,7 +175,7 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
       <div className="relative h-64 md:h-80 w-full flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0">
           <img src="/banner.jpg" alt="Banner" className="w-full h-full object-cover object-center scale-110 blur-sm brightness-75" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/60 to-transparent" />
+          <div className="absolute inset-0 bg-linear-to-b from-black/60 to-transparent" />
         </div>
         
         {/* Back Button */}
@@ -279,7 +279,7 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
                 key={item.id}
                 className="group flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg hover:bg-gray-50/80 transition-all duration-200 border border-transparent hover:border-gray-200"
               >
-                <div className="flex-shrink-0 w-6 sm:w-8 text-center">
+                <div className="shrink-0 w-6 sm:w-8 text-center">
                   <span className="text-xs sm:text-sm text-gray-500 group-hover:hidden font-medium">
                     {index + 1}
                   </span>
@@ -321,7 +321,11 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
                 <div className="flex items-center gap-2">
                   {item.song && (
                     <>
-                      <StarButton songId={item.song.id} />
+                      <StarButton 
+                        songId={item.song.id} 
+                        initialStarCount={item.song.starCount ?? item.song._count?.stars ?? 0}
+                        initialIsStarred={item.song.isStarred}
+                      />
                       <Button
                         variant="ghost"
                         size="sm"

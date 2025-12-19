@@ -1,13 +1,20 @@
-import { generateStructuredData } from '@/lib/structured-data';
-import { PAGE_METADATA } from '@/lib/metadata';
 import BannerDisplay from '@/components/BannerDisplay';
 import HomePageClient from './HomePageClient';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { buildMetadata, buildOrganizationJsonLd, buildWebsiteJsonLd } from '@/lib/seo';
 
-export const metadata = PAGE_METADATA.home();
+export const metadata = buildMetadata({
+  title: 'Cantólico | Biblioteca de Cânticos Católicos',
+  description: 'Plataforma gratuita para descobrir, organizar e partilhar cânticos católicos em português.',
+  path: '/',
+  type: 'website',
+});
 
-export default function HomePage() {
-  const websiteStructuredData = generateStructuredData({ type: 'website' });
-  const organizationStructuredData = generateStructuredData({ type: 'organization' });
+export default async function HomePage() {
+  const session = await getServerSession(authOptions);
+  const websiteStructuredData = buildWebsiteJsonLd();
+  const organizationStructuredData = buildOrganizationJsonLd();
 
   return (
     <>
@@ -21,7 +28,7 @@ export default function HomePage() {
       />
       <BannerDisplay page="HOME" />
       <main className="min-h-screen">
-        <HomePageClient />
+        <HomePageClient hasUser={!!session?.user} />
       </main>
     </>
   );

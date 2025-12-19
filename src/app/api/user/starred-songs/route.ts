@@ -97,6 +97,17 @@ export const GET = withAuthApiProtection(async (request: NextRequest) => {
       );
     }
 
+    // Contar stars agregados por música para evitar N+1
+    const { data: starAggregates } = await supabase
+      .from('Star')
+      .select('songId')
+      .in('songId', songIds);
+
+    const starCounts = (starAggregates || []).reduce((acc: Record<string, number>, row) => {
+      acc[row.songId] = (acc[row.songId] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
     // Buscar detalhes dos usuários (criadores das músicas) - Simplificado
     // Como não temos acesso direto ao userId na tabela Song, vamos usar um fallback
     const usersData: any[] = [];
@@ -139,6 +150,8 @@ export const GET = withAuthApiProtection(async (request: NextRequest) => {
         created_at: song.createdAt,
         updated_at: song.updatedAt,
         starred_at: star.createdAt,
+        starCount: starCounts[song.id] || 0,
+        isStarred: true,
         User: { id: '0', name: 'Cantólico' } // Dados padrão
       };
     }).filter(Boolean);

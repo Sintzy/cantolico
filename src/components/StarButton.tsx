@@ -14,13 +14,18 @@ interface StarButtonProps {
   className?: string;
   showCount?: boolean;
   size?: 'sm' | 'md' | 'lg';
+  // OTIMIZAÇÃO: Props opcionais para dados pré-carregados (evita request)
+  initialStarCount?: number;
+  initialIsStarred?: boolean;
 }
 
 export default function StarButton({ 
   songId, 
   className, 
   showCount = true,
-  size = 'md'
+  size = 'md',
+  initialStarCount,
+  initialIsStarred
 }: StarButtonProps) {
   const { data: session } = useSession();
   const [isLoading, setIsLoading] = useState(false);
@@ -36,15 +41,22 @@ export default function StarButton({
     lg: 'h-6 w-6'
   };
 
-  // Carregar status inicial
+  // OTIMIZAÇÃO: Carregar status inicial - usar dados pré-carregados se disponíveis
   useEffect(() => {
     const fetchStarStatus = async () => {
+      // Se já tem dados iniciais, usar eles (dados vêm da API de listagem)
+      if (initialStarCount !== undefined && initialIsStarred !== undefined) {
+        updateStarCache(initialStarCount, initialIsStarred);
+        return;
+      }
+
       // Verificar cache primeiro
       const cached = getStarCache();
       if (cached) {
         return; // Já tem dados do cache
       }
       
+      // Só fazer request se realmente necessário (fallback)
       try {
         const response = await fetch(`/api/songs/${songId}/star`);
         if (response.ok) {
@@ -57,7 +69,7 @@ export default function StarButton({
     };
 
     fetchStarStatus();
-  }, [songId, getStarCache, updateStarCache]);
+  }, [songId, getStarCache, updateStarCache, initialStarCount, initialIsStarred]);
 
   const handleStar = async () => {
     if (!session) {

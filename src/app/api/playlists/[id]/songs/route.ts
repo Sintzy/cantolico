@@ -184,8 +184,19 @@ export async function POST(
     // Buscar contagem de stars para a música
     const { count: starCount } = await supabase
       .from('Star')
-      .select('*', { count: 'exact', head: true })
+      .select('songId', { count: 'exact', head: true })
       .eq('songId', actualSongId);
+
+    let isStarred = false;
+    if (session?.user?.id) {
+      const { data: userStar } = await supabase
+        .from('Star')
+        .select('songId')
+        .eq('songId', actualSongId)
+        .eq('userId', session.user.id)
+        .maybeSingle();
+      isStarred = !!userStar;
+    }
 
     // Reformatar dados para manter compatibilidade
     const formattedItem = {
@@ -195,7 +206,9 @@ export async function POST(
         currentVersion: versionDetails || null,
         _count: {
           stars: starCount || 0
-        }
+        },
+        starCount: starCount || 0,
+        isStarred,
       },
       addedBy: userDetails || null
     };

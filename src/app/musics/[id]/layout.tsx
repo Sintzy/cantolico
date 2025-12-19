@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import { supabase } from "@/lib/supabase-client";
 import { findSongBySlug } from "@/lib/slugs";
-import { generateMusicSEO } from "@/lib/seo";
+import { buildMetadata } from "@/lib/seo";
 
 interface MusicLayoutProps {
   children: React.ReactNode;
@@ -50,28 +50,31 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     }
 
     if (!song) {
-      return {
+      return buildMetadata({
         title: "Música não encontrada",
         description: "Esta música não existe no nosso cancioneiro.",
-      };
+        path: `/musics/${id}`,
+        index: false,
+      });
     }
 
-    const autor = (song as any)?.currentVersion?.createdBy?.name;
-    const lyrics = (song as any)?.currentVersion?.sourceText;
-    
-    // Usar o sistema SEO otimizado
-    return generateMusicSEO({
-      title: (song as any)?.title,
-      author: autor,
-      moments: (song as any)?.moments,
-      slug: (song as any)?.slug || (song as any)?.id,
-      lyrics: lyrics
+    const title = (song as any)?.title || "Cântico";
+    const slug = (song as any)?.slug || (song as any)?.id || id;
+    const moments = Array.isArray((song as any)?.moments) ? (song as any)?.moments : [];
+
+    return buildMetadata({
+      title: `${title} | Letra e Acordes`,
+      description: `${title} com letra e acordes para celebrações litúrgicas.`,
+      path: `/musics/${slug}`,
+      type: "article",
     });
   } catch (error) {
-    return {
+    return buildMetadata({
       title: "Erro ao carregar música",
       description: "Ocorreu um erro ao carregar esta música.",
-    };
+      path: `/musics/${await params.then(p => p.id)}`,
+      index: false,
+    });
   }
 }
 

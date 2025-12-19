@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase-client";
 import { adminSupabase } from '@/lib/supabase-admin';
-import { generatePlaylistSEO } from "@/lib/seo";
+import { buildMetadata } from "@/lib/seo";
 
 interface PlaylistLayoutProps {
   children: React.ReactNode;
@@ -61,30 +61,34 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
         playlist = adminPlaylist as any;
       } catch (err) {
         console.warn('generateMetadata: admin fetch failed', err);
-        return {
+        return buildMetadata({
           title: "Playlist",
           description: "Informações da playlist indisponíveis no momento.",
-        };
+          path: `/playlists/${id}`,
+          index: false,
+        });
       }
     }
 
     const songCount = (playlist as any).PlaylistSong?.length || 0;
 
-    return generatePlaylistSEO({
-      name: playlist.name,
-      description: playlist.description,
-      id: id,
-      songCount: songCount
+    return buildMetadata({
+      title: `${playlist.name} | Playlist`,
+      description: playlist.description || `Playlist ${playlist.name} com ${songCount || "várias"} músicas selecionadas.`,
+      path: `/playlists/${id}`,
+      type: "article",
     });
   } catch (error) {
     // If an error occurs while fetching metadata (permissions, RLS, network),
     // avoid returning a not-found, but surface a neutral metadata object so the
     // client can decide how to render. Log the error for diagnostics.
     console.warn('generateMetadata: error fetching playlist metadata', error);
-    return {
+    return buildMetadata({
       title: "Playlist",
       description: "Informações da playlist indisponíveis no momento.",
-    };
+      path: `/playlists/${await params.then(p => p.id)}`,
+      index: false,
+    });
   }
 }
 

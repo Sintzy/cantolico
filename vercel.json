@@ -5,12 +5,24 @@
   },
   "redirects": [
     {
-      "source": "https://www.cantolico.pt/:path*",
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.cantolico.pt"
+        }
+      ],
       "destination": "https://cantolico.pt/:path*",
       "permanent": true
     },
     {
-      "source": "http://www.cantolico.pt/:path*",
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.cantolico.pt"
+        }
+      ],
       "destination": "https://cantolico.pt/:path*",
       "permanent": true
     }
