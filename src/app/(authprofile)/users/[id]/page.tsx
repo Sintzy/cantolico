@@ -3,8 +3,8 @@ import { authOptions } from "@/lib/auth";
 import { supabase } from "@/lib/supabase-client";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
-import { PAGE_METADATA } from "@/lib/metadata";
 import ProfileView from "./ProfileView";
+import { buildMetadata } from "@/lib/seo";
 
 // Inline the ProfileViewProps type definition
 interface ProfileViewProps {
@@ -46,10 +46,12 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const userId = Number(id);
   
   if (isNaN(userId)) {
-    return {
+    return buildMetadata({
       title: "Utilizador não encontrado",
       description: "Este perfil de utilizador não existe.",
-    };
+      path: `/users/${id}`,
+      index: false,
+    });
   }
 
   const { data: user } = await supabase
@@ -59,10 +61,21 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     .single();
 
   if (!user) {
-    return PAGE_METADATA.userProfile();
+    return buildMetadata({
+      title: "Utilizador não encontrado",
+      description: "Este perfil de utilizador não existe.",
+      path: `/users/${id}`,
+      index: false,
+    });
   }
 
-  return PAGE_METADATA.userProfile(user.name || undefined, user.bio || undefined);
+  return buildMetadata({
+    title: user.name ? `${user.name} | Perfil` : "Perfil de utilizador",
+    description: user.bio || "Perfil de membro do Cantólico.",
+    path: `/users/${id}`,
+    type: "profile",
+    index: false,
+  });
 }
 
 export type ProfilePageProps = {

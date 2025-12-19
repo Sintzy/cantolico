@@ -14,9 +14,7 @@ import {
   Pause,
   Loader2,
   AlertCircle,
-  Edit2,
   Check,
-  X,
   Trash2
 } from 'lucide-react';
 import { formatFileSize } from '@/types/song-files';
@@ -31,6 +29,12 @@ interface SubmissionFile {
   uploadedAt: string;
   storageKey: string;
   description?: string;
+  isPrincipal?: boolean;
+  storageFileName?: string;
+  _lastSaved?: {
+    fileName: string;
+    description: string;
+  };
 }
 
 interface SubmissionFileViewerProps {
@@ -44,10 +48,9 @@ export function SubmissionFileViewer({ submissionId, onDescriptionChange, onFile
   const [loading, setLoading] = useState(true);
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
   const [viewingPdf, setViewingPdf] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editDescription, setEditDescription] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [savingById, setSavingById] = useState<Record<string, boolean>>({});
   const audioRefs = useRef<Map<string, HTMLAudioElement>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -58,7 +61,15 @@ export function SubmissionFileViewer({ submissionId, onDescriptionChange, onFile
         if (response.ok) {
           const data = await response.json();
           const loadedFiles = data.files || [];
-          setFiles(loadedFiles);
+          setFiles(
+            loadedFiles.map((f: SubmissionFile) => ({
+              ...f,
+              _lastSaved: {
+                fileName: (f.fileName || '').trim(),
+                description: (f.description || '').trim(),
+              },
+            }))
+          );
           
           // Notificar o componente pai sobre as descrições iniciais
           if (onDescriptionChange) {
@@ -88,39 +99,78 @@ export function SubmissionFileViewer({ submissionId, onDescriptionChange, onFile
   const pdfs = files.filter(f => f.fileType === 'PDF');
   const audios = files.filter(f => f.fileType === 'AUDIO');
 
-  const handleEditDescription = (fileId: string, currentDescription: string = '') => {
-    setEditingId(fileId);
-    setEditDescription(currentDescription);
+  const persistMetadata = async (file: SubmissionFile, patch: { fileName?: string; description?: string; isPrincipal?: boolean }) => {
+    const storageFileName = file.storageFileName || (file.storageKey.split('/').pop() || file.fileName);
+    const res = await fetch(`/api/admin/submission/${submissionId}/files/metadata`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        filename: storageFileName,
+        ...patch,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.error || 'Erro ao guardar metadados');
+    }
   };
 
-  const handleSaveDescription = (fileId: string) => {
-    // Encontrar o ficheiro para obter o storageKey
+  const setSaving = (fileId: string, saving: boolean) => {
+    setSavingById(prev => ({ ...prev, [fileId]: saving }));
+  };
+
+  const handleChangeFile = (fileId: string, patch: Partial<Pick<SubmissionFile, 'fileName' | 'description'>>) => {
+    setFiles(prev => prev.map(f => (f.id === fileId ? { ...f, ...patch } : f)));
+  };
+
+  const handleSaveOnBlur = async (fileId: string) => {
     const file = files.find(f => f.id === fileId);
     if (!file) return;
-    
-    // Extrair o nome do ficheiro do storageKey (última parte do path)
-    const storageFileName = file.storageKey.split('/').pop() || file.fileName;
-    
-    // Atualizar no estado local
-    setFiles(prevFiles => 
-      prevFiles.map(f => 
-        f.id === fileId ? { ...f, description: editDescription } : f
-      )
-    );
 
-    // Notificar componente pai se callback fornecido
-    if (onDescriptionChange) {
-      onDescriptionChange(storageFileName, editDescription, file.fileName);
+    const patch = {
+      fileName: (file.fileName || '').trim(),
+      description: (file.description || '').trim(),
+    };
+
+    const last = file._lastSaved;
+    if (last && last.fileName === patch.fileName && last.description === patch.description) {
+      return;
     }
 
-    setEditingId(null);
-    setEditDescription('');
-    toast.success('Descrição atualizada');
+    setSaving(fileId, true);
+    try {
+      await persistMetadata(file, patch);
+
+      setFiles(prev =>
+        prev.map(f =>
+          f.id === fileId
+            ? { ...f, fileName: patch.fileName, description: patch.description, _lastSaved: { ...patch } }
+            : f
+        )
+      );
+
+      const storageFileName = file.storageFileName || (file.storageKey.split('/').pop() || file.fileName);
+      if (onDescriptionChange) {
+        onDescriptionChange(storageFileName, patch.description, patch.fileName || file.fileName);
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error(e instanceof Error ? e.message : 'Erro ao guardar');
+    } finally {
+      setSaving(fileId, false);
+    }
   };
 
-  const handleCancelEdit = () => {
-    setEditingId(null);
-    setEditDescription('');
+  const handleSetPrincipal = async (file: SubmissionFile) => {
+    try {
+      await persistMetadata(file, { isPrincipal: true });
+      setFiles(prev => prev.map(f => ({ ...f, isPrincipal: f.id === file.id })));
+      toast.success('Ficheiro principal atualizado');
+    } catch (e) {
+      console.error(e);
+      toast.error(e instanceof Error ? e.message : 'Erro ao atualizar principal');
+    }
   };
 
   const handlePlayPause = (fileId: string, url: string) => {
@@ -216,7 +266,16 @@ export function SubmissionFileViewer({ submissionId, onDescriptionChange, onFile
       }
 
       const data = await response.json();
-      setFiles(prevFiles => [...prevFiles, ...(data.files || [])]);
+      setFiles(prevFiles => [
+        ...prevFiles,
+        ...((data.files || []) as SubmissionFile[]).map((f) => ({
+          ...f,
+          _lastSaved: {
+            fileName: (f.fileName || '').trim(),
+            description: (f.description || '').trim(),
+          },
+        })),
+      ]);
       toast.success('Ficheiros enviados com sucesso');
 
       // Reset file input
@@ -316,70 +375,55 @@ export function SubmissionFileViewer({ submissionId, onDescriptionChange, onFile
                           {formatFileSize(file.fileSize)}
                         </p>
 
-                        {/* Descrição editável */}
-                        {editingId === file.id ? (
-                          <div className="mt-3 space-y-2">
-                            <Label className="text-xs">Descrição</Label>
-                            <div className="flex gap-2">
-                              <Input
-                                value={editDescription}
-                                onChange={(e) => setEditDescription(e.target.value)}
-                                placeholder="Adicionar descrição..."
-                                className="text-sm h-8"
-                                autoFocus
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    handleSaveDescription(file.id);
-                                  } else if (e.key === 'Escape') {
-                                    handleCancelEdit();
-                                  }
-                                }}
-                              />
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 w-8 p-0"
-                                onClick={() => handleSaveDescription(file.id)}
-                              >
-                                <Check className="w-4 h-4 text-green-600" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 w-8 p-0"
-                                onClick={handleCancelEdit}
-                              >
-                                <X className="w-4 h-4 text-red-600" />
-                              </Button>
+                        {/* Nome + descrição (autosave) */}
+                        <div className="mt-3 space-y-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Nome</Label>
+                            <Input
+                              value={file.fileName}
+                              onChange={(e) => handleChangeFile(file.id, { fileName: e.target.value })}
+                              onBlur={() => handleSaveOnBlur(file.id)}
+                              placeholder="Nome para mostrar..."
+                              className="text-sm h-8"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <Label className="text-xs">Descrição</Label>
+                              {savingById[file.id] && (
+                                <span className="text-[11px] text-muted-foreground">a guardar…</span>
+                              )}
                             </div>
+                            <Input
+                              value={file.description ?? ''}
+                              onChange={(e) => handleChangeFile(file.id, { description: e.target.value })}
+                              onBlur={() => handleSaveOnBlur(file.id)}
+                              placeholder="Adicionar descrição..."
+                              className="text-sm h-8"
+                            />
                           </div>
-                        ) : (
-                          <div className="mt-2">
-                            {file.description ? (
-                              <p className="text-sm text-gray-700 italic">
-                                "{file.description}"
-                              </p>
-                            ) : (
-                              <p className="text-xs text-gray-400">
-                                Sem descrição
-                              </p>
-                            )}
-                          </div>
-                        )}
+                        </div>
                       </div>
 
                       {/* Ações */}
                       <div className="flex flex-col gap-2 shrink-0">
-                        {editingId !== file.id && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleEditDescription(file.id, file.description)}
-                            title="Editar descrição"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </Button>
-                        )}
+                        <Button
+                          size="sm"
+                          variant={file.isPrincipal ? 'default' : 'outline'}
+                          onClick={() => handleSetPrincipal(file)}
+                          disabled={file.isPrincipal}
+                          title={file.isPrincipal ? 'Ficheiro principal' : 'Definir como principal'}
+                        >
+                          {file.isPrincipal ? (
+                            <>
+                              <Check className="w-4 h-4 mr-1" />
+                              Principal
+                            </>
+                          ) : (
+                            'Tornar principal'
+                          )}
+                        </Button>
                         <Button
                           size="sm"
                           variant="outline"
@@ -464,59 +508,38 @@ export function SubmissionFileViewer({ submissionId, onDescriptionChange, onFile
                         {formatFileSize(file.fileSize)}
                       </p>
 
-                      {/* Descrição editável */}
-                      {editingId === file.id ? (
-                        <div className="mt-3 space-y-2">
-                          <Label className="text-xs">Descrição</Label>
-                          <div className="flex gap-2">
-                            <Input
-                              value={editDescription}
-                              onChange={(e) => setEditDescription(e.target.value)}
-                              placeholder="Adicionar descrição..."
-                              className="text-sm h-8"
-                              autoFocus
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  handleSaveDescription(file.id);
-                                } else if (e.key === 'Escape') {
-                                  handleCancelEdit();
-                                }
-                              }}
-                            />
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 w-8 p-0"
-                              onClick={() => handleSaveDescription(file.id)}
-                            >
-                              <Check className="w-4 h-4 text-green-600" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 w-8 p-0"
-                              onClick={handleCancelEdit}
-                            >
-                              <X className="w-4 h-4 text-red-600" />
-                            </Button>
+                      {/* Nome + descrição (autosave) */}
+                      <div className="mt-3 space-y-2">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Nome</Label>
+                          <Input
+                            value={file.fileName}
+                            onChange={(e) => handleChangeFile(file.id, { fileName: e.target.value })}
+                            onBlur={() => handleSaveOnBlur(file.id)}
+                            placeholder="Nome para mostrar..."
+                            className="text-sm h-8"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <Label className="text-xs">Descrição</Label>
+                            {savingById[file.id] && (
+                              <span className="text-[11px] text-muted-foreground">a guardar…</span>
+                            )}
                           </div>
+                          <Input
+                            value={file.description ?? ''}
+                            onChange={(e) => handleChangeFile(file.id, { description: e.target.value })}
+                            onBlur={() => handleSaveOnBlur(file.id)}
+                            placeholder="Adicionar descrição..."
+                            className="text-sm h-8"
+                          />
                         </div>
-                      ) : (
-                        <div className="mt-2">
-                          {file.description ? (
-                            <p className="text-sm text-gray-700 italic">
-                              "{file.description}"
-                            </p>
-                          ) : (
-                            <p className="text-xs text-gray-400">
-                              Sem descrição
-                            </p>
-                          )}
-                        </div>
-                      )}
+                      </div>
 
                       {/* Player de áudio nativo */}
-                      {file.signedUrl && editingId !== file.id && (
+                      {file.signedUrl && (
                         <div className="mt-3">
                           <audio controls className="w-full" style={{ maxHeight: '40px' }}>
                             <source src={file.signedUrl} type="audio/mpeg" />
@@ -528,16 +551,22 @@ export function SubmissionFileViewer({ submissionId, onDescriptionChange, onFile
 
                     {/* Ações */}
                     <div className="flex flex-col gap-2 shrink-0">
-                      {editingId !== file.id && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleEditDescription(file.id, file.description)}
-                          title="Editar descrição"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                      )}
+                      <Button
+                        size="sm"
+                        variant={file.isPrincipal ? 'default' : 'outline'}
+                        onClick={() => handleSetPrincipal(file)}
+                        disabled={file.isPrincipal}
+                        title={file.isPrincipal ? 'Ficheiro principal' : 'Definir como principal'}
+                      >
+                        {file.isPrincipal ? (
+                          <>
+                            <Check className="w-4 h-4 mr-1" />
+                            Principal
+                          </>
+                        ) : (
+                          'Tornar principal'
+                        )}
+                      </Button>
                       {file.signedUrl && (
                         <Button
                           size="sm"

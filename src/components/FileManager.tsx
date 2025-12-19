@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { 
@@ -17,13 +17,14 @@ import {
   X, 
   FileText, 
   Music, 
-  Check, 
-  AlertCircle, 
   Trash2, 
-  Edit2,
   Download,
   Play,
-  Pause
+  Pause,
+  Star,
+  File,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -51,13 +52,18 @@ export function FileManager({
   onlyPdf = false
 }: FileManagerProps) {
   const [files, setFiles] = useState<FileUploadData[]>([]);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editDescription, setEditDescription] = useState('');
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(mode === 'edit');
+  const [savingById, setSavingById] = useState<Record<string, boolean>>({});
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragType, setDragType] = useState<FileType | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const audioRefs = useRef<Map<string, HTMLAudioElement>>(new Map());
+
+  const setSaving = (fileId: string, saving: boolean) => {
+    setSavingById(prev => ({ ...prev, [fileId]: saving }));
+  };
 
   // Buscar ficheiros existentes em modo edit
   useEffect(() => {
@@ -309,59 +315,6 @@ export function FileManager({
     }
   };
 
-  const handleUpdateDescription = async (fileId: string, newDesc: string) => {
-    const trimmed = newDesc.trim();
-    if (!trimmed) {
-      toast.error('Descrição não pode estar vazia');
-      return;
-    }
-
-    if (mode === 'create') {
-      // Modo create: atualiza localmente
-      const updatedFiles = files.map(f =>
-        (f.id || f.fileName) === fileId ? { ...f, description: trimmed } : f
-      );
-      setFiles(updatedFiles);
-      onChange?.(updatedFiles);
-      setEditingId(null);
-      toast.success('Descrição atualizada');
-    } else if (mode === 'edit') {
-      if (onUpdateDescription) {
-        // Usa callback custom
-        try {
-          await onUpdateDescription(fileId, trimmed);
-          const updatedFiles = files.map(f =>
-            f.id === fileId ? { ...f, description: trimmed } : f
-          );
-          setFiles(updatedFiles);
-          setEditingId(null);
-          toast.success('Descrição atualizada');
-        } catch (error) {
-          toast.error('Erro ao atualizar descrição');
-        }
-      } else if (songId) {
-        // Update default usando PATCH (precisa criar endpoint)
-        try {
-          const response = await fetch(`/api/admin/songs/${songId}/files/${fileId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ description: trimmed })
-          });
-
-          if (!response.ok) throw new Error('Update failed');
-          
-          const updatedFiles = files.map(f =>
-            f.id === fileId ? { ...f, description: trimmed } : f
-          );
-          setFiles(updatedFiles);
-          setEditingId(null);
-          toast.success('Descrição atualizada');
-        } catch (error) {
-          toast.error('Erro ao atualizar descrição');
-        }
-      }
-    }
-  };
 
   const handleDelete = async (fileId: string) => {
     if (mode === 'create') {
@@ -398,11 +351,6 @@ export function FileManager({
     }
   };
 
-  const startEditing = (file: FileUploadData) => {
-    setEditingId(file.id || file.fileName || '');
-    setEditDescription(file.description);
-  };
-
   const toggleAudioPlay = (fileId: string, url?: string) => {
     if (!url) return;
 
@@ -427,128 +375,237 @@ export function FileManager({
     }
   };
 
+  // Drag and Drop handlers
+  const handleDragOver = (e: React.DragEvent, type: FileType) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+    setDragType(type);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    setDragType(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, type: FileType) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    setDragType(null);
+
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    if (droppedFiles.length === 0) return;
+
+    // Simular evento de input para reutilizar a lógica de validação
+    const dataTransfer = new DataTransfer();
+    droppedFiles.forEach(file => dataTransfer.items.add(file));
+    
+    const fakeEvent = {
+      target: { files: dataTransfer.files }
+    } as React.ChangeEvent<HTMLInputElement>;
+
+    await handleFileSelect(fakeEvent, type);
+  };
+
   const renderFileCard = (file: FileUploadData, index: number) => {
     const fileId = file.id || file.fileName || `file-${index}`;
-    const isEditing = editingId === fileId;
     const isPdf = file.fileType === FileType.PDF;
     const Icon = isPdf ? FileText : Music;
+    const isUploading = file.isUploading;
+    const hasError = false; // TODO: adicionar estado de erro se necessário
+
+    const handleChangeDescriptionLocal = (newDescription: string) => {
+      const updatedFiles = files.map((f, idx) => {
+        const id = f.id || f.fileName || `file-${idx}`;
+        return id === fileId ? { ...f, description: newDescription } : f;
+      });
+      setFiles(updatedFiles);
+      onChange?.(updatedFiles);
+    };
+
+    const persistDescription = async (newDescription: string) => {
+      // create: só atualiza estado local
+      if (mode === 'create') return;
+
+      // edit: persistir no servidor
+      if (songId && file.id) {
+        setSaving(fileId, true);
+        try {
+          if (onUpdateDescription) {
+            await onUpdateDescription(file.id, newDescription);
+          } else {
+            const response = await fetch(`/api/admin/songs/${songId}/files`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ fileId: file.id, description: newDescription }),
+            });
+            if (!response.ok) throw new Error('Erro ao atualizar descrição');
+          }
+        } catch (e) {
+          console.error(e);
+          toast.error(e instanceof Error ? e.message : 'Erro ao guardar descrição');
+        } finally {
+          setSaving(fileId, false);
+        }
+      }
+    };
 
     return (
-      <Card key={fileId} className="overflow-hidden hover:shadow-md transition-shadow">
-        <CardContent className="p-4">
-          <div className="flex items-start gap-3">
-            {/* Ícone */}
-            <div className={`p-3 rounded-lg ${isPdf ? 'bg-red-50' : 'bg-blue-50'}`}>
-              <Icon className={`w-6 h-6 ${isPdf ? 'text-red-600' : 'text-blue-600'}`} />
+      <Card 
+        key={fileId} 
+        className={`group relative overflow-hidden border-2 transition-all duration-200 ${
+          isUploading ? 'border-primary bg-primary/5' : 
+          hasError ? 'border-destructive bg-destructive/5' :
+          'border-border hover:border-primary/50 hover:shadow-lg'
+        }`}
+      >
+        {/* Upload Progress Overlay */}
+        {isUploading && file.uploadProgress !== undefined && (
+          <div className="absolute inset-0 bg-primary/5 z-10 pointer-events-none">
+            <div 
+              className="h-full bg-linear-to-r from-primary/20 to-primary/10 transition-all duration-300"
+              style={{ width: `${file.uploadProgress}%` }}
+            />
+          </div>
+        )}
+
+        <CardContent className="p-4 sm:p-5 relative z-20">
+          <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
+            {/* Icon with visual feedback */}
+            <div className={`relative p-3 rounded-xl transition-all duration-200 ${
+              isPdf 
+                ? 'bg-linear-to-br from-red-50 to-red-100 group-hover:from-red-100 group-hover:to-red-200' 
+                : 'bg-linear-to-br from-blue-50 to-blue-100 group-hover:from-blue-100 group-hover:to-blue-200'
+            }`}>
+              <Icon className={`w-5 h-5 ${isPdf ? 'text-red-600' : 'text-blue-600'}`} />
+              
+              {/* Status indicator */}
+              {file.uploaded && !isUploading && (
+                <div className="absolute -top-1 -right-1 bg-green-500 rounded-full p-1">
+                  <CheckCircle2 className="w-3 h-3 text-white" />
+                </div>
+              )}
+              {isUploading && (
+                <div className="absolute -top-1 -right-1 bg-primary rounded-full p-1 animate-pulse">
+                  <Upload className="w-3 h-3 text-white" />
+                </div>
+              )}
             </div>
 
-            {/* Conteúdo */}
-            <div className="flex-1 min-w-0">
-              {/* Nome do ficheiro */}
-              <div className="flex items-center gap-2 mb-2">
-                <p className="font-medium text-sm truncate">{file.fileName}</p>
-                <Badge variant="outline" className="text-xs shrink-0">
-                  {file.fileType}
-                </Badge>
-              </div>
+            {/* Content */}
+            <div className="flex-1 min-w-0 space-y-3">
+              {/* Header */}
+              <div className="space-y-2">
+                <div className="flex flex-col sm:flex-row items-start justify-between gap-2 sm:gap-3">
+                  <div className="flex-1 min-w-0 w-full sm:w-auto">
+                    <h4 className="font-semibold text-sm sm:text-base truncate mb-1">{file.fileName}</h4>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge variant="outline" className={`text-xs font-medium ${isPdf ? 'bg-red-50 text-red-700 border-red-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+                        {file.fileType}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {formatFileSize(file.fileSize || 0)}
+                      </span>
+                      {file.isMainPdf && (
+                        <Badge variant="default" className="text-xs">
+                          <Star className="w-3 h-3 mr-1 fill-current" />
+                          Principal
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
 
-              {/* Descrição */}
-              {isEditing ? (
-                <div className="space-y-2 mb-2">
-                  <Input
-                    value={editDescription}
-                    onChange={(e) => setEditDescription(e.target.value)}
-                    placeholder="Descrição (ex: Partitura Completa, Playback)"
-                    className="h-8 text-sm"
-                    autoFocus
-                  />
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => handleUpdateDescription(fileId, editDescription)}
-                      className="h-7 text-xs"
-                    >
-                      <Check className="w-3 h-3 mr-1" />
-                      Guardar
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setEditingId(null)}
-                      className="h-7 text-xs"
-                    >
-                      Cancelar
-                    </Button>
+                  {/* Quick actions */}
+                  <div className="flex items-center gap-1 sm:gap-1.5">
+                    {!isPdf && file.signedUrl && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => toggleAudioPlay(fileId, file.signedUrl)}
+                        className="h-10 w-10 sm:h-9 sm:w-9 p-0 hover:bg-primary/10 hover:text-primary touch-manipulation"
+                      >
+                        {playingAudio === fileId ? (
+                          <Pause className="w-4 h-4" />
+                        ) : (
+                          <Play className="w-4 h-4" />
+                        )}
+                      </Button>
+                    )}
+                    
+                    {file.signedUrl && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        asChild
+                        className="h-10 w-10 sm:h-9 sm:w-9 p-0 hover:bg-primary/10 hover:text-primary touch-manipulation"
+                      >
+                        <a href={file.signedUrl} download={file.fileName}>
+                          <Download className="w-4 h-4" />
+                        </a>
+                      </Button>
+                    )}
+                    
+                    {!isUploading && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleDelete(fileId)}
+                        className="h-10 w-10 sm:h-9 sm:w-9 p-0 hover:bg-destructive/10 hover:text-destructive touch-manipulation"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
-              ) : (
-                <div className="mb-2">
-                  <p className={`text-sm ${!file.description || !file.description.trim() ? 'text-orange-600 flex items-center gap-1' : 'text-muted-foreground'}`}>
-                    {!file.description || !file.description.trim() ? (
-                      <>
-                        <AlertCircle className="w-3 h-3" />
-                        Adicione uma descrição!
-                      </>
-                    ) : (
-                      file.description
-                    )}
-                  </p>
-                </div>
-              )}
+              </div>
 
-              {/* Tamanho */}
-              <p className="text-xs text-muted-foreground">
-                {formatFileSize(file.fileSize || 0)}
-              </p>
-
-              {/* Progress (se estiver a fazer upload) */}
-              {file.isUploading && (
-                <div className="mt-2">
-                  <Progress value={file.uploadProgress || 0} className="h-1" />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    A carregar... {file.uploadProgress || 0}%
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Ações */}
-            <div className="flex flex-col gap-1 shrink-0">
-              {/* Botão Play (só para áudio) */}
-              {!isPdf && file.signedUrl && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => toggleAudioPlay(fileId, file.signedUrl)}
-                  className="h-8 w-8 p-0"
-                >
-                  {playingAudio === fileId ? (
-                    <Pause className="w-4 h-4" />
-                  ) : (
-                    <Play className="w-4 h-4" />
+              {/* Description field */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-medium text-muted-foreground">
+                    Descrição
+                  </Label>
+                  {savingById[fileId] && (
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      A guardar
+                    </span>
                   )}
-                </Button>
+                </div>
+                <Input
+                  value={file.description || ''}
+                  onChange={(e) => handleChangeDescriptionLocal(e.target.value)}
+                  onBlur={(e) => persistDescription(e.target.value)}
+                  placeholder="Ex: Versão simplificada, arranjo coral..."
+                  className={`h-9 transition-all ${
+                    !file.description || !file.description.trim() 
+                      ? 'border-amber-300 bg-amber-50/40 focus:border-amber-400' 
+                      : 'focus:border-primary'
+                  }`}
+                  disabled={isUploading}
+                />
+              </div>
+
+              {/* Upload progress */}
+              {isUploading && file.uploadProgress !== undefined && (
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">A carregar ficheiro...</span>
+                    <span className="font-medium text-primary">{file.uploadProgress}%</span>
+                  </div>
+                  <Progress value={file.uploadProgress} className="h-2" />
+                </div>
               )}
 
-              {/* Botão Download */}
-              {file.signedUrl && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  asChild
-                  className="h-8 w-8 p-0"
-                >
-                  <a href={file.signedUrl} download={file.fileName}>
-                    <Download className="w-4 h-4" />
-                  </a>
-                </Button>
-              )}
-
-              {/* Botão Marcar como Principal (só para PDFs) */}
-              {isPdf && (
+              {/* Principal button for PDFs */}
+              {isPdf && !isUploading && (
                 <Button
                   size="sm"
                   variant={file.isMainPdf ? "default" : "outline"}
+                  className="h-9 sm:h-8 text-xs gap-1.5 touch-manipulation w-full sm:w-auto"
                   onClick={async () => {
                     try {
                       // Em modo edit com songId, fazer update no servidor
@@ -571,7 +628,9 @@ export function FileManager({
                       // Atualizar localmente
                       const updatedFiles = files.map((f, idx) => ({
                         ...f,
-                        isMainPdf: (f.id || f.fileName) === (file.id || file.fileName)
+                        isMainPdf: file.isMainPdf 
+                          ? false // Se clicou no principal, desmarcar todos
+                          : (f.id || f.fileName) === (file.id || file.fileName) // Senão, marcar apenas este
                       }));
                       setFiles(updatedFiles);
                       onChange?.(updatedFiles);
@@ -581,34 +640,9 @@ export function FileManager({
                       toast.error('Erro ao atualizar ficheiro');
                     }
                   }}
-                  className="h-8 px-2 text-xs"
-                  title={file.isMainPdf ? "Remover como principal" : "Marcar como principal"}
                 >
-                  {file.isMainPdf ? "★ Principal" : "☆ Principal"}
-                </Button>
-              )}
-
-              {/* Botão Editar */}
-              {!file.isUploading && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => startEditing(file)}
-                  className="h-8 w-8 p-0"
-                >
-                  <Edit2 className="w-4 h-4" />
-                </Button>
-              )}
-
-              {/* Botão Eliminar */}
-              {!file.isUploading && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => handleDelete(fileId)}
-                  className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                >
-                  <Trash2 className="w-4 h-4" />
+                  <Star className={`w-3.5 h-3.5 ${file.isMainPdf ? 'fill-current' : ''}`} />
+                  {file.isMainPdf ? "Principal" : "Marcar principal"}
                 </Button>
               )}
             </div>
@@ -619,14 +653,14 @@ export function FileManager({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Loading State */}
       {isLoading && (
-        <Card>
-          <CardContent className="flex items-center justify-center py-8">
-            <div className="flex items-center gap-2">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600" />
-              <p className="text-sm text-muted-foreground">A carregar ficheiros...</p>
+        <Card className="border-2">
+          <CardContent className="flex items-center justify-center py-12">
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm font-medium text-muted-foreground">A carregar ficheiros...</p>
             </div>
           </CardContent>
         </Card>
@@ -635,76 +669,154 @@ export function FileManager({
       {/* Secção PDFs */}
       {!isLoading && (
       <>
-      <div>
-        <div className="flex items-center justify-between mb-3">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold">Partituras (PDFs)</h3>
-            <p className="text-sm text-muted-foreground">
-              {pdfs.length}/{maxPdfs} ficheiros • Máx: 50MB cada
+            <h3 className="text-xl font-bold flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-red-50">
+                <FileText className="w-5 h-5 text-red-600" />
+              </div>
+              Partituras (PDFs)
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              {pdfs.length} de {maxPdfs} ficheiros • Máximo 50MB por ficheiro
             </p>
           </div>
           <Button
-            onClick={() => {
-              fileInputRef.current?.click();
-            }}
+            onClick={() => fileInputRef.current?.click()}
             disabled={pdfs.length >= maxPdfs}
-            size="sm"
+            size="lg"
+            className="gap-2 w-full sm:w-auto touch-manipulation"
           >
-            <Upload className="w-4 h-4 mr-2" />
+            <Upload className="w-4 h-4" />
             Adicionar PDFs
           </Button>
         </div>
 
-        {pdfs.length > 0 ? (
-          <div className="grid gap-3">
+        {/* Drag and Drop Zone */}
+        <div
+          onDragOver={(e) => handleDragOver(e, FileType.PDF)}
+          onDragLeave={handleDragLeave}
+          onDrop={(e) => handleDrop(e, FileType.PDF)}
+          className={`
+            relative border-2 border-dashed rounded-xl p-6 sm:p-8 transition-all duration-200
+            ${isDragging && dragType === FileType.PDF
+              ? 'border-red-500 bg-red-50 scale-[1.02]' 
+              : 'border-border hover:border-red-300 hover:bg-red-50/30'
+            }
+            ${pdfs.length >= maxPdfs ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+          `}
+          onClick={() => {
+            if (pdfs.length < maxPdfs) fileInputRef.current?.click();
+          }}
+        >
+          <div className="flex flex-col items-center justify-center text-center space-y-3">
+            <div className={`p-4 rounded-2xl transition-all ${
+              isDragging && dragType === FileType.PDF 
+                ? 'bg-red-100 scale-110' 
+                : 'bg-red-50'
+            }`}>
+              <FileText className={`w-10 h-10 transition-colors ${
+                isDragging && dragType === FileType.PDF 
+                  ? 'text-red-700' 
+                  : 'text-red-500'
+              }`} />
+            </div>
+            <div>
+              <p className="font-medium text-sm sm:text-base mb-1">
+                {isDragging && dragType === FileType.PDF 
+                  ? 'Solte os ficheiros aqui' 
+                  : 'Arraste PDFs aqui ou clique para selecionar'
+                }
+              </p>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                Suporta múltiplos ficheiros • Máx: 50MB cada
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* PDF Files List */}
+        {pdfs.length > 0 && (
+          <div className="grid gap-4">
             {pdfs.map((file, idx) => renderFileCard(file, idx))}
           </div>
-        ) : (
-          <Card className="border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-              <FileText className="w-12 h-12 text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">
-                Nenhum PDF adicionado
-              </p>
-            </CardContent>
-          </Card>
         )}
       </div>
 
       {/* Secção Áudios */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
-            <h3 className="text-lg font-semibold">Áudios (MP3)</h3>
-            <p className="text-sm text-muted-foreground">
-              {audios.length}/{maxAudios} ficheiros • Máx: 20MB cada
+            <h3 className="text-lg sm:text-xl font-bold flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-blue-50">
+                <Music className="w-5 h-5 text-blue-600" />
+              </div>
+              Áudios (MP3)
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              {audios.length} de {maxAudios} ficheiros • Máximo 20MB por ficheiro
             </p>
           </div>
           <Button
-            onClick={() => {
-              audioInputRef.current?.click();
-            }}
+            onClick={() => audioInputRef.current?.click()}
             disabled={audios.length >= maxAudios}
-            size="sm"
+            size="lg"
+            className="gap-2 w-full sm:w-auto touch-manipulation"
           >
-            <Upload className="w-4 h-4 mr-2" />
+            <Upload className="w-4 h-4" />
             Adicionar Áudios
           </Button>
         </div>
 
-        {audios.length > 0 ? (
-          <div className="grid gap-3">
+        {/* Drag and Drop Zone */}
+        <div
+          onDragOver={(e) => handleDragOver(e, FileType.AUDIO)}
+          onDragLeave={handleDragLeave}
+          onDrop={(e) => handleDrop(e, FileType.AUDIO)}
+          className={`
+            relative border-2 border-dashed rounded-xl p-6 sm:p-8 transition-all duration-200
+            ${isDragging && dragType === FileType.AUDIO
+              ? 'border-blue-500 bg-blue-50 scale-[1.02]' 
+              : 'border-border hover:border-blue-300 hover:bg-blue-50/30'
+            }
+            ${audios.length >= maxAudios ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+          `}
+          onClick={() => {
+            if (audios.length < maxAudios) audioInputRef.current?.click();
+          }}
+        >
+          <div className="flex flex-col items-center justify-center text-center space-y-3">
+            <div className={`p-4 rounded-2xl transition-all ${
+              isDragging && dragType === FileType.AUDIO 
+                ? 'bg-blue-100 scale-110' 
+                : 'bg-blue-50'
+            }`}>
+              <Music className={`w-10 h-10 transition-colors ${
+                isDragging && dragType === FileType.AUDIO 
+                  ? 'text-blue-700' 
+                  : 'text-blue-500'
+              }`} />
+            </div>
+            <div>
+              <p className="font-medium text-sm sm:text-base mb-1">
+                {isDragging && dragType === FileType.AUDIO 
+                  ? 'Solte os ficheiros aqui' 
+                  : 'Arraste áudios aqui ou clique para selecionar'
+                }
+              </p>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                Formatos: MP3, WAV, OGG, M4A • Máx: 20MB cada
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Audio Files List */}
+        {audios.length > 0 && (
+          <div className="grid gap-4">
             {audios.map((file, idx) => renderFileCard(file, idx))}
           </div>
-        ) : (
-          <Card className="border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-              <Music className="w-12 h-12 text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">
-                Nenhum áudio adicionado
-              </p>
-            </CardContent>
-          </Card>
         )}
       </div>
 

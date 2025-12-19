@@ -1,9 +1,11 @@
-import { Metadata } from 'next';
+import { buildMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
+export const metadata = buildMetadata({
   title: 'Músicas Favoritas',
-  description: 'As tuas músicas favoritas no Cantólico',
-};
+  description: 'As tuas músicas favoritas no Cantólico.',
+  path: '/starred-songs',
+  index: false,
+});
 
 export default function StarredSongsLayout({
   children,

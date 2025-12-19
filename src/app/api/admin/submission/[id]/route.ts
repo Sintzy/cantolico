@@ -33,7 +33,6 @@ export async function GET(
         type,
         status,
         submitterId,
-        filesMetadata,
         createdAt,
         submitter:User!SongSubmission_submitterId_fkey (
           id,

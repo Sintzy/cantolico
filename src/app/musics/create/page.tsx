@@ -101,7 +101,7 @@ export default function CreateNewMusicPage() {
     moments: [] as LiturgicalMoment[],
     tags: [] as string[],
     tagsInput: "",
-    type: "ACORDES" as SongType, // Sempre definido como ACORDES
+    type: SongType.ACORDES,
     instrument: "" as Instrument,
     markdown: "",
     youtubeLink: "",
@@ -201,7 +201,7 @@ export default function CreateNewMusicPage() {
       case 2:
         return form.moments.length > 0;
       case 3:
-        // ACORDES precisa de markdown, PARTITURA precisa de ficheiros (PDFs)
+        // ACORDES precisa de markdown. PARTITURA precisa de ficheiros (PDFs).
         if (form.type === SongType.ACORDES) {
           return form.markdown.trim().length > 0;
         } else {
@@ -356,7 +356,7 @@ export default function CreateNewMusicPage() {
     { number: 1, title: "Informações Básicas", icon: Info },
     { number: 2, title: "Momentos e Tags", icon: Clock },
     { number: 3, title: "Letra e Acordes", icon: FileText },
-    { number: 4, title: "Finalização", icon: UploadIcon }
+    { number: 4, title: "Anexos e Finalização", icon: UploadIcon }
   ];
 
   return (
@@ -503,8 +503,8 @@ export default function CreateNewMusicPage() {
                         <SelectValue placeholder="Selecionar tipo..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="ACORDES">Acordes (com letra e acordes)</SelectItem>
-                        <SelectItem value="PARTITURA">Partitura (apenas PDF)</SelectItem>
+                        <SelectItem value={SongType.ACORDES}>Acordes (com letra e acordes)</SelectItem>
+                        <SelectItem value={SongType.PARTITURA}>Partitura (apenas PDF)</SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
@@ -730,21 +730,6 @@ export default function CreateNewMusicPage() {
                           options={simpleMDEOptions}
                         />
                       </div>
-
-                      {/* Anexos para ACORDES também (PDFs/MP3) */}
-                      <Separator className="my-2" />
-                      <div className="space-y-2">
-                        <Label className="text-sm">Anexos (opcional)</Label>
-                        <p className="text-xs text-muted-foreground">
-                          Podes adicionar PDFs (partituras) e MP3s (áudio) também em músicas de acordes.
-                        </p>
-                        <FileManager
-                          mode="create"
-                          maxPdfs={20}
-                          maxAudios={20}
-                          onChange={(updatedFiles) => setFiles(updatedFiles)}
-                        />
-                      </div>
                     </div>
 
                     <div className="space-y-4">
@@ -830,22 +815,43 @@ export default function CreateNewMusicPage() {
         </div>
       )}
 
-      {/* Passo 4: Finalização */}
+  {/* Passo 4: Anexos e Finalização */}
       {currentStep === 4 && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="space-y-8">
             <div>
               <h2 className="text-2xl font-bold tracking-tight">Anexos e Finalização</h2>
               <p className="text-muted-foreground">
-                Adiciona ficheiros opcionais e submete a música
+                {form.type === SongType.ACORDES
+                  ? "Anexos são opcionais em músicas de acordes. Depois completa os links e submete."
+                  : "Adiciona ficheiros opcionais e submete a música"}
               </p>
             </div>
 
             <div className="space-y-6">
               {/*
-                Nota: para ACORDES, o FileManager já aparece no Passo 3 junto do editor.
-                Aqui no Passo 4 ficam apenas links + captcha + resumo.
+                Nota: para ACORDES, o editor fica no Passo 3.
+                Os anexos (opcionais) ficam aqui no Passo 4.
               */}
+
+              {form.type === SongType.ACORDES && (
+                <Card className="border border-border/50 shadow-lg bg-card/80 backdrop-blur-sm">
+                  <CardHeader className="border-b border-border/50 bg-linear-to-r from-primary/5 to-transparent">
+                    <CardTitle className="text-lg">Anexos (opcional)</CardTitle>
+                    <CardDescription>
+                      Podes adicionar PDFs (partituras) e MP3s (áudio) também em músicas de acordes.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6 pt-6">
+                    <FileManager
+                      mode="create"
+                      maxPdfs={20}
+                      maxAudios={20}
+                      onChange={(updatedFiles) => setFiles(updatedFiles)}
+                    />
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Links Externos */}
               <Card className="border border-border/50 shadow-lg bg-card/80 backdrop-blur-sm">

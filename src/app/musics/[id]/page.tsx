@@ -149,15 +149,15 @@ export default function SongPage() {
 
         setSong(data);
 
-        // Buscar ficheiros do novo sistema
+        // Buscar ficheiros do novo sistema (endpoint p7blico)
         try {
-          const filesRes = await fetch(`/api/admin/songs/${id}/files`);
+          const filesRes = await fetch(`/api/musics/${id}/files`);
           if (filesRes.ok) {
             const filesData = await filesRes.json();
             if (filesData.success && filesData.files) {
               // Filtrar ficheiros de metadados e ficheiros ocultos
-              const validFiles = filesData.files.filter((f: { fileName: string }) => 
-                !f.fileName.startsWith('.') && 
+              const validFiles = filesData.files.filter((f: { fileName: string }) =>
+                !f.fileName.startsWith('.') &&
                 !f.fileName.endsWith('.json') &&
                 f.fileName !== '.metadata.json'
               );

@@ -29,6 +29,8 @@ interface StarredSong {
   created_at: string;
   updated_at: string;
   starred_at: string;
+  starCount?: number;
+  isStarred?: boolean;
   User: {
     id: string;
     name: string;
@@ -330,8 +332,8 @@ export default function StarredSongsPage() {
                     <CardContent className="p-4 sm:p-5">
                       <div className="flex items-start gap-3 sm:gap-4">
                         {/* Icon/Avatar */}
-                        <div className="flex-shrink-0">
-                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg flex items-center justify-center border border-border">
+                        <div className="shrink-0">
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-linear-to-br from-primary/10 to-primary/5 rounded-lg flex items-center justify-center border border-border">
                             <Star className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-500" />
                           </div>
                         </div>
@@ -361,7 +363,12 @@ export default function StarredSongsPage() {
                             
                             {/* Actions */}
                             <div className="flex items-center gap-1.5 sm:gap-2 sm:ml-4">
-                              <StarButton songId={song.id} size="sm" />
+                              <StarButton 
+                                songId={song.id} 
+                                size="sm" 
+                                initialStarCount={song.starCount ?? 0}
+                                initialIsStarred={song.isStarred ?? true}
+                              />
                               <AddToPlaylistButton songId={song.id} size="sm" />
                               <Button 
                                 asChild 
@@ -453,7 +460,7 @@ export default function StarredSongsPage() {
                       size="sm"
                       onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                       disabled={currentPage === 1}
-                      className="h-8 sm:h-9 px-2 sm:px-3 flex-shrink-0"
+                      className="h-8 sm:h-9 px-2 sm:px-3 shrink-0"
                     >
                       <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
                       <span className="hidden sm:inline ml-1">Anterior</span>
@@ -479,7 +486,7 @@ export default function StarredSongsPage() {
                             size="sm"
                             variant={page === currentPage ? 'default' : 'outline'}
                             onClick={() => setCurrentPage(page)}
-                            className="w-8 h-8 sm:w-9 sm:h-9 p-0 text-xs sm:text-sm flex-shrink-0"
+                            className="w-8 h-8 sm:w-9 sm:h-9 p-0 text-xs sm:text-sm shrink-0"
                           >
                             {page}
                           </Button>
@@ -492,7 +499,7 @@ export default function StarredSongsPage() {
                       size="sm"
                       onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                       disabled={currentPage === totalPages}
-                      className="h-8 sm:h-9 px-2 sm:px-3 flex-shrink-0"
+                      className="h-8 sm:h-9 px-2 sm:px-3 shrink-0"
                     >
                       <span className="hidden sm:inline mr-1">Seguinte</span>
                       <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />

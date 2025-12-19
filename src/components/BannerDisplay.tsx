@@ -91,12 +91,21 @@ export default function BannerDisplay({ page }: BannerDisplayProps) {
   const [dismissedBanners, setDismissedBanners] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    fetchBanners();
-    
-    // Recuperar banners dispensados do localStorage
-    const dismissed = localStorage.getItem('dismissedBanners');
-    if (dismissed) {
-      setDismissedBanners(new Set(JSON.parse(dismissed)));
+    const scheduleFetch = () => {
+      // Recuperar banners dispensados do localStorage
+      const dismissed = typeof window !== 'undefined' ? localStorage.getItem('dismissedBanners') : null;
+      if (dismissed) {
+        setDismissedBanners(new Set(JSON.parse(dismissed)));
+      }
+      fetchBanners();
+    };
+
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      // Defer banner fetch to idle to avoid blocking LCP
+      (window as any).requestIdleCallback(scheduleFetch, { timeout: 2000 });
+    } else {
+      const timeout = setTimeout(scheduleFetch, 300);
+      return () => clearTimeout(timeout);
     }
   }, [page]);
 
@@ -144,7 +153,7 @@ export default function BannerDisplay({ page }: BannerDisplayProps) {
             className={`border rounded-lg p-4 ${styles.bg} ${styles.text} shadow-sm animate-in slide-in-from-top duration-300`}
           >
             <div className="flex items-start gap-3">
-              <IconComponent className={`h-5 w-5 mt-0.5 ${styles.iconColor} flex-shrink-0`} />
+              <IconComponent className={`h-5 w-5 mt-0.5 ${styles.iconColor} shrink-0`} />
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-sm mb-1">{banner.title}</h3>
                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{banner.message}</p>
@@ -152,7 +161,7 @@ export default function BannerDisplay({ page }: BannerDisplayProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className={`h-8 w-8 p-0 ${styles.text} hover:bg-black/10 flex-shrink-0`}
+                className={`h-8 w-8 p-0 ${styles.text} hover:bg-black/10 shrink-0`}
                 onClick={() => dismissBanner(banner.id)}
               >
                 <X className="h-4 w-4" />

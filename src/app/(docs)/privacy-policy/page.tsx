@@ -1,7 +1,12 @@
-import { PAGE_METADATA } from "@/lib/metadata";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { buildMetadata } from "@/lib/seo";
 
-export const metadata = PAGE_METADATA.privacy();
+export const metadata = buildMetadata({
+  title: "Política de Privacidade",
+  description: "Como o Cantólico trata e protege os teus dados.",
+  path: "/privacy-policy",
+  type: "article",
+});
 
 export default function PrivacyPolicyPage() {
   return (

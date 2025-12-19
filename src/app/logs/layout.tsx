@@ -1,10 +1,11 @@
-import type { Metadata } from 'next';
+import { buildMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
+export const metadata = buildMetadata({
   title: 'Sistema de Logs',
-  description: 'Sistema completo de monitorização e análise de logs do Cantolico',
-  robots: 'noindex, nofollow', // Não indexar páginas de admin
-};
+  description: 'Monitorização e análise de logs do Cantólico.',
+  path: '/logs',
+  index: false,
+});
 
 export default function LogsLayout({
   children,

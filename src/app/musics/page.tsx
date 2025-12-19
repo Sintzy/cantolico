@@ -74,6 +74,8 @@ type Song = {
   moments: string[];
   tags: string[];
   mainInstrument: string;
+  starCount?: number;
+  isStarred?: boolean;
 };
 
 export default function MusicsPage() {
@@ -102,109 +104,49 @@ export default function MusicsPage() {
   const itemsPerPage = 12;
   const totalPages = Math.ceil((filteredSongs || []).length / itemsPerPage);
 
-  // Função para carregar dados (com cache simples) - sem useCallback
-  const loadMusicData = async (forceRefresh = false) => {
+  // Função para carregar dados diretamente da API (sem cache local)
+  const loadMusicData = async () => {
     // Evitar múltiplas cargas simultâneas apenas se já temos dados
-    if (loading && !forceRefresh && dataLoaded) {
-      console.log('Carregamento já em andamento e dados já carregados, pulando...');
+    if (loading && dataLoaded) {
       return;
     }
-    
-    const cacheKey = 'musicList_data';
-    const cacheTimeKey = 'musicList_timestamp';
-    const cacheExpiry = 5 * 60 * 1000; // 5 minutos - dados mais frescos
-
-    console.log('Iniciando carregamento de dados...', { 
-      forceRefresh, 
-      currentlyLoading: loading, 
-      dataLoaded,
-      hasCache: !!sessionStorage.getItem('musicList_data')
-    });
 
     try {
       setLoading(true);
-      
-      // Verificar cache se não for refresh forçado
-      if (!forceRefresh && typeof window !== 'undefined') {
-        const cachedData = sessionStorage.getItem(cacheKey);
-        const cacheTime = sessionStorage.getItem(cacheTimeKey);
-        
-        if (cachedData && cacheTime) {
-          const isExpired = Date.now() - parseInt(cacheTime) > cacheExpiry;
-          
-          if (!isExpired) {
-            try {
-              const parsedData = JSON.parse(cachedData);
-              setSongs(parsedData.songs || []);
-              setDataLoaded(true);
-              console.log('Cache: Dados carregados do cache', { 
-                totalSongs: parsedData.songs?.length || 0,
-                source: 'cache',
-                timestamp: new Date().toISOString()
-              });
-              setLoading(false);
-              return;
-            } catch (parseError) {
-              console.warn('Erro ao fazer parse do cache:', parseError);
-              // Continue para buscar da API
-            }
-          }
-        }
-      }
 
-      // Buscar dados da API com timeout
-      console.log('Fazendo fetch da API...');
-      
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 segundos timeout
-      
+
       const response = await fetch('/api/musics/getmusics', {
         signal: controller.signal
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       if (!data || !Array.isArray(data.songs)) {
         throw new Error('Formato de dados inválido');
       }
 
       setSongs(data.songs);
       setDataLoaded(true);
-      
-      // Salvar no cache
-      if (typeof window !== 'undefined') {
-        try {
-          sessionStorage.setItem(cacheKey, JSON.stringify(data));
-          sessionStorage.setItem(cacheTimeKey, Date.now().toString());
-        } catch (storageError) {
-          console.warn('Erro ao salvar no cache:', storageError);
-        }
-      }
-      
-      console.log('Cache: Dados carregados da API', { 
-        totalSongs: data.songs?.length || 0,
-        source: 'api',
-        timestamp: new Date().toISOString()
-      });
-      
+
     } catch (error) {
       console.error('Erro ao carregar músicas:', error);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         toast.error('Timeout: A requisição demorou muito tempo. Tente novamente.');
       } else {
         toast.error('Erro ao carregar as músicas. Tente novamente.');
       }
-      
+
       setDataLoaded(true); // Marcar como tentado mesmo com erro para evitar loops
     } finally {
-      console.log('Finalizando carregamento...');
       setLoading(false);
     }
   };
@@ -220,20 +162,10 @@ export default function MusicsPage() {
     }
   }, [isInitialized, state]);
 
-  // Carregar dados iniciais - sempre buscar dados frescos na primeira carga
+  // Carregar dados iniciais diretamente da API
   useEffect(() => {
-    console.log('🔄 useEffect para carregar dados:', { isInitialized, dataLoaded });
     if (isInitialized && !dataLoaded) {
-      console.log('✅ Executando loadMusicData...');
-      
-      // Verificar se é uma nova sessão (sessionStorage vazio = nova aba/navegador)
-      const isNewSession = !sessionStorage.getItem('musicList_data');
-      if (isNewSession) {
-        console.log('🆕 Nova sessão detectada - forçar refresh dos dados');
-        loadMusicData(true); // Forçar refresh para nova sessão
-      } else {
-        loadMusicData(); // Usar cache se disponível
-      }
+      loadMusicData();
     }
   }, [isInitialized, dataLoaded]);
 
@@ -520,7 +452,7 @@ export default function MusicsPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  loadMusicData(true);
+                  loadMusicData();
                   toast.success('Dados atualizados!');
                 }}
                 className="flex items-center gap-2"
@@ -691,7 +623,12 @@ export default function MusicsPage() {
                                 
                                 {/* Actions */}
                                 <div className="flex items-center gap-1.5 sm:gap-2 sm:ml-4">
-                                  <StarButton songId={song.id} size="sm" />
+                                  <StarButton 
+                                    songId={song.id} 
+                                    size="sm"
+                                    initialStarCount={song.starCount}
+                                    initialIsStarred={song.isStarred}
+                                  />
                                   <AddToPlaylistButton songId={song.id} size="sm" />
                                   <Button 
                                     asChild 

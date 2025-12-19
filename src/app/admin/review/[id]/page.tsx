@@ -715,11 +715,6 @@ export default function ReviewSubmissionPage() {
             <TabsTrigger value="media" className="flex items-center gap-2">
               <Music className="h-4 w-4" />
               Mídia
-              {submission?.filesMetadata?.files?.length > 0 && (
-                <Badge className="ml-2 bg-blue-100 text-blue-700 hover:bg-blue-100">
-                  📎 {submission.filesMetadata.files.length}
-                </Badge>
-              )}
             </TabsTrigger>
           </TabsList>
 

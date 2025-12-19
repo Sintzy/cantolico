@@ -1,9 +1,11 @@
-import { Metadata } from "next";
+import { buildMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Gestão de Músicas",
-  description: "Administrar músicas, versões e conteúdo no Cantólico!",
-};
+export const metadata = buildMetadata({
+  title: "Admin | Músicas",
+  description: "Administrar músicas, versões e conteúdo no Cantólico.",
+  path: "/admin/dashboard/musics",
+  index: false,
+});
 
 export default function MusicsLayout({
   children,
