@@ -1,9 +1,11 @@
 import { Metadata } from "next";
 
 export const SITE_NAME = "Cantólico";
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://cantolico.com").replace(/\/$/, "");
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://cantolico.pt").replace(/\/$/, "");
 export const DEFAULT_LOCALE = "pt_PT";
 export const DEFAULT_OG_IMAGE = "/cantolicoemail.png";
+export const DEFAULT_ICON = "/favicon.ico";
+export const DEFAULT_APPLE_ICON = "/cantolicoemail.png";
 
 export type SeoType = "website" | "article" | "profile" | "music.song";
 
@@ -40,6 +42,8 @@ export function buildMetadata(options: BuildMetadataOptions): Metadata {
   const fullTitle = formatTitle(title);
   const url = absoluteUrl(path);
   const ogImage = absoluteUrl(image);
+  const icon = absoluteUrl(DEFAULT_ICON);
+  const appleIcon = absoluteUrl(DEFAULT_APPLE_ICON);
 
   return {
     title: fullTitle,
@@ -79,6 +83,11 @@ export function buildMetadata(options: BuildMetadataOptions): Metadata {
         "max-snippet": -1,
         "max-video-preview": -1,
       },
+    },
+    icons: {
+      icon,
+      shortcut: icon,
+      apple: appleIcon,
     },
   };
 }
