@@ -6,13 +6,24 @@ import { withUserProtection, withPublicMonitoring, logPlaylistAction } from '@/l
 import { randomUUID } from 'crypto';
 import { requireEmailVerification } from '@/lib/email';
 import { getVisibilityFlags, getVisibilityFromPlaylist } from '@/types/playlist';
+import { extractUserContext, logUserCreate, logUserRead } from '@/lib/user-action-logger';
 
 export const GET = withPublicMonitoring<any>(async (request: NextRequest) => {
   try {
     const session = await getServerSession(authOptions);
+    const userContext = extractUserContext(request, session);
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const includePublic = searchParams.get('includePublic') === 'true';
+
+    // Log read action
+    logUserRead(userContext, {
+      action: 'list_playlists',
+      resource: 'playlist',
+      method: request.method,
+      path: request.url,
+      metadata: { userId, includePublic },
+    });
 
     let whereClause: any = {};
 
@@ -123,6 +134,7 @@ export const GET = withPublicMonitoring<any>(async (request: NextRequest) => {
 });
 
 export const POST = withUserProtection<any>(async (request: NextRequest, session: any) => {
+  const userContext = extractUserContext(request, session);
   const body = await request.json();
   const { name, description, visibility = 'PRIVATE', memberEmails = [] }: {
     name: string;
@@ -140,7 +152,6 @@ export const POST = withUserProtection<any>(async (request: NextRequest, session
     );
   }
 
-  // Remoção de logs desnecessários - apenas para erros críticos
   console.log(`Creating playlist: ${name} (visibility: ${visibility})`);
 
     if (!name?.trim()) {
@@ -184,7 +195,23 @@ export const POST = withUserProtection<any>(async (request: NextRequest, session
       throw new Error(`Supabase error: ${error.message}`);
     }
 
-    // Remoção de log de sucesso redundante
+    // Log playlist creation
+    logUserCreate(userContext, {
+      action: 'create_playlist',
+      resource: 'playlist',
+      resourceId: playlist.id,
+      method: request.method,
+      path: request.url,
+      newValue: {
+        id: playlist.id,
+        name: playlist.name,
+        visibility,
+      },
+      metadata: {
+        memberEmails: memberEmails.length > 0 ? memberEmails : undefined,
+      },
+    });
+
     console.log(`✅ Playlist created: ${playlist.id} (${playlist.name})`);
 
     // Handle member invitations if provided

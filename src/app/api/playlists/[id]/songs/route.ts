@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase-client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { randomUUID } from "crypto";
+import { extractUserContext, logUserCreate } from '@/lib/user-action-logger';
 
 export async function POST(
   request: NextRequest,
@@ -129,6 +130,25 @@ export async function POST(
     if (createError || !playlistItem) {
       throw new Error(`Supabase error: ${createError?.message}`);
     }
+
+    // Log song addition to playlist
+    const userContext = extractUserContext(request, session);
+    logUserCreate(userContext, {
+      action: 'add_song_to_playlist',
+      resource: 'playlist_item',
+      resourceId: playlistItemId,
+      method: request.method,
+      path: request.url,
+      newValue: {
+        playlistId,
+        songId: actualSongId,
+        order: nextOrder,
+      },
+      metadata: {
+        isOwner,
+        isEditor,
+      },
+    });
 
     // Buscar detalhes da música separadamente
     const { data: songDetails, error: songDetailsError } = await supabase

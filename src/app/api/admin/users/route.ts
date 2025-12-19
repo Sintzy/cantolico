@@ -57,80 +57,73 @@ export const GET = withAdminProtection<any>(async (request: NextRequest, session
 
   console.log(`✅ Found ${allUsers?.length || 0} total users`);
 
-  // Enrich each user with additional data
-  const enrichedUsersList = await Promise.all(
-    (allUsers || []).map(async (user: any) => {
-      try {
-        // Fetch latest moderation data
-        const { data: moderationRecord } = await supabase
-          .from('UserModeration')
-          .select(`
-            id,
-            status,
-            type,
-            reason,
-            moderatorNote,
-            moderatedAt,
-            expiresAt,
-            moderatedById,
-            ipAddress
-          `)
-          .eq('userId', user.id)
-          .order('moderatedAt', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+  // Bulk fetch all required data to avoid N+1 queries
+  const userIds = (allUsers || []).map((u: any) => u.id);
 
-        let moderatorInfo: { name: string } | null = null;
-        if (moderationRecord?.moderatedById) {
-          const { data: moderator } = await supabase
-            .from('User')
-            .select('name')
-            .eq('id', moderationRecord.moderatedById)
-            .single();
-          moderatorInfo = moderator;
-        }
+  // Bulk fetch moderation records
+  const { data: allModerations } = await supabase
+    .from('UserModeration')
+    .select(`
+      id,
+      status,
+      type,
+      reason,
+      moderatorNote,
+      moderatedAt,
+      expiresAt,
+      moderatedById,
+      ipAddress,
+      userId
+    `)
+    .in('userId', userIds)
+    .order('moderatedAt', { ascending: false });
 
-        // Fetch songs count
-        const { count: songsCount } = await supabase
-          .from('SongVersion')
-          .select('id', { count: 'exact', head: true })
-          .eq('createdById', user.id);
+  // Group moderations by userId (latest only)
+  const moderationByUser = new Map();
+  allModerations?.forEach((mod: any) => {
+    if (!moderationByUser.has(mod.userId)) {
+      moderationByUser.set(mod.userId, mod);
+    }
+  });
 
-        // Fetch submissions count
-        const { count: submissionsCount } = await supabase
-          .from('SongSubmission')
-          .select('id', { count: 'exact', head: true })
-          .eq('submitterId', user.id);
+  // Bulk fetch moderator names
+  const moderatorIds = Array.from(new Set(
+    allModerations?.map((m: any) => m.moderatedById).filter(Boolean) || []
+  ));
+  const { data: moderators } = await supabase
+    .from('User')
+    .select('id, name')
+    .in('id', moderatorIds);
 
-        return {
-          ...user,
-          totalSongs: songsCount || 0,
-          totalSubmissions: submissionsCount || 0,
-          moderation: moderationRecord ? {
-            id: moderationRecord.id,
-            status: moderationRecord.status,
-            type: moderationRecord.type,
-            reason: moderationRecord.reason,
-            moderatorNote: moderationRecord.moderatorNote,
-            moderatedAt: moderationRecord.moderatedAt,
-            expiresAt: moderationRecord.expiresAt,
-            ipAddress: moderationRecord.ipAddress,
-            moderatedBy: moderatorInfo ? {
-              name: moderatorInfo.name
-            } : null
-          } : { status: 'ACTIVE' }
-        };
-      } catch (error) {
-        console.error(`Error fetching data for user ${user.id}:`, error);
-        return {
-          ...user,
-          totalSongs: 0,
-          totalSubmissions: 0,
-          moderation: { status: 'ACTIVE' }
-        };
-      }
-    })
-  );
+  const moderatorMap = new Map(moderators?.map((m: any) => [m.id, m]) || []);
+
+  // Note: Song/submission counts removed for list performance
+  // These can be fetched on the user detail page if needed
+  const enrichedUsersList = (allUsers || []).map((user: any) => {
+    const moderationRecord = moderationByUser.get(user.id);
+    const moderatorInfo = moderationRecord?.moderatedById 
+      ? moderatorMap.get(moderationRecord.moderatedById)
+      : null;
+
+    return {
+      ...user,
+      totalSongs: 0, // Fetch on detail page if needed
+      totalSubmissions: 0, // Fetch on detail page if needed
+      moderation: moderationRecord ? {
+        id: moderationRecord.id,
+        status: moderationRecord.status,
+        type: moderationRecord.type,
+        reason: moderationRecord.reason,
+        moderatorNote: moderationRecord.moderatorNote,
+        moderatedAt: moderationRecord.moderatedAt,
+        expiresAt: moderationRecord.expiresAt,
+        ipAddress: moderationRecord.ipAddress,
+        moderatedBy: moderatorInfo ? {
+          name: moderatorInfo.name
+        } : null
+      } : { status: 'ACTIVE' }
+    };
+  });
 
   // Filter by moderation status if specified
   let finalUsersList = enrichedUsersList;

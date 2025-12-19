@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { supabase } from '@/lib/supabase-client';
+import { requireAdmin } from '@/lib/admin-auth';
+import { adminSupabase } from '@/lib/supabase-admin';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session || session.user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
-    }
+    const { error: authError } = await requireAdmin();
+    if (authError) return authError;
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
@@ -18,9 +14,8 @@ export async function GET(request: NextRequest) {
 
     const offset = (page - 1) * limit;
 
-
-    // Buscar playlists com dados do criador (usando userId)
-    let playlistsQuery = supabase
+    // Buscar playlists com dados do criador (usando adminSupabase para performance)
+    let playlistsQuery = adminSupabase
       .from('Playlist')
       .select(`
         id,
@@ -52,23 +47,27 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Erro ao carregar playlists' }, { status: 500 });
     }
 
-    // Para cada playlist, buscar contagem de músicas
-    const playlistsWithData = await Promise.all(
-      (playlists || []).map(async (playlist: any) => {
-        const { count: items } = await supabase
-          .from('PlaylistSong')
-          .select('id', { count: 'exact', head: true })
-          .eq('playlistId', playlist.id);
+    // Bulk fetch song counts for all playlists to avoid N+1
+    const playlistIds = (playlists || []).map((p: any) => p.id);
+    const { data: songCounts } = await adminSupabase
+      .from('PlaylistSong')
+      .select('playlistId')
+      .in('playlistId', playlistIds);
 
-        return {
-          ...playlist,
-          _count: { items: items || 0 }
-        };
-      })
-    );
+    // Count songs per playlist
+    const countMap = new Map();
+    songCounts?.forEach((ps: any) => {
+      countMap.set(ps.playlistId, (countMap.get(ps.playlistId) || 0) + 1);
+    });
+
+    // Enrich playlists with counts
+    const playlistsWithData = (playlists || []).map((playlist: any) => ({
+      ...playlist,
+      _count: { items: countMap.get(playlist.id) || 0 }
+    }));
 
     // Get total count
-    const { count: totalCount, error: countError } = await supabase
+    const { count: totalCount, error: countError } = await adminSupabase
       .from('Playlist')
       .select('id', { count: 'exact', head: true });
 
@@ -93,11 +92,8 @@ export async function GET(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session || session.user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
-    }
+    const { error: authError } = await requireAdmin();
+    if (authError) return authError;
 
     const body = await request.json();
     const { playlistId } = body;
@@ -107,7 +103,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete playlist (cascade will handle playlist songs)
-    const { error } = await supabase
+    const { error } = await adminSupabase
       .from('Playlist')
       .delete()
       .eq('id', playlistId);

@@ -23,6 +23,7 @@ export enum LogLevel {
 export enum LogCategory {
   API = 'api',
   USER = 'user',
+  USER_ACTION = 'user_action',
   ADMIN = 'admin',
   SECURITY = 'security',
   PERFORMANCE = 'performance',
@@ -33,7 +34,9 @@ export enum LogCategory {
   SUBMISSION = 'submission',
   PLAYLIST = 'playlist',
   SONG = 'song',
-  UPLOAD = 'upload'
+  UPLOAD = 'upload',
+  AUTH = 'auth',
+  HTTP = 'http'
 }
 
 /**

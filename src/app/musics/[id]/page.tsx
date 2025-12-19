@@ -149,6 +149,12 @@ export default function SongPage() {
 
         setSong(data);
 
+        // Redirect to slug-based URL if accessing by ID
+        if (data.slug && data.slug !== id) {
+          router.replace(`/musics/${data.slug}`, { scroll: false });
+          return;
+        }
+
         // Buscar ficheiros do novo sistema (endpoint p7blico)
         try {
           const filesRes = await fetch(`/api/musics/${id}/files`);

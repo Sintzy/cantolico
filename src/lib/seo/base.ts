@@ -21,7 +21,10 @@ export interface BuildMetadataOptions {
 export const absoluteUrl = (path = "/") => {
   if (!path) return SITE_URL;
   if (path.startsWith("http")) return path;
-  return `${SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+  // Normalize path: ensure it starts with / and remove trailing slash (except root)
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const pathWithoutTrailingSlash = normalizedPath === "/" ? normalizedPath : normalizedPath.replace(/\/$/, "");
+  return `${SITE_URL}${pathWithoutTrailingSlash}`;
 };
 
 const formatTitle = (title?: string) => {

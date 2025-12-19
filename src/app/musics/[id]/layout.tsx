@@ -59,8 +59,18 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     }
 
     const title = (song as any)?.title || "Cântico";
-    const slug = (song as any)?.slug || (song as any)?.id || id;
+    const slug = (song as any)?.slug;
     const moments = Array.isArray((song as any)?.moments) ? (song as any)?.moments : [];
+
+    // Always use slug for canonical URL, never ID
+    if (!slug) {
+      return buildMetadata({
+        title: "Música não encontrada",
+        description: "Esta música não tem um identificador válido.",
+        path: `/musics/${id}`,
+        index: false,
+      });
+    }
 
     return buildMetadata({
       title: `${title} | Letra e Acordes`,

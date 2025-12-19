@@ -1,19 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { supabase } from '@/lib/supabase-client';
+import { requireAdmin } from '@/lib/admin-auth';
+import { adminSupabase } from '@/lib/supabase-admin';
+
+// In-memory cache for overview data (2 minutes TTL)
+let overviewCache: any = null;
+let cacheTime = 0;
+const CACHE_TTL = 2 * 60 * 1000;
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session || session.user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
+    const { error: authError } = await requireAdmin();
+    if (authError) return authError;
+
+    // Check cache first
+    const now = Date.now();
+    if (overviewCache && (now - cacheTime) < CACHE_TTL) {
+      console.log('🔍 Returning cached overview data');
+      return NextResponse.json(overviewCache);
     }
 
     console.log('🔍 Admin dashboard overview called');
 
-    // Buscar estatísticas gerais
+    // Buscar estatísticas gerais (usando adminSupabase para performance)
     const [
       { count: totalUsers },
       { count: totalSongs },
@@ -22,12 +30,12 @@ export async function GET(request: NextRequest) {
       { count: pendingSubmissions },
       { count: moderatedUsers }
     ] = await Promise.all([
-      supabase.from('User').select('id', { count: 'exact', head: true }),
-      supabase.from('Song').select('id', { count: 'exact', head: true }),
-      supabase.from('Playlist').select('id', { count: 'exact', head: true }),
-      supabase.from('SongSubmission').select('id', { count: 'exact', head: true }),
-      supabase.from('SongSubmission').select('id', { count: 'exact', head: true }).eq('status', 'PENDING'),
-      supabase.from('UserModeration').select('userId', { count: 'exact', head: true }).neq('status', 'ACTIVE')
+      adminSupabase.from('User').select('*', { count: 'exact', head: true }),
+      adminSupabase.from('Song').select('*', { count: 'exact', head: true }),
+      adminSupabase.from('Playlist').select('*', { count: 'exact', head: true }),
+      adminSupabase.from('SongSubmission').select('*', { count: 'exact', head: true }),
+      adminSupabase.from('SongSubmission').select('*', { count: 'exact', head: true }).eq('status', 'PENDING'),
+      adminSupabase.from('UserModeration').select('*', { count: 'exact', head: true }).neq('status', 'ACTIVE')
     ]);
 
     // Buscar atividade recente (últimos 7 dias)
@@ -39,34 +47,34 @@ export async function GET(request: NextRequest) {
       { count: recentSongs },
       { count: recentSubmissions }
     ] = await Promise.all([
-      supabase.from('User').select('id', { count: 'exact', head: true })
+      adminSupabase.from('User').select('*', { count: 'exact', head: true })
         .gte('createdAt', sevenDaysAgo.toISOString()),
-      supabase.from('Song').select('id', { count: 'exact', head: true })
+      adminSupabase.from('Song').select('*', { count: 'exact', head: true })
         .gte('createdAt', sevenDaysAgo.toISOString()),
-      supabase.from('SongSubmission').select('id', { count: 'exact', head: true })
+      adminSupabase.from('SongSubmission').select('*', { count: 'exact', head: true })
         .gte('createdAt', sevenDaysAgo.toISOString())
     ]);
 
-    // Buscar distribuição por roles
-    const { data: userRoles } = await supabase
-      .from('User')
-      .select('role');
+    // Buscar distribuição por roles com contagem otimizada
+    const [
+      { count: userCount },
+      { count: reviewerCount },
+      { count: adminCount }
+    ] = await Promise.all([
+      adminSupabase.from('User').select('*', { count: 'exact', head: true }).eq('role', 'USER'),
+      adminSupabase.from('User').select('*', { count: 'exact', head: true }).eq('role', 'REVIEWER'),
+      adminSupabase.from('User').select('*', { count: 'exact', head: true }).eq('role', 'ADMIN')
+    ]);
 
     const roleDistribution = {
-      USER: 0,
-      REVIEWER: 0,
-      ADMIN: 0
+      USER: userCount || 0,
+      REVIEWER: reviewerCount || 0,
+      ADMIN: adminCount || 0
     };
-
-    userRoles?.forEach((user: any) => {
-      if (user.role && roleDistribution.hasOwnProperty(user.role)) {
-        roleDistribution[user.role as keyof typeof roleDistribution]++;
-      }
-    });
 
     console.log('✅ Dashboard overview data ready');
 
-    return NextResponse.json({
+    const result = {
       totals: {
         users: totalUsers || 0,
         songs: totalSongs || 0,
@@ -84,7 +92,13 @@ export async function GET(request: NextRequest) {
         roles: roleDistribution
       },
       lastUpdated: new Date().toISOString()
-    });
+    };
+
+    // Update cache
+    overviewCache = result;
+    cacheTime = Date.now();
+
+    return NextResponse.json(result);
 
   } catch (error) {
     console.error('❌ Error in admin dashboard overview:', error);

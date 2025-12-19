@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { supabase } from '@/lib/supabase-client';
+import { requireAdmin } from '@/lib/admin-auth';
+import { adminSupabase } from '@/lib/supabase-admin';
 import { z } from 'zod';
 
 const UpdateSongSchema = z.object({
@@ -12,11 +11,8 @@ const UpdateSongSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session || session.user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
-    }
+    const { error: authError } = await requireAdmin();
+    if (authError) return authError;
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
@@ -26,8 +22,8 @@ export async function GET(request: NextRequest) {
 
     const offset = (page - 1) * limit;
 
-    // Buscar músicas com dados do autor
-    let songsQuery = supabase
+    // Buscar músicas com dados do autor (usando adminSupabase para performance)
+    let songsQuery = adminSupabase
       .from('Song')
       .select(`
         id,
@@ -61,7 +57,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get total count
-    const { count: totalCount, error: countError } = await supabase
+    const { count: totalCount, error: countError } = await adminSupabase
       .from('Song')
       .select('id', { count: 'exact', head: true });
 
@@ -86,11 +82,8 @@ export async function GET(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session || session.user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
-    }
+    const { error: authError } = await requireAdmin();
+    if (authError) return authError;
 
     const body = await request.json();
     const { songId } = body;
@@ -100,7 +93,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete song
-    const { error } = await supabase
+    const { error } = await adminSupabase
       .from('Song')
       .delete()
       .eq('id', songId);

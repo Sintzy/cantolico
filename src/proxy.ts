@@ -7,6 +7,8 @@ import {
   logForbiddenAccess,
 } from "@/lib/middleware-logging";
 import { runWithCorrelationContextAsync, createCorrelationContext } from "@/lib/correlation-context";
+import { logger } from "@/lib/logger";
+import { LogCategory } from "@/types/logging";
 
 // Create Supabase client for middleware
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -14,14 +16,56 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export async function proxy(req: NextRequest) {
+  const startTime = Date.now();
+  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || 'unknown';
+  const userAgent = req.headers.get('user-agent') || 'unknown';
+  
   const context = createCorrelationContext({
-    ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown',
-    user_agent: req.headers.get('user-agent') || 'unknown',
+    ip_address: ipAddress,
+    user_agent: userAgent,
   });
   
   return runWithCorrelationContextAsync(context, async () => {
     const url = req.nextUrl.clone();
     const pathname = url.pathname;
+    const method = req.method;
+    
+    // Tentar obter token do usuário (sem bloquear)
+    let token: any = null;
+    try {
+      token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    } catch (error) {
+      // Ignorar erros de token
+    }
+
+    // Log requisição importante (APIs, admin, ações de criação)
+    const shouldLog = 
+      pathname.startsWith('/api/') || 
+      pathname.startsWith('/admin') ||
+      pathname.startsWith('/musics/create') ||
+      pathname.startsWith('/playlists/create') ||
+      method !== 'GET';
+
+    if (shouldLog) {
+      logger.debug(`${method} ${pathname}`, {
+        category: LogCategory.HTTP,
+        tags: ['http-request', method.toLowerCase()],
+        user: token ? {
+          user_id: token.sub || token.id,
+          user_email: token.email,
+          user_name: token.name,
+          user_role: token.role,
+        } : undefined,
+        network: {
+          ip_address: ipAddress,
+          user_agent: userAgent.substring(0, 200),
+        },
+        http: {
+          method: method as any,
+          url: pathname + url.search,
+        },
+      });
+    }
     
     // ==========================================
     // REDIRECIONAMENTO SEO - MÚSICAS PARA SLUG
@@ -348,6 +392,36 @@ export async function proxy(req: NextRequest) {
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('X-Frame-Options', 'SAMEORIGIN');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  
+  // Log resposta para requisições importantes ou lentas
+  const endTime = Date.now();
+  const responseTime = endTime - startTime;
+  
+  if (shouldLog || responseTime > 3000) {
+    const statusCode = response.status;
+    
+    logger.debug(`${method} ${pathname} - ${statusCode} (${responseTime}ms)`, {
+      category: LogCategory.HTTP,
+      tags: ['http-response', method.toLowerCase(), `status-${statusCode}`],
+      user: token ? {
+        user_id: token.sub || token.id,
+        user_email: token.email,
+      } : undefined,
+      network: {
+        ip_address: ipAddress,
+      },
+      http: {
+        method: method as any,
+        url: pathname + url.search,
+        status_code: statusCode,
+        response_time_ms: responseTime,
+      },
+      performance: {
+        response_time_ms: responseTime,
+        is_slow: responseTime > 3000,
+      },
+    });
+  }
   
   return response;
   });
