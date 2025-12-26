@@ -76,6 +76,7 @@ export async function GET(
         order,
         songId,
         addedById,
+        note,
         createdAt
       `)
       .eq('playlistId', playlistId)
