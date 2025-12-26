@@ -57,7 +57,7 @@ export default async function PlaylistsPage() {
 
   let playlists: Playlist[] = [];
   
-  if (playlistsData) {
+  if (playlistsData && Array.isArray(playlistsData) && playlistsData.length > 0) {
     // Get song counts for each playlist
     const playlistIds = playlistsData.map(p => p.id);
     
@@ -96,5 +96,6 @@ export default async function PlaylistsPage() {
     console.error('Error fetching playlists:', error);
   }
 
-  return <PlaylistsClient initialPlaylists={playlists} />;
+  const initialPlaylists = Array.isArray(playlists) ? playlists : [];
+  return <PlaylistsClient initialPlaylists={initialPlaylists} />;
 }

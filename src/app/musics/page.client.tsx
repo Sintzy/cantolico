@@ -82,12 +82,19 @@ interface MusicsPageClientProps {
 }
 
 export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps) {
+  // Ensure initialSongs is always an array and normalize data
+  const normalizedInitialSongs = (Array.isArray(initialSongs) ? initialSongs : []).map(song => ({
+    ...song,
+    moments: Array.isArray(song.moments) ? song.moments : [],
+    tags: Array.isArray(song.tags) ? song.tags : [],
+  }));
+  
   // Estados principais
-  const [songs, setSongs] = useState<Song[]>(initialSongs);
+  const [songs, setSongs] = useState<Song[]>(normalizedInitialSongs);
   const [loading, setLoading] = useState(false);
   const [filteredSongs, setFilteredSongs] = useState<Song[]>([]);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
-  const [dataLoaded, setDataLoaded] = useState(true); // Já temos dados do servidor
+  const [dataLoaded, setDataLoaded] = useState(normalizedInitialSongs.length > 0); // Já temos dados do servidor
   
   // Use page state hook para manter estado entre navegações
   const { state, saveState, restoreScrollPosition, saveScrollPosition, isInitialized } = usePageState('musics');

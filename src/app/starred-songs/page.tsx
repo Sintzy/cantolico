@@ -63,18 +63,25 @@ export default async function StarredSongsPage() {
     .eq('userId', session.user.id)
     .order('createdAt', { ascending: false });
 
-  const songs: StarredSong[] = starredData?.map((star: any) => ({
-    ...star.Song,
-    starred_at: star.createdAt,
-    created_at: star.Song.createdAt,
-    updated_at: star.Song.updatedAt,
-    isStarred: true,
-    User: star.Song.User
-  })) || [];
+  let songs: StarredSong[] = [];
+  
+  if (starredData && Array.isArray(starredData) && starredData.length > 0) {
+    songs = starredData.map((star: any) => ({
+      ...star.Song,
+      starred_at: star.createdAt,
+      created_at: star.Song.createdAt,
+      updated_at: star.Song.updatedAt,
+      isStarred: true,
+      moments: Array.isArray(star.Song.moments) ? star.Song.moments : [],
+      tags: Array.isArray(star.Song.tags) ? star.Song.tags : [],
+      User: star.Song.User
+    }));
+  }
 
   if (error) {
     console.error('Error fetching starred songs:', error);
   }
 
-  return <StarredSongsClient initialSongs={songs} />;
+  const initialSongs = Array.isArray(songs) ? songs : [];
+  return <StarredSongsClient initialSongs={initialSongs} />;
 }

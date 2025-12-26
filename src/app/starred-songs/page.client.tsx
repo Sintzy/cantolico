@@ -62,13 +62,20 @@ interface StarredSongsClientProps {
 }
 
 export default function StarredSongsClient({ initialSongs }: StarredSongsClientProps) {
+  // Ensure initialSongs is always an array and normalize data
+  const normalizedInitialSongs = (Array.isArray(initialSongs) ? initialSongs : []).map(song => ({
+    ...song,
+    moments: Array.isArray(song.moments) ? song.moments : [],
+    tags: Array.isArray(song.tags) ? song.tags : [],
+  }));
+  
   const { data: session, status } = useSession();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('starred-desc');
   const [currentPage, setCurrentPage] = useState(1);
 
   // Use initial data from server
-  const allSongs = initialSongs;
+  const allSongs = normalizedInitialSongs;
   const itemsPerPage = 12;
 
   // Filtro e ordenação em memória
