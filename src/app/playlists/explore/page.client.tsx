@@ -40,8 +40,11 @@ interface ExplorePlaylistsClientProps {
 }
 
 export default function ExplorePlaylistsClient({ initialPlaylists }: ExplorePlaylistsClientProps) {
-  const [playlists, setPlaylists] = useState<Playlist[]>(initialPlaylists);
-  const [filteredPlaylists, setFilteredPlaylists] = useState<Playlist[]>(initialPlaylists);
+  // Ensure initialPlaylists is always an array
+  const safeInitialPlaylists = Array.isArray(initialPlaylists) ? initialPlaylists : [];
+  
+  const [playlists, setPlaylists] = useState<Playlist[]>(safeInitialPlaylists);
+  const [filteredPlaylists, setFilteredPlaylists] = useState<Playlist[]>(safeInitialPlaylists);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('updated');

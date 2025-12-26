@@ -44,10 +44,13 @@ interface PlaylistsClientProps {
 }
 
 function PlaylistsContent({ initialPlaylists }: PlaylistsClientProps) {
+  // Ensure initialPlaylists is always an array
+  const safeInitialPlaylists = Array.isArray(initialPlaylists) ? initialPlaylists : [];
+  
   const { data: session } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [playlists, setPlaylists] = useState<Playlist[]>(initialPlaylists);
+  const [playlists, setPlaylists] = useState<Playlist[]>(safeInitialPlaylists);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
 

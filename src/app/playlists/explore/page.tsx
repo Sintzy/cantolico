@@ -48,7 +48,7 @@ export default async function ExplorePlaylistsPage() {
 
   // Get song counts for each playlist
   let playlists: Playlist[] = [];
-  if (playlistsData) {
+  if (playlistsData && Array.isArray(playlistsData) && playlistsData.length > 0) {
     const playlistIds = playlistsData.map(p => p.id);
     
     const { data: itemCounts } = await adminSupabase
@@ -73,5 +73,6 @@ export default async function ExplorePlaylistsPage() {
     console.error('Error fetching playlists:', error);
   }
 
-  return <ExplorePlaylistsClient initialPlaylists={playlists} />;
+  const initialPlaylists = Array.isArray(playlists) ? playlists : [];
+  return <ExplorePlaylistsClient initialPlaylists={initialPlaylists} />;
 }
