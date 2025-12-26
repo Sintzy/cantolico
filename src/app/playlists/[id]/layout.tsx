@@ -13,23 +13,21 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   
   try {
-    let { data: playlist } : { data: any } = await supabase
+    let { data: playlist, error: playlistError } : { data: any; error: any } = await supabase
       .from('Playlist')
       .select(`
         name,
         description,
         isPublic,
+        visibility,
         User!Playlist_userId_fkey (
           name
-        ),
-        PlaylistSong!Playlist_id_fkey (
-          id
         )
       `)
       .eq('id', id)
       .single();
 
-    if (!playlist) {
+    if (playlistError || !playlist) {
       // If not found with the regular client, try to fetch full data with the
       // admin/service role client. That way we avoid returning notFound when
       // the playlist exists but the current request is blocked by RLS.
@@ -40,11 +38,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
             name,
             description,
             isPublic,
+            visibility,
             User!Playlist_userId_fkey (
               name
-            ),
-            PlaylistSong!Playlist_id_fkey (
-              id
             )
           `)
           .eq('id', id)
@@ -52,12 +48,15 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
         if (adminError || !adminPlaylist) {
           console.warn(`generateMetadata: playlist not found for id=${id}`);
-          return notFound();
+          return buildMetadata({
+            title: "Playlist não encontrada",
+            description: "A playlist que você procura não existe ou foi removida.",
+            path: `/playlists/${id}`,
+            index: false,
+          });
         }
 
         // Use the adminPlaylist as the playlist for metadata generation
-        // (it has the same shape as the earlier select)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         playlist = adminPlaylist as any;
       } catch (err) {
         console.warn('generateMetadata: admin fetch failed', err);
@@ -70,7 +69,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       }
     }
 
-    const songCount = (playlist as any).PlaylistSong?.length || 0;
+    // Get song count separately
+    const { count: songCount } = await supabase
+      .from('PlaylistItem')
+      .select('*', { count: 'exact', head: true })
+      .eq('playlistId', id);
 
     return buildMetadata({
       title: `${playlist.name} | Playlist`,

@@ -457,6 +457,7 @@ export interface Database {
           songId: string
           order: number
           addedById: number
+          note: string | null
           createdAt: string
         }
         Insert: {
@@ -465,6 +466,7 @@ export interface Database {
           songId: string
           order: number
           addedById: number
+          note?: string | null
           createdAt?: string
         }
         Update: {
@@ -473,6 +475,7 @@ export interface Database {
           songId?: string
           order?: number
           addedById?: number
+          note?: string | null
           createdAt?: string
         }
       }

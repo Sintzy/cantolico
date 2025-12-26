@@ -2859,4 +2859,366 @@ RESEND_API_KEY="..."
 
 ---
 
+## 📊 Sistema de Logging e Monitorização (Loki + Grafana)
+
+### **Visão Geral**
+
+O projecto integra um sistema empresarial de logging com **Grafana Loki** para captura, agregação e análise de logs estruturados de todas as acções no sistema. Permite auditoria completa, debug e monitorização de performance em tempo real.
+
+### **Arquitetura de Logging**
+
+```
+Aplicação (Next.js) 
+    ↓ HTTP Requests/Responses
+src/proxy.ts (Global Request Logger)
+    ↓
+src/lib/user-action-logger.ts (User Action Logger)
+    ↓
+src/lib/logger.ts (Winston Logger)
+    ↓ JSON Formatted Logs
+Loki (Log Aggregation)
+    ↓
+Grafana (Visualization & Dashboards)
+```
+
+### **Componentes Principais**
+
+#### **1. src/proxy.ts - Global Request Interceptor**
+- Intercepta **todas as requisições HTTP** do servidor
+- Extrai user ID via JWT token
+- Captura IP address de múltiplas fontes:
+  - `x-forwarded-for` (proxies, load balancers)
+  - `x-real-ip` (nginx, Apache)
+  - `cf-connecting-ip` (Cloudflare)
+  - `connection.remoteAddress` (fallback)
+- Mede tempo de resposta
+- Regista logs **não-blocking** em background
+- Filtra logs importantes: APIs, admin routes, POST/PUT/DELETE, slow requests (>3s)
+
+```typescript
+// Log de requisição com contexto completo
+{
+  level: "info",
+  timestamp: "2025-12-19T10:30:45Z",
+  message: "POST /api/playlists",
+  category: "http",
+  http: {
+    method: "POST",
+    path: "/api/playlists",
+    status_code: 201,
+    response_time_ms: 245,
+    user_agent: "Mozilla/5.0..."
+  },
+  user: {
+    user_id: "550e8400-e29b-41d4-a716-446655440000",
+    user_email: "user@example.com"
+  },
+  network: {
+    ip_address: "192.168.1.100"
+  }
+}
+```
+
+#### **2. src/lib/user-action-logger.ts - Semantic Action Logger**
+Biblioteca centralizada com funções especializadas para cada tipo de acção:
+
+**Funções Disponíveis:**
+
+```typescript
+// Lê contexto do user de requisição + sessão
+extractUserContext(req, session) → {userId, userEmail, userName, userRole, ipAddress, userAgent, sessionId}
+
+// Acções CRUD
+logUserCreate()   // CREATE (playlists, songs, etc.)
+logUserUpdate()   // UPDATE (edições)
+logUserDelete()   // DELETE (removals)
+logUserRead()     // READ (accesso a dados sensíveis)
+
+// Acções de Sistema
+logAuthAction()        // Login, logout, register, password reset
+logModerationAction()  // Warn, suspend, ban actions
+logAdminAction()       // Admin operations
+logFileUpload()        // File uploads (music, PDF, etc.)
+logUserError()         // User-facing errors
+```
+
+**Exemplo de Uso:**
+
+```typescript
+import { logUserCreate } from '@/lib/user-action-logger';
+
+// Criar playlist
+const result = await db.playlists.create({name, visibility, members});
+logUserCreate(userContext, {
+  action: 'create_playlist',
+  resource: 'playlist',
+  resourceId: result.id,
+  newValue: {id: result.id, name, visibility},
+  metadata: {memberEmails: members}
+});
+```
+
+#### **3. src/lib/logger.ts - Winston Logger**
+- Transport configurado para **Grafana Loki**
+- Suporta **múltiplos ambientes** (prod, dev, test)
+- Fallback automático para console se Loki indisponível
+- Logs estruturados em **JSON**
+- **Non-blocking**: usa workers e task queues
+
+**Configuração:**
+
+```typescript
+const logger = winston.createLogger({
+  level: process.env.MIN_LOG_LEVEL || 'info',
+  format: winston.format.json(),
+  defaultMeta: {app: 'cantolico'},
+  transports: [
+    // Loki Transport (Grafana Cloud ou self-hosted)
+    new LokiTransport({
+      host: process.env.LOKI_URL,
+      basicAuth: `${process.env.LOKI_USERNAME}:${process.env.LOKI_PASSWORD}`,
+      labels: {app: 'cantolico', env: process.env.NODE_ENV},
+      interval: 5, // flush a cada 5s
+    }),
+    // Console fallback
+    new winston.transports.Console({
+      format: winston.format.simple()
+    })
+  ]
+});
+```
+
+### **Dados Capturados**
+
+#### **User Context**
+```json
+{
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "user_email": "john.doe@example.com",
+  "user_name": "John Doe",
+  "user_role": "TRUSTED",
+  "session_id": "sess_xyz123"
+}
+```
+
+#### **Network Context**
+```json
+{
+  "ip_address": "192.168.1.100",
+  "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+}
+```
+
+#### **HTTP Context**
+```json
+{
+  "method": "POST",
+  "path": "/api/playlists",
+  "status_code": 201,
+  "response_time_ms": 245,
+  "request_id": "req_abc123",
+  "correlation_id": "corr_xyz789"
+}
+```
+
+#### **Domain Context** (Negócio)
+```json
+{
+  "song_id": "song_123",
+  "playlist_id": "pl_456",
+  "submission_id": "sub_789",
+  "moderator_id": "admin_111",
+  "moderated_user_id": "user_222"
+}
+```
+
+#### **Error Context**
+```json
+{
+  "error_message": "Validation failed",
+  "error_code": "VALIDATION_ERROR",
+  "error_type": "ValidationError",
+  "stack_trace": "at validatePlaylist (api/playlists/route.ts:45)",
+  "validation_errors": ["name is required", "visibility must be public|private"]
+}
+```
+
+### **O Que É Registado**
+
+#### **Categorias de Logs**
+
+| Categoria | O Que é Registado | Exemplo |
+|-----------|------------------|---------|
+| `HTTP` | Todas as requisições HTTP | GET /api/musics, POST /api/playlists |
+| `USER_ACTION` | Acções de utilizadores | create_playlist, add_song, edit_profile |
+| `AUTH` | Login, logout, register | user@email.com logged in, OAuth success |
+| `SUBMISSION` | Upload de músicas | Music submission created, status PENDING |
+| `UPLOAD` | Uploads de ficheiros | PDF uploaded (2.5MB), Audio MP3 uploaded |
+| `MODERATION` | Acções de moderação | User warned for 24h, banned indefinitely |
+| `ADMIN` | Operações administrativas | User deleted, playlist archived |
+| `ERROR` | Erros na aplicação | Database connection failed, Validation error |
+
+#### **Rotas com Logging Integrado**
+
+```
+✅ /api/playlists          - GET (list), POST (create)
+✅ /api/playlists/[id]     - GET, PUT, DELETE
+✅ /api/playlists/[id]/songs - POST (add song)
+✅ /api/musics/create      - POST (file upload + submission)
+✅ /api/songs/stars/batch  - POST (star/unstar)
+✅ /api/auth/*             - POST (login, register, logout)
+✅ /api/admin/*            - GET, PUT, DELETE (admin operations)
+✅ /api/user/*             - GET, PUT, DELETE (user profile)
+```
+
+### **Grafana Dashboard**
+
+#### **Estrutura do Dashboard (grafana.json)**
+
+**📊 Overview Geral** (Topo)
+- 📈 Total Count of logs
+- 📊 Total Count by search pattern
+- 🔴 Total Errors
+- 👥 Active Users (5m)
+
+**📝 Live Logs Stream**
+- Stream em tempo real com formatação customizada
+- Filtros por level, category, user_id, etc.
+- Suporte para drill-down em logs específicos
+
+**👤 User Activity & Authentication**
+- User Actions Timeline (gráfico temporal)
+- Authentication Events (bars chart)
+- Top 10 Active Users (donut chart)
+- 🚨 Failed Login Attempts by IP (table)
+
+**⚡ Performance & HTTP Metrics**
+- API Response Time (threshold alerts)
+- HTTP Status Codes (distribution)
+- 🐌 Slowest Endpoints (table com cor-coding)
+
+**🔴 Errors & Issues**
+- Error Rate by Category (time series)
+- Recent Errors (log stream)
+
+**🛡️ Security & Moderation**
+- 🔨 Moderation Actions (table)
+- Top IP Addresses (pie chart)
+
+**📊 Advanced Analytics**
+- stderr/stdout streams
+- Log level distribution
+- Custom search pattern analysis
+
+#### **Variáveis de Filtro**
+
+| Variável | Tipo | Exemplo |
+|----------|------|---------|
+| `environment` | Regex | production, development, staging |
+| `level` | Regex | info, error, warn, debug |
+| `category` | Regex | http, user_action, auth, upload |
+| `user_id` | Textbox | 550e8400-e29b-41d4-a716 |
+| `song_id` | Textbox | song_123 |
+| `playlist_id` | Textbox | pl_456 |
+| `submission_id` | Textbox | sub_789 |
+| `request_id` | Textbox | req_abc123 |
+| `correlation_id` | Textbox | corr_xyz789 |
+| `tags` | Textbox | custom tag |
+| `searchable_pattern` | Text | (case insensitive search) |
+
+### **Queries LogQL Úteis**
+
+```logql
+# Todos os logs
+{app="cantolico"}
+
+# Logs de um user específico
+{app="cantolico"} | json | user_user_id="550e8400-e29b-41d4-a716"
+
+# Erros apenas
+{app="cantolico"} | json | level="error"
+
+# Taxa de erro por categoria
+sum by (category) (count_over_time({app="cantolico"} | json | level="error" [5m]))
+
+# Requests lentos (>1000ms)
+{app="cantolico"} | json | category="http" | http_response_time_ms > 1000
+
+# Falhas de autenticação
+{app="cantolico"} | json | category="auth" | level="error"
+
+# Top 10 IPs por volume
+topk(10, sum by (network_ip_address) (count_over_time({app="cantolico"} | json [1h])))
+
+# Uploads de música
+{app="cantolico"} | json | category="upload" | message=~"(?i)music"
+```
+
+### **Setup & Configuração**
+
+#### **Variáveis de Ambiente (.env.local)**
+
+```env
+# Loki Configuration
+LOKI_URL=https://logs-prod-XXX.grafana.net/loki/api/v1/push
+LOKI_USERNAME=your-username
+LOKI_PASSWORD=your-api-key
+
+# Logging Configuration
+MIN_LOG_LEVEL=info              # info, warn, error, debug
+ENABLE_CONSOLE_LOGS=true        # fallback to console
+LOG_BATCH_SIZE=10              # flush logs in batches of 10
+LOG_BATCH_TIMEOUT=5000         # flush every 5 seconds
+```
+
+#### **Opções de Deployment**
+
+**Opção 1: Grafana Cloud (Recomendado)**
+- Setup rápido (5 min)
+- 14 dias free retention
+- HTTPS automático
+- Suporta até 1M eventos/dia no free tier
+
+**Opção 2: Self-Hosted Docker**
+```bash
+docker-compose up -d # Deploy Loki + Grafana
+# Acesso em http://localhost:3000
+```
+
+**Opção 3: Kubernetes**
+```bash
+helm install grafana-loki grafana/loki-stack \
+  --set loki.enabled=true \
+  --set grafana.enabled=true
+```
+
+### **Performance & Impacto**
+
+- **Overhead de Logging:** ~5-10ms por request
+- **Network Usage:** ~500 bytes por log
+- **Retenção:** Configurável (14d-1y)
+- **Queries:** <100ms para 1M logs
+- **Non-blocking:** Usa background workers
+- **Rate Limiting:** Automático para Loki
+
+### **Segurança & Privacy**
+
+- **Autenticação:** Basic auth + API key
+- **Criptografia:** HTTPS/TLS para Loki
+- **Redação:** IPs obfuscados após 30 dias
+- **Retenção:** Configurável por política
+- **GDPR:** Suporta right to be forgotten
+- **Acesso:** Role-based em Grafana (admin, viewer)
+
+### **Troubleshooting**
+
+| Problema | Solução |
+|----------|---------|
+| "Connection refused" | Verificar LOKI_URL, credenciais, firewall |
+| Logs não aparecem | Verificar MIN_LOG_LEVEL, network connectivity |
+| Dashboard vazio | Confirmar que app está a enviar logs |
+| Queries lentas | Reduzir time range, adicionar filtros |
+
+---
+
 *Documentação gerada em Dezembro 2024 para o projecto Cantólico v1.0*
