@@ -51,7 +51,7 @@ export async function GET(
       .from('SongFile')
       .select('id, fileType, fileName, description, fileSize, fileKey, mimeType, isPrincipal, uploadedAt')
       .eq('songVersionId', songWithVersion.currentVersionId)
-      .order('isPrincipal', { ascending: false, nullsLast: true })
+      .order('isPrincipal', { ascending: false })
       .order('uploadedAt', { ascending: false });
 
     if (filesError) {
