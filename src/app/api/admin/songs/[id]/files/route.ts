@@ -755,8 +755,8 @@ export async function PATCH(
     const body = await req.json();
     const { fileId, isPrincipal } = body;
 
-    if (!fileId) {
-      return NextResponse.json({ error: 'fileId é obrigatório' }, { status: 400 });
+    if (!fileId || typeof isPrincipal !== 'boolean') {
+      return NextResponse.json({ error: 'fileId e isPrincipal são obrigatórios' }, { status: 400 });
     }
 
     // Buscar música para obter currentVersionId
@@ -770,12 +770,41 @@ export async function PATCH(
       return NextResponse.json({ error: 'Música não encontrada' }, { status: 404 });
     }
 
+    const { data: file, error: fileFetchError } = await supabase
+      .from('SongFile')
+      .select('id, songVersionId, fileType')
+      .eq('id', fileId)
+      .maybeSingle();
+
+    if (fileFetchError) {
+      logger.error('Failed to fetch file before updating isPrincipal flag', {
+        category: LogCategory.DATABASE,
+        domain: { song_id: songIdOrSlug },
+        user: { id: session.user.id, email: session.user.email },
+        network: { ip_address: clientIp },
+        error: { error_message: fileFetchError.message }
+      });
+      return NextResponse.json({ error: 'Erro ao validar ficheiro' }, { status: 500 });
+    }
+
+    if (!file) {
+      return NextResponse.json({ error: 'Ficheiro não encontrado' }, { status: 404 });
+    }
+
+    if (file.songVersionId !== songData.currentVersionId) {
+      return NextResponse.json({ error: 'Ficheiro não pertence à versão atual' }, { status: 400 });
+    }
+
+    if (isPrincipal && file.fileType !== 'PDF') {
+      return NextResponse.json({ error: 'Apenas ficheiros PDF podem ser principais' }, { status: 400 });
+    }
+
     // Se marcando como principal, remover principal dos outros PDFs
     if (isPrincipal) {
       await supabase
         .from('SongFile')
         .update({ isPrincipal: false })
-        .eq('songVersionId', songData.currentVersionId)
+        .eq('songVersionId', file.songVersionId)
         .eq('fileType', 'PDF')
         .neq('id', fileId);
     }
@@ -785,16 +814,16 @@ export async function PATCH(
       .from('SongFile')
       .update({ isPrincipal })
       .eq('id', fileId)
-      .select()
-      .single();
+      .select('id, isPrincipal, fileType')
+      .maybeSingle();
 
-    if (updateError) {
+    if (updateError || !updatedFile) {
       logger.error('Failed to update file isPrincipal flag', {
         category: LogCategory.DATABASE,
         domain: { song_id: songIdOrSlug },
         user: { id: session.user.id, email: session.user.email },
         network: { ip_address: clientIp },
-        error: { error_message: updateError.message }
+        error: { error_message: updateError?.message || 'Nenhum ficheiro atualizado' }
       });
       return NextResponse.json({ error: 'Erro ao atualizar ficheiro' }, { status: 500 });
     }

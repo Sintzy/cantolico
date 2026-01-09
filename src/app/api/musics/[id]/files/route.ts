@@ -51,6 +51,7 @@ export async function GET(
       .from('SongFile')
       .select('id, fileType, fileName, description, fileSize, fileKey, mimeType, isPrincipal, uploadedAt')
       .eq('songVersionId', songWithVersion.currentVersionId)
+      .order('isPrincipal', { ascending: false, nullsLast: true })
       .order('uploadedAt', { ascending: false });
 
     if (filesError) {
@@ -76,6 +77,15 @@ export async function GET(
         };
       })
     );
+
+    // Garantir principal primeiro mesmo que o sort do Supabase falhe por nulls
+    signedFiles = (signedFiles || []).sort((a, b) => {
+      const principalDelta = Number(b.isPrincipal ?? false) - Number(a.isPrincipal ?? false);
+      if (principalDelta !== 0) return principalDelta;
+      const aDate = a.uploadedAt ? new Date(a.uploadedAt).getTime() : 0;
+      const bDate = b.uploadedAt ? new Date(b.uploadedAt).getTime() : 0;
+      return bDate - aDate;
+    });
 
     // Extra fallback (real-world): sometimes files exist in storage but SongFile rows are missing.
     // In that case, list the storage folder for the song and return signed URLs.
