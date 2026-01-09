@@ -13,6 +13,8 @@ import { supabase } from '@/lib/supabase';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useState, useRef, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { Pencil } from 'lucide-react';
 import { Spinner, type SpinnerProps } from '@/components/ui/shadcn-io/spinner';
 import StarButton from '@/components/StarButton';
 import AddToPlaylistButton from '@/components/AddToPlaylistButton';
@@ -112,6 +114,7 @@ function transposeMarkdownChords(text: string, interval: number): string {
 export default function SongPage() {
   const { id } = useParams();
   const router = useRouter();
+  const { data: session } = useSession();
   const [song, setSong] = React.useState<SongData | null>(null);
   const [pdfUrl, setPdfUrl] = React.useState<string | null>(null);
   const [audioUrl, setAudioUrl] = React.useState<string | null>(null);
@@ -424,6 +427,8 @@ export default function SongPage() {
   }
 
   const { title, mainInstrument, tags, moments, currentVersion, author } = song;
+  const isAdmin = session?.user?.role === 'ADMIN';
+  const adminEditUrl = song?.id ? `/admin/dashboard/musics/${song.id}/edit` : null;
 
 
   const getYoutubeId = (url: string) => {
@@ -538,6 +543,17 @@ export default function SongPage() {
                 <a href={pdfUrl} target="_blank" rel="noopener noreferrer"><Download className="h-4 w-4 mr-1" /> PDF Original</a>
               </Button>
             )}
+            {isAdmin && adminEditUrl && (
+              <Button
+                asChild
+                variant="ghost"
+                className="text-white hover:bg-white/20 border-white/30 shadow"
+              >
+                <a href={adminEditUrl} target="_blank" rel="noopener noreferrer">
+                  <Pencil className="h-4 w-4 mr-1" /> Editar
+                </a>
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -560,6 +576,17 @@ export default function SongPage() {
           {pdfUrl && (
             <Button asChild variant="ghost" className="text-blue-700 p-3 touch-manipulation">
               <a href={pdfUrl} target="_blank" rel="noopener noreferrer"><Download className="h-5 w-5" /></a>
+            </Button>
+          )}
+          {isAdmin && adminEditUrl && (
+            <Button
+              asChild
+              variant="ghost"
+              className="text-blue-700 p-3 touch-manipulation"
+            >
+              <a href={adminEditUrl} target="_blank" rel="noopener noreferrer">
+                <Pencil className="h-5 w-5" />
+              </a>
             </Button>
           )}
         </div>

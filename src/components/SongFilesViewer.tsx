@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -116,6 +116,21 @@ export function SongFilesViewer({ songId, showTitle = true, className = '' }: So
   const pdfFiles = files.filter(f => isPdfFileType(f.fileType as FileType));
   const audioFiles = files.filter(f => isAudioFileType(f.fileType as FileType));
 
+  const sortedPdfFiles = [...pdfFiles].sort((a, b) => {
+    const principalDelta = Number(b.isPrincipal ?? false) - Number(a.isPrincipal ?? false);
+    if (principalDelta !== 0) return principalDelta;
+    const aDate = a.uploadedAt ? new Date(a.uploadedAt).getTime() : 0;
+    const bDate = b.uploadedAt ? new Date(b.uploadedAt).getTime() : 0;
+    return bDate - aDate;
+  });
+
+  const handleHorizontalWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      e.currentTarget.scrollLeft += e.deltaY;
+      e.preventDefault();
+    }
+  }, []);
+
   return (
     <Card className={className}>
       {showTitle && (
@@ -143,55 +158,71 @@ export function SongFilesViewer({ songId, showTitle = true, className = '' }: So
           </TabsList>
 
           <TabsContent value="pdfs" className="space-y-3 mt-4">
-            {pdfFiles.length === 0 ? (
+            {sortedPdfFiles.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">
                 Nenhuma partitura disponível
               </p>
             ) : (
-              pdfFiles.map(file => (
-                <div 
-                  key={file.id} 
-                  className="flex items-center gap-3 p-4 border rounded-lg hover:bg-accent/50 transition-colors"
-                >
-                  <span className="text-2xl">{FileTypeIcons[file.fileType as FileType]}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">
-                      {file.description}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="outline" className="text-xs">
-                        PDF
-                      </Badge>
-                      {file.fileSize && (
-                        <span className="text-xs text-muted-foreground">
-                          {formatFileSize(file.fileSize)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={() => handleDownload(file)}
-                      disabled={!file.signedUrl}
+              <div
+                className="flex gap-3 overflow-x-auto pb-2 px-1"
+                onWheel={handleHorizontalWheel}
+              >
+                <div className="flex gap-3 min-w-max">
+                  {sortedPdfFiles.map(file => (
+                    <div 
+                      key={file.id} 
+                      className="flex w-72 min-w-72 flex-col gap-3 p-4 border rounded-lg hover:bg-accent/50 transition-colors shadow-sm"
                     >
-                      <Download className="h-4 w-4" />
-                    </Button>
-                    {file.signedUrl && (
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        asChild
-                      >
-                        <a href={file.signedUrl} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="h-4 w-4" />
-                        </a>
-                      </Button>
-                    )}
-                  </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl">{FileTypeIcons[file.fileType as FileType]}</span>
+                        {file.isPrincipal && (
+                          <Badge variant="default" className="text-[11px]">Principal</Badge>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <p className="font-medium text-sm line-clamp-2" title={file.description}>
+                          {file.description}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">
+                            PDF
+                          </Badge>
+                          {file.fileSize && (
+                            <span className="text-xs text-muted-foreground">
+                              {formatFileSize(file.fileSize)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => handleDownload(file)}
+                          disabled={!file.signedUrl}
+                          className="w-full"
+                        >
+                          <Download className="h-4 w-4" />
+                          <span className="ml-2 text-xs">Download</span>
+                        </Button>
+                        {file.signedUrl && (
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            asChild
+                            className="w-full"
+                          >
+                            <a href={file.signedUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2">
+                              <ExternalLink className="h-4 w-4" />
+                              <span className="text-xs">Abrir</span>
+                            </a>
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))
+              </div>
             )}
           </TabsContent>
 

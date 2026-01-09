@@ -437,12 +437,15 @@ export function FileManager({
           if (onUpdateDescription) {
             await onUpdateDescription(file.id, newDescription);
           } else {
-            const response = await fetch(`/api/admin/songs/${songId}/files`, {
+            const response = await fetch(`/api/admin/songs/${songId}/files/${file.id}`, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ fileId: file.id, description: newDescription }),
+              body: JSON.stringify({ description: newDescription }),
             });
-            if (!response.ok) throw new Error('Erro ao atualizar descrição');
+            if (!response.ok) {
+              const payload = await response.json().catch(() => null);
+              throw new Error(payload?.error || 'Erro ao atualizar descrição');
+            }
           }
         } catch (e) {
           console.error(e);

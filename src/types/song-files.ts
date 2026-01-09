@@ -30,6 +30,7 @@ export interface SongFile {
   description: string; // Descrição personalizada (obrigatório)
   uploadedAt: string;
   uploadedById: number;
+  isPrincipal?: boolean; // Apenas PDFs podem ser principais
   deletedAt?: string | null; // Data de marcação para eliminação (soft delete)
   deletionReason?: string | null; // Razão da eliminação
 }
