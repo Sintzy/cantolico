@@ -494,9 +494,9 @@ export default function SongPage() {
       
       <div className="relative w-full min-h-screen bg-white">
       {/* Hero Section with blurred background and overlay */}
-      <div className="relative h-64 md:h-80 w-full flex items-center justify-center overflow-hidden">
+      <div className="relative h-80 md:h-96 lg:h-[28rem] w-full flex items-center justify-center overflow-hidden -mt-16 pt-16">
         {/* Back Button */}
-        <div className="absolute top-4 left-4 z-20">
+        <div className="absolute top-20 left-4 z-20">
           <Button
             variant="ghost"
             size="sm"

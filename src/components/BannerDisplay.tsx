@@ -15,7 +15,7 @@ interface Banner {
 }
 
 interface BannerDisplayProps {
-  page: 'HOME' | 'MUSICS' | 'ADMIN' | 'ALL';
+  page: 'HOME' | 'MUSICS' | 'ADMIN' | 'LITURGIA' | 'ALL';
 }
 
 const getBannerStyles = (type: Banner['type']) => {

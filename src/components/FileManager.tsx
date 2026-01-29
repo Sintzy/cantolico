@@ -481,7 +481,7 @@ export function FileManager({
             <div className={`relative p-3 rounded-xl transition-all duration-200 ${
               isPdf 
                 ? 'bg-linear-to-br from-red-50 to-red-100 group-hover:from-red-100 group-hover:to-red-200' 
-                : 'bg-linear-to-br from-blue-50 to-blue-100 group-hover:from-blue-100 group-hover:to-blue-200'
+                : 'bg-linear-to-br from-rose-50 to-amber-100 group-hover:from-rose-100 group-hover:to-amber-200'
             }`}>
               <Icon className={`w-5 h-5 ${isPdf ? 'text-red-600' : 'text-blue-600'}`} />
               

@@ -101,33 +101,34 @@ export default function Navbar() {
 
     return (
         <>
-            <nav className="bg-white/95 backdrop-blur-sm border-b border-gray-200/80 sticky top-0 z-50">
-                <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-                    {/* Logo */}
-                    <Link href="/" className="flex items-center space-x-3 group">
-                        <div className="relative">
-                            <Image 
-                                src={Icons.SITE_IMAGES.logo} 
-                                alt="Logo" 
-                                width={32} 
-                                height={32} 
-                                className="transition-transform group-hover:scale-110"
-                            />
-                            <div className="absolute inset-0 bg-blue-500/20 rounded-full scale-0 group-hover:scale-125 transition-transform duration-300"></div>
-                        </div>
-                        <span className="text-xl font-bold text-black bg-clip-text">
-                            Can♱ólico!
-                        </span>
-                    </Link>
+            {/* Floating Navbar */}
+            <nav className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 w-[95vw] max-w-6xl">
+                <div className="bg-white/95 backdrop-blur-xl border border-slate-200/50 rounded-2xl shadow-md hover:shadow-lg transition-shadow duration-300">
+                    <div className="px-5 py-3 flex items-center justify-between max-w-7xl mx-auto">
+                        {/* Logo */}
+                        <Link href="/" className="flex items-center space-x-2 group shrink-0">
+                            <div className="relative">
+                                <Image 
+                                    src={Icons.SITE_IMAGES.logo} 
+                                    alt="Logo" 
+                                    width={28} 
+                                    height={28} 
+                                    className="transition-transform group-hover:scale-110"
+                                />
+                            </div>
+                            <span className="text-base font-black text-slate-900 hidden sm:inline">
+                                Can♱ólico!
+                            </span>
+                        </Link>
 
-                    {/* Desktop nav + Search */}
-                    <div className="hidden lg:flex items-center gap-1">
+                        {/* Desktop nav + Search */}
+                        <div className="hidden lg:flex items-center gap-0.5">
                         <Link 
                             href="/musics" 
-                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-slate-700 hover:text-rose-600 hover:bg-rose-100/50 transition-all duration-200 font-medium text-sm"
                         >
                             <Music className="h-4 w-4" />
-                            <span className="font-medium">Músicas</span>
+                            <span>Músicas</span>
                         </Link>
                         
                         {/* Playlists Dropdown Menu */}
@@ -147,63 +148,61 @@ export default function Navbar() {
                                         setPlaylistsMenuOpen(true);
                                     }
                                 }}
-                                className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
+                                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-slate-700 hover:text-orange-600 hover:bg-orange-100/50 transition-all duration-200 font-medium text-sm"
                             >
                                 <ListMusic className="h-4 w-4" />
-                                <span className="font-medium">Playlists</span>
+                                <span>Playlists</span>
                                 <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${playlistsMenuOpen ? 'rotate-180' : ''}`} />
                             </button>
                             
                             {playlistsMenuOpen && (
-                                <div className="absolute top-full left-0 mt-2 w-64 bg-white/95 backdrop-blur-sm border border-gray-200/80 rounded-xl shadow-lg z-50 overflow-hidden">
-                                    <div className="py-2">
+                                <div className="absolute top-full left-0 mt-1 w-56 bg-white/95 backdrop-blur-sm border border-slate-200/80 rounded-lg shadow-lg z-50 overflow-hidden">
+                                    <div className="py-1">
                                         <Link
                                             href="/playlists/explore"
-                                            className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                            className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-orange-100/50 hover:text-orange-600 transition-colors"
                                             onClick={() => {
                                                 setPlaylistsMenuOpen(false);
                                                 setPlaylistsMenuSticky(false);
                                             }}
                                         >
-                                            <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                                                <Globe className="h-4 w-4 text-green-600" />
+                                            <div className="w-7 h-7 bg-orange-100 rounded-md flex items-center justify-center">
+                                                <Globe className="h-3.5 w-3.5 text-orange-600" />
                                             </div>
                                             <div>
-                                                <div className="font-medium">Playlists Públicas</div>
-                                                <div className="text-xs text-gray-500">Descobrir playlists da comunidade</div>
+                                                <div className="font-medium text-sm">Públicas</div>
+                                                <div className="text-xs text-gray-500">Descobrir</div>
                                             </div>
                                         </Link>
                                         
                                         {session ? (
                                             <Link
                                                 href="/playlists"
-                                                className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                                className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-rose-100/50 hover:text-rose-600 transition-colors"
                                                 onClick={() => {
                                                     setPlaylistsMenuOpen(false);
                                                     setPlaylistsMenuSticky(false);
                                                 }}
                                             >
-                                                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                                                    <Lock className="h-4 w-4 text-blue-600" />
+                                                <div className="w-7 h-7 bg-rose-100 rounded-md flex items-center justify-center">
+                                                    <Lock className="h-3.5 w-3.5 text-rose-600" />
                                                 </div>
                                                 <div>
-                                                    <div className="font-medium">Minhas Playlists</div>
-                                                    <div className="text-xs text-gray-500">Gerir as tuas coleções</div>
+                                                    <div className="font-medium text-sm">Minhas</div>
+                                                    <div className="text-xs text-gray-500">Tuas coleções</div>
                                                 </div>
                                             </Link>
                                         ) : (
-                                            <div className="px-4 py-3 text-sm text-gray-500">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                                                        <Lock className="h-4 w-4 text-gray-400" />
+                                            <div className="px-3 py-2 text-sm text-slate-600">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-7 h-7 bg-slate-100 rounded-md flex items-center justify-center">
+                                                        <Lock className="h-3.5 w-3.5 text-slate-400" />
                                                     </div>
                                                     <div>
-                                                        <div className="font-medium text-gray-400">Minhas Playlists</div>
-                                                        <div className="text-xs">
-                                                            <Link href="/login" className="text-blue-600 hover:underline">
-                                                                Faz login
-                                                            </Link> para aceder
-                                                        </div>
+                                                        <div className="font-medium text-sm text-slate-500">Minhas Playlists</div>
+                                                        <Link href="/login" className="text-xs text-rose-600 hover:underline">
+                                                            Login
+                                                        </Link>
                                                     </div>
                                                 </div>
                                             </div>
@@ -215,10 +214,10 @@ export default function Navbar() {
                         
                         <Link 
                             href="/musics/create" 
-                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-700 hover:text-green-600 hover:bg-green-50 transition-all duration-200"
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-slate-700 hover:text-amber-600 hover:bg-amber-100/50 transition-all duration-200 font-medium text-sm"
                         >
                             <Plus className="h-4 w-4" />
-                            <span className="font-medium">Nova Música</span>
+                            <span>Nova</span>
                         </Link>
                         
                         {/* Admin/Reviewer Links */}
@@ -453,6 +452,7 @@ export default function Navbar() {
                         </button>
                     </div>
                 </div>
+                </div>
             </nav>
 
             {/* Mobile Sidebar Overlay */}
@@ -460,28 +460,28 @@ export default function Navbar() {
                 <div className="fixed inset-0 z-60 lg:hidden">
                     {/* Backdrop */}
                     <div 
-                        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm"
                         onClick={closeMobileMenu}
                     ></div>
                     
                     {/* Sidebar */}
-                    <div className="fixed left-0 top-0 h-full w-80 max-w-[85vw] bg-white shadow-xl transform transition-transform duration-300 ease-out">
+                    <div className="fixed left-0 top-0 h-full w-80 max-w-[85vw] bg-white shadow-2xl transform transition-transform duration-300 ease-out">
                         {/* Header */}
-                        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-                            <div className="flex items-center space-x-3">
+                        <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-gradient-to-r from-rose-50 via-orange-50 to-yellow-50">
+                            <div className="flex items-center space-x-2">
                                 <Image 
                                     src={Icons.SITE_IMAGES.logo} 
                                     alt="Logo" 
-                                    width={24} 
-                                    height={24} 
+                                    width={28} 
+                                    height={28} 
                                 />
-                                <span className="text-lg font-bold bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                                <span className="text-base font-black text-slate-900">
                                     Can♱ólico!
                                 </span>
                             </div>
                             <button
                                 onClick={closeMobileMenu}
-                                className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+                                className="p-2 text-slate-500 hover:bg-white/50 rounded-lg transition-colors"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -489,39 +489,35 @@ export default function Navbar() {
 
                         {/* User Info (if logged in) */}
                         {session?.user && (
-                            <div className="p-4 bg-gray-50 border-b border-gray-200">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 rounded-full border-2 border-gray-200 overflow-hidden">
+                            <div className="p-3 bg-slate-50 border-b border-slate-200/50">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-10 h-10 rounded-full border-2 border-slate-200 overflow-hidden">
                                         <UserAvatar 
                                             user={{
                                                 name: session.user.name || "Utilizador",
                                                 image: session.user.image
                                             }} 
-                                            size={48} 
+                                            size={40} 
                                         />
                                     </div>
                                     <div>
-                                        <div className="font-medium text-gray-900">{session.user.name}</div>
-                                        <div className="text-sm text-gray-500">{session.user.email}</div>
+                                        <div className="font-bold text-slate-900 text-sm">{session.user.name}</div>
+                                        <div className="text-xs text-slate-500">{session.user.email}</div>
                                     </div>
                                 </div>
                             </div>
                         )}
 
                         {/* Search */}
-                        <div className="p-4 border-b border-gray-200">
+                        <div className="p-3 border-b border-slate-200/50">
                             <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                                 <input
                                     type="text"
                                     placeholder="Pesquisar músicas..."
                                     value={searchQuery}
-                                    onChange={(e) => {
-                                        const newValue = e.target.value;
-                                        setSearchQuery(newValue);
-                                        handleSearchChange({ target: { value: newValue } } as any);
-                                    }}
-                                    className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                                    onChange={handleSearchChange}
+                                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent text-sm bg-slate-50 focus:bg-white transition-all duration-200"
                                     autoCapitalize="off"
                                     autoCorrect="off"
                                     spellCheck="false"
@@ -531,33 +527,33 @@ export default function Navbar() {
                             
                             {/* Search Results Mobile */}
                             {searchQuery.trim() !== "" && (
-                                <div className="mt-2 bg-white border border-gray-200 rounded-lg shadow-md max-h-80 overflow-y-auto">
+                                <div className="mt-2 bg-white border border-slate-200 rounded-lg shadow-md max-h-72 overflow-y-auto">
                                     {isSearching ? (
-                                        <div className="px-4 py-3 text-sm text-gray-500 text-center">A procurar...</div>
+                                        <div className="px-4 py-3 text-sm text-slate-500 text-center">A procurar...</div>
                                     ) : searchResults.length > 0 ? (
                                         <>
                                             {searchResults.slice(0, 8).map((result) => (
                                                 <Link
                                                     key={result.id}
                                                     href={`/musics/${result.id}`}
-                                                    className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors border-b last:border-b-0"
+                                                    className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-slate-700 hover:bg-rose-50 hover:text-rose-600 transition-colors border-b border-slate-100 last:border-b-0"
                                                     onClick={() => {
                                                         setSearchQuery("");
                                                         closeMobileMenu();
                                                     }}
                                                 >
-                                                    <Music className="h-4 w-4 text-gray-400 shrink-0" />
-                                                    <span className="truncate">{result.title}</span>
+                                                    <Music className="h-4 w-4 text-slate-400 shrink-0" />
+                                                    <span className="truncate font-medium">{result.title}</span>
                                                 </Link>
                                             ))}
                                             {searchResults.length > 8 && (
-                                                <div className="px-4 py-2 text-xs text-gray-500 bg-gray-50 text-center">
-                                                    +{searchResults.length - 8} mais resultados...
+                                                <div className="px-3 py-2 text-xs text-slate-500 bg-slate-50 text-center">
+                                                    +{searchResults.length - 8} mais...
                                                 </div>
                                             )}
                                         </>
                                     ) : (
-                                        <div className="px-4 py-3 text-sm text-gray-500 text-center">Nenhum resultado encontrado.</div>
+                                        <div className="px-4 py-3 text-sm text-slate-500 text-center">Nenhum resultado.</div>
                                     )}
                                 </div>
                             )}
@@ -565,133 +561,135 @@ export default function Navbar() {
 
                         {/* Navigation */}
                         <div className="flex-1 overflow-y-auto">
-                            <div className="py-2">
+                            <div className="py-1">
                                 <Link 
                                     href="/" 
-                                    className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors"
+                                    className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-slate-700 hover:bg-rose-100/50 hover:text-rose-600 rounded-lg transition-all duration-200 font-medium text-sm"
                                     onClick={closeMobileMenu}
                                 >
-                                    <Home className="h-5 w-5" />
-                                    <span className="font-medium">Início</span>
+                                    <Home className="h-4 w-4" />
+                                    <span>Início</span>
                                 </Link>
                                 
                                 <Link 
                                     href="/musics" 
-                                    className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors"
+                                    className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-slate-700 hover:bg-rose-100/50 hover:text-rose-600 rounded-lg transition-all duration-200 font-medium text-sm"
                                     onClick={closeMobileMenu}
                                 >
-                                    <Music className="h-5 w-5" />
-                                    <span className="font-medium">Músicas</span>
+                                    <Music className="h-4 w-4" />
+                                    <span>Músicas</span>
                                 </Link>
                                 
                                 <Link 
                                     href="/playlists/explore" 
-                                    className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors"
+                                    className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-slate-700 hover:bg-orange-100/50 hover:text-orange-600 rounded-lg transition-all duration-200 font-medium text-sm"
                                     onClick={closeMobileMenu}
                                 >
-                                    <Globe className="h-5 w-5" />
-                                    <span className="font-medium">Playlists Públicas</span>
+                                    <Globe className="h-4 w-4" />
+                                    <span>Playlists Públicas</span>
                                 </Link>
                                 
                                 {session ? (
                                     <>
                                         <Link 
                                             href="/playlists" 
-                                            className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors"
+                                            className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-slate-700 hover:bg-orange-100/50 hover:text-orange-600 rounded-lg transition-all duration-200 font-medium text-sm"
                                             onClick={closeMobileMenu}
                                         >
-                                            <ListMusic className="h-5 w-5" />
-                                            <span className="font-medium">Minhas Playlists</span>
+                                            <ListMusic className="h-4 w-4" />
+                                            <span>Minhas Playlists</span>
                                         </Link>
                                         
                                         <Link 
                                             href="/musics/create" 
-                                            className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors"
+                                            className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-slate-700 hover:bg-amber-100/50 hover:text-amber-600 rounded-lg transition-all duration-200 font-medium text-sm"
                                             onClick={closeMobileMenu}
                                         >
-                                            <Plus className="h-5 w-5" />
-                                            <span className="font-medium">Nova Música</span>
+                                            <Plus className="h-4 w-4" />
+                                            <span>Nova Música</span>
                                         </Link>
+
+                                        <div className="h-px bg-slate-200 my-2 mx-3"></div>
 
                                         <Link 
                                             href={`/users/${session.user.id}`} 
-                                            className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors"
+                                            className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-slate-700 hover:bg-slate-100/50 rounded-lg transition-all duration-200 font-medium text-sm"
                                             onClick={closeMobileMenu}
                                         >
-                                            <User className="h-5 w-5" />
-                                            <span className="font-medium">Meu Perfil</span>
+                                            <User className="h-4 w-4" />
+                                            <span>Perfil</span>
                                         </Link>
                                         
                                         <Link 
                                             href="/starred-songs" 
-                                            className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors"
+                                            className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-slate-700 hover:bg-yellow-100/50 hover:text-yellow-600 rounded-lg transition-all duration-200 font-medium text-sm"
                                             onClick={closeMobileMenu}
                                         >
-                                            <Star className="h-5 w-5" />
-                                            <span className="font-medium">Músicas Favoritas</span>
+                                            <Star className="h-4 w-4" />
+                                            <span>Favoritas</span>
                                         </Link>
                                         
                                         {/* Admin/Reviewer Links Mobile */}
                                         {session.user.role === "ADMIN" && (
                                             <>
-                                                <div className="px-4 py-2">
-                                                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Administração</div>
+                                                <div className="px-3 py-2 mt-2">
+                                                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Admin</div>
                                                 </div>
                                                 <Link 
                                                     href="/admin/dashboard" 
-                                                    className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors"
+                                                    className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-slate-700 hover:bg-purple-100/50 hover:text-purple-600 rounded-lg transition-all duration-200 font-medium text-sm"
                                                     onClick={closeMobileMenu}
                                                 >
-                                                    <Crown className="h-5 w-5" />
-                                                    <span className="font-medium">Dashboard</span>
+                                                    <Crown className="h-4 w-4" />
+                                                    <span>Dashboard</span>
                                                 </Link>
                                                 <Link 
                                                     href="/admin/review" 
-                                                    className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors"
+                                                    className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-slate-700 hover:bg-blue-100/50 hover:text-blue-600 rounded-lg transition-all duration-200 font-medium text-sm"
                                                     onClick={closeMobileMenu}
                                                 >
-                                                    <Eye className="h-5 w-5" />
-                                                    <span className="font-medium">Revisão</span>
+                                                    <Eye className="h-4 w-4" />
+                                                    <span>Revisão</span>
                                                 </Link>
                                             </>
                                         )}
                                         {session.user.role === "REVIEWER" && (
                                             <>
-                                                <div className="px-4 py-2">
-                                                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Moderação</div>
+                                                <div className="px-3 py-2 mt-2">
+                                                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Moderação</div>
                                                 </div>
                                                 <Link 
                                                     href="/admin/review" 
-                                                    className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors"
+                                                    className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-slate-700 hover:bg-blue-100/50 hover:text-blue-600 rounded-lg transition-all duration-200 font-medium text-sm"
                                                     onClick={closeMobileMenu}
                                                 >
-                                                    <Eye className="h-5 w-5" />
-                                                    <span className="font-medium">Revisão</span>
+                                                    <Eye className="h-4 w-4" />
+                                                    <span>Revisão</span>
                                                 </Link>
                                             </>
                                         )}
                                     </>
                                 ) : (
                                     <>
-                                        <div className="px-4 py-2">
-                                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Conta</div>
+                                        <div className="px-3 py-2 mt-2">
+                                            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Conta</div>
                                         </div>
                                         <Link 
                                             href="/login" 
-                                            className="flex items-center gap-3 px-4 py-3 text-blue-600 hover:bg-blue-50 transition-colors"
+                                            className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-rose-600 hover:bg-rose-100/50 rounded-lg transition-all duration-200 font-medium text-sm"
                                             onClick={closeMobileMenu}
                                         >
-                                            <User className="h-5 w-5" />
-                                            <span className="font-medium">Login</span>
+                                            <User className="h-4 w-4" />
+                                            <span>Login</span>
                                         </Link>
                                         
                                         <Link 
                                             href="/register" 
-                                            className="flex items-center gap-3 px-4 py-3 text-green-600 hover:bg-green-50 transition-colors"
+                                            className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-emerald-600 hover:bg-emerald-100/50 rounded-lg transition-all duration-200 font-medium text-sm"
                                             onClick={closeMobileMenu}
                                         >
-                                            <UserPlus className="h-5 w-5" />
-                                            <span className="font-medium">Criar Conta</span>
+                                            <UserPlus className="h-4 w-4" />
+                                            <span>Criar Conta</span>
                                         </Link>
                                     </>
                                 )}
@@ -700,16 +698,16 @@ export default function Navbar() {
 
                         {/* Footer */}
                         {session && (
-                            <div className="border-t border-gray-200 p-4">
+                            <div className="border-t border-slate-200 p-3">
                                 <button
                                     onClick={() => {
                                         signOut();
                                         closeMobileMenu();
                                     }}
-                                    className="flex items-center gap-3 w-full px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                    className="flex items-center gap-2.5 w-full px-3 py-2.5 text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 font-medium text-sm"
                                 >
-                                    <LogOut className="h-5 w-5" />
-                                    <span className="font-medium">Sair</span>
+                                    <LogOut className="h-4 w-4" />
+                                    <span>Sair</span>
                                 </button>
                             </div>
                         )}

@@ -22,10 +22,10 @@ export default function LoginPage() {
           {/* Background decoration */}
           <div className="pointer-events-none absolute inset-0" aria-hidden="true">
             <div className="absolute left-1/2 top-0 -translate-x-1/2">
-              <div className="h-80 w-80 rounded-full bg-linear-to-tr from-blue-500/20 to-purple-500/20 blur-[120px]" />
+              <div className="h-80 w-80 rounded-full bg-linear-to-tr from-rose-500/20 to-amber-500/20 blur-[120px]" />
             </div>
             <div className="absolute bottom-0 right-0">
-              <div className="h-60 w-60 rounded-full bg-linear-to-tl from-purple-500/20 to-pink-500/20 blur-[100px]" />
+              <div className="h-60 w-60 rounded-full bg-linear-to-tl from-rose-500/20 to-orange-500/20 blur-[100px]" />
             </div>
           </div>
           
@@ -35,7 +35,7 @@ export default function LoginPage() {
               <div className="text-center">
                 <div className="mb-4 border-y [border-image:linear-gradient(to_right,transparent,--theme(--color-slate-300/.8),transparent)1]">
                   <div className="-mx-0.5 flex justify-center py-2">
-                    <div className="w-12 h-12 bg-linear-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <div className="w-12 h-12 bg-linear-to-r from-rose-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
                       <Music className="h-6 w-6 text-white" />
                     </div>
                   </div>

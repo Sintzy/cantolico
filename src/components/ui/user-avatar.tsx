@@ -38,7 +38,7 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
   
   return (
     <div 
-      className={`rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center ${className}`}
+      className={`rounded-full bg-gradient-to-br from-rose-400 to-orange-500 flex items-center justify-center ${className}`}
       style={{ 
         width: `${size}px`, 
         height: `${size}px`,

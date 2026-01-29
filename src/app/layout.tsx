@@ -35,6 +35,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <CacheProvider>
           <AuthSessionProvider>
             <Navbar />
+            {/* Spacer for floating navbar */}
+            <div className="h-16"></div>
             <EmailVerificationBanner />
             <main className="flex-1">
               {children}

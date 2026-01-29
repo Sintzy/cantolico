@@ -124,9 +124,9 @@ function PlaylistsContent({ initialPlaylists }: PlaylistsClientProps) {
   const allPlaylistsForAdmin = playlists.filter(p => p.userRole === 'admin');
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="bg-white border-b">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="min-h-screen bg-white -mt-20">
+      <div className="bg-white border-b pt-20">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 md:py-12">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">As Minhas Playlists</h1>

@@ -11,10 +11,10 @@ export default function NotFound() {
       {/* Background decoration */}
       <div className="pointer-events-none absolute inset-0" aria-hidden="true">
         <div className="absolute left-1/2 top-1/3 -translate-x-1/2">
-          <div className="h-80 w-80 rounded-full bg-gradient-to-tr from-blue-500/30 to-purple-500/30 blur-[120px]" />
+          <div className="h-80 w-80 rounded-full bg-gradient-to-tr from-rose-500/30 to-amber-500/30 blur-[120px]" />
         </div>
         <div className="absolute left-1/4 top-2/3 -translate-x-1/2">
-          <div className="h-60 w-60 rounded-full bg-gradient-to-tr from-purple-400/20 to-pink-400/20 blur-[100px]" />
+          <div className="h-60 w-60 rounded-full bg-gradient-to-tr from-rose-400/20 to-orange-400/20 blur-[100px]" />
         </div>
         <div className="absolute right-1/4 top-1/4 -translate-x-1/2">
           <div className="h-40 w-40 rounded-full bg-gradient-to-tr from-orange-400/25 to-yellow-400/25 blur-[80px]" />
@@ -53,7 +53,7 @@ export default function NotFound() {
               <Button 
                 asChild 
                 size="lg" 
-                className="w-full bg-gradient-to-t from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600 shadow-lg"
+                className="w-full bg-gradient-to-t from-rose-600 to-pink-600 text-white hover:from-rose-700 hover:to-pink-700 shadow-lg"
               >
                 <Link href="/">
                   Voltar à página principal

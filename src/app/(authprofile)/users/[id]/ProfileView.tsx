@@ -137,12 +137,12 @@ export default function ProfileView({ user, isOwner }: ProfileViewProps) {
         const data: Music[] = Array.isArray(response.songs) ? response.songs : [];
 
         const filteredMusics = data.filter((music) =>
-          music.versions.some((version) => version.createdById === user.id)
+          music.versions && Array.isArray(music.versions) && music.versions.some((version) => version.createdById === user.id)
         );
 
         const formattedMusics = filteredMusics.map((music) => ({
           ...music,
-          versions: music.versions.filter(
+          versions: (music.versions || []).filter(
             (version) => version.createdById === user.id
           ),
         }));
@@ -238,20 +238,41 @@ export default function ProfileView({ user, isOwner }: ProfileViewProps) {
   const badgeUrl = `/badges/${user.role.toLowerCase()}.png`;
 
   return (
-    <main className="min-h-screen bg-white">
-      {/* Header Section */}
-      <section className="bg-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-          <div className="flex flex-col sm:flex-row lg:flex-row gap-6 sm:gap-8">
+    <main className="min-h-screen bg-white -mt-20">
+      {/* Hero Section */}
+      <section className="relative bg-white pt-20">
+        {/* Background decoration */}
+        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+          <div className="absolute left-1/2 top-0 -translate-x-1/2">
+            <div className="h-96 w-96 rounded-full bg-linear-to-br from-rose-50 via-white to-amber-50" />
+          </div>
+        </div>
+        
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12 md:py-16 relative z-10">
+          {/* Decorative border */}
+          <div className="mb-8 border-y [border-image:linear-gradient(to_right,transparent,--theme(--color-slate-300/.8),transparent)1]">
+            <div className="-mx-0.5 flex justify-center -space-x-2 py-2">
+              <div className="w-6 h-6 bg-linear-to-r from-rose-500 to-pink-600 rounded-full flex items-center justify-center">
+                <User className="text-white text-xs w-3 h-3" />
+              </div>
+              <div className="w-6 h-6 bg-linear-to-r from-amber-500 to-orange-500 rounded-full flex items-center justify-center">
+                <Music2 className="text-white text-xs w-3 h-3" />
+              </div>
+              <div className="w-6 h-6 bg-linear-to-r from-rose-500 to-orange-500 rounded-full flex items-center justify-center">
+                <Star className="text-white text-xs w-3 h-3" />
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-col items-center text-center gap-6 mb-8">
             {/* Avatar */}
-            <div className="flex-shrink-0 self-center sm:self-start">
+            <div className="relative">
               <div className="relative">
-                <Avatar className="h-24 w-24 sm:h-32 sm:w-32">
+                <Avatar className="h-32 w-32 sm:h-40 sm:w-40 border-4 border-white shadow-xl">
                   <AvatarImage 
-                    src={editMode ? form.image || "/default-profile.png" : user.image || "/default-profile.png"} 
-                    alt={user.name || "Utilizador"} 
+                    src={editMode ? (form.image || "/default-profile.png") : (user.image || "/default-profile.png")} 
+                    alt={user.name || "Utilizador"}
                   />
-                  <AvatarFallback className="text-2xl">
+                  <AvatarFallback className="text-2xl bg-gradient-to-br from-rose-500 to-amber-500 text-white">
                     {(user.name || "U").charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
@@ -276,9 +297,9 @@ export default function ProfileView({ user, isOwner }: ProfileViewProps) {
             </div>
 
             {/* User Info */}
-            <div className="flex-1 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="space-y-2">
+            <div className="w-full space-y-4">
+              <div className="flex flex-col items-center gap-4">
+                <div className="space-y-3">
                   {editMode ? (
                     <div className="space-y-2">
                       <Label htmlFor="name">Nome</Label>
@@ -321,7 +342,7 @@ export default function ProfileView({ user, isOwner }: ProfileViewProps) {
                 </div>
 
                 {isOwner && (
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 justify-center">
                     {editMode ? (
                       <>
                         <Button variant="outline" onClick={() => setEditMode(false)}>
@@ -352,7 +373,7 @@ export default function ProfileView({ user, isOwner }: ProfileViewProps) {
               </div>
 
               {/* User Stats */}
-              <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-6 text-sm text-muted-foreground">
+              <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-6 text-sm text-muted-foreground justify-center">
                 <div className="flex items-center gap-2">
                   <Mail className="w-4 h-4 flex-shrink-0" />
                   <span className="break-all">{user.email}</span>
@@ -372,7 +393,7 @@ export default function ProfileView({ user, isOwner }: ProfileViewProps) {
       </section>
 
       {/* Content */}
-      <section className="py-6 sm:py-8">
+      <section className="bg-gradient-to-br from-slate-50 via-white to-slate-50 border-t border-slate-200 py-8 sm:py-12">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-6 sm:space-y-8">
           {/* Biography */}
           <Card>

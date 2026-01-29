@@ -360,10 +360,10 @@ export default function CreateNewMusicPage() {
   ];
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-white -mt-20">
       {/* Loading state enquanto verifica moderação */}
       {isCheckingModeration && (
-        <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="min-h-screen flex items-center justify-center bg-white pt-20">
           <div className="text-center space-y-4">
             <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-primary mx-auto"></div>
             <p className="text-sm sm:text-base text-muted-foreground">A verificar permissões...</p>
@@ -378,26 +378,26 @@ export default function CreateNewMusicPage() {
           <BannerDisplay page="MUSICS" />
           
           {/* Hero Section com estilo da landing page */}
-          <section className="relative bg-white">
+          <section className="relative bg-white pt-20">
             {/* Background decoration */}
             <div className="pointer-events-none absolute inset-0" aria-hidden="true">
               <div className="absolute left-1/2 top-0 -translate-x-1/2">
-                <div className="h-60 w-60 rounded-full bg-linear-to-br from-blue-50 via-white to-purple-50" />
+                <div className="h-96 w-96 rounded-full bg-linear-to-br from-rose-50 via-white to-amber-50" />
               </div>
             </div>
             
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 md:py-12 relative z-10">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12 md:py-16 relative z-10">
               <div className="text-center mb-6 sm:mb-8 md:mb-12">
                 {/* Decorative border */}
                 <div className="mb-4 border-y [border-image:linear-gradient(to_right,transparent,--theme(--color-slate-300/.8),transparent)1]">
                   <div className="-mx-0.5 flex justify-center -space-x-2 py-2">
-                    <div className="w-6 h-6 bg-linear-to-r from-green-500 to-blue-600 rounded-full flex items-center justify-center">
+                    <div className="w-6 h-6 bg-linear-to-r from-amber-500 to-orange-600 rounded-full flex items-center justify-center">
                       <Music className="text-white text-xs w-3 h-3" />
                     </div>
-                    <div className="w-6 h-6 bg-linear-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                    <div className="w-6 h-6 bg-linear-to-r from-rose-500 to-pink-600 rounded-full flex items-center justify-center">
                       <FileText className="text-white text-xs w-3 h-3" />
                     </div>
-                    <div className="w-6 h-6 bg-linear-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                    <div className="w-6 h-6 bg-linear-to-r from-rose-500 to-orange-500 rounded-full flex items-center justify-center">
                       <Upload className="text-white text-xs w-3 h-3" />
                     </div>
                   </div>
