@@ -8,6 +8,61 @@
   }
 }
 
+/* Modern Landing Page Animations */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px);
+  }
+  25% {
+    transform: translateY(-20px) translateX(10px);
+  }
+  50% {
+    transform: translateY(-10px) translateX(-10px);
+  }
+  75% {
+    transform: translateY(-25px) translateX(5px);
+  }
+}
+
+@keyframes float-delayed {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px);
+  }
+  25% {
+    transform: translateY(-25px) translateX(-10px);
+  }
+  50% {
+    transform: translateY(-15px) translateX(10px);
+  }
+  75% {
+    transform: translateY(-20px) translateX(-5px);
+  }
+}
+
+@keyframes scroll {
+  0% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(0.5);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: float-delayed 8s ease-in-out infinite;
+}
+
+.animate-scroll {
+  animation: scroll 1.5s ease-in-out infinite;
+}
+
 /* Toast/sonner: força background branco sólido */
 .toaster .sonner-toast, .toaster .sonner-toast[data-type] {
   background: #fff !important;

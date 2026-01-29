@@ -199,7 +199,7 @@ export default function PlaylistInvitations() {
             <div key={invitation.id} className="border rounded-lg p-4 bg-blue-50">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-start gap-3">
-                  <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg p-2 text-white">
+                  <div className="bg-gradient-to-br from-rose-500 to-pink-600 rounded-lg p-2 text-white">
                     <ListMusic className="h-5 w-5" />
                   </div>
                   

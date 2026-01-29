@@ -164,7 +164,7 @@ export default function AdminUserDetailClient({ userId, initialUser }: { userId:
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="w-20 h-20 bg-linear-to-br from-blue-500 to-purple-600 rounded-full overflow-hidden flex items-center justify-center shrink-0">
+            <div className="w-20 h-20 bg-linear-to-br from-rose-500 to-pink-600 rounded-full overflow-hidden flex items-center justify-center shrink-0">
               {initialUser.image ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={initialUser.image} alt={initialUser.name} className="w-full h-full object-cover" />

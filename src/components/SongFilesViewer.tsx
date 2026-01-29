@@ -235,7 +235,7 @@ export function SongFilesViewer({ songId, showTitle = true, className = '' }: So
               audioFiles.map(file => (
                 <div 
                   key={file.id} 
-                  className="flex flex-col gap-3 p-4 border rounded-lg bg-linear-to-br from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20"
+                  className="flex flex-col gap-3 p-4 border rounded-lg bg-linear-to-br from-rose-50 to-amber-50 dark:from-rose-950/20 dark:to-amber-950/20"
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">{FileTypeIcons[file.fileType as FileType]}</span>

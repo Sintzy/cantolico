@@ -189,6 +189,9 @@ export default function AdminDashboard() {
             <Link href="/admin/dashboard/banners">Gestão Banners</Link>
           </Button>
           <Button asChild variant="outline" className="w-full sm:w-auto">
+            <Link href="/admin/dashboard/news">Gestão Notícias</Link>
+          </Button>
+          <Button asChild variant="outline" className="w-full sm:w-auto">
             <Link href="http://100.99.107.118:3101/grafana/goto/ef4ttwjjiq680f?orgId=1">Logs</Link>
           </Button>
         </div>

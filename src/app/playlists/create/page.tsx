@@ -141,7 +141,7 @@ export default function CreatePlaylistPage() {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center space-y-6">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-blue-500 to-blue-400 shadow-lg flex items-center justify-center mx-auto animate-pulse">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-rose-500 to-orange-400 shadow-lg flex items-center justify-center mx-auto animate-pulse">
             <ListMusic className="h-8 w-8 text-white" />
           </div>
           <div className="space-y-2">
@@ -159,14 +159,14 @@ export default function CreatePlaylistPage() {
       <div className="min-h-screen bg-white flex items-center justify-center p-4">
         <Card className="max-w-md w-full border-0 shadow-lg">
           <CardContent className="flex flex-col items-center justify-center py-12 px-6">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-blue-500 to-blue-400 shadow-lg flex items-center justify-center mb-6">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-rose-500 to-orange-400 shadow-lg flex items-center justify-center mb-6">
               <ListMusic className="h-8 w-8 text-white" />
             </div>
             <h3 className="text-2xl font-bold mb-3 text-center text-gray-900">Autenticação Necessária</h3>
             <p className="text-gray-700 text-center mb-6 leading-relaxed">
               Para criares e personalizares as tuas próprias playlists, precisas de estar autenticado na tua conta.
             </p>
-            <Button asChild size="lg" className="bg-gradient-to-t from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600">
+            <Button asChild size="lg" className="bg-gradient-to-t from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700">
               <Link href="/login">
                 <Plus className="h-4 w-4 mr-2" />
                 Fazer Login
