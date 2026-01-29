@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
       .from('News')
       .select('id, title, slug, summary, coverImageUrl, publishedAt')
       .eq('isPublished', true)
-      .order('publishedAt', { ascending: false, nullsLast: true })
+      .order('publishedAt', { ascending: false })
       .limit(limit);
 
     if (error) {
