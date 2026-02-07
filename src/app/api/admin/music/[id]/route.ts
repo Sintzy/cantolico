@@ -25,6 +25,7 @@ export async function GET(
         slug,
         type,
         mainInstrument,
+        capo,
         moments,
         tags,
         author,
@@ -81,6 +82,7 @@ export async function PUT(
       title,
       type,
       mainInstrument,
+      capo,
       moments,
       tags,
       author,
@@ -147,6 +149,7 @@ export async function PUT(
         slug,
         type,
         mainInstrument,
+        capo: capo || null,
         moments,
         tags: processedTags,
         author: author?.trim() || null

@@ -283,8 +283,8 @@ export async function GET(
       // Verificar se é linha de seção (Intro, Ponte, etc.)
       const isIntroLine = /^(Intro|Ponte|Solo|Bridge|Instrumental|Interlude|Refrão|Estrofe|Verso):?\s*$/i.test(line.trim());
       
-      // Verificar se é linha só com acordes
-      const isChordOnlyLine = /^(\s*\[[A-G][#b]?[^\]]*\]\s*)+\s*$/.test(line.trim());
+      // Verificar se é linha só com acordes (incluindo parênteses opcionais)
+      const isChordOnlyLine = /^(\s*\(?\s*\[[A-G][#b]?[^\]]*\]\s*\)?\s*)+\s*$/.test(line.trim());
       
       if (isIntroLine) {
         // Renderizar título da seção em negrito e cor moderna
@@ -299,59 +299,169 @@ export async function GET(
         return currentY - lineHeight - 4;
         
       } else if (isChordOnlyLine) {
-        // Renderizar linha de acordes com cor azul moderna
-        const chordMatches = line.match(/\[([A-G][#b]?[^\]]*)\]/g) || [];
+        // Renderizar linha de acordes com suporte a parênteses
         let chordX = x;
+        let i = 0;
+        const lineText = line.trim();
         
-        console.log('Acordes encontrados:', chordMatches);
-        
-        for (const chordMatch of chordMatches) {
-          const cleanChord = chordMatch.replace(/[\[\]]/g, '');
-          // Verificar se o acorde cabe na coluna
-          if (chordX + cleanChord.length * 7.5 <= x + columnWidth) {
-            page.drawText(cleanChord, {
-              x: chordX,
-              y: currentY,
-              size: chordFontSize,
-              font: boldFont,
-              color: rgb(0.1, 0.4, 0.7),
-            });
-            chordX += cleanChord.length * 7.5 + 22;
+        while (i < lineText.length) {
+          const char = lineText[i];
+          
+          // Pular espaços
+          if (char === ' ' || char === '\t') {
+            chordX += 5;
+            i++;
+            continue;
           }
+          
+          // Renderizar parêntese de abertura (cor preta)
+          if (char === '(') {
+            if (chordX + 6 <= x + columnWidth) {
+              page.drawText('(', {
+                x: chordX,
+                y: currentY,
+                size: chordFontSize,
+                font: boldFont,
+                color: rgb(0.15, 0.15, 0.15), // Preto como o texto
+              });
+              chordX += 6;
+            }
+            i++;
+            continue;
+          }
+          
+          // Renderizar parêntese de fechamento (cor preta)
+          if (char === ')') {
+            if (chordX + 6 <= x + columnWidth) {
+              page.drawText(')', {
+                x: chordX,
+                y: currentY,
+                size: chordFontSize,
+                font: boldFont,
+                color: rgb(0.15, 0.15, 0.15), // Preto como o texto
+              });
+              chordX += 6;
+            }
+            i++;
+            continue;
+          }
+          
+          // Renderizar acorde [X]
+          if (char === '[') {
+            const closeIndex = lineText.indexOf(']', i);
+            if (closeIndex !== -1) {
+              const cleanChord = lineText.substring(i + 1, closeIndex);
+              if (chordX + cleanChord.length * 7.5 <= x + columnWidth) {
+                page.drawText(cleanChord, {
+                  x: chordX,
+                  y: currentY,
+                  size: chordFontSize,
+                  font: boldFont,
+                  color: rgb(0.1, 0.4, 0.7), // Azul para acordes
+                });
+                chordX += cleanChord.length * 7.5 + 8;
+              }
+              i = closeIndex + 1;
+              continue;
+            }
+          }
+          
+          i++;
         }
+        
+        console.log('Renderizada linha de acordes com parênteses');
         return currentY - lineHeight;
         
       } else {
-        // Renderizar letra (pode ter acordes inline)
+        // Renderizar letra (pode ter acordes inline com parênteses)
         if (line.includes('[') && line.includes(']')) {
-          // Linha com acordes inline
-          const parts = line.split(/(\[[A-G][#b]?[^\]]*\])/);
+          // Linha com acordes inline - processar caractere por caractere para suportar parênteses
           let textX = x;
           let hasText = false;
+          let i = 0;
+          const lineText = line;
           
-          for (const part of parts) {
-            if (part.match(/^\[[A-G][#b]?[^\]]*\]$/)) {
-              // É um acorde
-              const cleanChord = part.replace(/[\[\]]/g, '');
-              if (textX + cleanChord.length * 6.5 <= x + columnWidth) {
-                page.drawText(cleanChord, {
+          while (i < lineText.length) {
+            const char = lineText[i];
+            
+            // Detectar parêntese de abertura seguido de acordes
+            if (char === '(' && lineText.substring(i + 1).match(/^\s*\[/)) {
+              if (textX + 6 <= x + columnWidth) {
+                page.drawText('(', {
                   x: textX,
                   y: currentY + 9,
                   size: chordFontSize,
                   font: boldFont,
-                  color: rgb(0.1, 0.4, 0.7),
+                  color: rgb(0.15, 0.15, 0.15), // Preto
                 });
-                textX += cleanChord.length * 6.5 + 6;
+                textX += 6;
               }
-            } else if (part.trim()) {
-              // É texto - processar formatação **bold**
-              if (part.includes('**')) {
-                const textParts = part.split(/(\*\*[^*]+\*\*)/);
-                
-                for (const textPart of textParts) {
-                  if (textPart.match(/^\*\*[^*]+\*\*$/)) {
-                    // Texto em bold
-                    const boldText = textPart.replace(/\*\*/g, '');
+              i++;
+              continue;
+            }
+            
+            // Detectar parêntese de fechamento após acordes
+            if (char === ')') {
+              // Verificar se estamos num contexto de acordes
+              const beforeParen = lineText.substring(0, i);
+              if (beforeParen.match(/\]\s*$/)) {
+                if (textX + 6 <= x + columnWidth) {
+                  page.drawText(')', {
+                    x: textX,
+                    y: currentY + 9,
+                    size: chordFontSize,
+                    font: boldFont,
+                    color: rgb(0.15, 0.15, 0.15), // Preto
+                  });
+                  textX += 6;
+                }
+                i++;
+                continue;
+              }
+            }
+            
+            // Detectar acorde [X]
+            if (char === '[') {
+              const closeIndex = lineText.indexOf(']', i);
+              if (closeIndex !== -1) {
+                const cleanChord = lineText.substring(i + 1, closeIndex);
+                if (/^[A-G][#b]?/.test(cleanChord)) {
+                  if (textX + cleanChord.length * 6.5 <= x + columnWidth) {
+                    page.drawText(cleanChord, {
+                      x: textX,
+                      y: currentY + 9,
+                      size: chordFontSize,
+                      font: boldFont,
+                      color: rgb(0.1, 0.4, 0.7), // Azul
+                    });
+                    textX += cleanChord.length * 6.5 + 6;
+                  }
+                  i = closeIndex + 1;
+                  hasText = true;
+                  continue;
+                }
+              }
+            }
+            
+            // Texto normal - acumular até encontrar acorde ou parêntese especial
+            let textEnd = i;
+            while (textEnd < lineText.length) {
+              const nextChar = lineText[textEnd];
+              if (nextChar === '[') break;
+              if (nextChar === '(' && lineText.substring(textEnd + 1).match(/^\s*\[/)) break;
+              if (nextChar === ')' && lineText.substring(0, textEnd).match(/\]\s*$/)) break;
+              textEnd++;
+            }
+            
+            if (textEnd > i) {
+              const textPart = lineText.substring(i, textEnd);
+              
+              // Processar formatação **bold**
+              if (textPart.includes('**')) {
+                const boldParts = textPart.split(/(\*\*[^*]+\*\*)/);
+                for (const boldPart of boldParts) {
+                  if (boldPart.match(/^\*\*[^*]+\*\*$/)) {
+                    const boldText = boldPart.replace(/\*\*/g, '');
                     if (textX + boldText.length * 7 <= x + columnWidth) {
                       page.drawText(boldText, {
                         x: textX,
@@ -362,35 +472,38 @@ export async function GET(
                       });
                       textX += boldText.length * 7;
                     }
-                  } else if (textPart.trim()) {
-                    // Texto normal
-                    if (textX + textPart.length * 6.5 <= x + columnWidth) {
-                      page.drawText(textPart, {
+                  } else if (boldPart) {
+                    if (textX + boldPart.length * 6.5 <= x + columnWidth) {
+                      page.drawText(boldPart, {
                         x: textX,
                         y: currentY,
                         size: fontSize,
                         font: font,
                         color: rgb(0.15, 0.15, 0.15),
                       });
-                      textX += textPart.length * 6.5;
+                      textX += boldPart.length * 6.5;
                     }
                   }
                 }
-              } else {
-                // Texto simples sem formatação
-                if (textX + part.length * 6.5 <= x + columnWidth) {
-                  page.drawText(part, {
+              } else if (textPart) {
+                if (textX + textPart.length * 6.5 <= x + columnWidth) {
+                  page.drawText(textPart, {
                     x: textX,
                     y: currentY,
                     size: fontSize,
                     font: font,
                     color: rgb(0.15, 0.15, 0.15),
                   });
-                  textX += part.length * 6.5;
+                  textX += textPart.length * 6.5;
                 }
               }
+              
               hasText = true;
+              i = textEnd;
+              continue;
             }
+            
+            i++;
           }
           
           if (hasText) {

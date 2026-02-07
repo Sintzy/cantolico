@@ -26,7 +26,7 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChordGuideButton } from "@/components/ChordGuidePopup";
-import { ArrowLeft, Save, Music, Edit3, Tag, Clock, Settings, Eye, Search as SearchIcon, FileText } from 'lucide-react';
+import { ArrowLeft, Save, Music, Edit3, Tag, Clock, Settings, Eye, Search as SearchIcon, FileText, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { LiturgicalMoment, Instrument, SongType } from '@/lib/constants';
@@ -116,6 +116,7 @@ interface SongData {
   slug: string;
   type: SongType;
   mainInstrument: Instrument;
+  capo?: number | null;
   moments: LiturgicalMoment[];
   tags: string[];
   author?: string | null;
@@ -134,6 +135,7 @@ interface EditForm {
   title: string;
   type: SongType;
   mainInstrument: Instrument;
+  capo: number;
   moments: LiturgicalMoment[];
   tags: string[];
   author: string;
@@ -214,6 +216,7 @@ export default function EditMusicPage() {
     title: '',
     type: SongType.ACORDES,
     mainInstrument: Instrument.GUITARRA,
+    capo: 0,
     moments: [],
     tags: [],
     author: '',
@@ -266,6 +269,7 @@ export default function EditMusicPage() {
           title: data.title,
           type: data.type,
           mainInstrument: data.mainInstrument,
+          capo: data.capo || 0,
           moments: Array.isArray(data.moments) ? data.moments : [],
           tags: parsedTags,
           author: data.author || '',
@@ -313,6 +317,7 @@ export default function EditMusicPage() {
           title: form.title.trim(),
           type: form.type,
           mainInstrument: form.mainInstrument,
+          capo: form.capo > 0 ? form.capo : null,
           moments: form.moments,
           tags: formatTagsForPostgreSQL(form.tags),
           author: form.author.trim() || null,
@@ -536,6 +541,27 @@ export default function EditMusicPage() {
                   </div>
                 </div>
 
+                {/* Campo Capo - para instrumentos de cordas */}
+                {(form.mainInstrument === Instrument.GUITARRA || form.mainInstrument === Instrument.OUTRO) && (
+                  <div className="max-w-xs">
+                    <Label>Capo (Traste)</Label>
+                    <Select value={form.capo.toString()} onValueChange={(v) => setForm({ ...form, capo: parseInt(v) })}>
+                      <SelectTrigger className="bg-white">
+                        <SelectValue placeholder="Sem capo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0">Sem capo</SelectItem>
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => (
+                          <SelectItem key={n} value={n.toString()}>{n}ª casa</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Indica em qual traste o capo deve ser colocado
+                    </p>
+                  </div>
+                )}
+
                 <div>
                   <Label>Tags (separadas por vírgula)</Label>
                   <p className="text-xs text-gray-500 mb-2">
@@ -756,10 +782,29 @@ export default function EditMusicPage() {
 
           <TabsContent value="media" className="space-y-6">
             {/* Sistema Moderno de Upload de Ficheiros */}
-            <FileManager 
-              mode="edit"
-              songId={songId}
-            />
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Upload className="h-5 w-5" />
+                  Gestão de Ficheiros
+                </CardTitle>
+                <CardDescription>
+                  {form.type === SongType.PARTITURA 
+                    ? 'Faça upload de partituras em PDF. Pode adicionar, remover e editar descrições dos ficheiros.'
+                    : 'Faça upload de ficheiros PDF (partituras) e áudio. Pode adicionar, remover e editar descrições dos ficheiros.'
+                  }
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <FileManager 
+                  mode="edit"
+                  songId={songId}
+                  onlyPdf={form.type === SongType.PARTITURA}
+                  maxPdfs={30}
+                  maxAudios={10}
+                />
+              </CardContent>
+            </Card>
 
             <Separator className="my-6" />
 

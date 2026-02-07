@@ -94,6 +94,18 @@
 	display: inline-block !important;
 }
 
+/* Estilo para parênteses ao redor de acordes - cor preta como o texto */
+[class*="chord-container"] .chord-parenthesis {
+	color: var(--text-color) !important;
+	font-weight: 600 !important;
+	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
+	font-style: italic !important;
+	font-size: 0.875em !important;
+	display: inline !important;
+	margin: 0 !important;
+	padding: 0 !important;
+}
+
 /* Garantir que todos os acordes apareçam juntos na linha */
 [class*="chord-container"] .chord,
 [class*="chord-container"] .above-chord,

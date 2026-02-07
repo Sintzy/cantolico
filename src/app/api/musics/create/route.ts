@@ -123,6 +123,10 @@ export const POST = withUserProtection<any>(async (req: NextRequest, session: an
     
     const instrument = (instrumentMap[instrumentRaw] || instrumentRaw.toUpperCase()) as Instrument;
     
+    // Capo (traste)
+    const capoRaw = formData.get("capo")?.toString() ?? "0";
+    const capo = parseInt(capoRaw) || 0;
+    
     const markdown = formData.get("markdown")?.toString() ?? "";
 
     const tagString = formData.get("tags")?.toString() ?? "";
@@ -302,6 +306,7 @@ export const POST = withUserProtection<any>(async (req: NextRequest, session: an
       moment: moments,
       type,
       mainInstrument: instrument,
+      capo: capo > 0 ? capo : null,
       tags,
       submitterId: uploaderId,
       status: "PENDING",

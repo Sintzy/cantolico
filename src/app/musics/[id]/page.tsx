@@ -63,6 +63,7 @@ type SongData = {
   mainInstrument: string;
   type: 'ACORDES' | 'PARTITURA';
   author?: string | null;
+  capo?: number | null;
   currentVersion: {
     sourceText: string | null;
     sourcePdfKey: string | null;
@@ -652,6 +653,12 @@ export default function SongPage() {
               <Music className="h-4 w-4 mr-1" />
               <span className="font-medium">Instrumento:</span> {getInstrumentLabel(mainInstrument)}
             </div>
+            {song?.capo && song.capo > 0 && (
+              <div className="flex items-center gap-2 text-sm text-blue-900/80">
+                <Guitar className="h-4 w-4 mr-1" />
+                <span className="font-medium">Capo:</span> <Badge className="bg-amber-100 text-amber-800 font-semibold">{song.capo}ª casa</Badge>
+              </div>
+            )}
             {author && (
               <div className="flex items-center gap-2 text-sm text-blue-900/80">
                 <FileText className="h-4 w-4 mr-1" />
@@ -779,6 +786,12 @@ export default function SongPage() {
               <Music className="h-4 w-4 mr-1" />
               <span className="font-medium">Instrumento:</span> {getInstrumentLabel(mainInstrument)}
             </div>
+            {song?.capo && song.capo > 0 && (
+              <div className="flex items-center gap-2 text-sm text-blue-900/80">
+                <Guitar className="h-4 w-4 mr-1" />
+                <span className="font-medium">Capo:</span> <Badge className="bg-amber-100 text-amber-800 font-semibold">{song.capo}ª casa</Badge>
+              </div>
+            )}
             {author && (
               <div className="flex items-center gap-2 text-sm text-blue-900/80">
                 <FileText className="h-4 w-4 mr-1" />
@@ -1035,6 +1048,12 @@ export default function SongPage() {
                     <Music className="h-4 w-4" />
                       <span className="font-medium">Instr.:</span> {getInstrumentLabel(mainInstrument)}
                     </div>
+                    {song?.capo && song.capo > 0 && (
+                      <div className="flex items-center gap-1">
+                        <Guitar className="h-4 w-4" />
+                        <span className="font-medium">Capo:</span> <Badge className="bg-amber-100 text-amber-800 font-semibold text-xs">{song.capo}ª</Badge>
+                      </div>
+                    )}
                     {author && (
                       <div className="flex items-center gap-1">
                         <span className="font-medium">Autor:</span> {author}
@@ -1097,6 +1116,12 @@ export default function SongPage() {
                       <Music className="h-4 w-4 mr-1" />
                       <span className="font-medium">Instrumento:</span> {getInstrumentLabel(mainInstrument)}
                     </div>
+                    {song?.capo && song.capo > 0 && (
+                      <div className="flex items-center gap-2 text-sm text-blue-900/80">
+                        <Guitar className="h-4 w-4 mr-1" />
+                        <span className="font-medium">Capo:</span> <Badge className="bg-amber-100 text-amber-800 font-semibold">{song.capo}ª casa</Badge>
+                      </div>
+                    )}
                     {author && (
                       <div className="flex items-center gap-2 text-sm text-blue-900/80">
                         <FileText className="h-4 w-4 mr-1" />

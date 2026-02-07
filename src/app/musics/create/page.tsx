@@ -103,6 +103,7 @@ export default function CreateNewMusicPage() {
     tagsInput: "",
     type: SongType.ACORDES,
     instrument: "" as Instrument,
+    capo: 0,
     markdown: "",
     youtubeLink: "",
     spotifyLink: "",
@@ -271,6 +272,7 @@ export default function CreateNewMusicPage() {
       formData.append("author", form.author);
       formData.append("instrument", form.instrument);
       formData.append("type", form.type);
+      formData.append("capo", form.capo.toString());
       formData.append("markdown", form.markdown);
       formData.append("tags", form.tags.join(","));
       formData.append("moments", JSON.stringify(form.moments));
@@ -530,6 +532,30 @@ export default function CreateNewMusicPage() {
                       </SelectContent>
                     </Select>
                   </div>
+                  
+                  {/* Campo Capo - apenas para guitarras */}
+                  {form.instrument === Instrument.GUITARRA && (
+                    <div className="space-y-2">
+                      <Label htmlFor="capo">Capo (Traste)</Label>
+                      <Select
+                        value={form.capo.toString()}
+                        onValueChange={(value) => setForm({ ...form, capo: parseInt(value) })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sem capo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">Sem capo</SelectItem>
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => (
+                            <SelectItem key={n} value={n.toString()}>{n}ª casa</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Indica em qual traste o capo deve ser colocado
+                      </p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
               <CardFooter className="flex justify-end">
