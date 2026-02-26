@@ -28,6 +28,7 @@ export async function GET(
         spotifyLink,
         youtubeLink,
         mainInstrument,
+        capo,
         moment,
         tags,
         type,

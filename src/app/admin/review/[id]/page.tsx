@@ -120,9 +120,10 @@ export default function ReviewSubmissionPage() {
   const [newPdf, setNewPdf] = useState<File | null>(null);
   const [newMp3, setNewMp3] = useState<File | null>(null);
   const [instrument, setInstrument] = useState("ORGAO");
+  const [capo, setCapo] = useState(0);
   const [moments, setMoments] = useState<string[]>([]);
   const [tags, setTags] = useState<string>("");
-  const [fileDescriptions, setFileDescriptions] = useState<Record<string, { description: string; fileName: string }>>({});
+  const [fileDescriptions, setFileDescriptions] = useState<Record<string, { description: string; fileName: string }>>({}); 
 
   // Estados para modais de ações
   const [showRejectDialog, setShowRejectDialog] = useState(false);
@@ -186,6 +187,7 @@ export default function ReviewSubmissionPage() {
         setSpotifyLink(data.spotifyLink || "");
         setYoutubeLink(data.youtubeLink || "");
         setInstrument(data.mainInstrument || "ORGAO");
+        setCapo(data.capo || 0);
         setMoments(data.moment || []);
         setTags((data.tags || []).join(", "));
         setLoading(false);
@@ -241,6 +243,7 @@ export default function ReviewSubmissionPage() {
     formData.append("spotifyLink", spotifyLink);
     formData.append("youtubeLink", youtubeLink);
     formData.append("instrument", instrument);
+    formData.append("capo", capo.toString());
     formData.append("moments", JSON.stringify(moments));
     formData.append("tags", `{${tags}}`);
     formData.append("fileDescriptions", JSON.stringify(fileDescriptions));
@@ -776,6 +779,27 @@ export default function ReviewSubmissionPage() {
                     />
                   </div>
                 </div>
+
+                {/* Campo Capo - para instrumentos de cordas */}
+                {(instrument === "GUITARRA" || instrument === "OUTRO") && (
+                  <div className="max-w-xs">
+                    <Label>Capo (Traste)</Label>
+                    <Select value={capo.toString()} onValueChange={(v) => setCapo(parseInt(v))}>
+                      <SelectTrigger className="bg-white">
+                        <SelectValue placeholder="Sem capo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0">Sem capo</SelectItem>
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => (
+                          <SelectItem key={n} value={n.toString()}>{n}ª casa</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Indica em qual traste o capo deve ser colocado
+                    </p>
+                  </div>
+                )}
 
                 <div>
                   <Label>Momentos Litúrgicos</Label>

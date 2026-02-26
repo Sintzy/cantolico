@@ -22,7 +22,7 @@ export async function POST(
     
     // Try to parse as JSON first, fallback to FormData if needed
     let body;
-    let title, author, markdown, spotifyLink, youtubeLink, instrument, moments, tags, fileDescriptions;
+    let title, author, markdown, spotifyLink, youtubeLink, instrument, moments, tags, fileDescriptions, capo;
     
     try {
       const contentType = req.headers.get('content-type');
@@ -30,7 +30,7 @@ export async function POST(
       if (contentType?.includes('application/json')) {
         // Handle JSON payload
         body = await req.json();
-        ({ title, author, markdown, spotifyLink, youtubeLink, instrument, moments = [], tags = [], fileDescriptions = {} } = body);
+        ({ title, author, markdown, spotifyLink, youtubeLink, instrument, moments = [], tags = [], fileDescriptions = {}, capo = 0 } = body);
       } else {
         // Handle FormData payload
         const formData = await req.formData();
@@ -40,6 +40,7 @@ export async function POST(
         spotifyLink = formData.get('spotifyLink') as string;
         youtubeLink = formData.get('youtubeLink') as string;
         instrument = formData.get('instrument') as string;
+        capo = parseInt(formData.get('capo') as string || '0') || 0;
         moments = JSON.parse(formData.get('moments') as string || '[]');
         
         const tagsString = formData.get('tags') as string;
@@ -157,6 +158,7 @@ export async function POST(
         slug: slug,
         type: submission.type || 'ACORDES',
         mainInstrument: instrument,
+        capo: capo > 0 ? capo : null,
         moments: moments,
         tags: processedTags
       })

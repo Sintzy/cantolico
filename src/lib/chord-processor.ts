@@ -32,6 +32,138 @@ export function processMarkdownFormatting(text: string): string {
 }
 
 /**
+ * Processa uma linha de acordes com suporte a parênteses
+ * Ex: [C][G] ([Am][F]) -> mantém os parênteses na renderização
+ */
+function processChordLineWithParentheses(line: string, chordClass: string): string {
+  // Regex que captura: 
+  // - parênteses de abertura opcionais
+  // - sequências de acordes [X]
+  // - parênteses de fechamento opcionais
+  // - espaços entre grupos
+  
+  let result = '';
+  let i = 0;
+  const text = line;
+  
+  while (i < text.length) {
+    // Pula espaços
+    if (text[i] === ' ' || text[i] === '\t') {
+      result += text[i];
+      i++;
+      continue;
+    }
+    
+    // Detecta início de grupo com parêntese
+    if (text[i] === '(') {
+      result += '<span class="chord-parenthesis">(</span>';
+      i++;
+      continue;
+    }
+    
+    // Detecta fim de grupo com parêntese
+    if (text[i] === ')') {
+      result += '<span class="chord-parenthesis">)</span>';
+      i++;
+      continue;
+    }
+    
+    // Detecta acorde [X]
+    if (text[i] === '[') {
+      const closeIndex = text.indexOf(']', i);
+      if (closeIndex !== -1) {
+        const chord = text.substring(i + 1, closeIndex);
+        result += `<span class="chord ${chordClass}" data-chord-length="${chord.length}"><span class="inner">${chord}</span></span>`;
+        i = closeIndex + 1;
+        continue;
+      }
+    }
+    
+    // Qualquer outro caractere
+    result += text[i];
+    i++;
+  }
+  
+  return result;
+}
+
+/**
+ * Processa texto inline com acordes e suporte a parênteses
+ * Preserva formatação markdown e parênteses ao redor de acordes
+ */
+function processInlineTextWithChords(line: string): string {
+  // Regex para encontrar acordes e parênteses relacionados
+  // Captura: texto normal, (acordes), ou acordes simples
+  
+  const segments: { type: 'text' | 'chord' | 'paren-open' | 'paren-close'; content: string }[] = [];
+  let i = 0;
+  
+  while (i < line.length) {
+    // Detecta parêntese de abertura seguido de acordes
+    if (line[i] === '(' && line.substring(i + 1).match(/^\s*\[/)) {
+      segments.push({ type: 'paren-open', content: '(' });
+      i++;
+      continue;
+    }
+    
+    // Detecta parêntese de fechamento após acordes
+    if (line[i] === ')') {
+      // Verifica se o segmento anterior é um acorde ou espaço após acorde
+      const lastSeg = segments[segments.length - 1];
+      const prevSeg = segments[segments.length - 2];
+      if (lastSeg?.type === 'chord' || (lastSeg?.type === 'text' && lastSeg.content.trim() === '' && prevSeg?.type === 'chord')) {
+        segments.push({ type: 'paren-close', content: ')' });
+        i++;
+        continue;
+      }
+    }
+    
+    // Detecta acorde [X]
+    if (line[i] === '[') {
+      const closeIndex = line.indexOf(']', i);
+      if (closeIndex !== -1) {
+        const chord = line.substring(i + 1, closeIndex);
+        // Verifica se é um acorde válido
+        if (/^[A-G][#b]?/.test(chord)) {
+          segments.push({ type: 'chord', content: chord });
+          i = closeIndex + 1;
+          continue;
+        }
+      }
+    }
+    
+    // Acumula texto normal
+    if (segments.length > 0 && segments[segments.length - 1].type === 'text') {
+      segments[segments.length - 1].content += line[i];
+    } else {
+      segments.push({ type: 'text', content: line[i] });
+    }
+    i++;
+  }
+  
+  // Converte segmentos em HTML
+  let result = '';
+  for (const seg of segments) {
+    switch (seg.type) {
+      case 'text':
+        result += processMarkdownFormatting(seg.content);
+        break;
+      case 'chord':
+        result += `<span class="chord" data-chord-length="${seg.content.length}"><span class="inner">${seg.content}</span></span>`;
+        break;
+      case 'paren-open':
+        result += '<span class="chord-parenthesis">(</span>';
+        break;
+      case 'paren-close':
+        result += '<span class="chord-parenthesis">)</span>';
+        break;
+    }
+  }
+  
+  return result;
+}
+
+/**
  * Detecta o formato dos acordes no texto de forma inteligente
  */
 export function detectChordFormat(text: string): ChordFormat {
@@ -45,11 +177,11 @@ export function detectChordFormat(text: string): ChordFormat {
     return 'above';
   }
   
-  // Se a primeira linha não vazia contém apenas acordes, é above
+  // Se a primeira linha não vazia contém apenas acordes (com ou sem parênteses), é above
   const lines = text.split('\n').filter(line => line.trim());
   if (lines.length > 0) {
     const firstLine = lines[0].trim();
-    if (/^(\s*\[[A-G][#b]?[^\]]*\]\s*)+$/.test(firstLine)) {
+    if (/^(\s*\(?\s*\[[A-G][#b]?[^\]]*\]\s*\)?\s*)+$/.test(firstLine)) {
       return 'above';
     }
   }
@@ -153,8 +285,8 @@ export function processAboveChords(text: string): string {
     const currentLine = lines[i];
     const nextLine = i + 1 < lines.length ? lines[i + 1] : '';
     
-    // Verifica se é uma linha só com acordes
-    const isChordOnlyLine = /^(\s*\[[A-G][#b]?[^\]]*\]\s*)+\s*$/.test(currentLine.trim());
+    // Verifica se é uma linha só com acordes (incluindo parênteses opcionais)
+    const isChordOnlyLine = /^(\s*\(?\s*\[[A-G][#b]?[^\]]*\]\s*\)?\s*)+\s*$/.test(currentLine.trim());
     const isTextLine = nextLine.trim() && !/^\s*\[/.test(nextLine.trim());
     
     // Verifica se é uma linha de intro/ponte (contém palavras como Intro, Ponte, etc. com ou sem dois pontos)
@@ -162,11 +294,9 @@ export function processAboveChords(text: string): string {
     
     if (isIntroLine && i + 1 < lines.length) {
       const chordLine = lines[i + 1];
-      if (/^(\s*\[[A-G][#b]?[^\]]*\]\s*)+\s*$/.test(chordLine.trim())) {
-        // Processa linha de intro/ponte
-        const chordHtml = chordLine.replace(/\[([A-G][#b]?[^\]]*)\]/g, (match, chord) => {
-          return `<span class="chord intro-chord" data-chord-length="${chord.length}"><span class="inner">${chord}</span></span>`;
-        });
+      if (/^(\s*\(?\s*\[[A-G][#b]?[^\]]*\]\s*\)?\s*)+\s*$/.test(chordLine.trim())) {
+        // Processa linha de intro/ponte com suporte a parênteses
+        const chordHtml = processChordLineWithParentheses(chordLine, 'intro-chord');
         result.push(`<div class="intro-section">`);
         result.push(`<div class="intro-label">${processMarkdownFormatting(currentLine.trim())}</div>`);
         result.push(`<div class="intro-line">${chordHtml}</div>`);
@@ -176,10 +306,8 @@ export function processAboveChords(text: string): string {
         result.push(`<p>${processMarkdownFormatting(currentLine)}</p>`);
       }
     } else if (isChordOnlyLine && isTextLine) {
-      // Processa linha de acordes normais acima da letra
-      const chordHtml = currentLine.replace(/\[([A-G][#b]?[^\]]*)\]/g, (match, chord) => {
-        return `<span class="chord above-chord" data-chord-length="${chord.length}"><span class="inner">${chord}</span></span>`;
-      });
+      // Processa linha de acordes normais acima da letra com suporte a parênteses
+      const chordHtml = processChordLineWithParentheses(currentLine, 'above-chord');
       
       result.push(`<div class="chord-section">`);
       result.push(`<div class="chord-line">${chordHtml}</div>`);
@@ -188,10 +316,8 @@ export function processAboveChords(text: string): string {
       
       i++; // Pula a próxima linha pois já foi processada
     } else if (isChordOnlyLine && !isTextLine && !isIntroLine) {
-      // Acordes isolados sem contexto (assume intro)
-      const chordHtml = currentLine.replace(/\[([A-G][#b]?[^\]]*)\]/g, (match, chord) => {
-        return `<span class="chord intro-chord" data-chord-length="${chord.length}"><span class="inner">${chord}</span></span>`;
-      });
+      // Acordes isolados sem contexto (assume intro) com suporte a parênteses
+      const chordHtml = processChordLineWithParentheses(currentLine, 'intro-chord');
       result.push(`<div class="intro-line standalone">${chordHtml}</div>`);
     } else {
       // Linha normal de texto
@@ -254,12 +380,10 @@ export function processMixedChords(text: string): string {
     
     if (isIntroLine && i + 1 < lines.length) {
       const chordLine = lines[i + 1];
-      // Verifica se a próxima linha tem apenas acordes (formato intro/ponte)
-      if (/^(\s*\[[A-G][#b]?[^\]]*\]\s*)+\s*$/.test(chordLine.trim())) {
-        // Processa linha de intro/ponte
-        const chordHtml = chordLine.replace(/\[([A-G][#b]?[^\]]*)\]/g, (match, chord) => {
-          return `<span class="chord intro-chord" data-chord-length="${chord.length}"><span class="inner">${chord}</span></span>`;
-        });
+      // Verifica se a próxima linha tem apenas acordes (formato intro/ponte) - com suporte a parênteses
+      if (/^(\s*\(?\s*\[[A-G][#b]?[^\]]*\]\s*\)?\s*)+\s*$/.test(chordLine.trim())) {
+        // Processa linha de intro/ponte com suporte a parênteses
+        const chordHtml = processChordLineWithParentheses(chordLine, 'intro-chord');
         result.push(`<div class="intro-section mixed">`);
         result.push(`<div class="intro-label">${processMarkdownFormatting(currentLine.trim())}</div>`);
         result.push(`<div class="intro-line">${chordHtml}</div>`);
@@ -272,38 +396,8 @@ export function processMixedChords(text: string): string {
     // Processa linha normal (pode ter acordes inline)
     if (currentLine.trim()) {
       if (/\[[A-G][#b]?[^\]]*\]/.test(currentLine)) {
-        // Linha com acordes inline - processa acordes e markdown separadamente
-        let processedLine = currentLine;
-        
-        // Primeiro extrai acordes para preservá-los
-        const chordMatches: { match: string; chord: string; index: number }[] = [];
-        const chordRegex = /\[([A-G][#b]?[^\]]*)\]/g;
-        let match;
-        while ((match = chordRegex.exec(currentLine)) !== null) {
-          chordMatches.push({
-            match: match[0],
-            chord: match[1],
-            index: match.index
-          });
-        }
-        
-        // Remove acordes temporariamente
-        let textWithoutChords = currentLine;
-        chordMatches.reverse().forEach(({ match, index }) => {
-          textWithoutChords = textWithoutChords.slice(0, index) + '|||CHORD|||' + textWithoutChords.slice(index + match.length);
-        });
-        
-        // Aplica formatação markdown ao texto sem acordes
-        textWithoutChords = processMarkdownFormatting(textWithoutChords);
-        
-        // Reinsere acordes processados
-        let chordIndex = 0;
-        processedLine = textWithoutChords.replace(/\|\|\|CHORD\|\|\|/g, () => {
-          const { chord } = chordMatches[chordMatches.length - 1 - chordIndex];
-          chordIndex++;
-          return `<span class="chord" data-chord-length="${chord.length}"><span class="inner">${chord}</span></span>`;
-        });
-        
+        // Linha com acordes inline - processa acordes e markdown separadamente com suporte a parênteses
+        const processedLine = processInlineTextWithChords(currentLine);
         result.push(`<p>${processedLine}</p>`);
       } else {
         // Linha de texto normal
@@ -328,38 +422,8 @@ export function processSimpleInline(text: string): string {
   
   for (const line of lines) {
     if (/\[[A-G][#b]?[^\]]*\]/.test(line)) {
-      // Linha com acordes - processa acordes e markdown separadamente
-      let processedLine = line;
-      
-      // Primeiro extrai acordes para preservá-los
-      const chordMatches: { match: string; chord: string; index: number }[] = [];
-      const chordRegex = /\[([A-G][#b]?[^\]]*)\]/g;
-      let match;
-      while ((match = chordRegex.exec(line)) !== null) {
-        chordMatches.push({
-          match: match[0],
-          chord: match[1],
-          index: match.index
-        });
-      }
-      
-      // Remove acordes temporariamente
-      let textWithoutChords = line;
-      chordMatches.reverse().forEach(({ match, index }) => {
-        textWithoutChords = textWithoutChords.slice(0, index) + '|||CHORD|||' + textWithoutChords.slice(index + match.length);
-      });
-      
-      // Aplica formatação markdown ao texto sem acordes
-      textWithoutChords = processMarkdownFormatting(textWithoutChords);
-      
-      // Reinsere acordes processados
-      let chordIndex = 0;
-      processedLine = textWithoutChords.replace(/\|\|\|CHORD\|\|\|/g, () => {
-        const { chord } = chordMatches[chordMatches.length - 1 - chordIndex];
-        chordIndex++;
-        return `<span class="chord" data-chord-length="${chord.length}"><span class="inner">${chord}</span></span>`;
-      });
-      
+      // Linha com acordes - processa com suporte a parênteses
+      const processedLine = processInlineTextWithChords(line);
       result.push(`<p>${processedLine}</p>`);
     } else {
       // Linha normal
