@@ -173,9 +173,9 @@ export default function PlaylistPageClient({
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white -mt-16">
       {/* Hero Section */}
-      <div className="relative h-64 md:h-80 w-full flex items-center justify-center overflow-hidden">
+      <div className="relative h-64 md:h-80 w-full flex items-center justify-center overflow-hidden pt-16">
         <div className="absolute inset-0">
           <img 
             src="/banner.jpg" 
@@ -185,12 +185,12 @@ export default function PlaylistPageClient({
           <div className="absolute inset-0 bg-linear-to-b from-black/60 to-transparent" />
         </div>
         
-        {/* Back Button */}
+        {/* Back Button - positioned below the floating navbar */}
         <Button 
           variant="ghost" 
           size="sm" 
           asChild 
-          className="absolute top-4 left-4 sm:top-6 sm:left-6 z-20 text-white hover:bg-white/20 border-white/30 shadow backdrop-blur-sm"
+          className="absolute top-20 left-4 sm:top-24 sm:left-6 z-20 text-white hover:bg-white/20 border-white/30 shadow backdrop-blur-sm"
         >
           <Link href="/playlists" className="flex items-center gap-1 sm:gap-2">
             <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -198,9 +198,9 @@ export default function PlaylistPageClient({
           </Link>
         </Button>
 
-        {/* Owner/Admin Actions */}
+        {/* Owner/Admin Actions - positioned below the floating navbar */}
         {canEdit && (
-          <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20">
+          <div className="absolute top-20 right-4 sm:top-24 sm:right-6 z-20">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button 
