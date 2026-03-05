@@ -178,7 +178,7 @@ export const GET = async (request: NextRequest, context: RouteParams) => {
         celebrant: mass.celebrant,
         celebration: mass.celebration,
         liturgicalColor: mass.liturgicalColor,
-        createdBy: mass.User?.name || 'Utilizador'
+        createdBy: ((mass.User as any)?.name || (Array.isArray(mass.User) ? (mass.User[0] as any)?.name : undefined)) || 'Utilizador'
       },
       format,
       items: exportData,

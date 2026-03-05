@@ -122,7 +122,7 @@ async function getMass(id: string, userId?: number) {
 
   return {
     ...mass,
-    user: mass.User || null,
+    user: (Array.isArray(mass.User) ? mass.User[0] : mass.User) || null,
     items: sortedItems,
     members: mass.MassMember || [],
     _count: {
@@ -143,5 +143,5 @@ export default async function MassPage({ params }: PageProps) {
     notFound();
   }
 
-  return <MassPageClient initialMass={mass} />;
+  return <MassPageClient initialMass={mass as any} />;
 }

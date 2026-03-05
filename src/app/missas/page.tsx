@@ -62,5 +62,5 @@ export default async function MassesPage() {
 
   const masses = await getMasses(session.user.id);
 
-  return <MassesPageClient initialMasses={masses} />;
+  return <MassesPageClient initialMasses={masses as any} />;
 }
