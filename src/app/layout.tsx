@@ -35,8 +35,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={inter.className + " flex flex-col min-h-screen"}>
         <Script
           defer
-          src="http://100.99.107.118:3005/script.js"
-          data-website-id="e097d855-5f02-4611-b188-a4f3d72bafd0"
+          src="https://truenas-scale.fold-pence.ts.net:8443/script.js"
+          data-website-id="91110ae1-32f4-4053-906d-7d063d24d07e"
           strategy="afterInteractive"
         />
         <CacheProvider>
