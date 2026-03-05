@@ -2,7 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   // Configuração do Turbopack (Next.js 16+)
-  turbopack: {},
+  turbopack: {
+    root: ".",
+  },
   images: {
     remotePatterns: [
       {

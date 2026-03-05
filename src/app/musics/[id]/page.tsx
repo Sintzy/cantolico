@@ -6,7 +6,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLab
 import { Guitar, ChevronDown, FileText, Music, Youtube, Download, ArrowLeft } from 'lucide-react';
 import YouTube from 'react-youtube';
 import * as React from "react";
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Head from 'next/head';
 import { supabase } from '@/lib/supabase';
@@ -113,8 +113,14 @@ function transposeMarkdownChords(text: string, interval: number): string {
 }
 
 export default function SongPage() {
-  const { id } = useParams();
   const router = useRouter();
+  const handleBackToList = () => {
+    router.push('/musics');
+  };
+  const { id } = useParams();
+  const searchParams = useSearchParams();
+  const massId = searchParams.get('massId');
+  const [nextMusicUrl, setNextMusicUrl] = React.useState<string | null>(null);
   const { data: session } = useSession();
   const [song, setSong] = React.useState<SongData | null>(null);
   const [pdfUrl, setPdfUrl] = React.useState<string | null>(null);
@@ -126,85 +132,104 @@ export default function SongPage() {
   const [selectedPdfIndex, setSelectedPdfIndex] = React.useState(0);
   const [files, setFiles] = React.useState<Array<{
     id: string;
-    fileType: FileType;
     fileName: string;
-    description: string;
-    fileSize?: number;
-    signedUrl?: string;
+    url: string;
   }>>([]);
-
-
-  const handleBackToList = React.useCallback(() => {
-    sessionStorage.setItem('returningFromSong', 'true');
-    router.push('/musics');
-  }, [router]);
-  
   React.useEffect(() => {
-    const fetchSong = async () => {
-      try {
-        setLoading(true);
-        const res = await fetch(`/api/musics/${id}`);
-        const data = await res.json();
-
-        if (!data || data.error) {
-          console.error('Erro ao carregar música:', data.error || 'Dados inválidos');
-          return;
-        }
-
-        setSong(data);
-
-        // Redirect to slug-based URL if accessing by ID
-        if (data.slug && data.slug !== id) {
-          router.replace(`/musics/${data.slug}`, { scroll: false });
-          return;
-        }
-
-        // Buscar ficheiros do novo sistema (endpoint p7blico)
+      const fetchSong = async () => {
         try {
-          const filesRes = await fetch(`/api/musics/${id}/files`);
-          if (filesRes.ok) {
-            const filesData = await filesRes.json();
-            if (filesData.success && filesData.files) {
-              // Filtrar ficheiros de metadados e ficheiros ocultos
-              const validFiles = filesData.files.filter((f: { fileName: string }) =>
-                !f.fileName.startsWith('.') &&
-                !f.fileName.endsWith('.json') &&
-                f.fileName !== '.metadata.json'
-              );
-              setFiles(validFiles);
+          setLoading(true);
+          const res = await fetch(`/api/musics/${id}`);
+          const data = await res.json();
+
+          if (!data || data.error) {
+            console.error('Erro ao carregar música:', data.error || 'Dados inválidos');
+            return;
+          }
+
+          setSong(data);
+
+          // Redirect to slug-based URL if accessing by ID
+          if (data.slug && data.slug !== id) {
+            router.replace(`/musics/${data.slug}`, { scroll: false });
+            return;
+          }
+
+          // Buscar ficheiros do novo sistema (endpoint público)
+          try {
+            const filesRes = await fetch(`/api/musics/${id}/files`);
+            if (filesRes.ok) {
+              const filesData = await filesRes.json();
+              if (filesData.success && filesData.files) {
+                // Filtrar ficheiros de metadados e ficheiros ocultos
+                const validFiles = filesData.files.filter((f: { fileName: string }) =>
+                  !f.fileName.startsWith('.') &&
+                  !f.fileName.endsWith('.json') &&
+                  f.fileName !== '.metadata.json'
+                );
+                setFiles(validFiles);
+              }
+            }
+          } catch (err) {
+            console.error('Erro ao carregar ficheiros:', err);
+          }
+
+          // Sistema antigo (manter por enquanto para compatibilidade)
+          if (data.currentVersion?.sourcePdfKey) {
+            const { data: signedPdfUrlData, error: pdfError } = await supabase
+              .storage
+              .from('songs')
+              .createSignedUrl(data.currentVersion.sourcePdfKey, 60 * 60);
+
+            if (!pdfError) setPdfUrl(signedPdfUrlData?.signedUrl || null);
+          }
+
+          if (data.currentVersion?.mediaUrl) {
+            const { data: signedAudioUrlData, error: audioError } = await supabase
+              .storage
+              .from('songs')
+              .createSignedUrl(data.currentVersion.mediaUrl, 60 * 60);
+
+            if (!audioError) setAudioUrl(signedAudioUrlData?.signedUrl || null);
+          }
+
+          // Se veio de uma missa, busca próxima música
+          if (massId) {
+            try {
+              const massRes = await fetch(`/api/masses/${massId}/export?format=full`);
+              if (massRes.ok) {
+                const massData = await massRes.json();
+                // Encontra próxima música
+                let found = false;
+                let nextUrl = null;
+                for (const moment of massData.items) {
+                  for (const song of moment.songs) {
+                    if (found) {
+                      nextUrl = `/musics/${song.slug || song.id}?massId=${massId}`;
+                      break;
+                    }
+                    if (song.id === data.id || song.slug === data.slug) {
+                      found = true;
+                    }
+                  }
+                  if (nextUrl) break;
+                }
+                console.log('Próxima música URL:', nextUrl);
+                setNextMusicUrl(nextUrl);
+              }
+            } catch (err) {
+              // ignora erro
             }
           }
         } catch (err) {
-          console.error('Erro ao carregar ficheiros:', err);
+          console.error('erro ao procurar a música:', err);
+        } finally {
+          setLoading(false);
         }
+      };
 
-        // Sistema antigo (manter por enquanto para compatibilidade)
-        if (data.currentVersion?.sourcePdfKey) {
-          const { data: signedPdfUrlData, error: pdfError } = await supabase
-            .storage
-            .from('songs')
-            .createSignedUrl(data.currentVersion.sourcePdfKey, 60 * 60);
-
-          if (!pdfError) setPdfUrl(signedPdfUrlData?.signedUrl || null);
-        }
-
-        if (data.currentVersion?.mediaUrl) {
-          const { data: signedAudioUrlData, error: audioError } = await supabase
-            .storage
-            .from('songs')
-            .createSignedUrl(data.currentVersion.mediaUrl, 60 * 60);
-
-          if (!audioError) setAudioUrl(signedAudioUrlData?.signedUrl || null);
-        }
-      } catch (err) {
-        console.error('erro ao procurar a música:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSong();
-  }, [id]);
+      fetchSong();
+    }, [id, massId]);
 
   const strippedMarkdown = (md: string) => md.replace(/\[[^\]]*\]/g, '');
 
@@ -495,7 +520,7 @@ export default function SongPage() {
       
       <div className="relative w-full min-h-screen bg-white">
       {/* Hero Section with blurred background and overlay */}
-      <div className="relative h-80 md:h-96 lg:h-[28rem] w-full flex items-center justify-center overflow-hidden -mt-16 pt-16">
+      <div className="relative h-80 md:h-96 lg:h-112 w-full flex items-center justify-center overflow-hidden -mt-16 pt-16">
         {/* Back Button */}
         <div className="absolute top-20 left-4 z-20">
           <Button
@@ -593,6 +618,16 @@ export default function SongPage() {
         </div>
       </div>
 
+      {/* Botão de próxima música se veio de missa */}
+      {nextMusicUrl && (
+        <div className="fixed bottom-8 right-8 z-50">
+          <Button asChild variant="default" size="lg" className="shadow-lg bg-blue-600 text-white">
+            <Link href={nextMusicUrl}>
+              Próxima música →
+            </Link>
+          </Button>
+        </div>
+      )}
       {/* Main Content - padding inferior para não sobrepor floating bar em mobile */}
       <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-8 py-6 sm:py-8 md:py-14 pb-20 sm:pb-8 flex flex-col gap-6 sm:gap-8 md:gap-10">
         {/* Mobile/Tablet: Information and Controls BEFORE Lyrics - Only for ACORDES */}
