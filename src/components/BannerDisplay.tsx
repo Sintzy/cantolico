@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { X, AlertCircle, Info, CheckCircle, AlertTriangle, Bell, FileText, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import Link from 'next/link';
 
 interface Banner {
   id: string;
@@ -17,6 +18,58 @@ interface Banner {
 interface BannerDisplayProps {
   page: 'HOME' | 'MUSICS' | 'ADMIN' | 'LITURGIA' | 'ALL';
 }
+
+// Função para processar markdown links [texto](url)
+const parseMessageWithLinks = (message: string) => {
+  const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  const parts: (string | React.ReactNode)[] = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = linkRegex.exec(message)) !== null) {
+    // Adicionar texto antes do link
+    if (match.index > lastIndex) {
+      parts.push(message.substring(lastIndex, match.index));
+    }
+
+    const [, linkText, linkUrl] = match;
+    const isExternal = linkUrl.startsWith('http://') || linkUrl.startsWith('https://');
+
+    // Adicionar link como elemento React
+    if (isExternal) {
+      parts.push(
+        <a
+          key={`link-${match.index}`}
+          href={linkUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline font-semibold hover:opacity-80 transition-opacity"
+        >
+          {linkText}
+        </a>
+      );
+    } else {
+      parts.push(
+        <Link
+          key={`link-${match.index}`}
+          href={linkUrl}
+          className="underline font-semibold hover:opacity-80 transition-opacity"
+        >
+          {linkText}
+        </Link>
+      );
+    }
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Adicionar texto restante
+  if (lastIndex < message.length) {
+    parts.push(message.substring(lastIndex));
+  }
+
+  return parts.length === 0 ? message : parts;
+};
 
 const getBannerStyles = (type: Banner['type']) => {
   switch (type) {
@@ -156,7 +209,7 @@ export default function BannerDisplay({ page }: BannerDisplayProps) {
               <IconComponent className={`h-5 w-5 mt-0.5 ${styles.iconColor} shrink-0`} />
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-sm mb-1">{banner.title}</h3>
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">{banner.message}</p>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{parseMessageWithLinks(banner.message)}</p>
               </div>
               <Button
                 variant="ghost"

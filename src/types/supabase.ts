@@ -720,6 +720,184 @@ export interface Database {
           updatedAt?: string
         }
       }
+      Mass: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          date: string | null
+          parish: string | null
+          celebrant: string | null
+          celebration: string | null
+          liturgicalColor: 'VERDE' | 'ROXO' | 'BRANCO' | 'VERMELHO' | 'ROSA' | null
+          visibility: 'PUBLIC' | 'PRIVATE' | 'NOT_LISTED'
+          userId: number
+          createdAt: string
+          updatedAt: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          date?: string | null
+          parish?: string | null
+          celebrant?: string | null
+          celebration?: string | null
+          liturgicalColor?: 'VERDE' | 'ROXO' | 'BRANCO' | 'VERMELHO' | 'ROSA' | null
+          visibility?: 'PUBLIC' | 'PRIVATE' | 'NOT_LISTED'
+          userId: number
+          createdAt?: string
+          updatedAt?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          date?: string | null
+          parish?: string | null
+          celebrant?: string | null
+          celebration?: string | null
+          liturgicalColor?: 'VERDE' | 'ROXO' | 'BRANCO' | 'VERMELHO' | 'ROSA' | null
+          visibility?: 'PUBLIC' | 'PRIVATE' | 'NOT_LISTED'
+          userId?: number
+          createdAt?: string
+          updatedAt?: string
+        }
+      }
+      MassItem: {
+        Row: {
+          id: string
+          massId: string
+          songId: string
+          moment: string
+          order: number
+          note: string | null
+          transpose: number
+          addedById: number
+          createdAt: string
+        }
+        Insert: {
+          id?: string
+          massId: string
+          songId: string
+          moment: string
+          order?: number
+          note?: string | null
+          transpose?: number
+          addedById: number
+          createdAt?: string
+        }
+        Update: {
+          id?: string
+          massId?: string
+          songId?: string
+          moment?: string
+          order?: number
+          note?: string | null
+          transpose?: number
+          addedById?: number
+          createdAt?: string
+        }
+      }
+      MassMember: {
+        Row: {
+          id: string
+          massId: string
+          userEmail: string
+          role: 'EDITOR' | 'VIEWER'
+          status: 'PENDING' | 'ACCEPTED' | 'DECLINED'
+          invitedBy: number
+          invitedAt: string
+          acceptedAt: string | null
+          createdAt: string
+          updatedAt: string
+        }
+        Insert: {
+          id?: string
+          massId: string
+          userEmail: string
+          role?: 'EDITOR' | 'VIEWER'
+          status?: 'PENDING' | 'ACCEPTED' | 'DECLINED'
+          invitedBy: number
+          invitedAt?: string
+          acceptedAt?: string | null
+          createdAt?: string
+          updatedAt?: string
+        }
+        Update: {
+          id?: string
+          massId?: string
+          userEmail?: string
+          role?: 'EDITOR' | 'VIEWER'
+          status?: 'PENDING' | 'ACCEPTED' | 'DECLINED'
+          invitedBy?: number
+          invitedAt?: string
+          acceptedAt?: string | null
+          createdAt?: string
+          updatedAt?: string
+        }
+      }
+      MassTemplate: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          celebration: string | null
+          isPublic: boolean
+          userId: number
+          createdAt: string
+          updatedAt: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          celebration?: string | null
+          isPublic?: boolean
+          userId: number
+          createdAt?: string
+          updatedAt?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          celebration?: string | null
+          isPublic?: boolean
+          userId?: number
+          createdAt?: string
+          updatedAt?: string
+        }
+      }
+      MassTemplateItem: {
+        Row: {
+          id: string
+          templateId: string
+          songId: string
+          moment: string
+          order: number
+          note: string | null
+          createdAt: string
+        }
+        Insert: {
+          id?: string
+          templateId: string
+          songId: string
+          moment: string
+          order?: number
+          note?: string | null
+          createdAt?: string
+        }
+        Update: {
+          id?: string
+          templateId?: string
+          songId?: string
+          moment?: string
+          order?: number
+          note?: string | null
+          createdAt?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never

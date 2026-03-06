@@ -26,7 +26,8 @@ import {
   UserPlus,
   Crown,
   Eye,
-  Star
+  Star,
+  Church
 } from "lucide-react";
 
 type Music = {
@@ -211,6 +212,17 @@ export default function Navbar() {
                                 </div>
                             )}
                         </div>
+
+                        {/* Missas Link */}
+                        {session && (
+                            <Link 
+                                href="/missas" 
+                                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-slate-700 hover:text-purple-600 hover:bg-purple-100/50 transition-all duration-200 font-medium text-sm"
+                            >
+                                <Church className="h-4 w-4" />
+                                <span>Missas</span>
+                            </Link>
+                        )}
                         
                         <Link 
                             href="/musics/create" 
@@ -598,6 +610,15 @@ export default function Navbar() {
                                         >
                                             <ListMusic className="h-4 w-4" />
                                             <span>Minhas Playlists</span>
+                                        </Link>
+
+                                        <Link 
+                                            href="/missas" 
+                                            className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-slate-700 hover:bg-purple-100/50 hover:text-purple-600 rounded-lg transition-all duration-200 font-medium text-sm"
+                                            onClick={closeMobileMenu}
+                                        >
+                                            <Church className="h-4 w-4" />
+                                            <span>Minhas Missas</span>
                                         </Link>
                                         
                                         <Link 

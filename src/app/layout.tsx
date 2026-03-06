@@ -2,6 +2,7 @@ import "./globals.css";
 import "./globals-blur.css";
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import Script from "next/script";
 import AuthSessionProvider from "@/components/SessionProvider";
 import Navbar from "@/components/Navbar";
 import { Toaster } from "@/components/ui/sonner";
@@ -32,6 +33,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="pt">
       <head />
       <body className={inter.className + " flex flex-col min-h-screen"}>
+        <Script
+          defer
+          src="https://truenas-scale.fold-pence.ts.net:8443/script.js"
+          data-website-id="91110ae1-32f4-4053-906d-7d063d24d07e"
+          strategy="afterInteractive"
+        />
         <CacheProvider>
           <AuthSessionProvider>
             <Navbar />
