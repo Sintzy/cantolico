@@ -134,6 +134,9 @@ export default function SongPage() {
     id: string;
     fileName: string;
     url: string;
+    fileType?: string;
+    description?: string;
+    signedUrl?: string;
   }>>([]);
   React.useEffect(() => {
       const fetchSong = async () => {
