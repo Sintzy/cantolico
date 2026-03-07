@@ -12,6 +12,7 @@ import {
   FileUploadData,
   formatFileSize,
 } from '@/types/song-files';
+import { trackEvent } from '@/lib/umami';
 import { 
   Upload, 
   X, 
@@ -232,6 +233,7 @@ export function FileManager({
 
     // Se não há ficheiros válidos, retornar
     if (validFiles.length === 0) {
+      trackEvent('song_files_add_failed', { mode, reason: 'no_valid_files', fileType: type });
       toast.error('Nenhum ficheiro válido selecionado');
       return;
     }
@@ -242,6 +244,7 @@ export function FileManager({
       const updatedFiles = [...files, ...validFiles];
       setFiles(updatedFiles);
       onChange?.(updatedFiles);
+      trackEvent('song_files_added', { mode, count: validFiles.length, fileType: type });
       toast.success(`${validFiles.length} ficheiro(s) adicionado(s)`);
     } else if (mode === 'edit') {
       // Modo edit: faz upload de todos
@@ -302,9 +305,11 @@ export function FileManager({
 
       // Mostrar resultado final
       if (successCount > 0) {
+        trackEvent('song_files_upload_success', { mode, count: successCount, fileType: type });
         toast.success(`${successCount} ficheiro(s) carregado(s) com sucesso!`);
       }
       if (errorCount > 0) {
+        trackEvent('song_files_upload_failed', { mode, count: errorCount, fileType: type });
         toast.error(`${errorCount} ficheiro(s) falharam`);
       }
     }
@@ -322,6 +327,7 @@ export function FileManager({
       const updatedFiles = files.filter(f => (f.id || f.fileName) !== fileId);
       setFiles(updatedFiles);
       onChange?.(updatedFiles);
+      trackEvent('song_file_deleted', { mode: 'create' });
       toast.success('Ficheiro removido');
     } else if (mode === 'edit') {
       if (onDelete) {
@@ -329,8 +335,10 @@ export function FileManager({
         try {
           await onDelete(fileId);
           setFiles(prev => prev.filter(f => f.id !== fileId));
+          trackEvent('song_file_deleted', { mode: 'edit' });
           toast.success('Ficheiro eliminado');
         } catch (error) {
+          trackEvent('song_file_delete_failed', { mode: 'edit', reason: 'callback_failed' });
           toast.error('Erro ao eliminar ficheiro');
         }
       } else if (songId) {
@@ -343,8 +351,10 @@ export function FileManager({
           if (!response.ok) throw new Error('Delete failed');
           
           setFiles(prev => prev.filter(f => f.id !== fileId));
+          trackEvent('song_file_deleted', { mode: 'edit' });
           toast.success('Ficheiro eliminado');
         } catch (error) {
+          trackEvent('song_file_delete_failed', { mode: 'edit', reason: 'request_failed' });
           toast.error('Erro ao eliminar ficheiro');
         }
       }
@@ -358,6 +368,7 @@ export function FileManager({
       const audio = audioRefs.current.get(fileId);
       audio?.pause();
       setPlayingAudio(null);
+      trackEvent('song_audio_pause', { source: 'file_manager' });
     } else {
       // Pausar outros áudios
       audioRefs.current.forEach((audio, id) => {
@@ -372,6 +383,7 @@ export function FileManager({
       }
       audio.play();
       setPlayingAudio(fileId);
+      trackEvent('song_audio_play', { source: 'file_manager' });
     }
   };
 

@@ -26,6 +26,7 @@ import AddToPlaylistButton from '@/components/AddToPlaylistButton';
 import { MusicListSkeleton } from '@/components/MusicListSkeleton';
 import { toast } from 'sonner';
 import { usePageState } from '@/hooks/usePageState';
+import { trackEvent } from '@/lib/umami';
 import {
   Pagination,
   PaginationContent,
@@ -110,6 +111,10 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [currentPage, setCurrentPage] = useState(1);
   const [jumpPageInput, setJumpPageInput] = useState('');
+
+  useEffect(() => {
+    trackEvent('musics_list_view', { initialCount: normalizedInitialSongs.length });
+  }, []);
 
   const itemsPerPage = 12;
   const totalPages = Math.ceil((filteredSongs || []).length / itemsPerPage);
@@ -249,6 +254,7 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
 
   // Função para navegar para música individual
   const handleNavigateToSong = useCallback((songSlug: string) => {
+    trackEvent('musics_song_opened', { songSlug });
     // Salvar estado atual antes de navegar
     if (saveState) {
       saveState({
@@ -274,6 +280,7 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
   }, [currentPage, searchTerm, selectedMoment, tagFilter, sortOrder]);
 
   const clearFilters = () => {
+    trackEvent('musics_filters_cleared');
     setSearchTerm('');
     setSelectedMoment(null);
     setTagFilter('');
@@ -301,6 +308,7 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
         <Select
           onValueChange={(v) => {
             const newValue = v === 'ALL' ? null : v;
+            trackEvent('musics_filter_moment_changed', { moment: newValue || 'ALL' });
             setSelectedMoment(newValue);
             if (saveState) {
               saveState({ 
@@ -358,6 +366,7 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
         <Select
           onValueChange={(v) => {
             const newValue = v as 'asc' | 'desc';
+            trackEvent('musics_sort_changed', { value: newValue });
             setSortOrder(newValue);
             if (saveState) {
               saveState({ 
@@ -456,6 +465,7 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
                 variant="outline"
                 size="sm"
                 onClick={() => {
+                  trackEvent('musics_list_refresh_clicked');
                   loadMusicData();
                   toast.success('Dados atualizados!');
                 }}
@@ -732,6 +742,7 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
                                   onClick={() => {
                                     if (currentPage === 1) return; // guard: do nothing when already at first page
                                     const newPage = Math.max(currentPage - 1, 1);
+                                    trackEvent('musics_pagination_changed', { toPage: newPage, source: 'previous' });
                                     setCurrentPage(newPage);
                                     if (saveState) saveState({ ...state, currentPage: newPage, scrollPosition: 0 });
                                     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -762,6 +773,7 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
                                       <PaginationItem key={`ellipsis-${idx}`}>
                                         <PaginationEllipsis
                                           onClick={() => {
+                                            trackEvent('musics_pagination_changed', { toPage: target, source: isLeft ? 'ellipsis_left' : 'ellipsis_right' });
                                             setCurrentPage(target);
                                             if (saveState) saveState({ ...state, currentPage: target, scrollPosition: 0 });
                                             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -778,6 +790,7 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
                                         <PaginationLink
                                           isActive={isActive}
                                           onClick={() => {
+                                            trackEvent('musics_pagination_changed', { toPage: pageNum, source: 'page_number' });
                                             setCurrentPage(pageNum);
                                             if (saveState) saveState({ ...state, currentPage: pageNum, scrollPosition: 0 });
                                             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -797,6 +810,7 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
                                   onClick={() => {
                                     if (currentPage === totalPages) return; // guard: do nothing when already at last page
                                     const newPage = Math.min(currentPage + 1, totalPages);
+                                    trackEvent('musics_pagination_changed', { toPage: newPage, source: 'next' });
                                     setCurrentPage(newPage);
                                     if (saveState) saveState({ ...state, currentPage: newPage, scrollPosition: 0 });
                                     window.scrollTo({ top: 0, behavior: 'smooth' });

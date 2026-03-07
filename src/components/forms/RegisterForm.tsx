@@ -10,6 +10,7 @@ import Link from "next/link";
 import { Mail, Lock, User, Eye, EyeOff, UserPlus, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
+import { trackEvent } from "@/lib/umami";
 
 export function RegisterForm() {
   const [email, setEmail] = useState("");
@@ -22,6 +23,7 @@ export function RegisterForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    trackEvent("auth_register_submit_attempt", { method: "email" });
     
     if (!name.trim()) {
       setError("Por favor, insere o teu nome completo");
@@ -53,20 +55,24 @@ export function RegisterForm() {
       });
       
       if (res.ok) {
+        trackEvent("auth_register_success", { method: "email" });
         toast.success("Conta criada com sucesso! Faz login para continuar.");
         window.location.href = "/login";
       } else if (res.status === 400) {
         const data = await res.json();
         const errorMsg = data.error || "Email já está em uso";
+        trackEvent("auth_register_failed", { method: "email", status: 400, reason: data.error || "validation_error" });
         setError(errorMsg);
         toast.error(errorMsg);
       } else {
+        trackEvent("auth_register_failed", { method: "email", status: res.status, reason: "server_error" });
         const errorMsg = "Erro ao registar. Verifica os dados e tenta novamente.";
         setError(errorMsg);
         toast.error(errorMsg);
       }
     } catch (error) {
       console.error("Erro no registo:", error);
+      trackEvent("auth_register_failed", { method: "email", reason: "network_error" });
       const errorMsg = "Erro de conexão. Tenta novamente.";
       setError(errorMsg);
       toast.error(errorMsg);

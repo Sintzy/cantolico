@@ -40,6 +40,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import EditPlaylistModal from '../../components/EditPlaylistModal';
+import { trackEvent } from '@/lib/umami';
 
 interface PlaylistMember {
   id: string;
@@ -85,6 +86,10 @@ function PlaylistsContent({ initialPlaylists }: PlaylistsClientProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterVisibility, setFilterVisibility] = useState<string>('ALL');
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+
+  useEffect(() => {
+    trackEvent('playlists_list_view', { initialCount: safeInitialPlaylists.length });
+  }, []);
 
   // Check for invitation messages
   useEffect(() => {
@@ -133,8 +138,13 @@ function PlaylistsContent({ initialPlaylists }: PlaylistsClientProps) {
   }
 
   const handleEditPlaylist = (playlist: Playlist) => {
+    trackEvent('playlist_edit_opened', { source: 'playlists_list' });
     setSelectedPlaylist(playlist);
     setEditModalOpen(true);
+  };
+
+  const handleOpenPlaylist = (playlistId: string) => {
+    trackEvent('playlist_opened', { source: 'playlists_list', playlistId });
   };
 
   // Filter playlists
@@ -155,6 +165,7 @@ function PlaylistsContent({ initialPlaylists }: PlaylistsClientProps) {
   const allPlaylistsForAdmin = filteredPlaylists.filter(p => p.userRole === 'admin');
 
   const clearFilters = () => {
+    trackEvent('playlists_filters_cleared');
     setSearchTerm('');
     setFilterVisibility('ALL');
     setIsMobileFiltersOpen(false);
@@ -224,6 +235,7 @@ function PlaylistsContent({ initialPlaylists }: PlaylistsClientProps) {
                   <Link 
                     href={`/playlists/${playlist.id}`}
                     className="hover:underline"
+                    onClick={() => handleOpenPlaylist(playlist.id)}
                   >
                     {playlist.name}
                   </Link>
@@ -258,7 +270,7 @@ function PlaylistsContent({ initialPlaylists }: PlaylistsClientProps) {
                   size="sm"
                   className="h-7 sm:h-8 text-xs px-2 sm:px-3"
                 >
-                  <Link href={`/playlists/${playlist.id}`}>
+                  <Link href={`/playlists/${playlist.id}`} onClick={() => handleOpenPlaylist(playlist.id)}>
                     <span className="hidden sm:inline">Ver Playlist</span>
                     <span className="sm:hidden">Ver</span>
                   </Link>
@@ -353,13 +365,13 @@ function PlaylistsContent({ initialPlaylists }: PlaylistsClientProps) {
             {/* Action Buttons */}
             <div className="flex items-center justify-center gap-4 mt-6">
               <Button asChild variant="outline" size="sm">
-                <Link href="/playlists/explore">
+                <Link href="/playlists/explore" onClick={() => trackEvent('playlists_explore_clicked', { source: 'playlists_page' })}>
                   <Globe className="h-4 w-4 mr-2" />
                   Explorar
                 </Link>
               </Button>
               <Button asChild size="sm">
-                <Link href="/playlists/create">
+                <Link href="/playlists/create" onClick={() => trackEvent('playlist_create_cta_clicked', { source: 'playlists_page' })}>
                   <Plus className="h-4 w-4 mr-2" />
                   Nova Playlist
                 </Link>

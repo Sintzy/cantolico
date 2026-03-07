@@ -30,6 +30,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Plus, Music, FileText, Upload, Youtube, ChevronRight, ChevronLeft, Info, Clock, User, Upload as UploadIcon, Eye, Check, AlertCircle, Search, Filter } from "lucide-react";
 import { FaSpotify } from "react-icons/fa";
+import { trackEvent } from "@/lib/umami";
 
 // Editor é renderizado via wrapper `MarkdownEditor` (fallback incluído)
 const mdParser = new MarkdownIt({ breaks: true }).use(chords);
@@ -228,6 +229,7 @@ export default function CreateNewMusicPage() {
   };
 
   const handleSubmit = async () => {
+    trackEvent("song_create_submit_attempt", { source: "public_create_page", type: form.type });
     if (!form.title.trim()) {
       toast.error("Por favor, insere o título da música");
       return;
@@ -315,14 +317,17 @@ export default function CreateNewMusicPage() {
 
       const data = await res.json();
       if (data.success) {
+        trackEvent("song_create_submit_success", { source: "public_create_page", type: form.type });
         toast.success("A tua música foi enviada para revisão com sucesso!");
         router.push(`/musics`);
       } else {
+        trackEvent("song_create_submit_failed", { source: "public_create_page", type: form.type, reason: data.error || "request_failed" });
         toast.error(data.error || "Erro ao submeter a música");
         setCaptchaToken(null);
       }
     } catch (error) {
       console.error("Erro na submissão:", error);
+      trackEvent("song_create_submit_failed", { source: "public_create_page", type: form.type, reason: "network_error" });
       toast.error(error instanceof Error ? error.message : "Erro de conexão ao submeter a música");
       setCaptchaToken(null);
     } finally {

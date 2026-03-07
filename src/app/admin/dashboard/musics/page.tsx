@@ -356,7 +356,7 @@ export default function MusicsManagement() {
             Atualizar
           </Button>
           <Button asChild size="sm">
-            <a href="/musics/create" target="_blank" rel="noopener noreferrer">
+            <a href="/admin/dashboard/musics/create">
               <ExternalLink className="h-4 w-4 mr-2" />
               Adicionar Música
             </a>

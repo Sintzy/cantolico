@@ -65,6 +65,7 @@ import {
 import EditMassModal from '@/components/EditMassModal';
 import ExportMassModal from '@/components/ExportMassModal';
 import ExportOptionsModal from '@/components/ExportOptionsModal';
+import { trackEvent } from '@/lib/umami';
 
 interface MassPageClientProps {
   initialMass: Mass & { isOwner: boolean; canEdit?: boolean };
@@ -100,6 +101,10 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
   const isAdmin = session?.user?.role === 'ADMIN';
   const canEdit = isOwner || isAdmin || mass.canEdit;
 
+  React.useEffect(() => {
+    trackEvent('mass_page_view', { massId: initialMass.id });
+  }, [initialMass.id]);
+
   const getVisibilityIcon = (visibility: MassVisibility) => {
     switch (visibility) {
       case 'PUBLIC': return <Globe className="w-4 h-4" />;
@@ -118,13 +123,16 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
     try {
       const response = await fetch(`/api/masses/${mass.id}`, { method: 'DELETE' });
       if (response.ok) {
+        trackEvent('mass_deleted_success', { source: 'mass_page' });
         toast.success('Missa apagada com sucesso');
         router.push('/missas');
       } else {
+        trackEvent('mass_deleted_failed', { source: 'mass_page' });
         toast.error('Erro ao apagar missa');
       }
     } catch (error) {
       console.error('Error deleting mass:', error);
+      trackEvent('mass_deleted_failed', { source: 'mass_page', reason: 'network_error' });
       toast.error('Erro ao apagar missa');
     } finally {
       setIsDeleting(false);
@@ -141,13 +149,16 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
 
       if (response.ok) {
         const newMass = await response.json();
+        trackEvent('mass_duplicated_success', { source: 'mass_page' });
         toast.success('Missa duplicada com sucesso');
         router.push(`/missas/${newMass.id}`);
       } else {
+        trackEvent('mass_duplicated_failed', { source: 'mass_page' });
         toast.error('Erro ao duplicar missa');
       }
     } catch (error) {
       console.error('Error duplicating mass:', error);
+      trackEvent('mass_duplicated_failed', { source: 'mass_page', reason: 'network_error' });
       toast.error('Erro ao duplicar missa');
     }
   };
@@ -170,6 +181,7 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
     }
 
     setIsSearching(true);
+    trackEvent('mass_song_search', { source: 'mass_page' });
     try {
       const response = await fetch(`/api/musics/search?q=${encodeURIComponent(query)}&limit=20`);
       if (response.ok) {
@@ -196,6 +208,7 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
 
       if (response.ok) {
         const newItem = await response.json();
+        trackEvent('mass_song_added', { source: 'mass_page' });
         setMass(prev => ({
           ...prev,
           items: [...(prev.items || []), newItem]
@@ -206,10 +219,12 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
         setSearchResults([]);
       } else {
         const error = await response.json();
+        trackEvent('mass_song_add_failed', { source: 'mass_page', reason: error.error || 'request_failed' });
         toast.error(error.error || 'Erro ao adicionar música');
       }
     } catch (error) {
       console.error('Error adding song:', error);
+      trackEvent('mass_song_add_failed', { source: 'mass_page', reason: 'network_error' });
       toast.error('Erro ao adicionar música');
     } finally {
       setAddingItemId(null);
@@ -223,16 +238,19 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
       });
 
       if (response.ok) {
+        trackEvent('mass_song_removed', { source: 'mass_page' });
         setMass(prev => ({
           ...prev,
           items: (prev.items || []).filter(item => item.id !== itemId)
         }));
         toast.success('Música removida');
       } else {
+        trackEvent('mass_song_remove_failed', { source: 'mass_page' });
         toast.error('Erro ao remover música');
       }
     } catch (error) {
       console.error('Error removing item:', error);
+      trackEvent('mass_song_remove_failed', { source: 'mass_page', reason: 'network_error' });
       toast.error('Erro ao remover música');
     }
   };

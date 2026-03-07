@@ -5,6 +5,7 @@ import { X, AlertCircle, Info, CheckCircle, AlertTriangle, Bell, FileText, HelpC
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { trackEvent } from '@/lib/umami';
 
 interface Banner {
   id: string;
@@ -20,7 +21,7 @@ interface BannerDisplayProps {
 }
 
 // Função para processar markdown links [texto](url)
-const parseMessageWithLinks = (message: string) => {
+const parseMessageWithLinks = (message: string, bannerId: string, page: BannerDisplayProps['page']) => {
   const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
   const parts: (string | React.ReactNode)[] = [];
   let lastIndex = 0;
@@ -43,6 +44,7 @@ const parseMessageWithLinks = (message: string) => {
           href={linkUrl}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => trackEvent('banner_link_clicked', { bannerId, page, target: 'external' })}
           className="underline font-semibold hover:opacity-80 transition-opacity"
         >
           {linkText}
@@ -53,6 +55,7 @@ const parseMessageWithLinks = (message: string) => {
         <Link
           key={`link-${match.index}`}
           href={linkUrl}
+          onClick={() => trackEvent('banner_link_clicked', { bannerId, page, target: 'internal' })}
           className="underline font-semibold hover:opacity-80 transition-opacity"
         >
           {linkText}
@@ -168,6 +171,7 @@ export default function BannerDisplay({ page }: BannerDisplayProps) {
       if (response.ok) {
         const data = await response.json();
         setBanners(data);
+        trackEvent('banner_loaded', { page, count: Array.isArray(data) ? data.length : 0 });
       } else {
         console.error('Erro ao carregar banners: resposta não OK');
       }
@@ -181,10 +185,12 @@ export default function BannerDisplay({ page }: BannerDisplayProps) {
     }
   };
 
-  const dismissBanner = (bannerId: string) => {
+  const dismissBanner = (banner: Banner) => {
+    const bannerId = banner.id;
     const newDismissed = new Set([...dismissedBanners, bannerId]);
     setDismissedBanners(newDismissed);
     localStorage.setItem('dismissedBanners', JSON.stringify([...newDismissed]));
+    trackEvent('banner_dismissed', { bannerId: banner.id, page, type: banner.type, position: banner.position });
   };
 
   const activeBanners = banners.filter(banner => !dismissedBanners.has(banner.id));
@@ -209,13 +215,13 @@ export default function BannerDisplay({ page }: BannerDisplayProps) {
               <IconComponent className={`h-5 w-5 mt-0.5 ${styles.iconColor} shrink-0`} />
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-sm mb-1">{banner.title}</h3>
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">{parseMessageWithLinks(banner.message)}</p>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{parseMessageWithLinks(banner.message, banner.id, page)}</p>
               </div>
               <Button
                 variant="ghost"
                 size="sm"
                 className={`h-8 w-8 p-0 ${styles.text} hover:bg-black/10 shrink-0`}
-                onClick={() => dismissBanner(banner.id)}
+                onClick={() => dismissBanner(banner)}
               >
                 <X className="h-4 w-4" />
               </Button>

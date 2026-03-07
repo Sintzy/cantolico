@@ -1,6 +1,7 @@
 'use client';
 
 import { Turnstile } from '@marsidev/react-turnstile';
+import { trackEvent } from '@/lib/umami';
 
 interface TurnstileCaptchaProps {
   onSuccess: (token: string) => void;
@@ -24,9 +25,18 @@ export function TurnstileCaptcha({
     <div className={`flex justify-center ${className}`}>
       <Turnstile
         siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
-        onSuccess={onSuccess}
-        onError={onError}
-        onExpire={onExpire}
+        onSuccess={(token) => {
+          trackEvent('turnstile_success');
+          onSuccess(token);
+        }}
+        onError={() => {
+          trackEvent('turnstile_error');
+          onError?.();
+        }}
+        onExpire={() => {
+          trackEvent('turnstile_expired');
+          onExpire?.();
+        }}
       />
     </div>
   );
