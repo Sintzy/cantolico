@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { getVisibilityLabel, getVisibilityFlags } from '@/types/playlist';
+import { trackEvent } from '@/lib/umami';
 
 interface CreatePlaylistForm {
   name: string;
@@ -34,6 +35,10 @@ export default function CreatePlaylistPage() {
     memberEmails: []
   });
   const [newMemberEmail, setNewMemberEmail] = useState('');
+
+  useEffect(() => {
+    trackEvent('playlist_create_page_view');
+  }, []);
 
   // Verificar autenticação
   useEffect(() => {
@@ -71,6 +76,7 @@ export default function CreatePlaylistPage() {
       ...prev,
       memberEmails: [...prev.memberEmails, email]
     }));
+    trackEvent('playlist_member_email_added', { visibility: form.visibility });
     setNewMemberEmail('');
     toast.success('Email adicionado com sucesso');
   };
@@ -80,6 +86,7 @@ export default function CreatePlaylistPage() {
       ...prev,
       memberEmails: prev.memberEmails.filter(email => email !== emailToRemove)
     }));
+    trackEvent('playlist_member_email_removed', { visibility: form.visibility });
     toast.success('Email removido');
   };
 
@@ -94,6 +101,7 @@ export default function CreatePlaylistPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    trackEvent('playlist_create_attempt', { visibility: form.visibility, members: form.memberEmails.length });
     
     if (!form.name.trim()) {
       toast.error('O nome da playlist é obrigatório');
@@ -122,14 +130,17 @@ export default function CreatePlaylistPage() {
 
       if (response.ok) {
         const newPlaylist = await response.json();
+        trackEvent('playlist_create_success', { visibility: form.visibility, members: form.memberEmails.length });
         toast.success('Playlist criada com sucesso!');
         router.push(`/playlists/${newPlaylist.id}`);
       } else {
         const error = await response.json();
+        trackEvent('playlist_create_failed', { visibility: form.visibility, reason: error.error || 'request_failed' });
         toast.error(error.error || 'Erro ao criar playlist');
       }
     } catch (error) {
       console.error('Error creating playlist:', error);
+      trackEvent('playlist_create_failed', { visibility: form.visibility, reason: 'network_error' });
       toast.error('Erro de conexão ao criar playlist');
     } finally {
       setIsLoading(false);

@@ -12,6 +12,7 @@ import Link from "next/link";
 import { Mail, Lock, Eye, EyeOff, LogIn, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
+import { trackEvent } from "@/lib/umami";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
@@ -24,6 +25,7 @@ export function LoginForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    trackEvent("auth_login_submit_attempt", { method: "credentials" });
     
     if (!email.trim()) {
       setError("Por favor, insere o teu email");
@@ -45,9 +47,11 @@ export function LoginForm() {
       });
       
       if (res?.ok) {
+        trackEvent("auth_login_success", { method: "credentials" });
         toast.success("Login efetuado com sucesso!");
         router.push("/");
       } else if (res?.error) {
+        trackEvent("auth_login_failed", { method: "credentials", reason: res.error });
         if (res.error === "CredentialsSignin") {
           setError("Email ou palavra-passe incorretos");
           toast.error("Email ou palavra-passe incorretos");
@@ -56,11 +60,13 @@ export function LoginForm() {
           toast.error("Erro no login");
         }
       } else {
+        trackEvent("auth_login_failed", { method: "credentials", reason: "unknown" });
         setError("Erro desconhecido no login");
         toast.error("Erro desconhecido no login");
       }
     } catch (error) {
       console.error("Erro no login:", error);
+      trackEvent("auth_login_failed", { method: "credentials", reason: "network_error" });
       setError("Erro de conexão. Tenta novamente.");
       toast.error("Erro de conexão. Tenta novamente.");
     } finally {

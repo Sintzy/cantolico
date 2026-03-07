@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Chrome } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { trackEvent } from '@/lib/umami';
 
 interface GoogleSignInButtonProps {
   callbackUrl?: string;
@@ -19,6 +20,7 @@ export function GoogleSignInButton({
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
+    trackEvent('auth_login_submit_attempt', { method: 'google' });
     
     try {
       // Mostrar feedback imediato
@@ -32,17 +34,20 @@ export function GoogleSignInButton({
       });
 
       if (result?.error) {
+        trackEvent('auth_login_failed', { method: 'google', reason: result.error });
         toast.error('Erro ao entrar com Google. Tenta novamente.', {
           id: 'google-signin'
         });
         console.error('Erro Google Sign-in:', result.error);
       } else if (result?.url) {
+        trackEvent('auth_login_success', { method: 'google' });
         toast.success('Redirecionando...', {
           id: 'google-signin'
         });
         // Redirecionar manualmente
         window.location.href = result.url;
       } else {
+        trackEvent('auth_login_redirect_fallback', { method: 'google' });
         // Fallback - tentar redirect direto
         await signIn('google', {
           callbackUrl,
@@ -51,6 +56,7 @@ export function GoogleSignInButton({
       }
     } catch (error) {
       console.error('Erro ao fazer login com Google:', error);
+      trackEvent('auth_login_failed', { method: 'google', reason: 'network_error' });
       toast.error('Erro de conexão. Verifica a tua internet e tenta novamente.', {
         id: 'google-signin'
       });

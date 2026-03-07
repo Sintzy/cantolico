@@ -50,6 +50,7 @@ import {
   getColorHex,
   LiturgicalColor
 } from '@/types/mass';
+import { trackEvent } from '@/lib/umami';
 
 interface MassesClientProps {
   initialMasses: Mass[];
@@ -63,6 +64,10 @@ export default function MassesPageClient({ initialMasses }: MassesClientProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterVisibility, setFilterVisibility] = useState<string>('ALL');
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+
+  React.useEffect(() => {
+    trackEvent('masses_list_view', { initialCount: initialMasses.length });
+  }, []);
 
   const getVisibilityIcon = (visibility: MassVisibility) => {
     switch (visibility) {
@@ -89,13 +94,16 @@ export default function MassesPageClient({ initialMasses }: MassesClientProps) {
       });
 
       if (response.ok) {
+        trackEvent('mass_deleted_success', { source: 'masses_list' });
         setMasses(prev => prev.filter(m => m.id !== massId));
         toast.success('Missa apagada com sucesso');
       } else {
+        trackEvent('mass_deleted_failed', { source: 'masses_list' });
         toast.error('Erro ao apagar missa');
       }
     } catch (error) {
       console.error('Error deleting mass:', error);
+      trackEvent('mass_deleted_failed', { source: 'masses_list', reason: 'network_error' });
       toast.error('Erro ao apagar missa');
     } finally {
       setDeletingId(null);
@@ -112,13 +120,16 @@ export default function MassesPageClient({ initialMasses }: MassesClientProps) {
 
       if (response.ok) {
         const newMass = await response.json();
+        trackEvent('mass_duplicated_success', { source: 'masses_list' });
         toast.success('Missa duplicada com sucesso');
         router.push(`/missas/${newMass.id}`);
       } else {
+        trackEvent('mass_duplicated_failed', { source: 'masses_list' });
         toast.error('Erro ao duplicar missa');
       }
     } catch (error) {
       console.error('Error duplicating mass:', error);
+      trackEvent('mass_duplicated_failed', { source: 'masses_list', reason: 'network_error' });
       toast.error('Erro ao duplicar missa');
     }
   };
@@ -141,6 +152,7 @@ export default function MassesPageClient({ initialMasses }: MassesClientProps) {
   const pastMasses = filteredMasses.filter(m => !m.date || new Date(m.date) < now);
 
   const clearFilters = () => {
+    trackEvent('masses_filters_cleared');
     setSearchTerm('');
     setFilterVisibility('ALL');
     setIsMobileFiltersOpen(false);
@@ -215,6 +227,7 @@ export default function MassesPageClient({ initialMasses }: MassesClientProps) {
                   <Link 
                     href={`/missas/${mass.id}`}
                     className="hover:underline"
+                    onClick={() => trackEvent('mass_opened', { source: 'masses_list' })}
                   >
                     {mass.name}
                   </Link>
@@ -261,7 +274,7 @@ export default function MassesPageClient({ initialMasses }: MassesClientProps) {
                   size="sm"
                   className="h-7 sm:h-8 text-xs px-2 sm:px-3"
                 >
-                  <Link href={`/missas/${mass.id}`}>
+                  <Link href={`/missas/${mass.id}`} onClick={() => trackEvent('mass_opened', { source: 'masses_list' })}>
                     <span className="hidden sm:inline">Ver Missa</span>
                     <span className="sm:hidden">Ver</span>
                   </Link>

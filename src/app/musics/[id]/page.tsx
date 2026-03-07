@@ -21,6 +21,7 @@ import AddToPlaylistButton from '@/components/AddToPlaylistButton';
 import { LiturgicalMoment, getInstrumentLabel, getLiturgicalMomentLabel } from '@/lib/constants';
 import { FileViewer } from '@/components/FileViewer';
 import { FileType } from '@/types/song-files';
+import { trackEvent } from '@/lib/umami';
 
 // Small badge with hover/click notice for BETA warning
 function BetaBadgeWithNotice() {
@@ -138,6 +139,35 @@ export default function SongPage() {
     description?: string;
     signedUrl?: string;
   }>>([]);
+
+  const openGeneratedPdf = (source: string) => {
+    trackEvent('song_pdf_generated', { source, transposition });
+    const generatedPdfUrl = `/api/musics/${id}/pdf?transposition=${transposition}`;
+    window.open(generatedPdfUrl, '_blank');
+  };
+
+  const openOriginalPdf = (source: string) => {
+    if (!pdfUrl) return;
+    trackEvent('song_pdf_original_opened', { source });
+    window.open(pdfUrl, '_blank');
+  };
+
+  const changeTransposition = (delta: number, source: string) => {
+    const nextValue = transposition + delta;
+    trackEvent('song_transposition_changed', { source, value: nextValue });
+    setTransposition(nextValue);
+  };
+
+  const changeChordsVisibility = (visible: boolean, source: string) => {
+    trackEvent('song_chords_visibility_changed', { source, visible });
+    setShowChords(visible);
+  };
+
+  const changeDiagramInstrument = (instrument: 'guitar' | 'ukulele' | 'piano', source: string) => {
+    trackEvent('song_diagram_instrument_changed', { source, instrument });
+    setDiagramInstrument(instrument);
+  };
+
   React.useEffect(() => {
       const fetchSong = async () => {
         try {
@@ -151,6 +181,7 @@ export default function SongPage() {
           }
 
           setSong(data);
+          trackEvent('song_page_view', { songId: data.id, songType: data.type || 'unknown' });
 
           // Redirect to slug-based URL if accessing by ID
           if (data.slug && data.slug !== id) {
@@ -560,16 +591,17 @@ export default function SongPage() {
             <Button 
               variant="ghost" 
               className="text-white hover:bg-white/20 border-white/30 shadow"
-              onClick={() => {
-                const pdfUrl = `/api/musics/${id}/pdf?transposition=${transposition}`;
-                window.open(pdfUrl, '_blank');
-              }}
+              onClick={() => openGeneratedPdf('hero_desktop')}
             >
               <FileText className="h-4 w-4 mr-1" /> PDF
             </Button>
             {pdfUrl && (
-              <Button asChild variant="ghost" className="text-white hover:bg-white/20 border-white/30 shadow">
-                <a href={pdfUrl} target="_blank" rel="noopener noreferrer"><Download className="h-4 w-4 mr-1" /> PDF Original</a>
+              <Button
+                variant="ghost"
+                className="text-white hover:bg-white/20 border-white/30 shadow"
+                onClick={() => openOriginalPdf('hero_desktop')}
+              >
+                <Download className="h-4 w-4 mr-1" /> PDF Original
               </Button>
             )}
             {isAdmin && adminEditUrl && (
@@ -595,16 +627,13 @@ export default function SongPage() {
           <Button 
             variant="ghost" 
             className="text-blue-700 p-3 touch-manipulation"
-            onClick={() => {
-              const pdfUrl = `/api/musics/${id}/pdf?transposition=${transposition}`;
-              window.open(pdfUrl, '_blank');
-            }}
+            onClick={() => openGeneratedPdf('hero_mobile')}
           >
             <FileText className="h-5 w-5" />
           </Button>
           {pdfUrl && (
-            <Button asChild variant="ghost" className="text-blue-700 p-3 touch-manipulation">
-              <a href={pdfUrl} target="_blank" rel="noopener noreferrer"><Download className="h-5 w-5" /></a>
+            <Button variant="ghost" className="text-blue-700 p-3 touch-manipulation" onClick={() => openOriginalPdf('hero_mobile')}>
+              <Download className="h-5 w-5" />
             </Button>
           )}
           {isAdmin && adminEditUrl && (
@@ -625,7 +654,7 @@ export default function SongPage() {
       {nextMusicUrl && (
         <div className="fixed bottom-8 right-8 z-50">
           <Button asChild variant="default" size="lg" className="shadow-lg bg-blue-600 text-white">
-            <Link href={nextMusicUrl}>
+            <Link href={nextMusicUrl} onClick={() => trackEvent('mass_next_song_clicked')}>
               Próxima música →
             </Link>
           </Button>
@@ -641,11 +670,11 @@ export default function SongPage() {
             <div className="bg-white/80 rounded-xl shadow p-5 flex flex-col gap-3 border border-blue-100">
               <SidebarTitle>Transpor Tom</SidebarTitle>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => setTransposition(transposition - 1)}>-</Button>
+                <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => changeTransposition(-1, 'mobile_sidebar')}>-</Button>
                 <span className="text-lg font-bold flex-1 text-center select-none">
                   {transposition >= 0 ? `+${transposition}` : transposition}
                 </span>
-                <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => setTransposition(transposition + 1)}>+</Button>
+                <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => changeTransposition(1, 'mobile_sidebar')}>+</Button>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -657,10 +686,10 @@ export default function SongPage() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-40">
                   <DropdownMenuLabel>Visualização</DropdownMenuLabel>
-                  <DropdownMenuItem onClick={() => setShowChords(true)}>
+                  <DropdownMenuItem onClick={() => changeChordsVisibility(true, 'mobile_sidebar')}>
                     Com acordes
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowChords(false)}>
+                  <DropdownMenuItem onClick={() => changeChordsVisibility(false, 'mobile_sidebar')}>
                     Sem acordes
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -669,10 +698,7 @@ export default function SongPage() {
               <Button 
                 className="w-full mt-2" 
                 variant="outline"
-                onClick={() => {
-                  const pdfUrl = `/api/musics/${id}/pdf?transposition=${transposition}`;
-                  window.open(pdfUrl, '_blank');
-                }}
+                onClick={() => openGeneratedPdf('mobile_sidebar')}
               >
                 <FileText className="h-4 w-4 mr-2" />
                 Gerar PDF
@@ -736,9 +762,9 @@ export default function SongPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
-                    <DropdownMenuItem onClick={() => setDiagramInstrument('guitar')}>Guitarra</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setDiagramInstrument('ukulele')}>Ukulele</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setDiagramInstrument('piano')}>Piano</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => changeDiagramInstrument('guitar', 'mobile_diagrams')}>Guitarra</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => changeDiagramInstrument('ukulele', 'mobile_diagrams')}>Ukulele</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => changeDiagramInstrument('piano', 'mobile_diagrams')}>Piano</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
 
@@ -774,11 +800,11 @@ export default function SongPage() {
             <div className="bg-white/80 rounded-xl shadow p-5 flex flex-col gap-3 border border-blue-100">
               <SidebarTitle>Transpor Tom</SidebarTitle>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => setTransposition(transposition - 1)}>-</Button>
+                <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => changeTransposition(-1, 'desktop_sidebar')}>-</Button>
                 <span className="text-lg font-bold flex-1 text-center select-none">
                   {transposition >= 0 ? `+${transposition}` : transposition}
                 </span>
-                <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => setTransposition(transposition + 1)}>+</Button>
+                <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => changeTransposition(1, 'desktop_sidebar')}>+</Button>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -790,10 +816,10 @@ export default function SongPage() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-40">
                   <DropdownMenuLabel>Visualização</DropdownMenuLabel>
-                  <DropdownMenuItem onClick={() => setShowChords(true)}>
+                  <DropdownMenuItem onClick={() => changeChordsVisibility(true, 'desktop_sidebar')}>
                     Com acordes
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowChords(false)}>
+                  <DropdownMenuItem onClick={() => changeChordsVisibility(false, 'desktop_sidebar')}>
                     Sem acordes
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -802,10 +828,7 @@ export default function SongPage() {
               <Button 
                 className="w-full mt-2" 
                 variant="outline"
-                onClick={() => {
-                  const pdfUrl = `/api/musics/${id}/pdf?transposition=${transposition}`;
-                  window.open(pdfUrl, '_blank');
-                }}
+                onClick={() => openGeneratedPdf('desktop_sidebar')}
               >
                 <FileText className="h-4 w-4 mr-2" />
                 Gerar PDF
@@ -869,9 +892,9 @@ export default function SongPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
-                    <DropdownMenuItem onClick={() => setDiagramInstrument('guitar')}>Guitarra</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setDiagramInstrument('ukulele')}>Ukulele</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setDiagramInstrument('piano')}>Piano</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => changeDiagramInstrument('guitar', 'desktop_diagrams')}>Guitarra</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => changeDiagramInstrument('ukulele', 'desktop_diagrams')}>Ukulele</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => changeDiagramInstrument('piano', 'desktop_diagrams')}>Piano</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
 

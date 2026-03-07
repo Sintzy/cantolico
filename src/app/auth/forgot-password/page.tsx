@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { trackEvent } from '@/lib/umami';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -12,6 +13,7 @@ export default function ForgotPasswordPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    trackEvent('auth_forgot_password_submit_attempt');
     setLoading(true);
     try {
       const res = await fetch('/api/auth/forgot-password', {
@@ -21,14 +23,17 @@ export default function ForgotPasswordPage() {
       });
 
       if (res.ok) {
+        trackEvent('auth_forgot_password_success');
         toast.success('Se o e-mail existir, receberá instruções para redefinir a password.');
         setEmail('');
       } else {
         const data = await res.json();
+        trackEvent('auth_forgot_password_failed', { status: res.status, reason: data?.error || 'request_failed' });
         toast.error(data?.error || 'Erro ao solicitar redefinição');
       }
     } catch (err) {
       console.error(err);
+      trackEvent('auth_forgot_password_failed', { reason: 'network_error' });
       toast.error('Erro de rede');
     } finally {
       setLoading(false);

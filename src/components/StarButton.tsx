@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useStarCountCache } from '@/hooks/useCache';
 import { useAppCache } from '@/components/providers/CacheProvider';
+import { trackEvent } from '@/lib/umami';
 
 interface StarButtonProps {
   songId: string;
@@ -73,6 +74,7 @@ export default function StarButton({
 
   const handleStar = async () => {
     if (!session) {
+      trackEvent('song_star_login_required');
       toast.error('Precisas de fazer login para dares estrela às músicas');
       return;
     }
@@ -112,16 +114,20 @@ export default function StarButton({
         
         // Toast de sucesso com animação
         if (data.starred) {
+          trackEvent('song_star_added');
           toast.success('⭐ Música adicionada aos favoritos!');
         } else {
+          trackEvent('song_star_removed');
           toast.success('Música removida dos favoritos');
         }
       } else {
         const error = await response.json();
+        trackEvent('song_star_failed', { reason: error.error || 'request_failed' });
         toast.error(error.error || 'Erro ao dar star na música');
       }
     } catch (error) {
       console.error('Error toggling star:', error);
+      trackEvent('song_star_failed', { reason: 'network_error' });
       toast.error('Erro ao dar star na música');
     } finally {
       setIsLoading(false);

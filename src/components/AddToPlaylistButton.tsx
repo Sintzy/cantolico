@@ -20,6 +20,7 @@ import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { getVisibilityLabel, getVisibilityFlags } from '@/types/playlist';
+import { trackEvent } from '@/lib/umami';
 
 interface AddToPlaylistButtonProps {
   songId: string;
@@ -128,6 +129,7 @@ export default function AddToPlaylistButton({
 
       if (response.ok) {
         const newPlaylist = await response.json();
+        trackEvent('playlist_create_success', { visibility: newPlaylistVisibility, source: 'add_to_playlist_modal' });
         setPlaylists(prev => [newPlaylist, ...prev]);
         setSelectedPlaylist(newPlaylist.id);
         setIsCreatingNew(false);
@@ -137,10 +139,12 @@ export default function AddToPlaylistButton({
         toast.success('Playlist criada com sucesso!');
       } else {
         const error = await response.json();
+        trackEvent('playlist_create_failed', { reason: error.error || 'request_failed', source: 'add_to_playlist_modal' });
         toast.error(error.error || 'Erro ao criar playlist');
       }
     } catch (error) {
       console.error('Error creating playlist:', error);
+      trackEvent('playlist_create_failed', { reason: 'network_error', source: 'add_to_playlist_modal' });
       toast.error('Erro ao criar playlist');
     } finally {
       setIsLoading(false);
@@ -180,15 +184,18 @@ export default function AddToPlaylistButton({
 
       if (response.ok) {
         const playlist = playlists.find(p => p.id === selectedPlaylist);
+        trackEvent('playlist_add_song_success', { source: 'add_to_playlist_modal' });
         toast.success(`Música adicionada à playlist "${playlist?.name}"!`);
         setIsOpen(false);
         setSelectedPlaylist('');
       } else {
         const error = await response.json();
+        trackEvent('playlist_add_song_failed', { reason: error.error || 'request_failed', source: 'add_to_playlist_modal' });
         toast.error(error.error || 'Erro ao adicionar música à playlist');
       }
     } catch (error) {
       console.error('Error adding to playlist:', error);
+      trackEvent('playlist_add_song_failed', { reason: 'network_error', source: 'add_to_playlist_modal' });
       toast.error('Erro ao adicionar música à playlist');
     } finally {
       setIsLoading(false);
@@ -209,7 +216,10 @@ export default function AddToPlaylistButton({
         variant={variant}
         size={size}
         className={className}
-        onClick={() => toast.error('Precisas de fazer login para criares playlists')}
+        onClick={() => {
+          trackEvent('playlist_action_login_required');
+          toast.error('Precisas de fazer login para criares playlists');
+        }}
       >
         <ListMusic className="h-4 w-4 mr-2" />
         Playlist
@@ -218,7 +228,13 @@ export default function AddToPlaylistButton({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        setIsOpen(open);
+        if (open) trackEvent('playlist_modal_opened');
+      }}
+    >
       <DialogTrigger asChild>
         <Button
           variant={variant}

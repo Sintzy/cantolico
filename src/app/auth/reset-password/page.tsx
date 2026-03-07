@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { trackEvent } from '@/lib/umami';
 
 function ResetPasswordForm() {
   const searchParams = useSearchParams();
@@ -23,6 +24,7 @@ function ResetPasswordForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    trackEvent('auth_reset_password_submit_attempt');
     if (!token) return;
     if (password.length < 8) return toast.error('A password deve ter pelo menos 8 caracteres');
     if (password !== confirm) return toast.error('As passwords não coincidem');
@@ -36,14 +38,17 @@ function ResetPasswordForm() {
       });
 
       if (res.ok) {
+        trackEvent('auth_reset_password_success');
         toast.success('Password atualizada com sucesso. Pode fazer login.');
         router.push('/auth/login');
       } else {
         const data = await res.json();
+        trackEvent('auth_reset_password_failed', { status: res.status, reason: data?.error || 'request_failed' });
         toast.error(data?.error || 'Erro ao redefinir a password');
       }
     } catch (err) {
       console.error(err);
+      trackEvent('auth_reset_password_failed', { reason: 'network_error' });
       toast.error('Erro de rede');
     } finally {
       setLoading(false);
