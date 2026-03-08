@@ -36,39 +36,24 @@ export const GET = withPublicMonitoring<any>(async (request: NextRequest) => {
           name,
           email,
           image
-        ),
-        MassItem (
-          id,
-          moment,
-          order,
-          Song!MassItem_songId_fkey (
-            id,
-            title,
-            slug
-          )
         )
       `)
       .order('date', { ascending: true, nullsFirst: false });
 
-    // Apply filters based on access
+    // Apply filters
     if (userId) {
       query = query.eq('userId', parseInt(userId));
-      
-      // If not the owner, only show public/unlisted
       if (!session || session.user.id !== parseInt(userId)) {
         query = query.in('visibility', ['PUBLIC', 'NOT_LISTED']);
       }
     } else if (session?.user?.id) {
-      // Get own masses
       query = query.eq('userId', session.user.id);
     } else if (includePublic) {
-      // Only public for non-logged users
       query = query.eq('visibility', 'PUBLIC');
     } else {
       return NextResponse.json([]);
     }
 
-    // Filter for upcoming masses
     if (upcoming) {
       query = query.gte('date', new Date().toISOString());
     }
@@ -76,22 +61,30 @@ export const GET = withPublicMonitoring<any>(async (request: NextRequest) => {
     const { data: masses, error } = await query;
 
     if (error) {
-      console.error('Error fetching masses:', error);
       throw new Error(`Supabase error: ${error.message}`);
     }
 
-    // Format response
+    // Bulk fetch items count to avoid N+1
+    const massIds = (masses || []).map(m => m.id);
+    let itemCountMap: { [key: string]: number } = {};
+    
+    if (massIds.length > 0) {
+      const { data: itemCounts } = await supabase
+        .from('MassItem')
+        .select('massId')
+        .in('massId', massIds);
+      
+      (itemCounts || []).forEach(item => {
+        itemCountMap[item.massId] = (itemCountMap[item.massId] || 0) + 1;
+      });
+    }
+
     const formattedMasses = (masses || []).map(mass => ({
       ...mass,
       user: mass.User || null,
-      items: (mass.MassItem || [])
-        .sort((a: any, b: any) => a.order - b.order)
-        .map((item: any) => ({
-          ...item,
-          song: item.Song || null
-        })),
+      items: [],
       _count: {
-        items: (mass.MassItem || []).length
+        items: itemCountMap[mass.id] || 0
       }
     }));
 

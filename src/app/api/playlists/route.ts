@@ -62,32 +62,18 @@ export const GET = withPublicMonitoring<any>(async (request: NextRequest) => {
           name,
           email,
           image
-        ),
-        PlaylistItem (
-          id,
-          order,
-          Song!PlaylistItem_songId_fkey (
-            id,
-            title,
-            slug
-          )
         )
       `)
       .order('updatedAt', { ascending: false });
 
     if (userId) {
-      // Se especificou userId, buscar playlists desse usuário
       query = query.eq('userId', parseInt(userId));
-      
-      // Se não é o próprio usuário, só mostrar públicas e não listadas
       if (!session || session.user.id !== parseInt(userId)) {
         query = query.in('visibility', ['PUBLIC', 'NOT_LISTED']);
       }
     } else if (session?.user?.id) {
-      // Se logado mas não especificou userId, buscar próprias playlists
       query = query.eq('userId', session.user.id);
     } else if (includePublic) {
-      // Se não logado mas quer ver públicas e não listadas
       query = query.in('visibility', ['PUBLIC', 'NOT_LISTED']);
     } else {
       return NextResponse.json([]);
@@ -99,30 +85,38 @@ export const GET = withPublicMonitoring<any>(async (request: NextRequest) => {
       throw new Error(`Supabase error: ${error.message}`);
     }
 
-    // Reformatar dados para manter compatibilidade
+    // Bulk fetch items count to avoid N+1
+    const playlistIds = (playlists || []).map(p => p.id);
+    let itemCountMap: { [key: string]: number } = {};
+    
+    if (playlistIds.length > 0) {
+      const { data: itemCounts } = await supabase
+        .from('PlaylistItem')
+        .select('playlistId')
+        .in('playlistId', playlistIds);
+      
+      (itemCounts || []).forEach(item => {
+        itemCountMap[item.playlistId] = (itemCountMap[item.playlistId] || 0) + 1;
+      });
+    }
+
     const formattedPlaylists = (playlists || []).map(playlist => {
       const visibility = playlist.visibility || getVisibilityFromPlaylist({ isPublic: playlist.isPublic });
       return {
         ...playlist,
-        // Add calculated visibility properties for backward compatibility
         isPrivate: visibility === 'PRIVATE',
         isNotListed: visibility === 'NOT_LISTED',
         user: playlist.User || null,
-        items: (playlist.PlaylistItem || [])
-          .sort((a, b) => a.order - b.order)
-          .map(item => ({
-            ...item,
-            song: item.Song || null
-          })),
-        members: [], // Por enquanto vazio até resolver a relação
+        items: [],
+        members: [],
         _count: {
-          items: (playlist.PlaylistItem || []).length,
-          members: 0 // Por enquanto 0 até resolver a relação
-        }
-      };
-    });
+          items: itemCountMap[playlist.id] || 0,
+          members: 0
+      }
+    };
+  });
 
-    return NextResponse.json(formattedPlaylists);
+  return NextResponse.json(formattedPlaylists);
 
   } catch (error) {
     console.error('Error fetching playlists:', error);
