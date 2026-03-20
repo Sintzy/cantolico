@@ -30,7 +30,8 @@ export async function GET(request: NextRequest) {
           name,
           email,
           image
-        )
+        ),
+        PlaylistItem(id)
       `)
       .range(offset, offset + limit - 1)
       .order('createdAt', { ascending: false });
@@ -47,23 +48,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Erro ao carregar playlists' }, { status: 500 });
     }
 
-    // Bulk fetch song counts for all playlists to avoid N+1
-    const playlistIds = (playlists || []).map((p: any) => p.id);
-    const { data: songCounts } = await adminSupabase
-      .from('PlaylistSong')
-      .select('playlistId')
-      .in('playlistId', playlistIds);
-
-    // Count songs per playlist
-    const countMap = new Map();
-    songCounts?.forEach((ps: any) => {
-      countMap.set(ps.playlistId, (countMap.get(ps.playlistId) || 0) + 1);
-    });
-
     // Enrich playlists with counts
     const playlistsWithData = (playlists || []).map((playlist: any) => ({
       ...playlist,
-      _count: { items: countMap.get(playlist.id) || 0 }
+      _count: { items: playlist.PlaylistItem ? playlist.PlaylistItem.length : 0 }
     }));
 
     // Get total count

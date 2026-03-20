@@ -41,7 +41,8 @@ export async function GET(request: NextRequest) {
       moderationResponse,
       usersByRoleResponse,
       newUsersByRoleResponse,
-      recentModerationsResponse
+      recentModerationsResponse,
+      allSubmissionsResponse
     ] = await Promise.all([
       // Basic counts with head: true (only counts, no data fetched)
       adminSupabase.from('User').select('*', { count: 'exact', head: true }),
@@ -74,7 +75,11 @@ export async function GET(request: NextRequest) {
       // Recent moderations (30 days)
       adminSupabase.from('UserModeration')
         .select('*', { count: 'exact', head: true })
-        .gte('moderatedAt', thirtyDaysAgo.toISOString())
+        .gte('moderatedAt', thirtyDaysAgo.toISOString()),
+
+      // For Submissions by month
+      adminSupabase.from('SongSubmission')
+        .select('createdAt')
     ]);
 
     // Extract counts
@@ -127,6 +132,27 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Process submissions by month (last 6 months)
+    const submissionsByMonth: { month: string; count: number }[] = [];
+    const nowCurrent = new Date();
+    const map: Record<string, number> = {};
+    
+    if (allSubmissionsResponse.data) {
+      for (const s of allSubmissionsResponse.data) {
+        const d = s.createdAt ? new Date(s.createdAt) : null;
+        if (!d || isNaN(d.getTime())) continue;
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        map[key] = (map[key] || 0) + 1;
+      }
+    }
+    
+    for (let i = 5; i >= 0; i--) {
+      const dt = new Date(nowCurrent.getFullYear(), nowCurrent.getMonth() - i, 1);
+      const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
+      const label = dt.toLocaleString('pt-PT', { month: 'short' }).replace('.', '');
+      submissionsByMonth.push({ month: label.charAt(0).toUpperCase() + label.slice(1), count: map[key] || 0 });
+    }
+
     const stats = {
       totalUsers,
       totalSongs,
@@ -150,7 +176,7 @@ export async function GET(request: NextRequest) {
         { type: 'Publicadas', count: totalSongs },
         { type: 'Pendentes', count: pendingSubmissions }
       ],
-      submissionsByMonth: [],
+      submissionsByMonth: submissionsByMonth,
       recentActivities: [],
       topAuthors: [],
       newUsersByRole: [

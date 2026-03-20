@@ -72,7 +72,6 @@ export default function AdminDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [pendingSubmissionsList, setPendingSubmissionsList] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -102,25 +101,6 @@ export default function AdminDashboard() {
       
       const data = await response.json();
       setStats(data);
-      // Also fetch pending submissions (used to show pending-only charts)
-      try {
-        const url = new URL('/api/admin/submissions', window.location.origin);
-        url.searchParams.set('page', '1');
-        url.searchParams.set('limit', '1000');
-        url.searchParams.set('status', 'PENDING');
-        const pendingRes = await fetch(url.toString());
-        if (pendingRes.ok) {
-          const pendingJson = await pendingRes.json();
-          const list = Array.isArray(pendingJson.submissions) ? pendingJson.submissions : [];
-          setPendingSubmissionsList(list);
-        } else {
-          setPendingSubmissionsList([]);
-        }
-      } catch (e) {
-        console.error('Erro ao buscar submissões pendentes:', e);
-        setPendingSubmissionsList([]);
-      }
-      toast.success('Estatísticas atualizadas com sucesso!');
     } catch (error) {
       console.error('Erro ao carregar estatísticas:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
@@ -302,28 +282,7 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
-                  <LineChart data={(function() {
-                    // If we have pending submissions, derive last 6 months counts from them
-                    if (pendingSubmissionsList && pendingSubmissionsList.length > 0) {
-                      const map: Record<string, number> = {};
-                      for (const s of pendingSubmissionsList) {
-                        const d = s.createdAt ? new Date(s.createdAt) : null;
-                        if (!d || isNaN(d.getTime())) continue;
-                        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-                        map[key] = (map[key] || 0) + 1;
-                      }
-                      const months: { month: string; count: number }[] = [];
-                      const now = new Date();
-                      for (let i = 5; i >= 0; i--) {
-                        const dt = new Date(now.getFullYear(), now.getMonth() - i, 1);
-                        const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
-                        const label = dt.toLocaleString('pt-PT', { month: 'short' }).replace('.', '');
-                        months.push({ month: label.charAt(0).toUpperCase() + label.slice(1), count: map[key] || 0 });
-                      }
-                      return months;
-                    }
-                    return stats?.submissionsByMonth || [];
-                  })()}>
+              <LineChart data={stats?.submissionsByMonth || []}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" fontSize={12} />
                 <YAxis fontSize={12} />
