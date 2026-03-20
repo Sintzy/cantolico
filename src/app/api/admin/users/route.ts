@@ -66,9 +66,9 @@ export const GET = withAdminProtection<any>(async (request: NextRequest, session
     }
     
     // Se não tiver filtro de status complexo, podemos já paginar aqui!
-    const applyPagination = !status || status === 'all';
+    const applyPaginationDb = !status || status === 'all';
     
-    if (applyPagination) {
+    if (applyPaginationDb) {
       const from = (page - 1) * limit;
       const to = from + limit - 1;
       baseQuery = baseQuery.range(from, to).order('createdAt', { ascending: false });
@@ -187,9 +187,6 @@ export const GET = withAdminProtection<any>(async (request: NextRequest, session
   return NextResponse.json({
     users: paginatedUsers,
     totalCount: totalFilteredCount,
-    totalPages: totalPagesCount,
-    currentPage: page
-  });
     totalPages: totalPagesCount,
     currentPage: page
   });
