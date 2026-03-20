@@ -82,7 +82,7 @@ const getMomentDisplayName = (momentKey: string): string => {
 
 function transposeChord(chord: string, interval: number): string {
   // Array completo de semitons (usando sustenidos como padrão)
-  const semitones = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  const semitones = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'];
   
   // Mapeamento de bemóis para sustenidos para normalização
   const flatToSharp: Record<string, string> = {

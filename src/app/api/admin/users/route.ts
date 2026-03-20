@@ -24,7 +24,26 @@ export const GET = withAdminProtection<any>(async (request: NextRequest, session
 
   console.log('🔍 Query params:', { page, limit, search, role, status });
 
-  // Build basic users query
+  // If filtering by moderation status, get matching user ids first
+  let userIdsWithStatus: string[] | null = null;
+  if (status && status !== 'all') {
+    // Only get active if status is ACTIVE, otherwise get the specific status
+    if (status === 'ACTIVE') {
+      // Find users with active moderation status
+      const { data: activeMods } = await supabase
+        .from('UserModeration')
+        .select('userId, status');
+      
+      // We want users who DO NOT have restrictive statuses or whose latest is ACTIVE
+      const restrictedUsers = new Set(
+        activeMods?.filter(m => ['WARNING', 'SUSPENDED', 'BANNED'].includes(m.status)).map(m => m.userId) || []
+      );
+      // We'll filter this out later in the query or memory.
+      // For now, let's just do standard pagination and filter in DB
+    }
+  }
+
+  // Build basic users query with pagination
   let baseQuery = supabase
     .from('User')
     .select(`
@@ -34,8 +53,7 @@ export const GET = withAdminProtection<any>(async (request: NextRequest, session
       role,
       createdAt,
       image
-    `)
-    .order('createdAt', { ascending: false });
+    `, { count: 'exact' });
 
     // Apply search filter
     if (search) {
@@ -45,10 +63,21 @@ export const GET = withAdminProtection<any>(async (request: NextRequest, session
     // Apply role filter
     if (role && role !== 'all') {
       baseQuery = baseQuery.eq('role', role);
-  }
+    }
+    
+    // Se não tiver filtro de status complexo, podemos já paginar aqui!
+    const applyPagination = !status || status === 'all';
+    
+    if (applyPagination) {
+      const from = (page - 1) * limit;
+      const to = from + limit - 1;
+      baseQuery = baseQuery.range(from, to).order('createdAt', { ascending: false });
+    } else {
+      baseQuery = baseQuery.order('createdAt', { ascending: false });
+    }
 
   console.log('🔍 Executing users query...');
-  const { data: allUsers, error: baseUsersError } = await baseQuery;
+  const { data: allUsers, error: baseUsersError, count } = await baseQuery;
 
   if (baseUsersError) {
     console.error('❌ Error fetching users:', baseUsersError);
@@ -57,26 +86,29 @@ export const GET = withAdminProtection<any>(async (request: NextRequest, session
 
   console.log(`✅ Found ${allUsers?.length || 0} total users`);
 
-  // Bulk fetch all required data to avoid N+1 queries
+  // Bulk fetch all required data to avoid N+1 queries for the fetched users ONLY
   const userIds = (allUsers || []).map((u: any) => u.id);
 
-  // Bulk fetch moderation records
-  const { data: allModerations } = await supabase
-    .from('UserModeration')
-    .select(`
-      id,
-      status,
-      type,
-      reason,
-      moderatorNote,
-      moderatedAt,
-      expiresAt,
-      moderatedById,
-      ipAddress,
-      userId
-    `)
-    .in('userId', userIds)
-    .order('moderatedAt', { ascending: false });
+  let allModerations: any[] = [];
+  if (userIds.length > 0) {
+    const { data } = await supabase
+      .from('UserModeration')
+      .select(`
+        id,
+        status,
+        type,
+        reason,
+        moderatorNote,
+        moderatedAt,
+        expiresAt,
+        moderatedById,
+        ipAddress,
+        userId
+      `)
+      .in('userId', userIds)
+      .order('moderatedAt', { ascending: false });
+    allModerations = data || [];
+  }
 
   // Group moderations by userId (latest only)
   const moderationByUser = new Map();
@@ -133,10 +165,17 @@ export const GET = withAdminProtection<any>(async (request: NextRequest, session
     );
   }
 
-  // Apply pagination AFTER filtering
-  const offset = (page - 1) * limit;
-  const totalFilteredCount = finalUsersList.length;
-  const paginatedUsers = finalUsersList.slice(offset, offset + limit);
+  // Apply pagination AFTER filtering if we didn't apply it on the DB
+  const applyPagination = !status || status === 'all';
+  let paginatedUsers = finalUsersList;
+  let totalFilteredCount = count || finalUsersList.length;
+
+  if (!applyPagination) {
+    const offset = (page - 1) * limit;
+    totalFilteredCount = finalUsersList.length;
+    paginatedUsers = finalUsersList.slice(offset, offset + limit);
+  }
+
   const totalPagesCount = Math.ceil(totalFilteredCount / limit);
 
   console.log('✅ Returning users data with all moderation fields:', {
@@ -148,6 +187,9 @@ export const GET = withAdminProtection<any>(async (request: NextRequest, session
   return NextResponse.json({
     users: paginatedUsers,
     totalCount: totalFilteredCount,
+    totalPages: totalPagesCount,
+    currentPage: page
+  });
     totalPages: totalPagesCount,
     currentPage: page
   });

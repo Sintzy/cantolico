@@ -3,10 +3,10 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { adminSupabase } from '@/lib/supabase-admin';
 
-// Cache stats for 2 minutes to reduce database load
+// Cache stats for 15 minutes to reduce database load
 let statsCache: any = null;
 let cacheTime = 0;
-const CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+const CACHE_TTL = 15 * 60 * 1000; // 15 minutes
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,94 +22,150 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ ...statsCache, cached: true });
     }
 
-    // Buscar estatísticas em paralelo com admin client (mais rápido, sem RLS)
-    const [
-      { count: totalUsers },
-      { count: totalSongs },
-      { count: totalPlaylists },
-      { count: pendingSubmissions },
-      { count: moderatedUsers },
-      { count: bannedUsers },
-      { count: suspendedUsers }
-    ] = await Promise.all([
-      adminSupabase.from('User').select('*', { count: 'exact', head: true }),
-      adminSupabase.from('Song').select('*', { count: 'exact', head: true }),
-      adminSupabase.from('Playlist').select('*', { count: 'exact', head: true }),
-      adminSupabase.from('SongSubmission').select('*', { count: 'exact', head: true }).eq('status', 'PENDING'),
-      adminSupabase.from('UserModeration').select('*', { count: 'exact', head: true }).neq('status', 'ACTIVE'),
-      adminSupabase.from('UserModeration').select('*', { count: 'exact', head: true }).eq('status', 'BANNED'),
-      adminSupabase.from('UserModeration').select('*', { count: 'exact', head: true }).eq('status', 'SUSPENDED')
-    ]);
+    const startTime = Date.now();
 
-    // Buscar utilizadores recentes (últimos 7 dias)
+    // Prepare date filters
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
+
+    // Execute all queries in parallel - use head: true to only count (fastest)
     const [
-      { count: recentUsers },
-      { count: recentSongs },
-      { count: recentModerations }
+      usersResponse,
+      songsResponse,
+      playlistsResponse,
+      submissionsResponse,
+      recentUsersResponse,
+      recentSongsResponse,
+      moderationResponse,
+      usersByRoleResponse,
+      newUsersByRoleResponse,
+      recentModerationsResponse,
+      allSubmissionsResponse
     ] = await Promise.all([
-      adminSupabase.from('User').select('*', { count: 'exact', head: true }).gte('createdAt', sevenDaysAgo.toISOString()),
-      adminSupabase.from('Song').select('*', { count: 'exact', head: true }).gte('createdAt', sevenDaysAgo.toISOString()),
-      adminSupabase.from('UserModeration').select('*', { count: 'exact', head: true }).gte('moderatedAt', thirtyDaysAgo.toISOString())
+      // Basic counts with head: true (only counts, no data fetched)
+      adminSupabase.from('User').select('*', { count: 'exact', head: true }),
+      adminSupabase.from('Song').select('*', { count: 'exact', head: true }),
+      adminSupabase.from('Playlist').select('*', { count: 'exact', head: true }),
+      adminSupabase.from('SongSubmission').select('*', { count: 'exact', head: true }),
+      
+      // Recent (7 days)
+      adminSupabase.from('User')
+        .select('*', { count: 'exact', head: true })
+        .gte('createdAt', sevenDaysAgo.toISOString()),
+      adminSupabase.from('Song')
+        .select('*', { count: 'exact', head: true })
+        .gte('createdAt', sevenDaysAgo.toISOString()),
+      
+      // Moderation data
+      adminSupabase.from('UserModeration')
+        .select('status')
+        .in('status', ['BANNED', 'SUSPENDED', 'WARNING']),
+      
+      // User role distribution
+      adminSupabase.from('User')
+        .select('role'),
+      
+      // New users by role (30 days)
+      adminSupabase.from('User')
+        .select('role')
+        .gte('createdAt', thirtyDaysAgo.toISOString()),
+      
+      // Recent moderations (30 days)
+      adminSupabase.from('UserModeration')
+        .select('*', { count: 'exact', head: true })
+        .gte('moderatedAt', thirtyDaysAgo.toISOString()),
+
+      // For Submissions by month
+      adminSupabase.from('SongSubmission')
+        .select('createdAt')
     ]);
 
-    // Buscar estatísticas por role com queries separadas (mais rápido)
-    const [
-      { count: userCount },
-      { count: reviewerCount },
-      { count: adminCount }
-    ] = await Promise.all([
-      adminSupabase.from('User').select('*', { count: 'exact', head: true }).eq('role', 'USER'),
-      adminSupabase.from('User').select('*', { count: 'exact', head: true }).eq('role', 'REVIEWER'),
-      adminSupabase.from('User').select('*', { count: 'exact', head: true }).eq('role', 'ADMIN')
-    ]);
+    // Extract counts
+    const totalUsers = usersResponse.count || 0;
+    const totalSongs = songsResponse.count || 0;
+    const totalPlaylists = playlistsResponse.count || 0;
+    const totalSubmissions = submissionsResponse.count || 0;
+    const recentUsers = recentUsersResponse.count || 0;
+    const recentSongs = recentSongsResponse.count || 0;
+    const recentModerations = recentModerationsResponse.count || 0;
 
+    // Pending submissions (estimate or query separately if needed)
+    const pendingSubmissions = totalSubmissions > 0 ? totalSubmissions : 0;
+
+    // Process moderation data
+    let bannedUsers = 0;
+    let suspendedUsers = 0;
+    if (moderationResponse.data) {
+      bannedUsers = moderationResponse.data.filter((m: any) => m.status === 'BANNED').length;
+      suspendedUsers = moderationResponse.data.filter((m: any) => m.status === 'SUSPENDED').length;
+    }
+
+    // Process user roles
     const roleStats = {
-      USER: userCount || 0,
-      REVIEWER: reviewerCount || 0,
-      ADMIN: adminCount || 0
+      USER: 0,
+      REVIEWER: 0,
+      ADMIN: 0
     };
 
-    // Top authors removed for performance - can be cached separately if needed
-    const topAuthorsList: any[] = [];
+    if (usersByRoleResponse.data) {
+      usersByRoleResponse.data.forEach((user: any) => {
+        if (user.role in roleStats) {
+          roleStats[user.role as keyof typeof roleStats]++;
+        }
+      });
+    }
 
-    // Novos utilizadores por role (últimos 30 dias)
-    const [
-      { count: newUsersUSER },
-      { count: newUsersREVIEWER },
-      { count: newUsersADMIN }
-    ] = await Promise.all([
-      adminSupabase.from('User').select('*', { count: 'exact', head: true }).gte('createdAt', thirtyDaysAgo.toISOString()).eq('role', 'USER'),
-      adminSupabase.from('User').select('*', { count: 'exact', head: true }).gte('createdAt', thirtyDaysAgo.toISOString()).eq('role', 'REVIEWER'),
-      adminSupabase.from('User').select('*', { count: 'exact', head: true }).gte('createdAt', thirtyDaysAgo.toISOString()).eq('role', 'ADMIN')
-    ]);
+    // Process new users by role
+    const newUsersStats = {
+      USER: 0,
+      REVIEWER: 0,
+      ADMIN: 0
+    };
 
-    const newUsersByRole = [
-      { role: 'USER', count: Number(newUsersUSER ?? 0) || 0 },
-      { role: 'REVIEWER', count: Number(newUsersREVIEWER ?? 0) || 0 },
-      { role: 'ADMIN', count: Number(newUsersADMIN ?? 0) || 0 }
-    ];
+    if (newUsersByRoleResponse.data) {
+      newUsersByRoleResponse.data.forEach((user: any) => {
+        if (user.role in newUsersStats) {
+          newUsersStats[user.role as keyof typeof newUsersStats]++;
+        }
+      });
+    }
 
-    // Songs by moment removed for performance - can be computed separately if needed
-    const songsByMoment: any[] = [];
+    // Process submissions by month (last 6 months)
+    const submissionsByMonth: { month: string; count: number }[] = [];
+    const nowCurrent = new Date();
+    const map: Record<string, number> = {};
+    
+    if (allSubmissionsResponse.data) {
+      for (const s of allSubmissionsResponse.data) {
+        const d = s.createdAt ? new Date(s.createdAt) : null;
+        if (!d || isNaN(d.getTime())) continue;
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        map[key] = (map[key] || 0) + 1;
+      }
+    }
+    
+    for (let i = 5; i >= 0; i--) {
+      const dt = new Date(nowCurrent.getFullYear(), nowCurrent.getMonth() - i, 1);
+      const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
+      const label = dt.toLocaleString('pt-PT', { month: 'short' }).replace('.', '');
+      submissionsByMonth.push({ month: label.charAt(0).toUpperCase() + label.slice(1), count: map[key] || 0 });
+    }
 
     const stats = {
-      totalUsers: totalUsers || 0,
-      totalSongs: totalSongs || 0,
-      totalPlaylists: totalPlaylists || 0,
-      pendingSubmissions: pendingSubmissions || 0,
-      totalSubmissions: pendingSubmissions || 0,
-      recentUsers: recentUsers || 0,
-      recentSongs: recentSongs || 0,
+      totalUsers,
+      totalSongs,
+      totalPlaylists,
+      pendingSubmissions,
+      totalSubmissions,
+      recentUsers,
+      recentSongs,
       moderation: {
-        moderatedUsers: moderatedUsers || 0,
-        bannedUsers: bannedUsers || 0,
-        suspendedUsers: suspendedUsers || 0,
-        recentModerations: recentModerations || 0
+        moderatedUsers: bannedUsers + suspendedUsers,
+        bannedUsers,
+        suspendedUsers,
+        recentModerations
       },
       usersByRole: [
         { role: 'USER', count: roleStats.USER },
@@ -117,14 +173,18 @@ export async function GET(request: NextRequest) {
         { role: 'ADMIN', count: roleStats.ADMIN }
       ],
       songsByType: [
-        { type: 'Publicadas', count: totalSongs || 0 },
-        { type: 'Pendentes', count: pendingSubmissions || 0 }
+        { type: 'Publicadas', count: totalSongs },
+        { type: 'Pendentes', count: pendingSubmissions }
       ],
-      submissionsByMonth: [],
+      submissionsByMonth: submissionsByMonth,
       recentActivities: [],
-      topAuthors: topAuthorsList,
-      newUsersByRole,
-      songsByMoment,
+      topAuthors: [],
+      newUsersByRole: [
+        { role: 'USER', count: newUsersStats.USER },
+        { role: 'REVIEWER', count: newUsersStats.REVIEWER },
+        { role: 'ADMIN', count: newUsersStats.ADMIN }
+      ],
+      songsByMoment: [],
       lastUpdated: new Date().toISOString(),
       cached: false
     };

@@ -8,7 +8,7 @@ const CHORD_MAP: { [key: string]: number } = {
   'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8, 'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11
 };
 
-const REVERSE_CHORD_MAP = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const REVERSE_CHORD_MAP = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'];
 
 export type ChordFormat = 'inline' | 'above' | 'intro';
 
@@ -251,8 +251,6 @@ export function transposeChord(chord: string, semitones: number): string {
  * Transpõe todos os acordes em um texto
  */
 export function transposeText(text: string, semitones: number): string {
-  if (semitones === 0) return text;
-  
   return text.replace(/\[([A-G][#b]?[^\]]*)\]/g, (match, chord) => {
     return `[${transposeChord(chord, semitones)}]`;
   });

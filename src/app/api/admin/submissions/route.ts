@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { supabase } from "@/lib/supabase-client";
+import { adminSupabase } from "@/lib/supabase-admin";
 
 // /api/admin/submissions?page=1&limit=20&q=&status=
 export async function GET(req: NextRequest) {
@@ -10,11 +10,6 @@ export async function GET(req: NextRequest) {
     
     if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'REVIEWER')) {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
-    }
-
-    // Log específico para REVIEWER
-    if (session.user.role === 'REVIEWER') {
-      console.log(`📝 [API] REVIEWER ${session.user.name} (${session.user.email}) acessando submissions`);
     }
 
     const { searchParams } = new URL(req.url);
@@ -27,16 +22,13 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get("status");
     const type = searchParams.get("type");
     const instrument = searchParams.get("instrument");
-    const userRole = searchParams.get("userRole");
-    const dateFilter = searchParams.get("dateFilter");
-    const moderationFilter = searchParams.get("moderationFilter");
     
     // Sort parameters
     const sortBy = searchParams.get("sortBy") || "createdAt";
     const sortOrder = searchParams.get("sortOrder") || "desc";
 
-    // Build query for submissions (apenas campos necessários para a lista)
-    let query = supabase
+    // Build optimized query - apply filters at database level
+    let query = adminSupabase
       .from('SongSubmission')
       .select(`
         id,
@@ -55,7 +47,7 @@ export async function GET(req: NextRequest) {
         )
       `, { count: 'exact' });
 
-    // Apply filters only if they're not "all"
+    // Apply filters at database level (more efficient)
     if (q) {
       query = query.or(`title.ilike.%${q}%,tags.cs.{${q}}`);
     }
@@ -72,17 +64,9 @@ export async function GET(req: NextRequest) {
       query = query.eq('mainInstrument', instrument);
     }
 
-    // Apply sorting
+    // Apply sorting and pagination at database level
     const ascending = sortOrder === "asc";
-    if (sortBy === "submitter.role") {
-      // This will need to be handled after fetching since it's a relation
-      query = query.order('createdAt', { ascending: !ascending });
-    } else {
-      query = query.order(sortBy, { ascending });
-    }
-    
-    // Remove range pagination - we'll do it after filtering
-    // query = query.range(skip, skip + limit - 1);
+    query = query.order(sortBy, { ascending }).range(skip, skip + limit - 1);
 
     const { data: rawSubmissions, error, count: total } = await query;
 
@@ -91,14 +75,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Erro ao buscar submissões' }, { status: 500 });
     }
 
-    // Bulk fetch moderation data for all submitters to avoid N+1 queries
+    // Bulk fetch moderation data only for submissions on this page
     const submitterIds = (rawSubmissions || [])
       .map((s: any) => s.submitter?.id)
       .filter(Boolean);
     
     let moderationByUser = new Map();
     if (submitterIds.length > 0) {
-      const { data: moderationRecords } = await supabase
+      const { data: moderationRecords } = await adminSupabase
         .from('UserModeration')
         .select(`
           userId,
@@ -123,7 +107,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Enrich submissions with moderation data
-    let submissions = (rawSubmissions || []).map((submission: any) => ({
+    const submissions = (rawSubmissions || []).map((submission: any) => ({
       ...submission,
       submitter: {
         ...submission.submitter,
@@ -133,84 +117,13 @@ export async function GET(req: NextRequest) {
       }
     }));
 
-    // Apply filters that couldn't be done in the database query
-    if (userRole && userRole !== "all") {
-      submissions = submissions.filter(submission => 
-        submission.submitter?.role === userRole
-      );
-    }
-
-    if (dateFilter && dateFilter !== "all") {
-      const now = new Date();
-      const filterDate = new Date();
-      
-      switch (dateFilter) {
-        case "today":
-          filterDate.setHours(0, 0, 0, 0);
-          submissions = submissions.filter(submission => 
-            new Date(submission.createdAt) >= filterDate
-          );
-          break;
-        case "week":
-          filterDate.setDate(now.getDate() - 7);
-          submissions = submissions.filter(submission => 
-            new Date(submission.createdAt) >= filterDate
-          );
-          break;
-        case "month":
-          filterDate.setMonth(now.getMonth() - 1);
-          submissions = submissions.filter(submission => 
-            new Date(submission.createdAt) >= filterDate
-          );
-          break;
-      }
-    }
-
-    if (moderationFilter && moderationFilter !== "all") {
-      switch (moderationFilter) {
-        case "banned":
-          submissions = submissions.filter(submission => 
-            submission.submitter?.currentModeration?.status === 'BANNED'
-          );
-          break;
-        case "warned":
-          submissions = submissions.filter(submission => 
-            submission.submitter?.currentModeration?.status === 'WARNING'
-          );
-          break;
-        case "clean":
-          submissions = submissions.filter(submission => 
-            !submission.submitter?.currentModeration || 
-            submission.submitter?.currentModeration?.status === 'RESOLVED'
-          );
-          break;
-      }
-    }
-
-    // Handle special sorting cases that need to be done after fetching
-    if (sortBy === "submitter.role") {
-      submissions = submissions.sort((a, b) => {
-        const roleA = a.submitter?.role || '';
-        const roleB = b.submitter?.role || '';
-        const comparison = roleA.localeCompare(roleB);
-        return ascending ? comparison : -comparison;
-      });
-    }
-
-    // Recalculate pagination after filtering
-    const filteredTotal = submissions.length;
-    const totalPages = Math.ceil(filteredTotal / limit);
-    
-    // Apply pagination to filtered results
-    const startIndex = skip;
-    const endIndex = startIndex + limit;
-    submissions = submissions.slice(startIndex, endIndex);
+    const totalPages = Math.ceil((total || 0) / limit);
 
     return NextResponse.json({ 
       submissions, 
       totalPages,
-      totalItems: filteredTotal,
-      total: filteredTotal,
+      totalItems: total || 0,
+      total: total || 0,
       page,
       limit,
       hasNextPage: page < totalPages,

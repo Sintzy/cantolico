@@ -4,6 +4,8 @@ import { buildMetadata } from '@/lib/seo';
 import MusicsPageClient from './page.client';
 import BannerDisplay from '@/components/BannerDisplay';
 
+export const revalidate = 600; // Cache invalidation every 10 minutes
+
 export const metadata: Metadata = buildMetadata({
   title: 'Cânticos Católicos - Biblioteca Completa',
   description: 'Descobre centenas de cânticos católicos organizados por momentos litúrgicos, instrumentos e tags.',

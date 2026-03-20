@@ -1,37 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase-client";
+import { adminSupabase } from "@/lib/supabase-admin";
 import { logApiRequestError, toErrorContext } from "@/lib/logging-helpers";
 import { protectApiRoute, applySecurityHeaders } from "@/lib/api-protection";
 import { parseTagsFromPostgreSQL, parseMomentsFromPostgreSQL } from "@/lib/utils";
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 
+// In-memory cache with TTL (5 minutes)
+let cachedSongsData: any = null;
+let cacheTime = 0;
+const CACHE_TTL = 5 * 60 * 1000;
+
 export async function GET(request: NextRequest) {
-  // Verifica se a requisição vem de uma origem autorizada
   const unauthorizedResponse = protectApiRoute(request);
   if (unauthorizedResponse) {
-    console.warn(`⚠️  [API] Unauthorized access attempt to /api/musics/getmusics`);
     return unauthorizedResponse;
   }
+  
   try {
-    console.log(`🎵 [GET MUSICS] Fetching music list with star counts`);
+    const now = Date.now();
+    
+    // Return cached data if valid (public endpoint - can use aggressive cache)
+    if (cachedSongsData && (now - cacheTime) < CACHE_TTL) {
+      const response = NextResponse.json({ songs: cachedSongsData, cached: true });
+      response.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+      return applySecurityHeaders(response, request);
+    }
     
     const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
 
-    // OTIMIZADO: Retornar apenas campos necessários para listagem
-    // Frontend usa: id, title, slug, moments, tags, mainInstrument
-    const { data: songs, error } = await supabase
+    // Fetch minimal data using admin client with Stars included directly
+    const { data: songs, error } = await adminSupabase
       .from('Song')
-      .select(`
-        id,
-        title,
-        slug,
-        moments,
-        type,
-        mainInstrument,
-        tags
-      `)
+      .select('id,title,slug,moments,type,mainInstrument,tags, Star(id, userId)')
       .order('title', { ascending: true });
 
     if (error) {
@@ -39,62 +41,35 @@ export async function GET(request: NextRequest) {
     }
 
     if (!songs || songs.length === 0) {
-      console.log(`✅ [GET MUSICS] No songs found`);
       const response = NextResponse.json({ songs: [] });
+      response.headers.set('Cache-Control', 'public, max-age=300');
       return applySecurityHeaders(response, request);
     }
 
-    // OTIMIZAÇÃO CRÍTICA: Buscar star counts de todas as músicas em 1 query
-    const songIds = songs.map(s => s.id);
-    
-    const { data: starCounts, error: countError } = await supabase
-      .from('Star')
-      .select('songId')
-      .in('songId', songIds);
+    const formattedSongs = songs.map(song => {
+      const songStars = song.Star || [];
+      const starCount = songStars.length;
+      const isStarred = userId ? songStars.some((s: any) => s.userId === userId) : false;
 
-    if (countError) {
-      console.error('Error fetching star counts:', countError);
-      // Continuar mesmo se houver erro, mas sem star counts
-    }
-
-    // Contar stars por música
-    const starCountMap: { [key: string]: number } = {};
-    (starCounts || []).forEach((star) => {
-      starCountMap[star.songId] = (starCountMap[star.songId] || 0) + 1;
+      return {
+        id: song.id,
+        title: song.title,
+        slug: song.slug,
+        type: song.type,
+        mainInstrument: song.mainInstrument,
+        tags: parseTagsFromPostgreSQL(song.tags),
+        moments: parseMomentsFromPostgreSQL(song.moments),
+        starCount,
+        isStarred
+      };
     });
 
-    // Se usuário está logado, buscar quais músicas ele deu star (1 query)
-    let userStarredSongs: Set<string> = new Set();
-    if (userId) {
-      const { data: userStars, error: userStarError } = await supabase
-        .from('Star')
-        .select('songId')
-        .eq('userId', userId)
-        .in('songId', songIds);
-
-      if (userStarError) {
-        console.error('Error fetching user stars:', userStarError);
-      } else {
-        userStarredSongs = new Set((userStars || []).map(s => s.songId));
-      }
-    }
-
-    // Reformatar dados - incluir star counts
-    const formattedSongs = songs.map(song => ({
-      id: song.id,
-      title: song.title,
-      slug: song.slug,
-      type: song.type,
-      mainInstrument: song.mainInstrument,
-      tags: parseTagsFromPostgreSQL(song.tags),
-      moments: parseMomentsFromPostgreSQL(song.moments),
-      starCount: starCountMap[song.id] || 0,
-      isStarred: userStarredSongs.has(song.id)
-    }));
-
-    console.log(`✅ [GET MUSICS] Found ${formattedSongs.length} songs (with star data)`);
+    // Update cache
+    cachedSongsData = formattedSongs;
+    cacheTime = now;
 
     const response = NextResponse.json({ songs: formattedSongs });
+    response.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
     return applySecurityHeaders(response, request);
   } catch (error) {
     logApiRequestError({
@@ -105,7 +80,6 @@ export async function GET(request: NextRequest) {
       error: toErrorContext(error),
       details: { action: 'fetch_musics_error' } as any
     });
-    console.error("[GET_MUSICS]", error);
     const response = NextResponse.json({ error: "Erro ao buscar músicas." }, { status: 500 });
     return applySecurityHeaders(response, request);
   }

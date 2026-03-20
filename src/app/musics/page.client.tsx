@@ -425,9 +425,9 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
   );
 
   return (
-    <main className="min-h-screen bg-white -mt-16">
+    <main className="flex-1 bg-white pt-2">
       {/* Hero Section com estilo da landing page */}
-      <section className="relative bg-white pt-16">
+      <section className="relative bg-white pt-6">
         {/* Background decoration */}
         <div className="pointer-events-none absolute inset-0" aria-hidden="true">
           <div className="absolute left-1/2 top-0 -translate-x-1/2">

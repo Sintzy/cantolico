@@ -126,6 +126,7 @@ export default function Navbar() {
                         <div className="hidden lg:flex items-center gap-0.5">
                         <Link 
                             href="/musics" 
+                            prefetch={false}
                             className="flex items-center gap-2 px-3 py-2 rounded-lg text-slate-700 hover:text-rose-600 hover:bg-rose-100/50 transition-all duration-200 font-medium text-sm"
                         >
                             <Music className="h-4 w-4" />
@@ -161,6 +162,7 @@ export default function Navbar() {
                                     <div className="py-1">
                                         <Link
                                             href="/playlists/explore"
+                                            prefetch={false}
                                             className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-orange-100/50 hover:text-orange-600 transition-colors"
                                             onClick={() => {
                                                 setPlaylistsMenuOpen(false);
@@ -179,6 +181,7 @@ export default function Navbar() {
                                         {session ? (
                                             <Link
                                                 href="/playlists"
+                                                prefetch={false}
                                                 className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-rose-100/50 hover:text-rose-600 transition-colors"
                                                 onClick={() => {
                                                     setPlaylistsMenuOpen(false);
@@ -217,6 +220,7 @@ export default function Navbar() {
                         {session && (
                             <Link 
                                 href="/missas" 
+                                prefetch={false}
                                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-slate-700 hover:text-purple-600 hover:bg-purple-100/50 transition-all duration-200 font-medium text-sm"
                             >
                                 <Church className="h-4 w-4" />
@@ -226,6 +230,7 @@ export default function Navbar() {
                         
                         <Link 
                             href="/musics/create" 
+                            prefetch={false}
                             className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-slate-700 hover:text-amber-600 hover:bg-amber-100/50 transition-all duration-200 font-medium text-sm"
                         >
                             <Plus className="h-4 w-4" />
@@ -237,6 +242,7 @@ export default function Navbar() {
                             <>
                                 <Link 
                                     href="/admin/dashboard" 
+                                    prefetch={false}
                                     className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
                                 >
                                     <Crown className="h-4 w-4" />
@@ -244,6 +250,7 @@ export default function Navbar() {
                                 </Link>
                                 <Link 
                                     href="/admin/review" 
+                                    prefetch={false}
                                     className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
                                 >
                                     <Eye className="h-4 w-4" />
@@ -254,6 +261,7 @@ export default function Navbar() {
                         {session?.user?.role === "REVIEWER" && (
                             <Link 
                                 href="/admin/review" 
+                                prefetch={false}
                                 className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
                             >
                                 <Eye className="h-4 w-4" />
@@ -585,6 +593,7 @@ export default function Navbar() {
                                 
                                 <Link 
                                     href="/musics" 
+                                    prefetch={false}
                                     className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-slate-700 hover:bg-rose-100/50 hover:text-rose-600 rounded-lg transition-all duration-200 font-medium text-sm"
                                     onClick={closeMobileMenu}
                                 >
@@ -594,6 +603,7 @@ export default function Navbar() {
                                 
                                 <Link 
                                     href="/playlists/explore" 
+                                    prefetch={false}
                                     className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-slate-700 hover:bg-orange-100/50 hover:text-orange-600 rounded-lg transition-all duration-200 font-medium text-sm"
                                     onClick={closeMobileMenu}
                                 >

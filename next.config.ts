@@ -3,9 +3,15 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Configuração do Turbopack (Next.js 16+)
   turbopack: {
-    root: ".",
+    root: process.cwd(),
   },
+  
+  // Image optimization
   images: {
+    // Enable modern image formats
+    formats: ['image/avif', 'image/webp'],
+    // Cache optimized images for 1 year (they have hash in filename)
+    minimumCacheTTL: 31536000,
     remotePatterns: [
       {
         protocol: 'https',
@@ -19,13 +25,27 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  
+  // Compression
+  compress: true,
+  
+  // Performance optimization
+  experimental: {
+    // Tree shake unused code more aggressively
+    optimizePackageImports: [
+      '@/components',
+      '@/lib',
+      '@/hooks',
+      'lucide-react'
+    ],
+  },
+  
   env: {
-    // Expose Vercel git environment variables to the client
     NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA,
     NEXT_PUBLIC_VERCEL_GIT_COMMIT_REF: process.env.VERCEL_GIT_COMMIT_REF,
-    // Set build time during the build process
     NEXT_PUBLIC_BUILD_TIME: new Date().toISOString(),
   },
+  
   webpack: (config, { isServer }) => {
     // Exclude native binaries from webpack bundling
     if (isServer) {

@@ -1,7 +1,5 @@
 import BannerDisplay from '@/components/BannerDisplay';
 import HomePageClient from './HomePageClient';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { buildMetadata, buildOrganizationJsonLd, buildWebsiteJsonLd } from '@/lib/seo';
 
 export const metadata = buildMetadata({
@@ -11,8 +9,7 @@ export const metadata = buildMetadata({
   type: 'website',
 });
 
-export default async function HomePage() {
-  const session = await getServerSession(authOptions);
+export default function HomePage() {
   const websiteStructuredData = buildWebsiteJsonLd();
   const organizationStructuredData = buildOrganizationJsonLd();
 
@@ -28,7 +25,7 @@ export default async function HomePage() {
       />
       <BannerDisplay page="HOME" />
       <main className="min-h-screen">
-        <HomePageClient hasUser={!!session?.user} />
+        <HomePageClient />
       </main>
     </>
   );

@@ -16,33 +16,15 @@ export async function GET(
   const { id } = await ctx.params;
 
   try {
-    // The admin endpoint resolves slug->uuid; do the same here.
-    const { data: song, error: songError } = await supabase
-      .from('Song')
-      .select('id, slug')
-      .or(`slug.eq.${id},id.eq.${id}`)
-      .single();
-
-    if (songError || !song) {
-      return NextResponse.json(
-        { success: false, error: 'Song not found' },
-        { status: 404 }
-      );
-    }
-
-    // Match the schema used throughout the project (see admin song files endpoint):
-    // - Song has currentVersionId
-    // - SongFile belongs to a version via songVersionId
-    // - storage path column is fileKey
     const { data: songWithVersion, error: songWithVersionError } = await supabase
       .from('Song')
       .select('id, slug, currentVersionId')
-      .eq('id', song.id)
+      .or(`slug.eq.${id},id.eq.${id}`)
       .single();
 
     if (songWithVersionError || !songWithVersion?.currentVersionId) {
       return NextResponse.json(
-        { success: false, error: 'Song version not found' },
+        { success: false, error: 'Song or version not found' },
         { status: 404 }
       );
     }
