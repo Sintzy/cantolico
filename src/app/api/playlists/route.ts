@@ -62,7 +62,8 @@ export const GET = withPublicMonitoring<any>(async (request: NextRequest) => {
           name,
           email,
           image
-        )
+        ),
+        PlaylistItem(id)
       `)
       .order('updatedAt', { ascending: false });
 
@@ -85,21 +86,6 @@ export const GET = withPublicMonitoring<any>(async (request: NextRequest) => {
       throw new Error(`Supabase error: ${error.message}`);
     }
 
-    // Bulk fetch items count to avoid N+1
-    const playlistIds = (playlists || []).map(p => p.id);
-    let itemCountMap: { [key: string]: number } = {};
-    
-    if (playlistIds.length > 0) {
-      const { data: itemCounts } = await supabase
-        .from('PlaylistItem')
-        .select('playlistId')
-        .in('playlistId', playlistIds);
-      
-      (itemCounts || []).forEach(item => {
-        itemCountMap[item.playlistId] = (itemCountMap[item.playlistId] || 0) + 1;
-      });
-    }
-
     const formattedPlaylists = (playlists || []).map(playlist => {
       const visibility = playlist.visibility || getVisibilityFromPlaylist({ isPublic: playlist.isPublic });
       return {
@@ -110,7 +96,7 @@ export const GET = withPublicMonitoring<any>(async (request: NextRequest) => {
         items: [],
         members: [],
         _count: {
-          items: itemCountMap[playlist.id] || 0,
+          items: playlist.PlaylistItem ? playlist.PlaylistItem.length : 0,
           members: 0
       }
     };

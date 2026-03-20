@@ -48,46 +48,31 @@ export default async function PlaylistsPage() {
     redirect('/login?callbackUrl=/playlists');
   }
 
-  // Fetch user's playlists from database (Server Component)
+  // Fetch user's playlists with counts and members in a single query
   const { data: playlistsData, error } = await adminSupabase
     .from('Playlist')
-    .select('id, name, description, visibility, isPublic, userId, createdAt, updatedAt')
+    .select(`
+      id, name, description, visibility, isPublic, userId, createdAt, updatedAt,
+      PlaylistItem(id),
+      PlaylistMember(*)
+    `)
     .eq('userId', session.user.id)
     .order('updatedAt', { ascending: false });
 
   let playlists: Playlist[] = [];
   
-  if (playlistsData && Array.isArray(playlistsData) && playlistsData.length > 0) {
-    // Get song counts for each playlist
-    const playlistIds = playlistsData.map(p => p.id);
-    
-    const { data: itemCounts } = await adminSupabase
-      .from('PlaylistItem')
-      .select('playlistId')
-      .in('playlistId', playlistIds);
-
-    const countsMap = new Map<string, number>();
-    itemCounts?.forEach(item => {
-      const count = countsMap.get(item.playlistId) || 0;
-      countsMap.set(item.playlistId, count + 1);
-    });
-
-    // Get members for each playlist
-    const { data: members } = await adminSupabase
-      .from('PlaylistMember')
-      .select('*')
-      .in('playlistId', playlistIds);
-
-    const membersMap = new Map<string, PlaylistMember[]>();
-    members?.forEach(member => {
-      const existing = membersMap.get(member.playlistId) || [];
-      membersMap.set(member.playlistId, [...existing, member]);
-    });
-
+  if (playlistsData && Array.isArray(playlistsData)) {
     playlists = playlistsData.map(p => ({
-      ...p,
-      songsCount: countsMap.get(p.id) || 0,
-      members: membersMap.get(p.id) || [],
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      visibility: p.visibility,
+      isPublic: p.isPublic,
+      userId: p.userId,
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt,
+      songsCount: p.PlaylistItem?.length ?? 0,
+      members: p.PlaylistMember ?? [],
       userRole: 'owner' as const
     }));
   }

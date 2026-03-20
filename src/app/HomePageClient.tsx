@@ -5,10 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Music, Sparkles, Users, Heart, Play, ArrowRight, Zap, Shield, Globe } from 'lucide-react';
-
-interface HomePageClientProps {
-  hasUser: boolean;
-}
+import { useSession } from 'next-auth/react';
 
 interface NewsItem {
   id: string;
@@ -19,7 +16,9 @@ interface NewsItem {
   publishedAt: string | null;
 }
 
-export default function HomePageClient({ hasUser }: HomePageClientProps) {
+export default function HomePageClient() {
+  const { data: session } = useSession();
+  const hasUser = !!session?.user;
   const [news, setNews] = useState<NewsItem[]>([]);
   const [newsLoading, setNewsLoading] = useState(true);
 
@@ -89,7 +88,7 @@ export default function HomePageClient({ hasUser }: HomePageClientProps) {
               size="lg" 
               className="bg-rose-600 hover:bg-rose-700 text-white text-lg px-8 py-5 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group font-semibold"
             >
-              <Link href="/musics" className="flex items-center gap-2">
+              <Link href="/musics" prefetch={false} className="flex items-center gap-2">
                 Ver Cânticos
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
@@ -100,7 +99,7 @@ export default function HomePageClient({ hasUser }: HomePageClientProps) {
                 size="lg" 
                 className="border-2 border-slate-300 hover:border-slate-400 bg-white text-slate-800 text-lg px-8 py-5 rounded-xl transition-all duration-300 font-semibold"
               >
-                <Link href="/register">
+                <Link href="/register" prefetch={false}>
                   Criar Conta
                 </Link>
               </Button>

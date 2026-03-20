@@ -36,7 +36,8 @@ export const GET = withPublicMonitoring<any>(async (request: NextRequest) => {
           name,
           email,
           image
-        )
+        ),
+        MassItem (id)
       `)
       .order('date', { ascending: true, nullsFirst: false });
 
@@ -64,27 +65,12 @@ export const GET = withPublicMonitoring<any>(async (request: NextRequest) => {
       throw new Error(`Supabase error: ${error.message}`);
     }
 
-    // Bulk fetch items count to avoid N+1
-    const massIds = (masses || []).map(m => m.id);
-    let itemCountMap: { [key: string]: number } = {};
-    
-    if (massIds.length > 0) {
-      const { data: itemCounts } = await supabase
-        .from('MassItem')
-        .select('massId')
-        .in('massId', massIds);
-      
-      (itemCounts || []).forEach(item => {
-        itemCountMap[item.massId] = (itemCountMap[item.massId] || 0) + 1;
-      });
-    }
-
     const formattedMasses = (masses || []).map(mass => ({
       ...mass,
       user: mass.User || null,
       items: [],
       _count: {
-        items: itemCountMap[mass.id] || 0
+        items: mass.MassItem ? mass.MassItem.length : 0
       }
     }));
 

@@ -30,10 +30,10 @@ export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
 
-    // Fetch minimal data using admin client (no RLS overhead)
+    // Fetch minimal data using admin client with Stars included directly
     const { data: songs, error } = await adminSupabase
       .from('Song')
-      .select('id,title,slug,moments,type,mainInstrument,tags')
+      .select('id,title,slug,moments,type,mainInstrument,tags, Star(id, userId)')
       .order('title', { ascending: true });
 
     if (error) {
@@ -46,38 +46,23 @@ export async function GET(request: NextRequest) {
       return applySecurityHeaders(response, request);
     }
 
-    const songIds = songs.map(s => s.id);
-    
-    // Fetch star data in parallel using admin client (faster)
-    const [starCountsResponse, userStarsResponse] = await Promise.all([
-      adminSupabase.from('Star').select('songId').in('songId', songIds),
-      userId 
-        ? adminSupabase.from('Star').select('songId').eq('userId', userId).in('songId', songIds)
-        : Promise.resolve({ data: [] })
-    ]);
+    const formattedSongs = songs.map(song => {
+      const songStars = song.Star || [];
+      const starCount = songStars.length;
+      const isStarred = userId ? songStars.some((s: any) => s.userId === userId) : false;
 
-    const starCounts = starCountsResponse.data || [];
-    const userStars = userStarsResponse.data || [];
-
-    // Count stars per song
-    const starCountMap: { [key: string]: number } = {};
-    starCounts.forEach(star => {
-      starCountMap[star.songId] = (starCountMap[star.songId] || 0) + 1;
+      return {
+        id: song.id,
+        title: song.title,
+        slug: song.slug,
+        type: song.type,
+        mainInstrument: song.mainInstrument,
+        tags: parseTagsFromPostgreSQL(song.tags),
+        moments: parseMomentsFromPostgreSQL(song.moments),
+        starCount,
+        isStarred
+      };
     });
-
-    const userStarredSongs = new Set(userStars.map(s => s.songId));
-
-    const formattedSongs = songs.map(song => ({
-      id: song.id,
-      title: song.title,
-      slug: song.slug,
-      type: song.type,
-      mainInstrument: song.mainInstrument,
-      tags: parseTagsFromPostgreSQL(song.tags),
-      moments: parseMomentsFromPostgreSQL(song.moments),
-      starCount: starCountMap[song.id] || 0,
-      isStarred: userStarredSongs.has(song.id)
-    }));
 
     // Update cache
     cachedSongsData = formattedSongs;
