@@ -37,10 +37,7 @@ html {
 }
 
 body {
-  background:
-    radial-gradient(circle at 15% -10%, rgba(244, 63, 94, 0.12), transparent 34%),
-    radial-gradient(circle at 100% 0%, rgba(251, 146, 60, 0.13), transparent 40%),
-    hsl(var(--background));
+  background: hsl(var(--background));
   color: hsl(var(--foreground));
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
