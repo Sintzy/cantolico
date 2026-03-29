@@ -50,10 +50,10 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
    * 1. User signs up/logs in
    * 2. Your API endpoint (/api/webhooks/clerk or /api/auth/setup) fetches role from DB
    * 3. Update Clerk's publicMetadata with: { role: 'ADMIN' | 'REVIEWER' | 'USER' | 'TRUSTED' }
-   * 4. In middleware (THIS FILE): Read role from sessionClaims.metadata (instant, no DB query)
+   * 4. In proxy (THIS FILE): Read role from sessionClaims.metadata (instant, no DB query)
    * 5. Redirect based on that role
    * 
-   * NEVER fetch roles from DB in middleware - it will timeout on Vercel!
+   * NEVER fetch roles from DB in proxy - it will timeout on Vercel!
    */
 
   // ==========================================
@@ -79,7 +79,7 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
         }
       } catch (error) {
         // Continuar sem redirecionar em caso de erro
-        console.debug('[MIDDLEWARE] SEO redirect failed:', error);
+        console.debug('[PROXY] SEO redirect failed:', error);
       }
     }
   }
@@ -90,7 +90,7 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
 
   const { userId, sessionClaims } = await auth();
 
-  // IMPORTANTE: Apenas usar dados do JWT, nunca fazer queries em middleware!
+  // IMPORTANTE: Apenas usar dados do JWT, nunca fazer queries no proxy!
   // O role deve ser atualizado na metadata do Clerk durante login/signup
   const userRole = (sessionClaims?.metadata as { role?: string })?.role;
   const isBanned = (sessionClaims?.metadata as { isBanned?: boolean })?.isBanned;

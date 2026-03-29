@@ -52,6 +52,19 @@ export default function Navbar() {
     const userMenuRef = useRef<HTMLDivElement>(null);
     const playlistsMenuRef = useRef<HTMLDivElement>(null);
 
+    // Debug: log userRole para entender se está a ser lido corretamente
+    useEffect(() => {
+        if (user) {
+            console.log('🔍 [Navbar] User:', {
+                id: user.id,
+                email: user.primaryEmailAddress?.emailAddress,
+                fullName: user.fullName,
+                publicMetadata: user.publicMetadata,
+                userRole: userRole
+            });
+        }
+    }, [user, userRole]);
+
     // Close menus when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -206,7 +219,7 @@ export default function Navbar() {
                                                     </div>
                                                     <div>
                                                         <div className="font-medium text-sm text-slate-500">Minhas Playlists</div>
-                                                        <Link href="/login" className="text-xs text-rose-600 hover:underline">
+                                                        <Link href="/sign-in" className="text-xs text-rose-600 hover:underline">
                                                             Login
                                                         </Link>
                                                     </div>
@@ -239,24 +252,24 @@ export default function Navbar() {
                             <span>Nova</span>
                         </Link>
                         
-                        {/* Admin/Reviewer Links */}
+                        {/* Admin/Reviewer Links - ONLY show on desktop */}
                         {userRole === "ADMIN" && (
                             <>
                                 <Link 
                                     href="/admin/dashboard" 
                                     prefetch={false}
-                                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
+                                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-slate-700 hover:text-blue-600 hover:bg-blue-50/50 transition-all duration-200 font-medium text-sm"
                                 >
                                     <Crown className="h-4 w-4" />
-                                    <span className="font-medium">Admin</span>
+                                    <span>Admin</span>
                                 </Link>
                                 <Link 
                                     href="/admin/review" 
                                     prefetch={false}
-                                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
+                                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-slate-700 hover:text-blue-600 hover:bg-blue-50/50 transition-all duration-200 font-medium text-sm"
                                 >
                                     <Eye className="h-4 w-4" />
-                                    <span className="font-medium">Revisão</span>
+                                    <span>Revisão</span>
                                 </Link>
                             </>
                         )}
@@ -264,10 +277,10 @@ export default function Navbar() {
                             <Link 
                                 href="/admin/review" 
                                 prefetch={false}
-                                className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
+                                className="flex items-center gap-2 px-3 py-2 rounded-lg text-slate-700 hover:text-blue-600 hover:bg-blue-50/50 transition-all duration-200 font-medium text-sm"
                             >
                                 <Eye className="h-4 w-4" />
-                                <span className="font-medium">Revisão</span>
+                                <span>Revisão</span>
                             </Link>
                         )}
 
@@ -708,7 +721,7 @@ export default function Navbar() {
                                             <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Conta</div>
                                         </div>
                                         <Link 
-                                            href="/login" 
+                                            href="/sign-in"
                                             className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-rose-600 hover:bg-rose-100/50 rounded-lg transition-all duration-200 font-medium text-sm"
                                             onClick={closeMobileMenu}
                                         >
@@ -717,7 +730,7 @@ export default function Navbar() {
                                         </Link>
                                         
                                         <Link 
-                                            href="/register" 
+                                            href="/sign-up"
                                             className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-emerald-600 hover:bg-emerald-100/50 rounded-lg transition-all duration-200 font-medium text-sm"
                                             onClick={closeMobileMenu}
                                         >
