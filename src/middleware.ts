@@ -1,28 +1,14 @@
-import { clerkMiddleware, createRouteMatcher, clerkClient } from "@clerk/nextjs/server";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from '@supabase/supabase-js';
 
-// Create Supabase client for middleware
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-// Cache para roles (evita múltiplas queries por request)
-const roleCache = new Map<string, { role: string; timestamp: number }>();
-const CACHE_TTL = 60000; // 1 minuto
-
-// Atualiza metadata no Clerk de forma assíncrona (não bloqueia o request)
-async function updateClerkMetadataAsync(clerkUserId: string, role: string): Promise<void> {
-  try {
-    const client = await clerkClient();
-    await client.users.updateUserMetadata(clerkUserId, {
-      publicMetadata: { role },
-    });
-  } catch (error) {
-    console.error('[MIDDLEWARE] Erro ao atualizar metadata Clerk:', error);
-  }
-}
+// Create Supabase client for SEO redirects ONLY (not for auth)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabase = supabaseUrl && supabaseAnonKey 
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null;
 
 // Rotas que requerem autenticação
 const isProtectedRoute = createRouteMatcher([
@@ -58,10 +44,22 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
   const url = req.nextUrl.clone();
   const pathname = url.pathname;
 
+  /**
+   * NOTE: Role-based access control should work like this:
+   * 
+   * 1. User signs up/logs in
+   * 2. Your API endpoint (/api/webhooks/clerk or /api/auth/setup) fetches role from DB
+   * 3. Update Clerk's publicMetadata with: { role: 'ADMIN' | 'REVIEWER' | 'USER' | 'TRUSTED' }
+   * 4. In middleware (THIS FILE): Read role from sessionClaims.metadata (instant, no DB query)
+   * 5. Redirect based on that role
+   * 
+   * NEVER fetch roles from DB in middleware - it will timeout on Vercel!
+   */
+
   // ==========================================
   // REDIRECIONAMENTO SEO - MÚSICAS PARA SLUG
   // ==========================================
-  if (pathname.startsWith('/musics/') && !pathname.includes('/create') && !pathname.includes('/edit')) {
+  if (supabase && pathname.startsWith('/musics/') && !pathname.includes('/create') && !pathname.includes('/edit')) {
     const musicId = pathname.split('/musics/')[1];
 
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -81,6 +79,7 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
         }
       } catch (error) {
         // Continuar sem redirecionar em caso de erro
+        console.debug('[MIDDLEWARE] SEO redirect failed:', error);
       }
     }
   }
@@ -91,33 +90,13 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
 
   const { userId, sessionClaims } = await auth();
 
-  // Tentar obter role das sessionClaims primeiro, senão do Supabase
-  let userRole = (sessionClaims?.metadata as { role?: string })?.role;
-  let isBanned = (sessionClaims?.metadata as { isBanned?: boolean })?.isBanned;
+  // IMPORTANTE: Apenas usar dados do JWT, nunca fazer queries em middleware!
+  // O role deve ser atualizado na metadata do Clerk durante login/signup
+  const userRole = (sessionClaims?.metadata as { role?: string })?.role;
+  const isBanned = (sessionClaims?.metadata as { isBanned?: boolean })?.isBanned;
 
-  // Se temos userId mas não temos role nas claims, buscar do Supabase
-  if (userId && !userRole) {
-    // Verificar cache primeiro
-    const cached = roleCache.get(userId);
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      userRole = cached.role;
-    } else {
-      // Buscar do Supabase pelo clerkUserId
-      const { data: user } = await supabase
-        .from('User')
-        .select('role')
-        .eq('clerkUserId', userId)
-        .single();
-
-      if (user?.role) {
-        userRole = user.role;
-        roleCache.set(userId, { role: user.role, timestamp: Date.now() });
-
-        // Atualizar metadata no Clerk para próximas requests (async, não bloqueia)
-        updateClerkMetadataAsync(userId, user.role);
-      }
-    }
-  }
+  // Se não temos role nas claims, o utilizador ainda não fez login
+  // (não tentar buscar do Supabase - isso causaria timeout)
 
   // Verificar se utilizador está banido
   if (userId && isBanned && !pathname.startsWith('/banned')) {
