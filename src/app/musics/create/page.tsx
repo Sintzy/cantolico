@@ -5,7 +5,7 @@ import "../../../../public/styles/chords.css";
 import { v4 as randomUUID } from "uuid";
 import { useState, useEffect, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/hooks/useClerkSession";
 import { useRouter } from "next/navigation";
 import { TurnstileCaptcha } from "@/components/TurnstileCaptcha";
 import { FileManager } from "@/components/FileManager";

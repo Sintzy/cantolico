@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(timeout 240 npm run build)",
+      "Bash(timeout 300 npm run build:*)",
+      "WebFetch(domain:clerk.com)",
+      "Bash(ls -1 src/app/api/auth/[...nextauth]/)",
+      "Bash(ls -1 src/app/\\\\\\(authprofile\\\\\\)/)",
+      "Bash(npx tsc:*)",
+      "Bash(npx next:*)",
+      "Bash(node -e \":*)",
+      "Bash(source .env.local)",
+      "Bash(grep -r \"LOKI_URL\\\\|NEXT_PUBLIC_LOKI_URL\" /c/Users/sintz/Desktop/Projetos/cantolico --include=*.ts --include=*.tsx --include=*.js --include=*.env*)"
+    ]
+  }
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Mail, Github, Music, Instagram } from "lucide-react";
+import { Mail, Github, Instagram, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import * as Icons from "@/lib/site-images";
@@ -61,67 +61,83 @@ export default function Footer() {
   }, []);
 
   return (
-    <footer className="border-t border-gray-200 bg-white mt-16">
-      <div className="max-w-6xl mx-auto px-6 py-12 grid grid-cols-1 md:grid-cols-3 gap-8 text-sm text-gray-700">
-        {/* Coluna 1: Sobre */}
-        <div className="space-y-3">
-          <h4 className="font-semibold text-gray-900 text-base flex items-center gap-2">
-            <Link href="/" className="flex items-center space-x-2">
-              <Image src={Icons.SITE_IMAGES.logo} alt="Logo" width={30} height={30} />
-              <span className="text-xl font-semibold text-gray-800">Can♱ólico!</span>
-            </Link>
-          </h4>
-          <p>
+    <footer className="mt-8 border-t border-slate-200/80 bg-white/50 backdrop-blur-md">
+      <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-8 text-sm text-slate-600 md:flex-row md:justify-between">
+        {/* Brand & Description */}
+        <div className="space-y-3 md:max-w-xs">
+          <Link href="/" className="inline-flex items-center gap-2 transition-opacity hover:opacity-80">
+            <Image src={Icons.SITE_IMAGES.logo} alt="Cantólico" width={28} height={28} />
+            <span className="text-xl font-bold tracking-tight text-slate-900">Can♱ólico!</span>
+          </Link>
+          <p className="max-w-[280px] leading-relaxed text-slate-500">
             Encontra, submete e partilha cânticos católicos. Um projeto aberto para servir a liturgia com música de qualidade.
           </p>
         </div>
 
-        {/* Coluna 2: Navegação */}
-        <div className="space-y-2">
-          <h4 className="font-semibold text-gray-900 text-base">Navegação</h4>
-          <ul className="space-y-1">
-            <li><Link href="/musics" className="hover:underline">Músicas</Link></li>
-            <li><Link href="/musics/createnew" className="hover:underline">Nova Música</Link></li>
-            <li><Link href="/terms" className="hover:underline">Termos & Condições</Link></li>
-            <li><Link href="/privacy-policy" className="hover:underline">Política de Privacidade</Link></li>
+        {/* Navigation */}
+        <div className="space-y-3">
+          <h4 className="font-semibold text-slate-900">Navegação</h4>
+          <ul className="space-y-2">
+            <li><Link href="/musics" className="transition-colors hover:text-rose-600">Músicas</Link></li>
+            <li><Link href="/musics/create" className="transition-colors hover:text-rose-600">Nova Música</Link></li>
+            <li><Link href="/playlists/explore" className="transition-colors hover:text-rose-600">Playlists Públicas</Link></li>
+            <li><Link href="/terms" className="transition-colors hover:text-rose-600">Termos & Condições</Link></li>
+            <li><Link href="/privacy-policy" className="transition-colors hover:text-rose-600">Política de Privacidade</Link></li>
           </ul>
         </div>
 
-        {/* Coluna 3: Contacto & Social */}
-        <div className="space-y-2">
-          <h4 className="font-semibold text-gray-900 text-base">Contacto</h4>
-          <p className="flex items-center gap-2">
+        {/* Contacto & Meta */}
+        <div className="space-y-3">
+          <h4 className="font-semibold text-slate-900">Contacto</h4>
+          <a href="mailto:miguel@cantolico.pt" className="flex items-center gap-2 transition-colors hover:text-rose-600">
             <Mail className="h-4 w-4" />
-            <a href="mailto:miguel@cantolico.pt" className="hover:underline">miguel@cantolico.pt</a>
-          </p>
-          <div className="flex gap-4 mt-2">
-            <a href="https://github.com/sintzy/cantolico" target="_blank" rel="noreferrer">
-              <Github className="h-5 w-5 hover:text-gray-900" />
+            miguel@cantolico.pt
+          </a>
+
+          <div className="flex gap-4 pt-1">
+            <a href="https://github.com/sintzy/cantolico" target="_blank" rel="noreferrer" className="text-slate-400 transition-colors hover:text-slate-900">
+              <Github className="h-5 w-5" />
+              <span className="sr-only">GitHub</span>
             </a>
-            <a href="https://instagram.com/cantolicoo" target="_blank" rel="noreferrer">
-              <Instagram className="h-5 w-5 hover:text-pink-600" />
+            <a href="https://instagram.com/cantolicoo" target="_blank" rel="noreferrer" className="text-slate-400 transition-colors hover:text-slate-900">
+              <Instagram className="h-5 w-5" />
+              <span className="sr-only">Instagram</span>
             </a>
-            
           </div>
-          <p className="text-xs text-gray-500 mt-4">
+
+          <div className="pt-2 text-[11px] leading-relaxed text-slate-400">
             commit{' '}
-            <a 
-              href={`https://github.com/sintzy/cantolico/commit/${fullCommit}`}
+            <a
+              href={fullCommit ? `https://github.com/sintzy/cantolico/commit/${fullCommit}` : "https://github.com/sintzy/cantolico"}
               target="_blank"
               rel="noreferrer"
-              className="font-mono hover:text-blue-600 hover:underline cursor-pointer"
+              className="font-mono transition-colors hover:text-slate-700 hover:underline"
             >
               {commit}
             </a>
-            {' '}on branch <span className="font-mono">{branch}</span> from about {timeAgo}
-          </p>
+            {' '}on branch <span className="font-mono">{branch}</span> from about {timeAgo || 'recentemente'}
+          </div>
         </div>
       </div>
 
-      <div className="text-center text-xs text-gray-500 py-4 border-t border-gray-100" data-nosnippet>
-        © {new Date().getFullYear()} Cantólico!. Todos os direitos reservados. | Made with ❤️ by <a href="https://github.com/sintzy" className="text-blue-600 hover:underline">miguel</a>
+      {/* Bottom Bar */}
+      <div className="border-t border-slate-200/60 py-4" data-nosnippet>
+        <div className="mx-auto flex max-w-6xl items-center justify-center px-6 text-sm text-slate-500">
+          <p>
+            © {new Date().getFullYear()} Cantólico!. Todos os direitos reservados.
+            <span className="mx-2 text-slate-300">|</span>
+            Made with <span className="text-rose-500">❤️</span> by{' '}
+            <a
+              href="https://github.com/sintzy"
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-blue-600 transition-colors hover:text-blue-700 hover:underline"
+            >
+              miguel
+            </a>
+          </p>
+        </div>
       </div>
-      
     </footer>
   );
 }

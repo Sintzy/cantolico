@@ -160,10 +160,9 @@ export default function ExploreMassesClient({ initialMasses }: ExploreMassesClie
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2">
                 <Globe className="w-7 h-7 text-blue-600" />
                 Explorar Missas
-                <Badge className="bg-amber-100 text-amber-800 border border-amber-200">BETA</Badge>
               </h1>
               <p className="text-gray-600 mt-1">
-                Descobre missas organizadas pela comunidade e usa como base (Sistema em beta)
+                Descobre missas organizadas pela comunidade e usa como base
               </p>
             </div>
           </div>
@@ -201,19 +200,34 @@ export default function ExploreMassesClient({ initialMasses }: ExploreMassesClie
           </div>
         ) : (
           <div className="space-y-8">
-            {/* All */}
-            <section>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <Church className="w-5 h-5 text-blue-600" />
-                Todas as Missas
-                <Badge variant="secondary">{filteredMasses.length}</Badge>
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredMasses.map((mass) => (
-                  <MassCard key={mass.id} mass={mass} />
-                ))}
-              </div>
-            </section>
+            {/* Upcoming */}
+            {upcomingMasses.length > 0 && (
+              <section>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-blue-600" />
+                  Próximas Celebrações
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {upcomingMasses.map((mass) => (
+                    <MassCard key={mass.id} mass={mass} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Past/All */}
+            {pastMasses.length > 0 && (
+              <section>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  {upcomingMasses.length > 0 ? 'Missas Anteriores' : 'Todas as Missas'}
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {pastMasses.map((mass) => (
+                    <MassCard key={mass.id} mass={mass} />
+                  ))}
+                </div>
+              </section>
+            )}
           </div>
         )}
       </div>

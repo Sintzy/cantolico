@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { supabase } from '@/lib/supabase-client';
 import { z } from 'zod';
 import { logUnauthorizedAccess, logApiRequestError, toErrorContext } from '@/lib/logging-helpers';
 import { sendEmail, createWarningEmailTemplate, createBanEmailTemplate, createSuspensionEmailTemplate } from '@/lib/email';
 
+import { getClerkSession } from '@/lib/api-middleware';
 const ModerateUserSchema = z.object({
   action: z.enum(['WARNING', 'SUSPENSION', 'BAN']),
   reason: z.string().min(1, 'Motivo é obrigatório'),
@@ -18,7 +17,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     
     if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'REVIEWER')) {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
@@ -208,7 +207,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     
     if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'REVIEWER')) {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });

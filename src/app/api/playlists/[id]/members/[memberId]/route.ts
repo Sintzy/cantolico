@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase } from '@/lib/supabase-admin';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import { logApiRequestError, logPlaylistSongRemoved, toErrorContext } from '@/lib/logging-helpers';
 
+import { getClerkSession } from '@/lib/api-middleware';
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; memberId: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     const { id: playlistId, memberId } = await params;
 
     if (!session?.user?.id) {

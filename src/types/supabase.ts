@@ -22,6 +22,7 @@ export interface Database {
           emailVerified: string | null
           createdAt: string
           updatedAt: string
+          clerkUserId: string | null
         }
         Insert: {
           id?: number
@@ -35,6 +36,7 @@ export interface Database {
           emailVerified?: string | null
           createdAt?: string
           updatedAt?: string
+          clerkUserId?: string | null
         }
         Update: {
           id?: number
@@ -48,6 +50,7 @@ export interface Database {
           emailVerified?: string | null
           createdAt?: string
           updatedAt?: string
+          clerkUserId?: string | null
         }
       }
       Account: {

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/hooks/useClerkSession';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -65,7 +65,6 @@ import {
 import EditMassModal from '@/components/EditMassModal';
 import ExportMassModal from '@/components/ExportMassModal';
 import ExportOptionsModal from '@/components/ExportOptionsModal';
-import { trackEvent } from '@/lib/umami';
 
 interface MassPageClientProps {
   initialMass: Mass & { isOwner: boolean; canEdit?: boolean };
@@ -101,10 +100,6 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
   const isAdmin = session?.user?.role === 'ADMIN';
   const canEdit = isOwner || isAdmin || mass.canEdit;
 
-  React.useEffect(() => {
-    trackEvent('mass_page_view', { massId: initialMass.id });
-  }, [initialMass.id]);
-
   const getVisibilityIcon = (visibility: MassVisibility) => {
     switch (visibility) {
       case 'PUBLIC': return <Globe className="w-4 h-4" />;
@@ -123,16 +118,13 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
     try {
       const response = await fetch(`/api/masses/${mass.id}`, { method: 'DELETE' });
       if (response.ok) {
-        trackEvent('mass_deleted_success', { source: 'mass_page' });
         toast.success('Missa apagada com sucesso');
         router.push('/missas');
       } else {
-        trackEvent('mass_deleted_failed', { source: 'mass_page' });
         toast.error('Erro ao apagar missa');
       }
     } catch (error) {
       console.error('Error deleting mass:', error);
-      trackEvent('mass_deleted_failed', { source: 'mass_page', reason: 'network_error' });
       toast.error('Erro ao apagar missa');
     } finally {
       setIsDeleting(false);
@@ -149,16 +141,13 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
 
       if (response.ok) {
         const newMass = await response.json();
-        trackEvent('mass_duplicated_success', { source: 'mass_page' });
         toast.success('Missa duplicada com sucesso');
         router.push(`/missas/${newMass.id}`);
       } else {
-        trackEvent('mass_duplicated_failed', { source: 'mass_page' });
         toast.error('Erro ao duplicar missa');
       }
     } catch (error) {
       console.error('Error duplicating mass:', error);
-      trackEvent('mass_duplicated_failed', { source: 'mass_page', reason: 'network_error' });
       toast.error('Erro ao duplicar missa');
     }
   };
@@ -181,7 +170,6 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
     }
 
     setIsSearching(true);
-    trackEvent('mass_song_search', { source: 'mass_page' });
     try {
       const response = await fetch(`/api/musics/search?q=${encodeURIComponent(query)}&limit=20`);
       if (response.ok) {
@@ -208,7 +196,6 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
 
       if (response.ok) {
         const newItem = await response.json();
-        trackEvent('mass_song_added', { source: 'mass_page' });
         setMass(prev => ({
           ...prev,
           items: [...(prev.items || []), newItem]
@@ -219,12 +206,10 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
         setSearchResults([]);
       } else {
         const error = await response.json();
-        trackEvent('mass_song_add_failed', { source: 'mass_page', reason: error.error || 'request_failed' });
         toast.error(error.error || 'Erro ao adicionar música');
       }
     } catch (error) {
       console.error('Error adding song:', error);
-      trackEvent('mass_song_add_failed', { source: 'mass_page', reason: 'network_error' });
       toast.error('Erro ao adicionar música');
     } finally {
       setAddingItemId(null);
@@ -238,19 +223,16 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
       });
 
       if (response.ok) {
-        trackEvent('mass_song_removed', { source: 'mass_page' });
         setMass(prev => ({
           ...prev,
           items: (prev.items || []).filter(item => item.id !== itemId)
         }));
         toast.success('Música removida');
       } else {
-        trackEvent('mass_song_remove_failed', { source: 'mass_page' });
         toast.error('Erro ao remover música');
       }
     } catch (error) {
       console.error('Error removing item:', error);
-      trackEvent('mass_song_remove_failed', { source: 'mass_page', reason: 'network_error' });
       toast.error('Erro ao remover música');
     }
   };
@@ -321,6 +303,10 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
 
         {/* Actions Menu */}
         <div className="absolute top-20 right-4 sm:top-24 sm:right-6 z-20 flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowExportModal(true)}>
+            <Download className="w-4 h-4 mr-2" />
+            Exportar
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="text-white hover:bg-white/20 backdrop-blur-sm">
@@ -368,7 +354,6 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
           )}
           
           <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
-            <Badge className="bg-amber-100 text-amber-800 border border-amber-200">BETA</Badge>
             <Badge variant="secondary" className="flex items-center gap-1 bg-white/90">
               {getVisibilityIcon(mass.visibility)}
               {getMassVisibilityLabel(mass.visibility)}
@@ -418,7 +403,21 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
         </div>
       </div>
 
-
+      {/* Export Buttons */}
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 border-b">
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/missas/${mass.id}/export?format=lyrics`}>
+              <FileText className="w-4 h-4 mr-2" />
+              PDF Letras
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setShowExportModal(true)}>
+            <Download className="w-4 h-4 mr-2" />
+            Exportar
+          </Button>
+        </div>
+      </div>
 
       {/* Moments and Songs */}
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">

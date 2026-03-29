@@ -3,9 +3,7 @@ import { adminSupabase } from "@/lib/supabase-admin";
 import { logApiRequestError, toErrorContext } from "@/lib/logging-helpers";
 import { protectApiRoute, applySecurityHeaders } from "@/lib/api-protection";
 import { parseTagsFromPostgreSQL, parseMomentsFromPostgreSQL } from "@/lib/utils";
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-
+import { getClerkSession } from '@/lib/api-middleware';
 // In-memory cache with TTL (5 minutes)
 let cachedSongsData: any = null;
 let cacheTime = 0;
@@ -27,7 +25,7 @@ export async function GET(request: NextRequest) {
       return applySecurityHeaders(response, request);
     }
     
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     const userId = session?.user?.id;
 
     // Fetch minimal data using admin client with Stars included directly

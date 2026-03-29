@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase-client';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import { withUserProtection, withPublicMonitoring } from '@/lib/enhanced-api-protection';
 import { randomUUID } from 'crypto';
 import { requireEmailVerification } from '@/lib/email';
 import { Mass, MassVisibility, LiturgicalColor } from '@/types/mass';
 
+import { getClerkSession } from '@/lib/api-middleware';
 // GET - List masses
 export const GET = withPublicMonitoring<any>(async (request: NextRequest) => {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const includePublic = searchParams.get('includePublic') === 'true';
@@ -37,24 +36,38 @@ export const GET = withPublicMonitoring<any>(async (request: NextRequest) => {
           email,
           image
         ),
-        MassItem (id)
+        MassItem (
+          id,
+          moment,
+          order,
+          Song!MassItem_songId_fkey (
+            id,
+            title,
+            slug
+          )
+        )
       `)
       .order('date', { ascending: true, nullsFirst: false });
 
-    // Apply filters
+    // Apply filters based on access
     if (userId) {
       query = query.eq('userId', parseInt(userId));
+      
+      // If not the owner, only show public/unlisted
       if (!session || session.user.id !== parseInt(userId)) {
         query = query.in('visibility', ['PUBLIC', 'NOT_LISTED']);
       }
     } else if (session?.user?.id) {
+      // Get own masses
       query = query.eq('userId', session.user.id);
     } else if (includePublic) {
+      // Only public for non-logged users
       query = query.eq('visibility', 'PUBLIC');
     } else {
       return NextResponse.json([]);
     }
 
+    // Filter for upcoming masses
     if (upcoming) {
       query = query.gte('date', new Date().toISOString());
     }
@@ -62,15 +75,22 @@ export const GET = withPublicMonitoring<any>(async (request: NextRequest) => {
     const { data: masses, error } = await query;
 
     if (error) {
+      console.error('Error fetching masses:', error);
       throw new Error(`Supabase error: ${error.message}`);
     }
 
+    // Format response
     const formattedMasses = (masses || []).map(mass => ({
       ...mass,
       user: mass.User || null,
-      items: [],
+      items: (mass.MassItem || [])
+        .sort((a: any, b: any) => a.order - b.order)
+        .map((item: any) => ({
+          ...item,
+          song: item.Song || null
+        })),
       _count: {
-        items: mass.MassItem ? mass.MassItem.length : 0
+        items: (mass.MassItem || []).length
       }
     }));
 

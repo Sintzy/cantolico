@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase-client';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-import { withAuthApiProtection } from '@/lib/api-middleware';
+import { withAuthApiProtection, getClerkSession} from '@/lib/api-middleware';
 import { logApiRequestError, toErrorContext } from '@/lib/logging-helpers';
 import { parseTagsFromPostgreSQL, parseMomentsFromPostgreSQL } from '@/lib/utils';
 
 export const GET = withAuthApiProtection(async (request: NextRequest) => {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     
     if (!session?.user?.id) {
       return NextResponse.json(

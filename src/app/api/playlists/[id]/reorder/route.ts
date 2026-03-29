@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase-client';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-
+import { getClerkSession } from '@/lib/api-middleware';
 interface Params {
   id: string;
 }
@@ -20,7 +18,7 @@ export async function PUT(
   { params }: { params: Promise<Params> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
 
     if (!session?.user?.id) {
       return NextResponse.json(

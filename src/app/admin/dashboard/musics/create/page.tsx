@@ -3,7 +3,7 @@
 import 'easymde/dist/easymde.min.css';
 import { v4 as randomUUID } from 'uuid';
 import { useMemo, useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/hooks/useClerkSession';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';

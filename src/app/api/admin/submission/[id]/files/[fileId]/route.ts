@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { supabase } from '@/lib/supabase-client';
 import { logger } from '@/lib/logger';
 import { LogCategory } from '@/types/logging';
 import { getClientIP } from '@/lib/utils';
 
+import { getClerkSession } from '@/lib/api-middleware';
 /**
  * DELETE /api/admin/submission/[id]/files/[fileId]
  * Delete a specific file from a submission
@@ -18,7 +17,7 @@ export async function DELETE(
   const startTime = Date.now();
 
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     if (!session || session.user.role !== 'ADMIN') {
       logger.warn('Unauthorized file deletion attempt', {
         category: LogCategory.SECURITY,

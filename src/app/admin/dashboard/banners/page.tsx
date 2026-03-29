@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/hooks/useClerkSession';
 import { useRouter } from 'next/navigation';
 import { Plus, Edit, Trash2, Eye, EyeOff, Calendar, ArrowUp, ArrowDown, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';

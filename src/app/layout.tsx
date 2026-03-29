@@ -25,12 +25,11 @@ export const viewport: Viewport = {
   themeColor: '#1e40af',
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt">
+    <html lang="pt-PT">
       <head />
       <body className={inter.className + " flex flex-col min-h-screen"}>
         <Script
@@ -42,8 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <CacheProvider>
           <AuthSessionProvider>
             <Navbar />
-            {/* Spacer for floating navbar */}
-            <div className="h-16"></div>
+            <div className="h-20" />
             <EmailVerificationBanner />
             <main className="flex-1">
               {children}

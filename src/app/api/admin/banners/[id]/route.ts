@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase-client';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { logApiRequestError, logUnauthorizedAccess } from '@/lib/logging-helpers';
 
+import { getClerkSession } from '@/lib/api-middleware';
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     if (!session || session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }
@@ -27,7 +26,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
 
 export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     if (!session || session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }
@@ -61,7 +60,7 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
 
 export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     if (!session || session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }

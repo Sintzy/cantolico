@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { supabase } from '@/lib/supabase-client';
 
+import { getClerkSession } from '@/lib/api-middleware';
 // ================================================
 // API PARA RECONHECER ALERTAS DE SEGURANÇA - PATCH
 // ================================================
@@ -12,7 +11,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     
     // Apenas admins podem reconhecer alertas de segurança
     if (!session || session.user.role !== 'ADMIN') {

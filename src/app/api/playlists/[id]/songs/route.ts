@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase-client';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { randomUUID } from "crypto";
 import { extractUserContext, logUserCreate } from '@/lib/user-action-logger';
 
+import { getClerkSession } from '@/lib/api-middleware';
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -249,7 +248,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     
     if (!session?.user?.id) {
       return NextResponse.json(

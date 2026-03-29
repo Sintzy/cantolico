@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/hooks/useClerkSession';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -50,7 +50,6 @@ import {
   getColorHex,
   LiturgicalColor
 } from '@/types/mass';
-import { trackEvent } from '@/lib/umami';
 
 interface MassesClientProps {
   initialMasses: Mass[];
@@ -64,10 +63,6 @@ export default function MassesPageClient({ initialMasses }: MassesClientProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterVisibility, setFilterVisibility] = useState<string>('ALL');
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
-
-  React.useEffect(() => {
-    trackEvent('masses_list_view', { initialCount: initialMasses.length });
-  }, []);
 
   const getVisibilityIcon = (visibility: MassVisibility) => {
     switch (visibility) {
@@ -94,16 +89,13 @@ export default function MassesPageClient({ initialMasses }: MassesClientProps) {
       });
 
       if (response.ok) {
-        trackEvent('mass_deleted_success', { source: 'masses_list' });
         setMasses(prev => prev.filter(m => m.id !== massId));
         toast.success('Missa apagada com sucesso');
       } else {
-        trackEvent('mass_deleted_failed', { source: 'masses_list' });
         toast.error('Erro ao apagar missa');
       }
     } catch (error) {
       console.error('Error deleting mass:', error);
-      trackEvent('mass_deleted_failed', { source: 'masses_list', reason: 'network_error' });
       toast.error('Erro ao apagar missa');
     } finally {
       setDeletingId(null);
@@ -120,16 +112,13 @@ export default function MassesPageClient({ initialMasses }: MassesClientProps) {
 
       if (response.ok) {
         const newMass = await response.json();
-        trackEvent('mass_duplicated_success', { source: 'masses_list' });
         toast.success('Missa duplicada com sucesso');
         router.push(`/missas/${newMass.id}`);
       } else {
-        trackEvent('mass_duplicated_failed', { source: 'masses_list' });
         toast.error('Erro ao duplicar missa');
       }
     } catch (error) {
       console.error('Error duplicating mass:', error);
-      trackEvent('mass_duplicated_failed', { source: 'masses_list', reason: 'network_error' });
       toast.error('Erro ao duplicar missa');
     }
   };
@@ -152,7 +141,6 @@ export default function MassesPageClient({ initialMasses }: MassesClientProps) {
   const pastMasses = filteredMasses.filter(m => !m.date || new Date(m.date) < now);
 
   const clearFilters = () => {
-    trackEvent('masses_filters_cleared');
     setSearchTerm('');
     setFilterVisibility('ALL');
     setIsMobileFiltersOpen(false);
@@ -227,7 +215,6 @@ export default function MassesPageClient({ initialMasses }: MassesClientProps) {
                   <Link 
                     href={`/missas/${mass.id}`}
                     className="hover:underline"
-                    onClick={() => trackEvent('mass_opened', { source: 'masses_list' })}
                   >
                     {mass.name}
                   </Link>
@@ -258,6 +245,11 @@ export default function MassesPageClient({ initialMasses }: MassesClientProps) {
                       Duplicar
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => router.push(`/missas/${mass.id}/export`)}>
+                      <FileText className="w-4 h-4 mr-2" />
+                      Exportar
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem 
                       onClick={() => handleDelete(mass.id)}
                       disabled={deletingId === mass.id}
@@ -274,7 +266,7 @@ export default function MassesPageClient({ initialMasses }: MassesClientProps) {
                   size="sm"
                   className="h-7 sm:h-8 text-xs px-2 sm:px-3"
                 >
-                  <Link href={`/missas/${mass.id}`} onClick={() => trackEvent('mass_opened', { source: 'masses_list' })}>
+                  <Link href={`/missas/${mass.id}`}>
                     <span className="hidden sm:inline">Ver Missa</span>
                     <span className="sm:hidden">Ver</span>
                   </Link>
@@ -349,14 +341,11 @@ export default function MassesPageClient({ initialMasses }: MassesClientProps) {
               </div>
             </div>
             
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 leading-tight">
-                As Minhas Missas
-              </h1>
-              <Badge className="bg-amber-100 text-amber-800 border border-amber-200">BETA</Badge>
-            </div>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 sm:mb-4 leading-tight">
+              As Minhas Missas
+            </h1>
             <p className="text-base sm:text-lg text-gray-700 max-w-2xl mx-auto px-4">
-              Organiza os cânticos para cada celebração (Sistema em beta - algumas funcionalidades podem estar limitadas)
+              Organiza os cânticos para cada celebração
             </p>
 
             {/* Action Buttons */}
@@ -488,19 +477,36 @@ export default function MassesPageClient({ initialMasses }: MassesClientProps) {
                 </Card>
               ) : (
                 <div className="space-y-6">
-                  {/* All Masses */}
-                  <section>
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <Calendar className="w-5 h-5 text-blue-600" />
-                      As Minhas Missas
-                      <Badge variant="secondary">{filteredMasses.length}</Badge>
-                    </h2>
-                    <div className="space-y-3">
-                      {filteredMasses.map((mass) => (
-                        <MassCard key={mass.id} mass={mass} />
-                      ))}
-                    </div>
-                  </section>
+                  {/* Upcoming Masses */}
+                  {upcomingMasses.length > 0 && (
+                    <section>
+                      <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        <Calendar className="w-5 h-5 text-blue-600" />
+                        Próximas Missas
+                        <Badge variant="secondary">{upcomingMasses.length}</Badge>
+                      </h2>
+                      <div className="space-y-3">
+                        {upcomingMasses.map((mass) => (
+                          <MassCard key={mass.id} mass={mass} />
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Past/Undated Masses */}
+                  {pastMasses.length > 0 && (
+                    <section>
+                      <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                        {upcomingMasses.length > 0 ? 'Missas Anteriores' : 'Todas as Missas'}
+                        <Badge variant="secondary" className="ml-2">{pastMasses.length}</Badge>
+                      </h2>
+                      <div className="space-y-3">
+                        {pastMasses.map((mass) => (
+                          <MassCard key={mass.id} mass={mass} />
+                        ))}
+                      </div>
+                    </section>
+                  )}
                 </div>
               )}
             </div>

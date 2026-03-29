@@ -425,7 +425,7 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
   );
 
   return (
-    <main className="flex-1 bg-white pt-2">
+    <main className="flex-1 bg-white">
       {/* Hero Section com estilo da landing page */}
       <section className="relative bg-white pt-6">
         {/* Background decoration */}

@@ -1,7 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { protectApiRoute, applySecurityHeaders } from '@/lib/api-protection';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+import { auth } from '@clerk/nextjs/server';
+import { getSupabaseUserId } from '@/lib/clerk-auth';
+
+/**
+ * Sessão compatível com o formato antigo para manter compatibilidade
+ */
+export interface ClerkSession {
+  user: {
+    id: number;
+    clerkUserId: string;
+    role: string;
+    email?: string;
+    name?: string;
+  };
+}
 
 /**
  * Middleware wrapper para proteger automaticamente qualquer rota de API
@@ -20,21 +33,21 @@ export function withApiProtection<T extends any[]>(
     try {
       // Executar o handler original
       const response = await handler(request, ...args);
-      
+
       // Aplicar headers de segurança à resposta
       return applySecurityHeaders(response, request);
     } catch (error) {
       console.error('[API_PROTECTION_ERROR]', error);
-      
+
       // Em caso de erro, retornar resposta de erro protegida
       const errorResponse = NextResponse.json(
-        { 
+        {
           error: 'Erro interno do servidor',
           message: 'Ocorreu um erro inesperado. Tente novamente mais tarde.'
-        }, 
+        },
         { status: 500 }
       );
-      
+
       return applySecurityHeaders(errorResponse, request);
     }
   };
@@ -42,18 +55,18 @@ export function withApiProtection<T extends any[]>(
 
 /**
  * Middleware específico para rotas que requerem autenticação
- * Aplica proteção de origem + verificação de autenticação
+ * Aplica proteção de origem + verificação de autenticação via Clerk
  */
 export function withAuthApiProtection<T extends any[]>(
   handler: (request: NextRequest, ...args: T) => Promise<Response>
 ) {
   return withApiProtection(async (request: NextRequest, ...args: T) => {
-    // Verificar se há uma sessão válida usando next-auth
-    const session = await getServerSession(authOptions);
+    // Verificar se há uma sessão válida usando Clerk
+    const { userId } = await auth();
 
-    if (!session?.user?.id) {
+    if (!userId) {
       return NextResponse.json(
-        { 
+        {
           error: 'Authentication required',
           message: 'Esta API requer autenticação. Faça login para continuar.',
           code: 'AUTH_REQUIRED'
@@ -64,4 +77,34 @@ export function withAuthApiProtection<T extends any[]>(
 
     return handler(request, ...args);
   });
+}
+
+/**
+ * Obtém a sessão Clerk formatada para compatibilidade com código existente
+ */
+export async function getClerkSession(): Promise<ClerkSession | null> {
+  const { userId, sessionClaims } = await auth();
+
+  if (!userId) {
+    return null;
+  }
+
+  const supabaseUserId = await getSupabaseUserId(userId);
+
+  if (!supabaseUserId) {
+    console.error('❌ [API] Utilizador Clerk não encontrado no Supabase:', userId);
+    return null;
+  }
+
+  const metadata = sessionClaims?.metadata as { role?: string } | undefined;
+
+  return {
+    user: {
+      id: supabaseUserId,
+      clerkUserId: userId,
+      role: metadata?.role || 'USER',
+      email: sessionClaims?.email as string | undefined,
+      name: sessionClaims?.name as string | undefined,
+    }
+  };
 }

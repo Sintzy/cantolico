@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase-client';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-
+import { getClerkSession } from '@/lib/api-middleware';
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'REVIEWER')) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
@@ -112,7 +110,7 @@ export async function GET(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     if (!session || session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }

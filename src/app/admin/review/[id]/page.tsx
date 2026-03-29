@@ -3,7 +3,7 @@
 import "easymde/dist/easymde.min.css";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/hooks/useClerkSession";
 import dynamic from "next/dynamic";
 import MarkdownIt from "markdown-it";
 import chords from "markdown-it-chords";

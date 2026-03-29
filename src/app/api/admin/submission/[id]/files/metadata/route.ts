@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { supabase } from '@/lib/supabase-client';
 import { logger } from '@/lib/logger';
 import { LogCategory } from '@/types/logging';
 import { getClientIP } from '@/lib/utils';
 
+import { getClerkSession } from '@/lib/api-middleware';
 export const runtime = 'nodejs';
 
 type MetadataEntry = {
@@ -37,7 +36,7 @@ export async function PATCH(
   const startTime = Date.now();
 
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'REVIEWER')) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }

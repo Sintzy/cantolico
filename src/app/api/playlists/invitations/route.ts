@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase } from '@/lib/supabase-admin';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import { logApiRequestError, logPlaylistSongAdded, toErrorContext } from '@/lib/logging-helpers';
 
+import { getClerkSession } from '@/lib/api-middleware';
 // GET: Get user's playlist invitations
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
 
     if (!session?.user?.id || !session.user.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -73,7 +72,7 @@ export async function GET(request: NextRequest) {
 // PATCH: Respond to invitation (accept/decline)
 export async function PATCH(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     const { invitationId, action } = await request.json();
 
     if (!session?.user?.id || !session.user.email) {

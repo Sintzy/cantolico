@@ -1,14 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getAuthenticatedUser } from '@/lib/clerk-auth';
 import { withPerformanceMonitoring, logUnauthorizedAccess, logCriticalAction } from '@/lib/enhanced-logging';
+
+// Sessão compatível com formato antigo
+export interface ClerkSession {
+  user: {
+    id: number;
+    clerkUserId: string;
+    role: string;
+    email?: string;
+    name?: string;
+  };
+}
+
+// ================================================
+// HELPER: Obter sessão Clerk formatada
+// ================================================
+
+async function getClerkSession(): Promise<ClerkSession | null> {
+  const user = await getAuthenticatedUser();
+
+  if (!user) {
+    return null;
+  }
+
+  return {
+    user: {
+      id: user.supabaseUserId,
+      clerkUserId: user.clerkUserId,
+      role: user.role,
+      email: user.email,
+      name: user.name || undefined,
+    }
+  };
+}
 
 // ================================================
 // WRAPPER DE PROTEÇÃO PARA APIs ADMIN
 // ================================================
 
 interface AdminAPIHandler<T = any> {
-  (req: NextRequest, session: any, ...args: any[]): Promise<NextResponse<T>>;
+  (req: NextRequest, session: ClerkSession, ...args: any[]): Promise<NextResponse<T>>;
 }
 
 export function withAdminProtection<T = any>(
@@ -22,13 +54,13 @@ export function withAdminProtection<T = any>(
   return async (req: NextRequest, ...args: any[]): Promise<NextResponse<T>> => {
     return withPerformanceMonitoring(async (request) => {
       try {
-        // Verificar autenticação
-        const session = await getServerSession(authOptions);
-        
+        // Verificar autenticação via Clerk
+        const session = await getClerkSession();
+
         if (!session) {
-          await logUnauthorizedAccess(req, req.url, 'Sem sessão ativa', session);
+          await logUnauthorizedAccess(req, req.url, 'Sem sessão ativa', null);
           return NextResponse.json(
-            { error: 'Acesso negado - Login necessário' }, 
+            { error: 'Acesso negado - Login necessário' },
             { status: 401 }
           ) as NextResponse<T>;
         }
@@ -37,13 +69,13 @@ export function withAdminProtection<T = any>(
         const requiredRole = options?.requiredRole || 'ADMIN';
         if (session.user.role !== requiredRole && session.user.role !== 'ADMIN') {
           await logUnauthorizedAccess(
-            req, 
-            req.url, 
-            `Nível de acesso insuficiente: ${session.user.role}, necessário: ${requiredRole}`, 
+            req,
+            req.url,
+            `Nível de acesso insuficiente: ${session.user.role}, necessário: ${requiredRole}`,
             session
           );
           return NextResponse.json(
-            { error: `Acesso negado - Necessário nível ${requiredRole}` }, 
+            { error: `Acesso negado - Necessário nível ${requiredRole}` },
             { status: 403 }
           ) as NextResponse<T>;
         }
@@ -69,7 +101,7 @@ export function withAdminProtection<T = any>(
       } catch (error) {
         console.error('Erro na API protegida:', error);
         return NextResponse.json(
-          { error: 'Erro interno do servidor' }, 
+          { error: 'Erro interno do servidor' },
           { status: 500 }
         ) as NextResponse<T>;
       }
@@ -82,7 +114,7 @@ export function withAdminProtection<T = any>(
 // ================================================
 
 interface UserAPIHandler<T = any> {
-  (req: NextRequest, session: any, ...args: any[]): Promise<NextResponse<T>>;
+  (req: NextRequest, session: ClerkSession, ...args: any[]): Promise<NextResponse<T>>;
 }
 
 export function withUserProtection<T = any>(
@@ -96,12 +128,12 @@ export function withUserProtection<T = any>(
   return async (req: NextRequest, ...args: any[]): Promise<NextResponse<T>> => {
     return withPerformanceMonitoring(async (request) => {
       try {
-        const session = await getServerSession(authOptions);
-        
+        const session = await getClerkSession();
+
         if (!session && !options?.allowAnonymous) {
-          await logUnauthorizedAccess(req, req.url, 'Acesso sem autenticação a endpoint protegido', session);
+          await logUnauthorizedAccess(req, req.url, 'Acesso sem autenticação a endpoint protegido', null);
           return NextResponse.json(
-            { error: 'Login necessário' }, 
+            { error: 'Login necessário' },
             { status: 401 }
           ) as NextResponse<T>;
         }
@@ -121,12 +153,12 @@ export function withUserProtection<T = any>(
           );
         }
 
-        return await handler(req, session, ...args);
+        return await handler(req, session!, ...args);
 
       } catch (error) {
         console.error('Erro na API de utilizador:', error);
         return NextResponse.json(
-          { error: 'Erro interno do servidor' }, 
+          { error: 'Erro interno do servidor' },
           { status: 500 }
         ) as NextResponse<T>;
       }
@@ -155,7 +187,7 @@ export function withPublicMonitoring<T = any>(
       } catch (error) {
         console.error('Erro na API pública:', error);
         return NextResponse.json(
-          { error: 'Erro interno do servidor' }, 
+          { error: 'Erro interno do servidor' },
           { status: 500 }
         ) as NextResponse<T>;
       }
@@ -171,7 +203,7 @@ export async function logMusicAction(
   action: 'create' | 'update' | 'delete' | 'publish' | 'unpublish',
   musicId: string,
   musicTitle: string,
-  session: any,
+  session: ClerkSession | null,
   req: NextRequest,
   additionalDetails?: Record<string, any>
 ) {
@@ -193,7 +225,7 @@ export async function logPlaylistAction(
   action: 'create' | 'update' | 'delete',
   playlistId: string,
   playlistName: string,
-  session: any,
+  session: ClerkSession | null,
   req: NextRequest,
   additionalDetails?: Record<string, any>
 ) {
@@ -216,7 +248,7 @@ export async function logUserModerationAction(
   targetUserId: string,
   targetUserEmail: string,
   reason: string,
-  session: any,
+  session: ClerkSession | null,
   req: NextRequest,
   additionalDetails?: Record<string, any>
 ) {
@@ -228,8 +260,8 @@ export async function logUserModerationAction(
       targetUserEmail,
       action,
       reason,
-      moderatorId: session.user.id,
-      moderatorEmail: session.user.email,
+      moderatorId: session?.user.id,
+      moderatorEmail: session?.user.email,
       ...additionalDetails
     },
     session,
@@ -241,7 +273,7 @@ export async function logSubmissionAction(
   action: 'approve' | 'reject' | 'review',
   submissionId: string,
   songTitle: string,
-  session: any,
+  session: ClerkSession | null,
   req: NextRequest,
   additionalDetails?: Record<string, any>
 ) {
@@ -252,8 +284,8 @@ export async function logSubmissionAction(
       submissionId,
       songTitle,
       action,
-      reviewerId: session.user.id,
-      reviewerEmail: session.user.email,
+      reviewerId: session?.user.id,
+      reviewerEmail: session?.user.email,
       ...additionalDetails
     },
     session,

@@ -32,11 +32,19 @@ export default async function MusicsPage() {
     console.error('Error fetching songs:', error);
   }
 
+  const parseTags = (tags: any): string[] => {
+    if (Array.isArray(tags)) return tags;
+    if (typeof tags === 'string' && tags.startsWith('{') && tags.endsWith('}')) {
+      return tags.slice(1, -1).split(',').map((t: string) => t.trim()).filter(Boolean);
+    }
+    return [];
+  };
+
   // Ensure songs is always an array and normalize data
   const initialSongs = (Array.isArray(songs) ? songs : []).map(song => ({
     ...song,
     moments: Array.isArray(song.moments) ? song.moments : [],
-    tags: Array.isArray(song.tags) ? song.tags : [],
+    tags: parseTags(song.tags),
   }));
 
   return (

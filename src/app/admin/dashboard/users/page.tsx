@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/hooks/useClerkSession';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -129,7 +129,7 @@ const MODERATION_ICONS = {
 };
 
 export default function UsersManagement() {
-  const { data: session, status, update } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -265,13 +265,12 @@ export default function UsersManagement() {
       // Forçar atualização da sessão se estivermos a alterar a nossa própria role
       if (session?.user?.id?.toString() === userId) {
         console.log('🔄 Atualizando sessão após mudança de role própria...');
-        await update();
-        
+
         // Aguardar um pouco e recarregar a página para garantir sincronização
         setTimeout(() => {
           window.location.reload();
         }, 1000);
-        
+
         toast.success(`Role alterada para ${newRole} com sucesso! A página será recarregada...`);
       } else {
         toast.success(`Role alterada para ${newRole} com sucesso!`);

@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { supabase } from '@/lib/supabase-client';
 import { logger } from '@/lib/logger';
 import { LogCategory } from '@/types/logging';
 import { getClientIP } from '@/lib/utils';
 
+import { getClerkSession } from '@/lib/api-middleware';
 /**
  * GET /api/admin/submission/[id]/files
  * Buscar ficheiros de uma submissão (PDF e MP3 no storage)
@@ -18,7 +17,7 @@ export async function GET(
   const startTime = Date.now();
 
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'REVIEWER')) {
       logger.warn('Unauthorized submission files access attempt', {
         category: LogCategory.SECURITY,
@@ -194,7 +193,7 @@ export async function POST(
   const startTime = Date.now();
 
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     if (!session || session.user.role !== 'ADMIN') {
       logger.warn('Unauthorized submission file upload attempt', {
         category: LogCategory.SECURITY,

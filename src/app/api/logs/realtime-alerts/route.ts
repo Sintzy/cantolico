@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { getClerkSession } from '@/lib/api-middleware';
 import { alertSystem } from '@/lib/realtime-alerts';
 
 export async function GET(req: NextRequest) {
   try {
-    const token = await getToken({ req });
-    
+    const session = await getClerkSession();
+    const token = session?.user;
+
     if (!token || (token.role !== 'ADMIN' && token.role !== 'REVIEWER')) {
       return NextResponse.json(
         { error: 'Acesso negado' },
@@ -65,8 +66,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const token = await getToken({ req });
-    
+    const session = await getClerkSession();
+    const token = session?.user;
+
     if (!token || token.role !== 'ADMIN') {
       return NextResponse.json(
         { error: 'Acesso negado' },

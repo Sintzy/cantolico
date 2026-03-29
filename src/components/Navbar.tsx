@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useSession, signOut } from "next-auth/react";
+import { useUser, useClerk } from "@clerk/nextjs";
 import Link from "next/link";
 import Image from "next/image";
 import * as Icons from "@/lib/site-images";
@@ -36,7 +36,9 @@ type Music = {
 };
 
 export default function Navbar() {
-    const { data: session } = useSession();
+    const { user } = useUser();
+    const { signOut } = useClerk();
+    const userRole = user?.publicMetadata?.role as string | undefined;
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [playlistsMenuOpen, setPlaylistsMenuOpen] = useState(false);
@@ -178,7 +180,7 @@ export default function Navbar() {
                                             </div>
                                         </Link>
                                         
-                                        {session ? (
+                                        {user ? (
                                             <Link
                                                 href="/playlists"
                                                 prefetch={false}
@@ -217,7 +219,7 @@ export default function Navbar() {
                         </div>
 
                         {/* Missas Link */}
-                        {session && (
+                        {user && (
                             <Link 
                                 href="/missas" 
                                 prefetch={false}
@@ -238,7 +240,7 @@ export default function Navbar() {
                         </Link>
                         
                         {/* Admin/Reviewer Links */}
-                        {session?.user?.role === "ADMIN" && (
+                        {userRole === "ADMIN" && (
                             <>
                                 <Link 
                                     href="/admin/dashboard" 
@@ -258,7 +260,7 @@ export default function Navbar() {
                                 </Link>
                             </>
                         )}
-                        {session?.user?.role === "REVIEWER" && (
+                        {userRole === "REVIEWER" && (
                             <Link 
                                 href="/admin/review" 
                                 prefetch={false}
@@ -315,7 +317,7 @@ export default function Navbar() {
                     {/* User Menu & Mobile Toggle */}
                     <div className="flex items-center gap-3">
                         {/* User Menu */}
-                        {session?.user ? (
+                        {user ? (
                             <div 
                                 ref={userMenuRef}
                                 className="relative"
@@ -337,8 +339,8 @@ export default function Navbar() {
                                     <div className="w-8 h-8 rounded-full border-2 border-gray-200 overflow-hidden">
                                         <UserAvatar 
                                             user={{
-                                                name: session.user.name || "Utilizador",
-                                                image: session.user.image
+                                                name: user?.fullName || "Utilizador",
+                                                image: user?.imageUrl
                                             }} 
                                             size={32} 
                                         />
@@ -353,30 +355,30 @@ export default function Navbar() {
                                                 <div className="w-10 h-10 rounded-full border-2 border-gray-200 overflow-hidden">
                                                     <UserAvatar 
                                                         user={{
-                                                            name: session.user.name || "Utilizador",
-                                                            image: session.user.image
+                                                            name: user?.fullName || "Utilizador",
+                                                            image: user?.imageUrl
                                                         }} 
                                                         size={40} 
                                                     />
                                                 </div>
                                                 <div>
-                                                    <div className="font-medium text-gray-900">{session.user.name}</div>
-                                                    <div className="text-xs text-gray-500">{session.user.email}</div>
+                                                    <div className="font-medium text-gray-900">{user?.fullName}</div>
+                                                    <div className="text-xs text-gray-500">{user?.primaryEmailAddress?.emailAddress}</div>
                                                 </div>
                                             </div>
                                         </div>
                                         
                                         <div className="py-2">
                                             <Link
-                                                href={`/users/${session.user.id}`}
+                                                href={`/account`}
                                                 className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                                                 onClick={() => {
                                                     setUserMenuOpen(false);
                                                     setUserMenuSticky(false);
                                                 }}
                                             >
-                                                <User className="h-4 w-4" />
-                                                Ver Perfil
+                                                <Settings className="h-4 w-4" />
+                                                A minha conta
                                             </Link>
                                             
                                             <Link
@@ -391,7 +393,7 @@ export default function Navbar() {
                                                 Músicas Favoritas
                                             </Link>
                                             
-                                            {session.user.role === "ADMIN" && (
+                                            {userRole === "ADMIN" && (
                                                 <>
                                                     <Link
                                                         href="/admin/dashboard"
@@ -417,7 +419,7 @@ export default function Navbar() {
                                                     </Link>
                                                 </>
                                             )}
-                                            {session.user.role === "REVIEWER" && (
+                                            {userRole === "REVIEWER" && (
                                                 <Link
                                                     href="/admin/review"
                                                     className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
@@ -450,7 +452,7 @@ export default function Navbar() {
                         ) : (
                             <div className="hidden md:flex items-center gap-3">
                                 <Link
-                                    href="/login"
+                                    href="/sign-in"
                                     className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
                                 >
                                     <User className="h-4 w-4" />
@@ -508,21 +510,21 @@ export default function Navbar() {
                         </div>
 
                         {/* User Info (if logged in) */}
-                        {session?.user && (
+                        {user && (
                             <div className="p-3 bg-slate-50 border-b border-slate-200/50">
                                 <div className="flex items-center gap-2.5">
                                     <div className="w-10 h-10 rounded-full border-2 border-slate-200 overflow-hidden">
                                         <UserAvatar 
                                             user={{
-                                                name: session.user.name || "Utilizador",
-                                                image: session.user.image
+                                                name: user?.fullName || "Utilizador",
+                                                image: user?.imageUrl
                                             }} 
                                             size={40} 
                                         />
                                     </div>
                                     <div>
-                                        <div className="font-bold text-slate-900 text-sm">{session.user.name}</div>
-                                        <div className="text-xs text-slate-500">{session.user.email}</div>
+                                        <div className="font-bold text-slate-900 text-sm">{user?.fullName}</div>
+                                        <div className="text-xs text-slate-500">{user?.primaryEmailAddress?.emailAddress}</div>
                                     </div>
                                 </div>
                             </div>
@@ -611,7 +613,7 @@ export default function Navbar() {
                                     <span>Playlists Públicas</span>
                                 </Link>
                                 
-                                {session ? (
+                                {user ? (
                                     <>
                                         <Link 
                                             href="/playlists" 
@@ -643,12 +645,12 @@ export default function Navbar() {
                                         <div className="h-px bg-slate-200 my-2 mx-3"></div>
 
                                         <Link 
-                                            href={`/users/${session.user.id}`} 
+                                            href={`/account`}
                                             className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-slate-700 hover:bg-slate-100/50 rounded-lg transition-all duration-200 font-medium text-sm"
                                             onClick={closeMobileMenu}
                                         >
-                                            <User className="h-4 w-4" />
-                                            <span>Perfil</span>
+                                            <Settings className="h-4 w-4" />
+                                            <span>A minha conta</span>
                                         </Link>
                                         
                                         <Link 
@@ -661,7 +663,7 @@ export default function Navbar() {
                                         </Link>
                                         
                                         {/* Admin/Reviewer Links Mobile */}
-                                        {session.user.role === "ADMIN" && (
+                                        {userRole === "ADMIN" && (
                                             <>
                                                 <div className="px-3 py-2 mt-2">
                                                     <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Admin</div>
@@ -684,7 +686,7 @@ export default function Navbar() {
                                                 </Link>
                                             </>
                                         )}
-                                        {session.user.role === "REVIEWER" && (
+                                        {userRole === "REVIEWER" && (
                                             <>
                                                 <div className="px-3 py-2 mt-2">
                                                     <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Moderação</div>
@@ -728,7 +730,7 @@ export default function Navbar() {
                         </div>
 
                         {/* Footer */}
-                        {session && (
+                        {user && (
                             <div className="border-t border-slate-200 p-3">
                                 <button
                                     onClick={() => {

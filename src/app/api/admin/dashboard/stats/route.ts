@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getAuthenticatedUser } from '@/lib/clerk-auth';
 import { adminSupabase } from '@/lib/supabase-admin';
 
 // Cache stats for 15 minutes to reduce database load
@@ -10,9 +9,9 @@ const CACHE_TTL = 15 * 60 * 1000; // 15 minutes
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getAuthenticatedUser();
     
-    if (!session || session.user.role !== 'ADMIN') {
+    if (!user || user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }
 

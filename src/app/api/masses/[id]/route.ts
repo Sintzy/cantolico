@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase-client';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import { withUserProtection, withPublicMonitoring } from '@/lib/enhanced-api-protection';
 import { MassVisibility, LiturgicalColor } from '@/types/mass';
 
+import { getClerkSession } from '@/lib/api-middleware';
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
@@ -13,7 +12,7 @@ interface RouteParams {
 export const GET = withPublicMonitoring<any>(async (request: NextRequest, context: RouteParams) => {
   try {
     const { id } = await context.params;
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
 
     const { data: mass, error } = await supabase
       .from('Mass')

@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { sendEmail } from '@/lib/email';
 import { supabase } from '@/lib/supabase-client';
 
+import { getClerkSession } from '@/lib/api-middleware';
 // ================================================
 // API PARA ENVIO DE EMAILS DE SEGURANÇA
 // ================================================
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     const { to, subject, alert, logId } = await req.json();
 
     // Validações básicas

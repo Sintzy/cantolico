@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase-client';
-import { getToken } from 'next-auth/jwt';
+import { getClerkSession } from '@/lib/api-middleware';
 
 // ================================================
 // MIDDLEWARE DE LOGGING AUTOMÁTICO
@@ -28,26 +28,27 @@ export async function loggingMiddleware(req: NextRequest, response?: NextRespons
   });
 
   try {
-    // Obter token de autenticação
-    const token = await getToken({ req }) as any;
-    
+    // Obter sessão de autenticação via Clerk
+    const session = await getClerkSession();
+    const userInfo = session?.user || null;
+
     // Obter informações da request
     const method = req.method;
     const url = req.url;
     const userAgent = req.headers.get('user-agent') || '';
     const ip = getClientIP(req);
     const referer = req.headers.get('referer');
-    
+
     // Determinar se deve logar esta request
     if (shouldLogRequest(req)) {
       await logRequest({
-        req, // Pass the request object
+        req,
         method,
         url,
         userAgent,
         ip,
         referer,
-        token,
+        token: userInfo,
         requestId,
         correlationId,
         startTime
@@ -55,7 +56,7 @@ export async function loggingMiddleware(req: NextRequest, response?: NextRespons
     }
 
     // Detectar eventos de segurança
-    await detectSecurityEvents(req, token);
+    await detectSecurityEvents(req, userInfo);
 
     return requestId;
   } catch (error) {

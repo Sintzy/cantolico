@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase-client';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/hooks/useClerkSession';
 import { useCallback } from 'react';
 
 // ================================================

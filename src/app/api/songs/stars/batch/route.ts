@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase-client';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-import { withApiProtection } from '@/lib/api-middleware';
+import { withApiProtection, getClerkSession} from '@/lib/api-middleware';
 
 /**
  * OTIMIZAÇÃO: Endpoint batch para obter stars de múltiplas músicas de uma vez
@@ -14,7 +12,7 @@ import { withApiProtection } from '@/lib/api-middleware';
  */
 export const POST = withApiProtection(async (request: NextRequest) => {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     const userId = session?.user?.id;
 
     // Parse body

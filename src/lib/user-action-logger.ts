@@ -11,8 +11,8 @@
 
 import { logger } from './logger';
 import { LogCategory } from '@/types/logging';
-import { Session } from 'next-auth';
 import { NextRequest } from 'next/server';
+import { ClerkSession } from '@/lib/api-middleware';
 
 export interface UserActionContext {
   userId: string;
@@ -39,8 +39,8 @@ export interface ActionDetails {
 /**
  * Extrai contexto de usuário e rede da requisição
  */
-export function extractUserContext(req: NextRequest, session: Session | null): UserActionContext {
-  const ipAddress = 
+export function extractUserContext(req: NextRequest, session: ClerkSession | null): UserActionContext {
+  const ipAddress =
     req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
     req.headers.get('x-real-ip') ||
     req.headers.get('cf-connecting-ip') || // Cloudflare
@@ -52,10 +52,9 @@ export function extractUserContext(req: NextRequest, session: Session | null): U
     userId: session?.user?.id ? String(session.user.id) : 'anonymous',
     userEmail: session?.user?.email || undefined,
     userName: session?.user?.name || undefined,
-    userRole: session?.user?.role || undefined,
+    userRole: session?.user?.role as any || undefined,
     ipAddress,
     userAgent,
-    sessionId: (session as any)?.sessionToken,
   };
 }
 
