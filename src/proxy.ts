@@ -92,8 +92,10 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
 
   // IMPORTANTE: Apenas usar dados do JWT, nunca fazer queries no proxy!
   // O role deve ser atualizado na metadata do Clerk durante login/signup
+  console.log('🔍 [PROXY] sessionClaims:', JSON.stringify(sessionClaims, null, 2));
   const userRole = (sessionClaims?.metadata as { role?: string })?.role;
   const isBanned = (sessionClaims?.metadata as { isBanned?: boolean })?.isBanned;
+  console.log('🔍 [PROXY] userRole:', userRole, '| userId:', userId, '| path:', pathname);
 
   // Se não temos role nas claims, o utilizador ainda não fez login
   // (não tentar buscar do Supabase - isso causaria timeout)
