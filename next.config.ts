@@ -1,9 +1,10 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
   // Configuração do Turbopack (Next.js 16+)
   turbopack: {
-    root: ".",
+    root: path.resolve(__dirname),
   },
   images: {
     remotePatterns: [

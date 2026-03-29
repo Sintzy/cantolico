@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
           user: {
             user_id: session.user.id,
             user_email: session.user.email || null,
-            user_role: session.user.role
+            user_role: (session.user.role as 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN' | 'SUPER_ADMIN') || 'USER'
           },
           network: { ip_address: clientIp },
           tags: ['unauthorized', 'file-cleanup']
@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
         user: {
           user_id: session.user.id,
           user_email: session.user.email || null,
-          user_role: session.user.role
+          user_role: (session.user.role as 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN' | 'SUPER_ADMIN') || 'USER'
         },
         network: { ip_address: clientIp },
         tags: ['unauthorized', 'orphan-scan']

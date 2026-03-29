@@ -72,6 +72,7 @@
     "@types/node": "^20",
     "@types/react": "^19.1.11",
     "@types/react-dom": "^19",
+    "baseline-browser-mapping": "^2.10.12",
     "dotenv": "^17.2.3",
     "tailwindcss": "^4",
     "tsx": "^4.20.5",

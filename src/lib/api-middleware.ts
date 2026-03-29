@@ -10,7 +10,7 @@ export interface ClerkSession {
   user: {
     id: number;
     clerkUserId: string;
-    role: string;
+    role: 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN' | 'SUPER_ADMIN';
     email?: string;
     name?: string;
   };
@@ -102,7 +102,7 @@ export async function getClerkSession(): Promise<ClerkSession | null> {
     user: {
       id: supabaseUserId,
       clerkUserId: userId,
-      role: metadata?.role || 'USER',
+      role: (metadata?.role as 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN' | 'SUPER_ADMIN') || 'USER',
       email: sessionClaims?.email as string | undefined,
       name: sessionClaims?.name as string | undefined,
     }

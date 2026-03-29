@@ -7,7 +7,7 @@ export interface ClerkSession {
   user: {
     id: number;
     clerkUserId: string;
-    role: string;
+    role: 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN' | 'SUPER_ADMIN';
     email?: string;
     name?: string;
   };
