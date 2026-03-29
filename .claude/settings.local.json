@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(npx tsc:*)",
-      "Bash(npx next:*)"
+      "Bash(npx next:*)",
+      "Bash(grep -E \"\\\\.\\(ts|js\\)$\")",
+      "Bash(find /c/Users/sintz/Desktop/Projetos/cantolico/supabase -type f -name *.sql)"
     ]
   }
 }
