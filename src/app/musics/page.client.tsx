@@ -501,7 +501,7 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
                     });
                   }
                 }}
-                placeholder="Pesquisar cântico..."
+                placeholder="Pesquisar músicas..."
                 className="pl-10 h-10 w-full"
               />
             </div>
@@ -538,7 +538,7 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
           <div className="flex gap-6 lg:gap-8">
             {/* Desktop Sidebar - Filtros */}
             <aside className="hidden lg:block w-80 shrink-0">
-              <div className="sticky top-8 space-y-4">
+              <div className="sticky top-24 z-20 space-y-4">
                 {/* Search Bar */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -556,7 +556,7 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
                         });
                       }
                     }}
-                    placeholder="Pesquisar cântico..."
+                    placeholder="Pesquisar músicas..."
                     className="pl-10 h-10 w-full"
                   />
                 </div>
@@ -695,25 +695,25 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
                                 {/* Tags */}
                                 <div>
                                   {(song.tags || []).length > 0 ? (
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {(song.tags || []).slice(0, 5).map((tag, tagIndex) => (
-                                        <span 
-                                          key={`${song.id}-tag-${tagIndex}`} 
-                                          className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary border border-primary/20"
-                                        >
-                                          #{tag}
-                                        </span>
-                                      ))}
-                                      {(song.tags || []).length > 5 && (
-                                        <span className="inline-flex items-center rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground">
-                                          +{(song.tags || []).length - 5}
-                                        </span>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <span className="text-xs text-muted-foreground italic">
-                                      Sem tags encontradas
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {(song.tags || []).slice(0, 5).map((tag, tagIndex) => (
+                                    <span 
+                                      key={`${song.id}-tag-${tagIndex}`} 
+                                      className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary border border-primary/20"
+                                    >
+                                      {tag.replace(/[{}]/g, '')}
                                     </span>
+                                    ))}
+                                    {(song.tags || []).length > 5 && (
+                                    <span className="inline-flex items-center rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground">
+                                      +{(song.tags || []).length - 5}
+                                    </span>
+                                    )}
+                                  </div>
+                                  ) : (
+                                  <span className="text-xs text-muted-foreground italic">
+                                    Sem tags encontradas
+                                  </span>
                                   )}
                                 </div>
                               </div>
