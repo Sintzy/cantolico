@@ -83,6 +83,8 @@ interface MusicsPageClientProps {
 }
 
 export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps) {
+  const DESKTOP_STICKY_GAP_PX = 10;
+
   // Ensure initialSongs is always an array and normalize data
   const normalizedInitialSongs = (Array.isArray(initialSongs) ? initialSongs : []).map(song => ({
     ...song,
@@ -111,6 +113,27 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [currentPage, setCurrentPage] = useState(1);
   const [jumpPageInput, setJumpPageInput] = useState('');
+  const [desktopStickyTop, setDesktopStickyTop] = useState(96);
+
+  useEffect(() => {
+    const updateDesktopStickyTop = () => {
+      if (typeof window === 'undefined') return;
+
+      const navbar = document.querySelector('nav.fixed.top-6') as HTMLElement | null;
+      if (!navbar) return;
+
+      const rect = navbar.getBoundingClientRect();
+      const nextTop = Math.round(rect.top + rect.height + DESKTOP_STICKY_GAP_PX);
+      setDesktopStickyTop(nextTop);
+    };
+
+    updateDesktopStickyTop();
+    window.addEventListener('resize', updateDesktopStickyTop);
+
+    return () => {
+      window.removeEventListener('resize', updateDesktopStickyTop);
+    };
+  }, [DESKTOP_STICKY_GAP_PX]);
 
   useEffect(() => {
     trackEvent('musics_list_view', { initialCount: normalizedInitialSongs.length });
@@ -483,8 +506,8 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
       {/* Main Content */}
       <section className="bg-white min-h-screen">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6 lg:py-8">
-          {/* Mobile Search Bar */}
-          <div className="lg:hidden mb-4">
+          <div className="lg:hidden mt-4 mb-4 space-y-4">
+            {/* Mobile Search Bar */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -505,10 +528,8 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
                 className="pl-10 h-10 w-full"
               />
             </div>
-          </div>
 
-          {/* Mobile Filter Button */}
-          <div className="lg:hidden mb-4">
+            {/* Mobile Filter Button */}
             <Dialog open={isMobileFiltersOpen} onOpenChange={setIsMobileFiltersOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm" className="w-full justify-start">
@@ -538,7 +559,7 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
           <div className="flex gap-6 lg:gap-8">
             {/* Desktop Sidebar - Filtros */}
             <aside className="hidden lg:block w-80 shrink-0">
-              <div className="sticky top-24 z-20 space-y-4">
+              <div className="sticky z-20 space-y-2.5" style={{ top: `${desktopStickyTop}px` }}>
                 {/* Search Bar */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
