@@ -621,127 +621,86 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
                   {/* Top Banner Ad removed */}
                   
                   {/* Lista de Músicas */}
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {paginatedSongs.map((song) => (
-                      <Card
+                      <div
                         key={song.id}
-                        className="group hover:shadow-md transition-all duration-200 border border-border bg-card"
+                        className="group flex overflow-hidden rounded-xl border border-border bg-card hover:shadow-md hover:border-primary/20 transition-all duration-200"
                       >
-                        <CardContent className="p-4 sm:p-5">
-                          <div className="flex items-start gap-3 sm:gap-4">
-                            {/* Icon/Avatar */}
-                            <div className="shrink-0">
-                              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-linear-to-br from-primary/10 to-primary/5 rounded-lg flex items-center justify-center border border-border">
-                                <Music className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-                              </div>
+                        {/* Accent bar */}
+                        <div className="w-1 shrink-0 bg-primary/70 group-hover:bg-primary transition-colors duration-200 rounded-l-xl" />
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0 p-4 sm:p-5">
+                          <div className="flex items-start justify-between gap-3">
+                            {/* Left: title + meta */}
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-base text-foreground group-hover:text-primary transition-colors leading-tight truncate">
+                                <Link
+                                  href={`/musics/${song.slug || song.id}`}
+                                  className="hover:underline underline-offset-2"
+                                  onClick={() => handleNavigateToSong(song.slug || song.id)}
+                                >
+                                  {song.title}
+                                </Link>
+                              </h3>
+
+                              {/* Moments */}
+                              {(song.moments || []).length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-2">
+                                  {(song.moments || []).slice(0, 2).map((moment, momentIndex) => (
+                                    <Badge
+                                      key={`${song.id}-moment-${momentIndex}`}
+                                      variant="secondary"
+                                      className="text-[11px] h-5 px-2 font-normal"
+                                    >
+                                      {getMomentDisplayName(moment)}
+                                    </Badge>
+                                  ))}
+                                  {(song.moments || []).length > 2 && (
+                                    <Badge variant="outline" className="text-[11px] h-5 px-2 font-normal">
+                                      +{(song.moments || []).length - 2}
+                                    </Badge>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Tags */}
+                              {(song.tags || []).length > 0 && (
+                                <p className="text-xs text-muted-foreground mt-1.5 truncate">
+                                  {(song.tags || []).slice(0, 4).map(t => t.replace(/[{}]/g, '')).join(' · ')}
+                                  {(song.tags || []).length > 4 && ` +${(song.tags || []).length - 4}`}
+                                </p>
+                              )}
                             </div>
 
-                            {/* Main Content */}
-                            <div className="flex-1 min-w-0">
-                              {/* Header */}
-                              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-3 gap-2">
-                                <div className="flex-1 min-w-0">
-                                  <h3 className="text-base sm:text-lg font-semibold text-foreground group-hover:text-primary transition-colors leading-tight">
-                                    <Link 
-                                      href={`/musics/${song.slug || song.id}`}
-                                      className="hover:underline"
-                                      onClick={() => handleNavigateToSong(song.slug || song.id)}
-                                    >
-                                      {song.title}
-                                    </Link>
-                                  </h3>
-                                  <p className="text-xs sm:text-sm text-muted-foreground mt-1 flex items-center gap-2">
-                                    <span className="w-1.5 h-1.5 bg-primary/60 rounded-full"></span>
-                                    {getInstrumentLabel(song.mainInstrument)}
-                                  </p>
-                                </div>
-                                
-                                {/* Actions */}
-                                <div className="flex items-center gap-1.5 sm:gap-2 sm:ml-4">
-                                  <StarButton 
-                                    songId={song.id} 
-                                    size="sm"
-                                    initialStarCount={song.starCount}
-                                    initialIsStarred={song.isStarred}
-                                  />
-                                  <AddToPlaylistButton songId={song.id} size="sm" />
-                                  <Button 
-                                    asChild 
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-7 sm:h-8 text-xs px-2 sm:px-3"
-                                  >
-                                    <Link 
-                                      href={`/musics/${song.slug || song.id}`}
-                                      onClick={() => handleNavigateToSong(song.slug || song.id)}
-                                    >
-                                      <span className="hidden sm:inline">Ver Cântico</span>
-                                      <span className="sm:hidden">Ver</span>
-                                    </Link>
-                                  </Button>
-                                </div>
-                              </div>
-
-                              {/* Info Section */}
-                              <div className="space-y-3">
-                                {/* Momentos */}
-                                <div>
-                                  {(song.moments || []).length > 0 ? (
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {(song.moments || []).slice(0, 4).map((moment, momentIndex) => (
-                                        <Badge 
-                                          key={`${song.id}-moment-${momentIndex}`} 
-                                          variant="secondary"
-                                          className="text-xs h-6 px-2.5 bg-secondary/80"
-                                        >
-                                          {getMomentDisplayName(moment)}
-                                        </Badge>
-                                      ))}
-                                      {(song.moments || []).length > 4 && (
-                                        <Badge 
-                                          variant="outline" 
-                                          className="text-xs h-6 px-2.5"
-                                        >
-                                          +{(song.moments || []).length - 4}
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <span className="text-xs text-muted-foreground italic">
-                                      Sem momentos encontrados
-                                    </span>
-                                  )}
-                                </div>
-
-                                {/* Tags */}
-                                <div>
-                                  {(song.tags || []).length > 0 ? (
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {(song.tags || []).slice(0, 5).map((tag, tagIndex) => (
-                                    <span 
-                                      key={`${song.id}-tag-${tagIndex}`} 
-                                      className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary border border-primary/20"
-                                    >
-                                      {tag.replace(/[{}]/g, '')}
-                                    </span>
-                                    ))}
-                                    {(song.tags || []).length > 5 && (
-                                    <span className="inline-flex items-center rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground">
-                                      +{(song.tags || []).length - 5}
-                                    </span>
-                                    )}
-                                  </div>
-                                  ) : (
-                                  <span className="text-xs text-muted-foreground italic">
-                                    Sem tags encontradas
-                                  </span>
-                                  )}
-                                </div>
-                              </div>
+                            {/* Right: actions */}
+                            <div className="flex items-center gap-1 shrink-0">
+                              <StarButton
+                                songId={song.id}
+                                size="sm"
+                                initialStarCount={song.starCount}
+                                initialIsStarred={song.isStarred}
+                              />
+                              <AddToPlaylistButton songId={song.id} size="sm" />
+                              <Button
+                                asChild
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
+                              >
+                                <Link
+                                  href={`/musics/${song.slug || song.id}`}
+                                  onClick={() => handleNavigateToSong(song.slug || song.id)}
+                                >
+                                  <span className="hidden sm:inline">Ver</span>
+                                  <ChevronRight className="w-3.5 h-3.5" />
+                                </Link>
+                              </Button>
                             </div>
                           </div>
-                        </CardContent>
-                      </Card>
+                        </div>
+                      </div>
                     ))}
                   </div>
 

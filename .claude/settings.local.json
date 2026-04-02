@@ -4,7 +4,9 @@
       "Bash(npx tsc:*)",
       "Bash(npx next:*)",
       "Bash(grep -E \"\\\\.\\(ts|js\\)$\")",
-      "Bash(find /c/Users/sintz/Desktop/Projetos/cantolico/supabase -type f -name *.sql)"
+      "Bash(find /c/Users/sintz/Desktop/Projetos/cantolico/supabase -type f -name *.sql)",
+      "Bash(grep -r \"tailwind\\\\|theme\\\\|color\" /c/Users/sintz/Desktop/Projetos/cantolico/tailwind.config.*)",
+      "Bash(xargs grep:*)"
     ]
   }
 }

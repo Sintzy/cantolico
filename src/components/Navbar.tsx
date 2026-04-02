@@ -7,16 +7,16 @@ import Image from "next/image";
 import * as Icons from "@/lib/site-images";
 import UserAvatar from "./ui/user-avatar";
 import { toast } from "sonner";
-import { 
-  ChevronDown, 
-  ListMusic, 
-  Globe, 
-  Lock, 
-  Music, 
-  Plus, 
-  Shield, 
-  Settings, 
-  User, 
+import {
+  ChevronDown,
+  ListMusic,
+  Globe,
+  Lock,
+  Music,
+  Plus,
+  Shield,
+  Settings,
+  User,
   LogOut,
   Search,
   Menu,
