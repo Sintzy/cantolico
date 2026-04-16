@@ -3,6 +3,17 @@
 -- ============================================================================
 -- Execute this in Supabase SQL Editor to enable RLS on core tables.
 -- This version is aligned with current schema names/columns from src/types/supabase.ts
+--
+-- IMPORTANT: All Next.js API routes MUST use the service-role admin client
+-- (adminSupabase from @/lib/supabase-admin) for mutations. The service-role
+-- key bypasses RLS entirely — auth is enforced at the application layer.
+-- The anon client (@/lib/supabase-client) is only for client-side reads
+-- where user JWT is forwarded via Supabase Auth (not used here since we use Clerk).
+--
+-- The helper functions below (get_my_user_id, get_my_role, get_my_email) rely
+-- on auth.uid() which is only set when a Supabase JWT is present. Since this
+-- app uses Clerk for auth and the service-role client for all server mutations,
+-- these helpers are used exclusively for client-side RLS if needed in future.
 
 -- ============================================================================
 -- HELPER FUNCTIONS
@@ -72,6 +83,7 @@ ALTER TABLE "PlaylistItem" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "PlaylistMember" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Banner" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "MassItem" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "MassMember" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "SongSubmission" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Star" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Favorite" ENABLE ROW LEVEL SECURITY;
@@ -186,7 +198,52 @@ CREATE POLICY "Mass owners can delete own masses" ON "Mass"
 
 
 -- ============================================================================
--- 5. MASS ITEM TABLE POLICIES
+-- 5. MASS MEMBER TABLE POLICIES
+-- ============================================================================
+
+DROP POLICY IF EXISTS "Mass members are visible to mass participants" ON "MassMember";
+DROP POLICY IF EXISTS "Mass owners can manage members" ON "MassMember";
+DROP POLICY IF EXISTS "Members can update their own status" ON "MassMember";
+
+CREATE POLICY "Mass members are visible to mass participants" ON "MassMember"
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1
+      FROM "Mass" m
+      WHERE m.id = "MassMember"."massId"
+        AND (
+          m.visibility = 'PUBLIC'
+          OR m."userId" = get_my_user_id()
+          OR "MassMember"."userEmail" = get_my_email()
+        )
+    )
+  );
+
+CREATE POLICY "Mass owners can manage members" ON "MassMember"
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1
+      FROM "Mass" m
+      WHERE m.id = "MassMember"."massId"
+        AND m."userId" = get_my_user_id()
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1
+      FROM "Mass" m
+      WHERE m.id = "MassMember"."massId"
+        AND m."userId" = get_my_user_id()
+    )
+  );
+
+CREATE POLICY "Members can update their own status" ON "MassMember"
+  FOR UPDATE USING ("userEmail" = get_my_email())
+  WITH CHECK ("userEmail" = get_my_email());
+
+
+-- ============================================================================
+-- 7. MASS ITEM TABLE POLICIES
 -- ============================================================================
 
 DROP POLICY IF EXISTS "MassItems from public masses are readable" ON "MassItem";
@@ -237,7 +294,7 @@ CREATE POLICY "Only mass owners can manage mass items" ON "MassItem"
 
 
 -- ============================================================================
--- 6. PLAYLIST TABLE POLICIES
+-- 8. PLAYLIST TABLE POLICIES
 -- ============================================================================
 
 DROP POLICY IF EXISTS "Public playlists are readable" ON "Playlist";
@@ -285,7 +342,7 @@ CREATE POLICY "Playlist owners can delete own playlists" ON "Playlist"
 
 
 -- ============================================================================
--- 7. PLAYLIST ITEM TABLE POLICIES
+-- 9. PLAYLIST ITEM TABLE POLICIES
 -- ============================================================================
 
 DROP POLICY IF EXISTS "PlaylistItems from public playlists are readable" ON "PlaylistItem";
@@ -352,7 +409,7 @@ CREATE POLICY "Playlist members can manage items" ON "PlaylistItem"
 
 
 -- ============================================================================
--- 8. PLAYLIST MEMBER TABLE POLICIES
+-- 10. PLAYLIST MEMBER TABLE POLICIES
 -- ============================================================================
 
 DROP POLICY IF EXISTS "Members of public playlists are readable" ON "PlaylistMember";
@@ -409,7 +466,7 @@ CREATE POLICY "Users can update their own membership status" ON "PlaylistMember"
 
 
 -- ============================================================================
--- 9. BANNER TABLE POLICIES
+-- 11. BANNER TABLE POLICIES
 -- ============================================================================
 
 DROP POLICY IF EXISTS "Active banners are readable" ON "Banner";
@@ -428,7 +485,7 @@ CREATE POLICY "Only admins can manage banners" ON "Banner"
 
 
 -- ============================================================================
--- 10. SONG SUBMISSION TABLE POLICIES
+-- 12. SONG SUBMISSION TABLE POLICIES
 -- ============================================================================
 
 DROP POLICY IF EXISTS "Users can view their own submissions" ON "SongSubmission";
@@ -472,7 +529,7 @@ CREATE POLICY "Admins can delete any submission" ON "SongSubmission"
 
 
 -- ============================================================================
--- 11. STAR/FAVORITE TABLE POLICIES
+-- 13. STAR/FAVORITE TABLE POLICIES
 -- ============================================================================
 
 DROP POLICY IF EXISTS "Users can manage their own starred songs" ON "Star";

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase-client';
+import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { logger } from '@/lib/logger';
 import { LogCategory } from '@/types/logging';
 import { getClientIP } from '@/lib/utils';

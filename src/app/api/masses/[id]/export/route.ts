@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase-client';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+import { adminSupabase as supabase } from '@/lib/supabase-admin';
+import { getClerkSession } from '@/lib/api-middleware';
 import { 
   LITURGICAL_MOMENT_LABELS, 
   LITURGICAL_MOMENT_ORDER,
@@ -33,7 +32,7 @@ interface ExportItem {
 export const GET = async (request: NextRequest, context: RouteParams) => {
   try {
     const { id: massId } = await context.params;
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     const { searchParams } = new URL(request.url);
     const format = searchParams.get('format') || 'full'; // 'full', 'lyrics', 'chords', 'ppt'
 

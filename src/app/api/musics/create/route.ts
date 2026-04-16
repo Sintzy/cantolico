@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from "next/server";
 import { withUserProtection } from "@/lib/enhanced-api-protection";
-import { supabase } from "@/lib/supabase-client";
+import { adminSupabase as supabase } from "@/lib/supabase-admin";
 import { randomUUID } from "crypto";
 import {
   Instrument,

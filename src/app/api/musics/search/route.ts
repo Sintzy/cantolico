@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase-client";
+import { adminSupabase as supabase } from "@/lib/supabase-admin";
 
 // /api/musics/search?q=...&page=1&limit=20
 export async function GET(req: NextRequest) {

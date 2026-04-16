@@ -1,20 +1,16 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getAuthenticatedUser } from "@/lib/clerk-auth";
 import { redirect } from "next/navigation";
 
 export default async function AdminPage() {
-  const session = await getServerSession(authOptions);
+  const user = await getAuthenticatedUser();
 
-  if (!session || (session.user.role !== "ADMIN" && session.user.role !== "REVIEWER")) {
-    return redirect("/login");
+  if (!user || (user.role !== "ADMIN" && user.role !== "REVIEWER")) {
+    return redirect("/sign-in");
   }
 
-  // Redirect based on user role
-  if (session.user.role === "ADMIN") {
+  if (user.role === "ADMIN") {
     return redirect("/admin/dashboard");
-  } else if (session.user.role === "REVIEWER") {
-    return redirect("/admin/review");
   }
 
-  return redirect("/login");
+  return redirect("/admin/review");
 }

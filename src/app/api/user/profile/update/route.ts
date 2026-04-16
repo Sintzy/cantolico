@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase-client";
+import { adminSupabase as supabase } from "@/lib/supabase-admin";
 import { NextRequest, NextResponse } from "next/server";
 
 import { getClerkSession } from '@/lib/api-middleware';

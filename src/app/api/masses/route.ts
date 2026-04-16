@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase-client';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+import { adminSupabase as supabase } from '@/lib/supabase-admin';
+import { getClerkSession } from '@/lib/api-middleware';
 import { withUserProtection, withPublicMonitoring } from '@/lib/enhanced-api-protection';
 import { randomUUID } from 'crypto';
 import { requireEmailVerification } from '@/lib/email';
@@ -10,7 +9,7 @@ import { Mass, MassVisibility, LiturgicalColor } from '@/types/mass';
 // GET - List masses
 export const GET = withPublicMonitoring<any>(async (request: NextRequest) => {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const includePublic = searchParams.get('includePublic') === 'true';

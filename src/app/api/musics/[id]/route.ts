@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase-client";
+import { adminSupabase as supabase } from "@/lib/supabase-admin";
 import { logSongViewed, logApiRequestError, toErrorContext } from "@/lib/logging-helpers";
 import { protectApiRoute, applySecurityHeaders } from "@/lib/api-protection";
 import { formatTagsForPostgreSQL, parseTagsFromPostgreSQL, parseMomentsFromPostgreSQL } from "@/lib/utils";

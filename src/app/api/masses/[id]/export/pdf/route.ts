@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PDFDocument, PDFPage, StandardFonts, rgb } from 'pdf-lib';
-import { supabase } from '@/lib/supabase-client';
+import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import * as fs from 'fs';
 import * as path from 'path';
 

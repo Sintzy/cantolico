@@ -20,7 +20,9 @@
       "Bash(sed -i 's/font-display text-\\\\[clamp\\(2rem,3\\\\.5vw,3\\\\.2rem\\)\\\\] font-light leading-tight/font-display text-[clamp\\(1.9rem,3.2vw,3rem\\)] leading-tight/g' src/app/HomePageClient.tsx)",
       "Bash(sed -i 's/font-display text-\\\\[clamp\\(1\\\\.8rem,3\\\\.5vw,3rem\\)\\\\] font-light text-stone-900/font-display text-[clamp\\(1.7rem,3.2vw,2.8rem\\)] text-stone-900/g' src/app/HomePageClient.tsx)",
       "Bash(sed -i 's/font-display text-\\\\[clamp\\(2rem,5vw,4rem\\)\\\\] font-light leading-tight/font-display text-[clamp\\(1.9rem,4.5vw,3.8rem\\)] leading-tight/g' src/app/HomePageClient.tsx)",
-      "Bash(pnpm build *)"
+      "Bash(pnpm build *)",
+      "Bash(powershell *)",
+      "Bash(node *)"
     ]
   }
 }
