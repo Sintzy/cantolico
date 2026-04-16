@@ -14,15 +14,11 @@ export default function ExportOptionsModal({ open, onClose, massId }: ExportOpti
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
-        className="p-0 overflow-visible"
-        style={{ width: '96vw', maxWidth: '1800px', minWidth: '0', padding: 0 }}
+        className="p-0 overflow-hidden"
+        style={{ width: '96vw', maxWidth: '680px', minWidth: '0', height: '90vh', display: 'flex', flexDirection: 'column' }}
       >
-        {/* DialogTitle para acessibilidade, mas visualmente oculto */}
         <DialogTitle className="sr-only">Exportar Missa</DialogTitle>
-        <div
-          className="max-h-[90vh] overflow-y-auto px-2 pb-2"
-          style={{ width: '100%', minWidth: 0 }}
-        >
+        <div className="flex-1 overflow-hidden flex flex-col">
           <ExportMassPanel massId={massId} onClose={onClose} />
         </div>
       </DialogContent>

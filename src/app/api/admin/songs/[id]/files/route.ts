@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { supabase } from '@/lib/supabase-client';
 import { FileType } from '@/types/song-files';
 import { logger } from '@/lib/logger';
 import { LogCategory, LogLevel } from '@/types/logging';
 import { getClientIP } from '@/lib/utils';
 
-import { getClerkSession } from '@/lib/api-middleware';
 /**
  * GET /api/admin/songs/[id]/files
  * Retorna todos os ficheiros de uma música
@@ -145,7 +146,7 @@ export async function POST(
   const startTime = Date.now();
   
   try {
-    const session = await getClerkSession();
+    const session = await getServerSession(authOptions);
     if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'REVIEWER')) {
       logger.warn('Unauthorized file upload attempt', {
         category: LogCategory.SECURITY,
@@ -569,7 +570,7 @@ export async function DELETE(
   const startTime = Date.now();
   
   try {
-    const session = await getClerkSession();
+    const session = await getServerSession(authOptions);
     if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'REVIEWER')) {
       logger.warn('Unauthorized file delete attempt', {
         category: LogCategory.SECURITY,
@@ -745,7 +746,7 @@ export async function PATCH(
   const startTime = Date.now();
   
   try {
-    const session = await getClerkSession();
+    const session = await getServerSession(authOptions);
     if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'REVIEWER')) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }

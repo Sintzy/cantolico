@@ -22,20 +22,21 @@ export default function robots(): MetadataRoute.Robots {
           '/',
           '/musics/',
           '/musics/*',
+          '/missas/',
+          '/missas/*',
           '/playlists/',
           '/playlists/explore/',
           '/terms/',
-          '/privacy-policy/'
+          '/privacy-policy/',
         ],
         disallow: [
-          '/admin/', 
-          '/api/', 
+          '/admin/',
+          '/api/',
           '/auth/',
           '/banned/',
           '/logs/',
-          '/melhor-alternativa/'
+          '/melhor-alternativa/',
         ],
-        crawlDelay: 1,
       },
       {
         userAgent: 'Bingbot',
@@ -43,11 +44,12 @@ export default function robots(): MetadataRoute.Robots {
           '/',
           '/musics/',
           '/musics/*',
+          '/missas/',
+          '/missas/*',
           '/playlists/',
-          '/playlists/explore/'
+          '/playlists/explore/',
         ],
         disallow: ['/admin/', '/api/', '/auth/'],
-        crawlDelay: 2,
       }
     ],
     sitemap: 'https://cantolico.pt/sitemap.xml',

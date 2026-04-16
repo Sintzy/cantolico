@@ -1,6 +1,7 @@
 import { SignIn } from "@clerk/nextjs";
-import { Music } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
+import * as Icons from "@/lib/site-images";
 import { buildMetadata } from "@/lib/seo";
 
 export const metadata = buildMetadata({
@@ -12,64 +13,84 @@ export const metadata = buildMetadata({
 
 export default function SignInPage() {
   return (
-    <div className="min-h-screen bg-white">
-      {/* Background decoration */}
-      <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-        <div className="absolute left-1/2 top-0 -translate-x-1/2">
-          <div className="h-80 w-80 rounded-full bg-linear-to-tr from-rose-500/20 to-amber-500/20 blur-[120px]" />
+    <div className="min-h-screen bg-white flex">
+      {/* Left panel — decorative, hidden on mobile */}
+      <div className="hidden lg:flex lg:w-[420px] shrink-0 flex-col justify-between border-r border-stone-100 bg-stone-50 px-12 py-16">
+        <Link href="/" className="flex items-center gap-2.5">
+          <Image src={Icons.SITE_IMAGES.logo} alt="Cantólico" width={28} height={28} />
+          <span className="text-base font-semibold text-stone-900 tracking-tight">
+            Can<span className="text-rose-700">♱</span>ólico!
+          </span>
+        </Link>
+
+        <div>
+          <p className="font-display text-[2.6rem] leading-[1.1] text-stone-900">
+            A música que<br />
+            eleva a <em className="italic text-rose-700">alma.</em>
+          </p>
+          <p className="mt-5 text-sm leading-relaxed text-stone-500 max-w-[280px]">
+            Biblioteca colaborativa de cânticos católicos em português. Playlists, partituras e acordes — tudo num só lugar.
+          </p>
         </div>
-        <div className="absolute bottom-0 right-0">
-          <div className="h-60 w-60 rounded-full bg-linear-to-tl from-rose-500/20 to-orange-500/20 blur-[100px]" />
-        </div>
+
+        <p className="text-xs font-medium text-stone-400 flex items-center gap-2">
+          <span className="text-rose-700">✝</span>
+          Qui bene cantat, bis orat
+        </p>
       </div>
 
-      <div className="relative z-10 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
-          {/* Header */}
-          <div className="text-center">
-            <div className="mb-4 border-y [border-image:linear-gradient(to_right,transparent,--theme(--color-slate-300/.8),transparent)1]">
-              <div className="-mx-0.5 flex justify-center py-2">
-                <div className="w-12 h-12 bg-linear-to-r from-rose-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <Music className="h-6 w-6 text-white" />
-                </div>
-              </div>
+      {/* Right panel — form */}
+      <div className="flex flex-1 flex-col items-center justify-center px-6 py-16">
+        {/* Mobile logo */}
+        <Link href="/" className="lg:hidden mb-10 flex items-center gap-2.5">
+          <Image src={Icons.SITE_IMAGES.logo} alt="Cantólico" width={24} height={24} />
+          <span className="text-base font-semibold text-stone-900 tracking-tight">
+            Can<span className="text-rose-700">♱</span>ólico!
+          </span>
+        </Link>
+
+        <div className="w-full max-w-sm">
+          <div className="mb-8">
+            <div className="mb-4 flex items-center gap-3">
+              <span className="text-rose-700 text-sm">✝</span>
+              <span className="h-px w-6 bg-stone-300" />
+              <span className="text-xs font-medium tracking-[0.18em] text-stone-500 uppercase">Bem-vindo de volta</span>
             </div>
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 border-y [border-image:linear-gradient(to_right,transparent,--theme(--color-slate-300/.8),transparent)1] leading-tight">
-              Entrar na conta
-            </h2>
-            <p className="mt-4 text-sm text-gray-700">
-              Acede à tua conta para continuares a explorar os cânticos
+            <h1 className="font-display text-3xl text-stone-900">Entrar na conta</h1>
+            <p className="mt-2 text-sm text-stone-500">
+              Acede para continuares a explorar os cânticos.
             </p>
           </div>
 
-          {/* Clerk SignIn Component */}
-          <div className="flex justify-center">
-            <SignIn
-              appearance={{
-                elements: {
-                  formButtonPrimary:
-                    "bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700",
-                  card: "shadow-xl bg-white/80 backdrop-blur-sm border-0",
-                  headerTitle: "hidden",
-                  headerSubtitle: "hidden",
-                  socialButtonsBlockButton:
-                    "border border-gray-200 hover:bg-gray-50",
-                  footerActionLink: "text-rose-600 hover:text-rose-700",
-                }
-              }}
-            />
-          </div>
+          <SignIn
+            appearance={{
+              elements: {
+                rootBox: "w-full",
+                card: "shadow-none border-0 bg-transparent p-0 w-full",
+                headerTitle: "hidden",
+                headerSubtitle: "hidden",
+                header: "hidden",
+                formButtonPrimary:
+                  "bg-stone-900 hover:bg-rose-700 transition-colors duration-200 text-white font-medium rounded-lg",
+                socialButtonsBlockButton:
+                  "border border-stone-200 hover:bg-stone-50 text-stone-700 rounded-lg transition-colors",
+                formFieldInput:
+                  "border-stone-200 bg-white rounded-lg text-stone-900 focus:border-stone-400",
+                formFieldLabel: "text-stone-700 text-sm font-medium",
+                footerActionLink: "text-rose-700 hover:text-rose-800 font-medium",
+                dividerLine: "bg-stone-200",
+                dividerText: "text-stone-400 text-xs",
+                identityPreviewText: "text-stone-700",
+                formResendCodeLink: "text-rose-700",
+              }
+            }}
+          />
 
-          {/* Footer Links */}
-          <div className="text-center text-sm text-gray-600 space-x-1">
-            <Link href="/terms" className="text-blue-600 hover:text-blue-700 hover:underline underline-offset-4 transition-colors">
-              Termos de Serviço
-            </Link>
-            <span>•</span>
-            <Link href="/privacy-policy" className="text-blue-600 hover:text-blue-700 hover:underline underline-offset-4 transition-colors">
-              Política de Privacidade
-            </Link>
-          </div>
+          <p className="mt-8 text-center text-xs text-stone-400 space-x-1">
+            <Link href="/terms" className="hover:text-stone-600 transition-colors">Termos de Serviço</Link>
+            <span>·</span>
+            <Link href="/privacy-policy" className="hover:text-stone-600 transition-colors">Privacidade</Link>
+          </p>
         </div>
       </div>
     </div>

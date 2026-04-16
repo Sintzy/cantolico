@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
-import { getAuthenticatedUser } from '@/lib/clerk-auth';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { adminSupabase } from '@/lib/supabase-admin';
 import { buildMetadata } from '@/lib/seo';
 import { redirect } from 'next/navigation';
@@ -41,10 +42,10 @@ interface Playlist {
 }
 
 export default async function PlaylistsPage() {
-  const user = await getAuthenticatedUser();
+  const session = await getServerSession(authOptions);
 
-  if (!user?.supabaseUserId) {
-    redirect('/sign-in?redirect_url=/playlists');
+  if (!session?.user?.id) {
+    redirect('/login?callbackUrl=/playlists');
   }
 
   // Fetch user's playlists with counts and members in a single query
@@ -55,7 +56,7 @@ export default async function PlaylistsPage() {
       PlaylistItem(id),
       PlaylistMember(*)
     `)
-    .eq('userId', user.supabaseUserId)
+    .eq('userId', session.user.id)
     .order('updatedAt', { ascending: false });
 
   let playlists: Playlist[] = [];

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Metadata } from 'next';
 import ExploreMassesClient from './page.client';
 import { supabase } from '@/lib/supabase-client';
@@ -54,5 +53,5 @@ async function getPublicMasses() {
 
 export default async function ExploreMassesPage() {
   const masses = await getPublicMasses();
-  return <ExploreMassesClient initialMasses={masses} />;
+  return <ExploreMassesClient initialMasses={masses as any} />;
 }

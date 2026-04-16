@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+@theme {
+  --font-display: var(--font-cormorant, "Cormorant", Georgia, serif);
+  --font-sans: var(--font-dm-sans, "DM Sans", system-ui, sans-serif);
+}
+
 :root {
   --background: 220 33% 98%;
   --foreground: 222 47% 11%;

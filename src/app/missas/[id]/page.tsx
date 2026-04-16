@@ -1,9 +1,8 @@
-// @ts-nocheck
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { supabase } from '@/lib/supabase-client';
-import { auth } from '@clerk/nextjs/server';
-import { getSupabaseUserId } from '@/lib/clerk-auth';
+import { getAuthenticatedUser } from '@/lib/clerk-auth';
+import { buildMetadata } from '@/lib/seo';
 import MassPageClient from './page.client';
 
 interface PageProps {
@@ -12,7 +11,7 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-
+  
   const { data: mass } = await supabase
     .from('Mass')
     .select('name, description, celebration')
@@ -20,15 +19,24 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     .single();
 
   if (!mass) {
-    return {
-      title: 'Missa não encontrada | Cantólico',
-    };
+    return buildMetadata({
+      title: 'Missa não encontrada',
+      description: 'Esta missa não existe no Cantólico.',
+      path: `/missas/${id}`,
+      index: false,
+    });
   }
 
-  return {
-    title: `${mass.name} | Cantólico`,
-    description: mass.description || mass.celebration || 'Organização de cânticos para missa',
-  };
+  const description = mass.description
+    || (mass.celebration ? `Cânticos para ${mass.celebration}` : null)
+    || 'Organização de cânticos para celebração litúrgica';
+
+  return buildMetadata({
+    title: mass.name,
+    description,
+    path: `/missas/${id}`,
+    type: 'article',
+  });
 }
 
 async function getMass(id: string, userId?: number) {
@@ -90,7 +98,7 @@ async function getMass(id: string, userId?: number) {
 
   // Check access
   const isOwner = userId === mass.userId;
-
+  
   if (mass.visibility === 'PRIVATE' && !isOwner) {
     // Check if user is a member
     const isMember = mass.MassMember?.some(
@@ -123,7 +131,7 @@ async function getMass(id: string, userId?: number) {
 
   return {
     ...mass,
-    user: mass.User || null,
+    user: (Array.isArray(mass.User) ? mass.User[0] : mass.User) || null,
     items: sortedItems,
     members: mass.MassMember || [],
     _count: {
@@ -136,18 +144,13 @@ async function getMass(id: string, userId?: number) {
 
 export default async function MassPage({ params }: PageProps) {
   const { id } = await params;
-  const { userId: clerkUserId } = await auth();
+  const user = await getAuthenticatedUser();
 
-  let supabaseUserId: number | undefined;
-  if (clerkUserId) {
-    supabaseUserId = (await getSupabaseUserId(clerkUserId)) ?? undefined;
-  }
-
-  const mass = await getMass(id, supabaseUserId);
+  const mass = await getMass(id, user?.supabaseUserId);
 
   if (!mass) {
     notFound();
   }
 
-  return <MassPageClient initialMass={mass} />;
+  return <MassPageClient initialMass={mass as any} />;
 }

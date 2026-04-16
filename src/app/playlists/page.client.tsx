@@ -40,6 +40,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import EditPlaylistModal from '../../components/EditPlaylistModal';
+import { trackEvent } from '@/lib/umami';
 
 interface PlaylistMember {
   id: string;
@@ -86,6 +87,10 @@ function PlaylistsContent({ initialPlaylists }: PlaylistsClientProps) {
   const [filterVisibility, setFilterVisibility] = useState<string>('ALL');
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
+  useEffect(() => {
+    trackEvent('playlists_list_view', { initialCount: safeInitialPlaylists.length });
+  }, []);
+
   // Check for invitation messages
   useEffect(() => {
     const inviteAccepted = searchParams.get('invite_accepted');
@@ -124,7 +129,7 @@ function PlaylistsContent({ initialPlaylists }: PlaylistsClientProps) {
             <h1 className="text-2xl font-bold text-gray-900 mb-4">Playlists</h1>
             <p className="text-gray-600 mb-6">Faz login para ver as tuas playlists</p>
             <Button asChild>
-              <Link href="/sign-in">Fazer Login</Link>
+              <Link href="/login">Fazer Login</Link>
             </Button>
           </div>
         </div>
@@ -133,8 +138,13 @@ function PlaylistsContent({ initialPlaylists }: PlaylistsClientProps) {
   }
 
   const handleEditPlaylist = (playlist: Playlist) => {
+    trackEvent('playlist_edit_opened', { source: 'playlists_list' });
     setSelectedPlaylist(playlist);
     setEditModalOpen(true);
+  };
+
+  const handleOpenPlaylist = (playlistId: string) => {
+    trackEvent('playlist_opened', { source: 'playlists_list', playlistId });
   };
 
   // Filter playlists
@@ -155,6 +165,7 @@ function PlaylistsContent({ initialPlaylists }: PlaylistsClientProps) {
   const allPlaylistsForAdmin = filteredPlaylists.filter(p => p.userRole === 'admin');
 
   const clearFilters = () => {
+    trackEvent('playlists_filters_cleared');
     setSearchTerm('');
     setFilterVisibility('ALL');
     setIsMobileFiltersOpen(false);
@@ -210,8 +221,8 @@ function PlaylistsContent({ initialPlaylists }: PlaylistsClientProps) {
         <div className="flex items-start gap-3 sm:gap-4">
           {/* Icon */}
           <div className="shrink-0">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-linear-to-br from-primary/10 to-primary/5 rounded-lg flex items-center justify-center border border-border">
-              <ListMusic className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-stone-50 rounded-lg flex items-center justify-center border border-stone-200">
+              <ListMusic className="h-5 w-5 sm:h-6 sm:w-6 text-rose-600" />
             </div>
           </div>
 
@@ -224,6 +235,7 @@ function PlaylistsContent({ initialPlaylists }: PlaylistsClientProps) {
                   <Link 
                     href={`/playlists/${playlist.id}`}
                     className="hover:underline"
+                    onClick={() => handleOpenPlaylist(playlist.id)}
                   >
                     {playlist.name}
                   </Link>
@@ -258,7 +270,7 @@ function PlaylistsContent({ initialPlaylists }: PlaylistsClientProps) {
                   size="sm"
                   className="h-7 sm:h-8 text-xs px-2 sm:px-3"
                 >
-                  <Link href={`/playlists/${playlist.id}`}>
+                  <Link href={`/playlists/${playlist.id}`} onClick={() => handleOpenPlaylist(playlist.id)}>
                     <span className="hidden sm:inline">Ver Playlist</span>
                     <span className="sm:hidden">Ver</span>
                   </Link>
@@ -271,19 +283,19 @@ function PlaylistsContent({ initialPlaylists }: PlaylistsClientProps) {
               {/* Badges */}
               <div className="flex flex-wrap gap-1.5">
                 {showBadge === 'owner' && (
-                  <Badge variant="outline" className="flex items-center gap-1 text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
+                  <Badge variant="outline" className="flex items-center gap-1 text-xs bg-rose-50 text-rose-700 border-rose-200">
                     <Crown className="w-3 h-3" />
                     Proprietário
                   </Badge>
                 )}
                 {showBadge === 'editor' && (
-                  <Badge variant="outline" className="flex items-center gap-1 text-xs bg-blue-50 text-blue-700 border-blue-200">
+                  <Badge variant="outline" className="flex items-center gap-1 text-xs bg-stone-50 text-stone-600 border-stone-200">
                     <UserCheck className="w-3 h-3" />
                     Editor
                   </Badge>
                 )}
                 {showBadge === 'admin' && (
-                  <Badge variant="outline" className="flex items-center gap-1 text-xs bg-purple-50 text-purple-700 border-purple-200">
+                  <Badge variant="outline" className="flex items-center gap-1 text-xs bg-stone-100 text-stone-700 border-stone-200">
                     <Settings className="w-3 h-3" />
                     Admin
                   </Badge>
@@ -318,48 +330,36 @@ function PlaylistsContent({ initialPlaylists }: PlaylistsClientProps) {
   return (
     <main className="min-h-screen bg-white -mt-16">
       {/* Hero Section */}
-      <section className="relative bg-white pt-16">
-        {/* Background decoration */}
-        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-          <div className="absolute left-1/2 top-0 -translate-x-1/2">
-            <div className="h-80 w-80 rounded-full bg-linear-to-br from-rose-50 via-white to-amber-50" />
-          </div>
-        </div>
-        
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12 md:py-16 relative z-10">
+      <section className="border-b border-stone-100 bg-white pt-16">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12 md:py-14">
           <div className="text-center mb-6 sm:mb-8 md:mb-12">
-            {/* Decorative border */}
-            <div className="mb-4 border-y border-slate-200">
-              <div className="-mx-0.5 flex justify-center -space-x-2 py-2">
-                <div className="w-6 h-6 bg-linear-to-r from-rose-500 to-pink-600 rounded-full flex items-center justify-center">
-                  <ListMusic className="text-white text-xs w-3 h-3" />
-                </div>
-                <div className="w-6 h-6 bg-linear-to-r from-amber-500 to-orange-500 rounded-full flex items-center justify-center">
-                  <Music className="text-white text-xs w-3 h-3" />
-                </div>
-                <div className="w-6 h-6 bg-linear-to-r from-rose-500 to-orange-500 rounded-full flex items-center justify-center">
-                  <Users className="text-white text-xs w-3 h-3" />
-                </div>
-              </div>
+            <div className="mb-4 flex items-center justify-center gap-3">
+              <span className="text-rose-700 text-sm leading-none">✝</span>
+              <span className="h-px w-6 bg-stone-300" />
+              <span className="text-xs font-medium tracking-[0.18em] text-stone-500 uppercase">
+                Coleções de Cânticos
+              </span>
+              <span className="h-px w-6 bg-stone-300" />
+              <span className="text-rose-700 text-sm leading-none">✝</span>
             </div>
-            
-            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 sm:mb-4 leading-tight">
+
+            <h1 className="font-display text-3xl sm:text-4xl md:text-5xl text-stone-900 mb-3 sm:mb-4 leading-tight">
               As Minhas Playlists
             </h1>
-            <p className="text-base sm:text-lg text-gray-700 max-w-2xl mx-auto px-4">
+            <p className="text-base sm:text-lg text-stone-500 max-w-2xl mx-auto px-4">
               Gere e organiza as tuas coleções de cânticos
             </p>
 
             {/* Action Buttons */}
             <div className="flex items-center justify-center gap-4 mt-6">
               <Button asChild variant="outline" size="sm">
-                <Link href="/playlists/explore">
+                <Link href="/playlists/explore" onClick={() => trackEvent('playlists_explore_clicked', { source: 'playlists_page' })}>
                   <Globe className="h-4 w-4 mr-2" />
                   Explorar
                 </Link>
               </Button>
               <Button asChild size="sm">
-                <Link href="/playlists/create">
+                <Link href="/playlists/create" onClick={() => trackEvent('playlist_create_cta_clicked', { source: 'playlists_page' })}>
                   <Plus className="h-4 w-4 mr-2" />
                   Nova Playlist
                 </Link>
@@ -490,8 +490,8 @@ function PlaylistsContent({ initialPlaylists }: PlaylistsClientProps) {
                   {/* Owned Playlists */}
                   {ownedPlaylists.length > 0 && (
                     <section>
-                      <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                        <Crown className="w-5 h-5 text-yellow-600" />
+                      <h2 className="text-lg font-semibold text-stone-900 mb-4 flex items-center gap-2">
+                        <Crown className="w-5 h-5 text-rose-700" />
                         Minhas Playlists
                         <Badge variant="secondary">{ownedPlaylists.length}</Badge>
                       </h2>
@@ -506,8 +506,8 @@ function PlaylistsContent({ initialPlaylists }: PlaylistsClientProps) {
                   {/* Admin: All Playlists */}
                   {session.user.role === 'ADMIN' && allPlaylistsForAdmin.length > 0 && (
                     <section>
-                      <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                        <Settings className="w-5 h-5 text-gray-700" />
+                      <h2 className="text-lg font-semibold text-stone-900 mb-4 flex items-center gap-2">
+                        <Settings className="w-5 h-5 text-stone-500" />
                         Todas as Playlists (Admin)
                         <Badge variant="secondary">{allPlaylistsForAdmin.length}</Badge>
                       </h2>
@@ -522,8 +522,8 @@ function PlaylistsContent({ initialPlaylists }: PlaylistsClientProps) {
                   {/* Member Playlists */}
                   {memberPlaylists.length > 0 && (
                     <section>
-                      <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                        <UserCheck className="w-5 h-5 text-blue-600" />
+                      <h2 className="text-lg font-semibold text-stone-900 mb-4 flex items-center gap-2">
+                        <UserCheck className="w-5 h-5 text-stone-500" />
                         Playlists Colaborativas
                         <Badge variant="secondary">{memberPlaylists.length}</Badge>
                       </h2>

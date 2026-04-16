@@ -6,7 +6,21 @@
       "Bash(grep -E \"\\\\.\\(ts|js\\)$\")",
       "Bash(find /c/Users/sintz/Desktop/Projetos/cantolico/supabase -type f -name *.sql)",
       "Bash(grep -r \"tailwind\\\\|theme\\\\|color\" /c/Users/sintz/Desktop/Projetos/cantolico/tailwind.config.*)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(pnpm typecheck *)",
+      "Bash(sed -i 's/import { Inter } from \"next\\\\/font\\\\/google\";/import { Cormorant, DM_Sans } from \"next\\\\/font\\\\/google\";/' src/app/layout.tsx)",
+      "Bash(sed -i 's/const inter = Inter\\({ subsets: \\\\[\"latin\"\\\\] }\\);/const cormorant = Cormorant\\({ subsets: [\"latin\"], variable: \"--font-cormorant\", weight: [\"300\",\"400\",\"500\",\"600\",\"700\"], style: [\"normal\",\"italic\"], display: \"swap\" }\\);\\\\nconst dmSans = DM_Sans\\({ subsets: [\"latin\"], variable: \"--font-dm-sans\", display: \"swap\" }\\);/' src/app/layout.tsx)",
+      "Bash(sed -i 's/<html lang=\"pt\">/<html lang=\"pt\" className={`${cormorant.variable} ${dmSans.variable}`}>/' src/app/layout.tsx)",
+      "Bash(sed -i 's/className={inter.className + \" flex flex-col min-h-screen\"}/className={`${dmSans.className} flex flex-col min-h-screen antialiased`}/' src/app/layout.tsx)",
+      "Bash(sed -i 's/<div className=\"h-20\" \\\\/>/<div className=\"h-16\" \\\\/>/' src/app/layout.tsx)",
+      "Bash(sed -i 's/import { Cormorant, DM_Sans } from \"next\\\\/font\\\\/google\";/import { Instrument_Serif, DM_Sans } from \"next\\\\/font\\\\/google\";/' src/app/layout.tsx)",
+      "Bash(sed -i 's/const cormorant = Cormorant.*$/const instrumentSerif = Instrument_Serif\\({ subsets: [\"latin\"], variable: \"--font-cormorant\", weight: \"400\", style: [\"normal\",\"italic\"], display: \"swap\" }\\);/' src/app/layout.tsx)",
+      "Bash(sed -i 's/${cormorant.variable}/${instrumentSerif.variable}/g' src/app/layout.tsx)",
+      "Bash(sed -i 's/font-display text-\\\\[clamp\\(2\\\\.8rem,6\\\\.5vw,5\\\\.2rem\\)\\\\] font-light leading-\\\\[1\\\\.06\\\\] tracking-tight/font-display text-[clamp\\(2.6rem,6vw,4.8rem\\)] leading-[1.08]/g' src/app/HomePageClient.tsx)",
+      "Bash(sed -i 's/font-display text-\\\\[clamp\\(2rem,3\\\\.5vw,3\\\\.2rem\\)\\\\] font-light leading-tight/font-display text-[clamp\\(1.9rem,3.2vw,3rem\\)] leading-tight/g' src/app/HomePageClient.tsx)",
+      "Bash(sed -i 's/font-display text-\\\\[clamp\\(1\\\\.8rem,3\\\\.5vw,3rem\\)\\\\] font-light text-stone-900/font-display text-[clamp\\(1.7rem,3.2vw,2.8rem\\)] text-stone-900/g' src/app/HomePageClient.tsx)",
+      "Bash(sed -i 's/font-display text-\\\\[clamp\\(2rem,5vw,4rem\\)\\\\] font-light leading-tight/font-display text-[clamp\\(1.9rem,4.5vw,3.8rem\\)] leading-tight/g' src/app/HomePageClient.tsx)",
+      "Bash(pnpm build *)"
     ]
   }
 }

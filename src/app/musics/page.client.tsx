@@ -83,8 +83,6 @@ interface MusicsPageClientProps {
 }
 
 export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps) {
-  const DESKTOP_STICKY_GAP_PX = 10;
-
   // Ensure initialSongs is always an array and normalize data
   const normalizedInitialSongs = (Array.isArray(initialSongs) ? initialSongs : []).map(song => ({
     ...song,
@@ -113,27 +111,6 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [currentPage, setCurrentPage] = useState(1);
   const [jumpPageInput, setJumpPageInput] = useState('');
-  const [desktopStickyTop, setDesktopStickyTop] = useState(96);
-
-  useEffect(() => {
-    const updateDesktopStickyTop = () => {
-      if (typeof window === 'undefined') return;
-
-      const navbar = document.querySelector('nav.fixed.top-6') as HTMLElement | null;
-      if (!navbar) return;
-
-      const rect = navbar.getBoundingClientRect();
-      const nextTop = Math.round(rect.top + rect.height + DESKTOP_STICKY_GAP_PX);
-      setDesktopStickyTop(nextTop);
-    };
-
-    updateDesktopStickyTop();
-    window.addEventListener('resize', updateDesktopStickyTop);
-
-    return () => {
-      window.removeEventListener('resize', updateDesktopStickyTop);
-    };
-  }, [DESKTOP_STICKY_GAP_PX]);
 
   useEffect(() => {
     trackEvent('musics_list_view', { initialCount: normalizedInitialSongs.length });
@@ -448,37 +425,25 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
   );
 
   return (
-    <main className="flex-1 bg-white">
-      {/* Hero Section com estilo da landing page */}
-      <section className="relative bg-white pt-6">
-        {/* Background decoration */}
-        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-          <div className="absolute left-1/2 top-0 -translate-x-1/2">
-            <div className="h-80 w-80 rounded-full bg-linear-to-br from-rose-50 via-white to-amber-50" />
-          </div>
-        </div>
-        
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12 md:py-16 relative z-10">
+    <main className="flex-1 bg-white pt-2">
+      {/* Hero Section */}
+      <section className="border-b border-stone-100 bg-white pt-6">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12 md:py-14">
           <div className="text-center mb-6 sm:mb-8 md:mb-12">
-            {/* Decorative border */}
-            <div className="mb-4 border-y [border-image:linear-gradient(to_right,transparent,--theme(--color-slate-300/.8),transparent)1]">
-              <div className="-mx-0.5 flex justify-center -space-x-2 py-2">
-                <div className="w-6 h-6 bg-linear-to-r from-rose-500 to-pink-600 rounded-full flex items-center justify-center">
-                  <Music className="text-white text-xs w-3 h-3" />
-                </div>
-                <div className="w-6 h-6 bg-linear-to-r from-amber-500 to-orange-500 rounded-full flex items-center justify-center">
-                  <Search className="text-white text-xs w-3 h-3" />
-                </div>
-                <div className="w-6 h-6 bg-linear-to-r from-rose-500 to-orange-500 rounded-full flex items-center justify-center">
-                  <Filter className="text-white text-xs w-3 h-3" />
-                </div>
-              </div>
+            <div className="mb-4 flex items-center justify-center gap-3">
+              <span className="text-rose-700 text-sm leading-none">✝</span>
+              <span className="h-px w-6 bg-stone-300" />
+              <span className="text-xs font-medium tracking-[0.18em] text-stone-500 uppercase">
+                Biblioteca de Cânticos Católicos
+              </span>
+              <span className="h-px w-6 bg-stone-300" />
+              <span className="text-rose-700 text-sm leading-none">✝</span>
             </div>
-            
-            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 sm:mb-4 border-y [border-image:linear-gradient(to_right,transparent,--theme(--color-slate-300/.8),transparent)1] leading-tight">
+
+            <h1 className="font-display text-3xl sm:text-4xl md:text-5xl text-stone-900 mb-3 sm:mb-4 leading-tight">
               Biblioteca de Cânticos
             </h1>
-            <p className="text-base sm:text-lg text-gray-700 max-w-2xl mx-auto px-4">
+            <p className="text-base sm:text-lg text-stone-500 max-w-2xl mx-auto px-4">
               Explora todos os nossos cânticos!
             </p>
 
@@ -506,8 +471,8 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
       {/* Main Content */}
       <section className="bg-white min-h-screen">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6 lg:py-8">
-          <div className="lg:hidden mt-4 mb-4 space-y-4">
-            {/* Mobile Search Bar */}
+          {/* Mobile Search Bar */}
+          <div className="lg:hidden mb-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -524,12 +489,14 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
                     });
                   }
                 }}
-                placeholder="Pesquisar músicas..."
+                placeholder="Pesquisar cântico..."
                 className="pl-10 h-10 w-full"
               />
             </div>
+          </div>
 
-            {/* Mobile Filter Button */}
+          {/* Mobile Filter Button */}
+          <div className="lg:hidden mb-4">
             <Dialog open={isMobileFiltersOpen} onOpenChange={setIsMobileFiltersOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm" className="w-full justify-start">
@@ -559,7 +526,7 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
           <div className="flex gap-6 lg:gap-8">
             {/* Desktop Sidebar - Filtros */}
             <aside className="hidden lg:block w-80 shrink-0">
-              <div className="sticky z-20 space-y-2.5" style={{ top: `${desktopStickyTop}px` }}>
+              <div className="sticky top-8 space-y-4">
                 {/* Search Bar */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -577,7 +544,7 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
                         });
                       }
                     }}
-                    placeholder="Pesquisar músicas..."
+                    placeholder="Pesquisar cântico..."
                     className="pl-10 h-10 w-full"
                   />
                 </div>
@@ -621,86 +588,127 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
                   {/* Top Banner Ad removed */}
                   
                   {/* Lista de Músicas */}
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {paginatedSongs.map((song) => (
-                      <div
+                      <Card
                         key={song.id}
-                        className="group flex overflow-hidden rounded-xl border border-border bg-card hover:shadow-md hover:border-primary/20 transition-all duration-200"
+                        className="group hover:shadow-md transition-all duration-200 border border-border bg-card"
                       >
-                        {/* Accent bar */}
-                        <div className="w-1 shrink-0 bg-primary/70 group-hover:bg-primary transition-colors duration-200 rounded-l-xl" />
+                        <CardContent className="p-4 sm:p-5">
+                          <div className="flex items-start gap-3 sm:gap-4">
+                            {/* Icon/Avatar */}
+                            <div className="shrink-0">
+                              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-stone-50 rounded-lg flex items-center justify-center border border-stone-200">
+                                <Music className="h-5 w-5 sm:h-6 sm:w-6 text-rose-600" />
+                              </div>
+                            </div>
 
-                        {/* Content */}
-                        <div className="flex-1 min-w-0 p-4 sm:p-5">
-                          <div className="flex items-start justify-between gap-3">
-                            {/* Left: title + meta */}
+                            {/* Main Content */}
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-base text-foreground group-hover:text-primary transition-colors leading-tight truncate">
-                                <Link
-                                  href={`/musics/${song.slug || song.id}`}
-                                  className="hover:underline underline-offset-2"
-                                  onClick={() => handleNavigateToSong(song.slug || song.id)}
-                                >
-                                  {song.title}
-                                </Link>
-                              </h3>
-
-                              {/* Moments */}
-                              {(song.moments || []).length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-2">
-                                  {(song.moments || []).slice(0, 2).map((moment, momentIndex) => (
-                                    <Badge
-                                      key={`${song.id}-moment-${momentIndex}`}
-                                      variant="secondary"
-                                      className="text-[11px] h-5 px-2 font-normal"
+                              {/* Header */}
+                              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-3 gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="text-base sm:text-lg font-semibold text-foreground group-hover:text-primary transition-colors leading-tight">
+                                    <Link 
+                                      href={`/musics/${song.slug || song.id}`}
+                                      className="hover:underline"
+                                      onClick={() => handleNavigateToSong(song.slug || song.id)}
                                     >
-                                      {getMomentDisplayName(moment)}
-                                    </Badge>
-                                  ))}
-                                  {(song.moments || []).length > 2 && (
-                                    <Badge variant="outline" className="text-[11px] h-5 px-2 font-normal">
-                                      +{(song.moments || []).length - 2}
-                                    </Badge>
+                                      {song.title}
+                                    </Link>
+                                  </h3>
+                                  <p className="text-xs sm:text-sm text-muted-foreground mt-1 flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 bg-primary/60 rounded-full"></span>
+                                    {getInstrumentLabel(song.mainInstrument)}
+                                  </p>
+                                </div>
+                                
+                                {/* Actions */}
+                                <div className="flex items-center gap-1.5 sm:gap-2 sm:ml-4">
+                                  <StarButton 
+                                    songId={song.id} 
+                                    size="sm"
+                                    initialStarCount={song.starCount}
+                                    initialIsStarred={song.isStarred}
+                                  />
+                                  <AddToPlaylistButton songId={song.id} size="sm" />
+                                  <Button 
+                                    asChild 
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 sm:h-8 text-xs px-2 sm:px-3"
+                                  >
+                                    <Link 
+                                      href={`/musics/${song.slug || song.id}`}
+                                      onClick={() => handleNavigateToSong(song.slug || song.id)}
+                                    >
+                                      <span className="hidden sm:inline">Ver Cântico</span>
+                                      <span className="sm:hidden">Ver</span>
+                                    </Link>
+                                  </Button>
+                                </div>
+                              </div>
+
+                              {/* Info Section */}
+                              <div className="space-y-3">
+                                {/* Momentos */}
+                                <div>
+                                  {(song.moments || []).length > 0 ? (
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {(song.moments || []).slice(0, 4).map((moment, momentIndex) => (
+                                        <Badge 
+                                          key={`${song.id}-moment-${momentIndex}`} 
+                                          variant="secondary"
+                                          className="text-xs h-6 px-2.5 bg-secondary/80"
+                                        >
+                                          {getMomentDisplayName(moment)}
+                                        </Badge>
+                                      ))}
+                                      {(song.moments || []).length > 4 && (
+                                        <Badge 
+                                          variant="outline" 
+                                          className="text-xs h-6 px-2.5"
+                                        >
+                                          +{(song.moments || []).length - 4}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground italic">
+                                      Sem momentos encontrados
+                                    </span>
                                   )}
                                 </div>
-                              )}
 
-                              {/* Tags */}
-                              {(song.tags || []).length > 0 && (
-                                <p className="text-xs text-muted-foreground mt-1.5 truncate">
-                                  {(song.tags || []).slice(0, 4).map(t => t.replace(/[{}]/g, '')).join(' · ')}
-                                  {(song.tags || []).length > 4 && ` +${(song.tags || []).length - 4}`}
-                                </p>
-                              )}
-                            </div>
-
-                            {/* Right: actions */}
-                            <div className="flex items-center gap-1 shrink-0">
-                              <StarButton
-                                songId={song.id}
-                                size="sm"
-                                initialStarCount={song.starCount}
-                                initialIsStarred={song.isStarred}
-                              />
-                              <AddToPlaylistButton songId={song.id} size="sm" />
-                              <Button
-                                asChild
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
-                              >
-                                <Link
-                                  href={`/musics/${song.slug || song.id}`}
-                                  onClick={() => handleNavigateToSong(song.slug || song.id)}
-                                >
-                                  <span className="hidden sm:inline">Ver</span>
-                                  <ChevronRight className="w-3.5 h-3.5" />
-                                </Link>
-                              </Button>
+                                {/* Tags */}
+                                <div>
+                                  {(song.tags || []).length > 0 ? (
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {(song.tags || []).slice(0, 5).map((tag, tagIndex) => (
+                                        <span 
+                                          key={`${song.id}-tag-${tagIndex}`} 
+                                          className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary border border-primary/20"
+                                        >
+                                          #{tag}
+                                        </span>
+                                      ))}
+                                      {(song.tags || []).length > 5 && (
+                                        <span className="inline-flex items-center rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground">
+                                          +{(song.tags || []).length - 5}
+                                        </span>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground italic">
+                                      Sem tags encontradas
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </div>
+                        </CardContent>
+                      </Card>
                     ))}
                   </div>
 

@@ -1,8 +1,8 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase-client';
-import { getClerkSession } from '@/lib/api-middleware';
-import {
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
+import { 
   LITURGICAL_MOMENT_LABELS, 
   LITURGICAL_MOMENT_ORDER,
   formatMassDate,
@@ -33,7 +33,7 @@ interface ExportItem {
 export const GET = async (request: NextRequest, context: RouteParams) => {
   try {
     const { id: massId } = await context.params;
-    const session = await getClerkSession();
+    const session = await getServerSession(authOptions);
     const { searchParams } = new URL(request.url);
     const format = searchParams.get('format') || 'full'; // 'full', 'lyrics', 'chords', 'ppt'
 
@@ -178,7 +178,7 @@ export const GET = async (request: NextRequest, context: RouteParams) => {
         celebrant: mass.celebrant,
         celebration: mass.celebration,
         liturgicalColor: mass.liturgicalColor,
-        createdBy: mass.User?.name || 'Utilizador'
+        createdBy: ((mass.User as any)?.name || (Array.isArray(mass.User) ? (mass.User[0] as any)?.name : undefined)) || 'Utilizador'
       },
       format,
       items: exportData,

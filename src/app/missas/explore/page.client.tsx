@@ -88,11 +88,11 @@ export default function ExploreMassesClient({ initialMasses }: ExploreMassesClie
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
-            <CardTitle className="text-lg font-semibold text-gray-900 truncate">
+            <CardTitle className="text-lg font-semibold text-stone-900 truncate">
               {mass.name}
             </CardTitle>
             {mass.celebration && (
-              <CardDescription className="mt-1 truncate">
+              <CardDescription className="mt-1 truncate text-stone-500">
                 {mass.celebration}
               </CardDescription>
             )}
@@ -122,19 +122,19 @@ export default function ExploreMassesClient({ initialMasses }: ExploreMassesClie
           )}
         </div>
         
-        <div className="space-y-1.5 text-sm text-gray-600">
+        <div className="space-y-1.5 text-sm text-stone-500">
           {mass.date && (
             <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-gray-400" />
+              <Calendar className="w-4 h-4 text-stone-400" />
               <span>{formatMassDate(mass.date)}</span>
               {formatMassTime(mass.date) && (
-                <span className="text-gray-400">• {formatMassTime(mass.date)}</span>
+                <span className="text-stone-400">• {formatMassTime(mass.date)}</span>
               )}
             </div>
           )}
           {mass.parish && (
             <div className="flex items-center gap-2">
-              <Church className="w-4 h-4 text-gray-400" />
+              <Church className="w-4 h-4 text-stone-400" />
               <span className="truncate">{mass.parish}</span>
             </div>
           )}
@@ -145,7 +145,7 @@ export default function ExploreMassesClient({ initialMasses }: ExploreMassesClie
 
   return (
     <div className="min-h-screen bg-white -mt-16">
-      <div className="bg-white border-b pt-20">
+      <div className="bg-white border-b border-stone-100 pt-20">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 md:py-12">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -157,12 +157,13 @@ export default function ExploreMassesClient({ initialMasses }: ExploreMassesClie
                   </Link>
                 </Button>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2">
-                <Globe className="w-7 h-7 text-blue-600" />
+              <h1 className="font-display text-2xl sm:text-3xl text-stone-900 flex items-center gap-3">
+                <Globe className="w-6 h-6 text-rose-700" />
                 Explorar Missas
+                <Badge className="bg-stone-100 text-stone-600 border border-stone-200 text-xs font-sans">BETA</Badge>
               </h1>
-              <p className="text-gray-600 mt-1">
-                Descobre missas organizadas pela comunidade e usa como base
+              <p className="text-stone-500 mt-1">
+                Descobre missas organizadas pela comunidade e usa como base (Sistema em beta)
               </p>
             </div>
           </div>
@@ -185,13 +186,13 @@ export default function ExploreMassesClient({ initialMasses }: ExploreMassesClie
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {filteredMasses.length === 0 ? (
           <div className="text-center py-16">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Church className="w-8 h-8 text-gray-400" />
+            <div className="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Church className="w-8 h-8 text-stone-400" />
             </div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            <h2 className="text-xl font-semibold text-stone-900 mb-2">
               {searchQuery ? 'Nenhuma missa encontrada' : 'Ainda não há missas públicas'}
             </h2>
-            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+            <p className="text-stone-500 mb-6 max-w-md mx-auto">
               {searchQuery 
                 ? 'Tenta pesquisar com outros termos'
                 : 'Sê o primeiro a partilhar uma missa pública com a comunidade!'
@@ -200,34 +201,19 @@ export default function ExploreMassesClient({ initialMasses }: ExploreMassesClie
           </div>
         ) : (
           <div className="space-y-8">
-            {/* Upcoming */}
-            {upcomingMasses.length > 0 && (
-              <section>
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-blue-600" />
-                  Próximas Celebrações
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {upcomingMasses.map((mass) => (
-                    <MassCard key={mass.id} mass={mass} />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Past/All */}
-            {pastMasses.length > 0 && (
-              <section>
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  {upcomingMasses.length > 0 ? 'Missas Anteriores' : 'Todas as Missas'}
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {pastMasses.map((mass) => (
-                    <MassCard key={mass.id} mass={mass} />
-                  ))}
-                </div>
-              </section>
-            )}
+            {/* All */}
+            <section>
+              <h2 className="text-lg font-semibold text-stone-900 mb-4 flex items-center gap-2">
+                <Church className="w-5 h-5 text-rose-700" />
+                Todas as Missas
+                <Badge variant="secondary">{filteredMasses.length}</Badge>
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredMasses.map((mass) => (
+                  <MassCard key={mass.id} mass={mass} />
+                ))}
+              </div>
+            </section>
           </div>
         )}
       </div>

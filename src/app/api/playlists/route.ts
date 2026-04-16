@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase-client';
+import { getClerkSession } from '@/lib/api-middleware';
 import { withUserProtection, withPublicMonitoring, logPlaylistAction } from '@/lib/enhanced-api-protection';
 import { randomUUID } from 'crypto';
 import { requireEmailVerification } from '@/lib/email';
 import { getVisibilityFlags, getVisibilityFromPlaylist } from '@/types/playlist';
 import { extractUserContext, logUserCreate, logUserRead } from '@/lib/user-action-logger';
 
-import { getClerkSession } from '@/lib/api-middleware';
 export const GET = withPublicMonitoring<any>(async (request: NextRequest) => {
   try {
     const session = await getClerkSession();

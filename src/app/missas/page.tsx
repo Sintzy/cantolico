@@ -1,10 +1,8 @@
-// @ts-nocheck
 import { Metadata } from 'next';
+import { getAuthenticatedUser } from '@/lib/clerk-auth';
 import { redirect } from 'next/navigation';
 import MassesPageClient from './page.client';
 import { supabase } from '@/lib/supabase-client';
-import { auth } from '@clerk/nextjs/server';
-import { getSupabaseUserId } from '@/lib/clerk-auth';
 
 export const metadata: Metadata = {
   title: 'Missas | Cantólico',
@@ -55,19 +53,13 @@ async function getMasses(userId: number) {
 }
 
 export default async function MassesPage() {
-  const { userId: clerkUserId } = await auth();
+  const user = await getAuthenticatedUser();
 
-  if (!clerkUserId) {
+  if (!user) {
     redirect('/sign-in?redirect_url=/missas');
   }
 
-  const supabaseUserId = await getSupabaseUserId(clerkUserId);
+  const masses = await getMasses(user.supabaseUserId);
 
-  if (!supabaseUserId) {
-    redirect('/sign-in?redirect_url=/missas');
-  }
-
-  const masses = await getMasses(supabaseUserId);
-
-  return <MassesPageClient initialMasses={masses} />;
+  return <MassesPageClient initialMasses={masses as any} />;
 }
