@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/clerk-auth';
+import { auth } from '@clerk/nextjs/server';
 import { createClerkClient } from '@clerk/nextjs/server';
 
 const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY! });
@@ -12,6 +13,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const { sessionId: currentSessionId } = await auth();
+
     const sessionList = await clerk.sessions.getSessionList({
       userId: user.clerkUserId,
       status: 'active',
@@ -26,6 +29,7 @@ export async function GET(request: NextRequest) {
         clientId: s.clientId,
         createdAt: s.createdAt,
         updatedAt: s.updatedAt,
+        isCurrent: s.id === currentSessionId,
       })),
     });
   } catch (error) {
