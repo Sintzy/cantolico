@@ -322,16 +322,11 @@ export default function PlaylistPageClient({ initialPlaylist }: PlaylistPageClie
               ))}
             </div>
           ) : (
-            <div className="text-center py-20 px-4">
-              <div className="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center mx-auto mb-5">
-                <Music className="w-7 h-7 text-stone-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-stone-900 mb-2">Nenhuma música ainda</h3>
-              <p className="text-sm text-stone-500 mb-8 max-w-xs mx-auto">
-                Esta playlist ainda não tem músicas.{canEdit ? ' Adiciona algumas para começar.' : ''}
-              </p>
+            <div className="text-center py-12">
+              <ListMusic className="h-8 w-8 mx-auto mb-2 text-stone-200" />
+              <p className="text-sm text-stone-500">Nenhuma música nesta playlist</p>
               {canEdit && (
-                <Button asChild className="bg-stone-900 hover:bg-rose-700 transition-colors text-white">
+                <Button asChild className="mt-6 bg-stone-900 hover:bg-rose-700 transition-colors text-white">
                   <Link href="/musics">Explorar cânticos</Link>
                 </Button>
               )}
