@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useSession, signOut } from "@/hooks/useClerkSession";
+import { useSession } from "@/hooks/useClerkSession";
+import { useClerk } from "@clerk/nextjs";
 import Link from "next/link";
 import Image from "next/image";
 import * as Icons from "@/lib/site-images";
 import UserAvatar from "./ui/user-avatar";
+import Fuse from "fuse.js";
 import {
   ChevronDown,
   Church,
@@ -19,6 +21,7 @@ import {
   Music,
   Plus,
   Search,
+  Settings,
   X,
 } from "lucide-react";
 
@@ -26,6 +29,7 @@ type MusicResult = { id: string; title: string };
 
 export default function Navbar() {
   const { data: session } = useSession();
+  const { signOut } = useClerk();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [playlistsOpen, setPlaylistsOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
@@ -58,10 +62,22 @@ export default function Navbar() {
     setIsSearching(true);
     const t = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/musics/search?q=${encodeURIComponent(searchQuery)}&limit=8`);
+        // Fetch a wider pool so Fuse.js can re-rank client-side for typos
+        const res = await fetch(`/api/musics/search?q=${encodeURIComponent(searchQuery)}&limit=40`);
         if (!res.ok) throw new Error();
         const data = await res.json();
-        setSearchResults(Array.isArray(data?.songs) ? data.songs : []);
+        const pool: MusicResult[] = Array.isArray(data?.songs) ? data.songs : [];
+        if (!pool.length) { setSearchResults([]); return; }
+        const fuse = new Fuse(pool, {
+          keys: ['title'],
+          threshold: 0.45,
+          includeScore: true,
+          ignoreLocation: true,
+          useExtendedSearch: false,
+        });
+        const ranked = fuse.search(searchQuery).map(r => r.item);
+        // If Fuse returns nothing (very different query), fall back to API order
+        setSearchResults((ranked.length ? ranked : pool).slice(0, 8));
       } catch {
         setSearchResults([]);
       } finally {
@@ -200,12 +216,16 @@ export default function Navbar() {
                     <p className="text-sm font-semibold text-stone-900 truncate">{session.user.name || "Utilizador"}</p>
                     <p className="text-xs text-stone-500 truncate">{session.user.email}</p>
                   </div>
+                  <Link href="/account" onClick={close} className="flex items-center gap-2.5 px-4 py-3 text-sm text-stone-700 hover:bg-stone-50">
+                    <Settings className="h-3.5 w-3.5 text-stone-400" />
+                    Minha Conta
+                  </Link>
                   <Link href="/starred-songs" onClick={close} className="flex items-center gap-2.5 px-4 py-3 text-sm text-stone-700 hover:bg-stone-50">
                     <Heart className="h-3.5 w-3.5 text-stone-400" />
                     Favoritos
                   </Link>
                   <button
-                    onClick={() => { close(); signOut({ callbackUrl: "/" }); }}
+                    onClick={() => { close(); signOut({ redirectUrl: "/" }); }}
                     className="flex w-full items-center gap-2.5 px-4 py-3 text-sm text-red-600 hover:bg-red-50 border-t border-stone-100"
                   >
                     <LogOut className="h-3.5 w-3.5" />
@@ -264,6 +284,7 @@ export default function Navbar() {
               ...(session?.user ? [{ href: "/playlists", icon: Heart, label: "Minhas playlists" }] : [{ href: "/sign-in", icon: Heart, label: "Iniciar sessão" }]),
               ...(session?.user ? [{ href: "/missas", icon: Church, label: "Missas" }] : []),
               { href: "/musics/create", icon: Plus, label: "Nova música" },
+              ...(session?.user ? [{ href: "/account", icon: Settings, label: "Minha Conta" }] : []),
               ...(session?.user ? [{ href: "/starred-songs", icon: Heart, label: "Favoritos" }] : []),
               ...(showAdmin ? [{ href: "/admin/dashboard", icon: Crown, label: "Admin" }] : []),
               ...(showReview ? [{ href: "/admin/review", icon: Eye, label: "Revisão" }] : []),
@@ -280,7 +301,7 @@ export default function Navbar() {
               </div>
             ) : (
               <div className="border-t border-stone-100 pt-3 mt-2">
-                <button onClick={() => { close(); signOut({ callbackUrl: "/" }); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50">
+                <button onClick={() => { close(); signOut({ redirectUrl: "/" }); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50">
                   <LogOut className="h-4 w-4" />
                   Terminar sessão
                 </button>

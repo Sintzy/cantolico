@@ -518,9 +518,11 @@ export default function SongPage() {
             <div className="hidden sm:flex items-center gap-2">
               <StarButton songId={id as string} />
               <AddToPlaylistButton songId={id as string} />
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => openGeneratedPdf('hero_desktop')}>
-                <FileText className="h-3.5 w-3.5" /> PDF
-              </Button>
+              {song?.type !== 'PARTITURA' && (
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => openGeneratedPdf('hero_desktop')}>
+                  <FileText className="h-3.5 w-3.5" /> PDF
+                </Button>
+              )}
               {pdfUrl && (
                 <Button variant="outline" size="sm" className="gap-1.5" onClick={() => openOriginalPdf('hero_desktop')}>
                   <Download className="h-3.5 w-3.5" /> Original
@@ -558,13 +560,15 @@ export default function SongPage() {
         <div className="flex justify-around items-center py-2 px-2">
           <StarButton songId={id as string} className="text-stone-700 p-3 touch-manipulation" />
           <AddToPlaylistButton songId={id as string} className="text-stone-700 p-3 touch-manipulation" />
-          <Button
-            variant="ghost"
-            className="text-stone-700 p-3 touch-manipulation"
-            onClick={() => openGeneratedPdf('hero_mobile')}
-          >
-            <FileText className="h-5 w-5" />
-          </Button>
+          {song?.type !== 'PARTITURA' && (
+            <Button
+              variant="ghost"
+              className="text-stone-700 p-3 touch-manipulation"
+              onClick={() => openGeneratedPdf('hero_mobile')}
+            >
+              <FileText className="h-5 w-5" />
+            </Button>
+          )}
           {pdfUrl && (
             <Button variant="ghost" className="text-stone-700 p-3 touch-manipulation" onClick={() => openOriginalPdf('hero_mobile')}>
               <Download className="h-5 w-5" />
@@ -628,9 +632,9 @@ export default function SongPage() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              {/* Botão PDF com transposição */}
-              <Button 
-                className="w-full mt-2" 
+              {/* Botão PDF com transposição — apenas para ACORDES (bloco pai já garante isso) */}
+              <Button
+                className="w-full mt-2"
                 variant="outline"
                 onClick={() => openGeneratedPdf('mobile_sidebar')}
               >
@@ -758,9 +762,9 @@ export default function SongPage() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              {/* Botão PDF com transposição */}
-              <Button 
-                className="w-full mt-2" 
+              {/* Botão PDF com transposição — apenas para ACORDES (bloco pai já garante isso) */}
+              <Button
+                className="w-full mt-2"
                 variant="outline"
                 onClick={() => openGeneratedPdf('desktop_sidebar')}
               >

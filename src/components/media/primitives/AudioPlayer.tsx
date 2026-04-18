@@ -66,9 +66,9 @@ export function AudioPlayer({ url, fileName, isActive, onActivate, onDeactivate 
   };
 
   return (
-    <div className="space-y-2 mt-2">
+    <div className="space-y-2 mt-2 min-w-0">
       <audio ref={audioRef} src={url} className="hidden" />
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 min-w-0">
         <Button
           size="icon"
           variant={isActive ? 'default' : 'outline'}
@@ -77,7 +77,7 @@ export function AudioPlayer({ url, fileName, isActive, onActivate, onDeactivate 
         >
           {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
         </Button>
-        <div className="flex-1 space-y-1">
+        <div className="flex-1 min-w-0 space-y-1">
           <input
             type="range"
             min={0}

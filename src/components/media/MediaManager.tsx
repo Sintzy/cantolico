@@ -208,7 +208,7 @@ export function MediaManager({ submissionId, onDescriptionChange }: MediaManager
             <div className="flex-1 min-w-0">
               <p className="text-xs text-stone-400">{formatFileSize(file.fileSize)}</p>
             </div>
-            <div className="flex gap-1.5 shrink-0">
+            <div className="flex flex-wrap gap-1.5 shrink-0 justify-end">
               {isPdf && (
                 <Button size="sm" variant={file.isPrincipal ? 'default' : 'outline'} onClick={() => handleSetPrincipal(file)} disabled={file.isPrincipal} className="h-8 text-xs">
                   {file.isPrincipal ? <><Check className="w-3 h-3 mr-1" />Principal</> : 'Tornar principal'}
@@ -262,12 +262,12 @@ export function MediaManager({ submissionId, onDescriptionChange }: MediaManager
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="gap-1.5">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+        <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="gap-1.5 w-full sm:w-auto">
           {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
           Adicionar ficheiros
         </Button>
-        <Button size="sm" onClick={handleSave} disabled={!isDirty || saving} className="gap-1.5 bg-rose-700 hover:bg-rose-800 text-white">
+        <Button size="sm" onClick={handleSave} disabled={!isDirty || saving} className="gap-1.5 bg-rose-700 hover:bg-rose-800 text-white w-full sm:w-auto">
           {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
           Guardar alterações
         </Button>

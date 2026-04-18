@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/select';
 import { LiturgicalMoment, getInstrumentLabel, getLiturgicalMomentLabel } from '@/lib/constants';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import removeAccents from 'remove-accents';
+import Fuse from 'fuse.js';
 import Link from 'next/link';
 import { Search, Tags, Music, ChevronLeft, ChevronRight, X, SlidersHorizontal, RefreshCw } from 'lucide-react';
 import StarButton from '@/components/StarButton';
@@ -210,28 +210,40 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
   }, [isInitialized, state, searchTerm, selectedMoment, tagFilter, sortOrder, currentPage, saveState]);
 
   useEffect(() => {
-    const filtered = songs
-      .filter((song: Song) => {
-        const titleMatch = removeAccents(song.title.toLowerCase()).includes(
-          removeAccents(searchTerm.toLowerCase())
-        );
-        const momentMatch = selectedMoment
-          ? (song.moments || []).includes(selectedMoment)
-          : true;
-        const tagMatch = tagFilter
-          ? (song.tags || []).some((tag: string) =>
-              removeAccents(tag.toLowerCase()).includes(
-                removeAccents(tagFilter.toLowerCase())
-              )
-            )
-          : true;
-        return titleMatch && momentMatch && tagMatch;
-      })
-      .sort((a: Song, b: Song) =>
+    // First apply moment and tag filters (exact)
+    const preFiltered = songs.filter((song: Song) => {
+      const momentMatch = selectedMoment ? (song.moments || []).includes(selectedMoment) : true;
+      const tagMatch = tagFilter
+        ? (song.tags || []).some((tag: string) => tag.toLowerCase().includes(tagFilter.toLowerCase()))
+        : true;
+      return momentMatch && tagMatch;
+    });
+
+    // Then apply fuzzy + accent-insensitive title search via Fuse.js
+    let filtered: Song[];
+    if (searchTerm.trim()) {
+      const fuse = new Fuse(preFiltered, {
+        keys: ['title'],
+        threshold: 0.4,
+        includeScore: true,
+        ignoreLocation: true,
+      });
+      const results = fuse.search(searchTerm);
+      filtered = results.length
+        ? results.map(r => r.item)
+        : preFiltered; // fallback to unfiltered if Fuse returns empty
+    } else {
+      filtered = preFiltered;
+    }
+
+    // Sort (unless search is active — Fuse already ranks by relevance)
+    if (!searchTerm.trim()) {
+      filtered = [...filtered].sort((a: Song, b: Song) =>
         sortOrder === 'asc'
           ? a.title.localeCompare(b.title)
           : b.title.localeCompare(a.title)
       );
+    }
 
     setFilteredSongs(filtered);
     // Only reset to page 1 on initial loads. If we're restoring state (isInitialized === true)

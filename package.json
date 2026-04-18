@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node scripts/git-info.js && next dev --turbopack",
+    "dev": "node scripts/git-info.js && next dev --webpack",
+    "dev:turbopack": "node scripts/git-info.js && next dev --turbopack",
     "build": "node scripts/git-info.js && next build",
     "vercel-build": "node scripts/git-info.js && next build",
     "start": "node scripts/git-info.js && next start",
@@ -13,8 +14,8 @@
     "git-info": "node scripts/git-info.js"
   },
   "dependencies": {
-    "@clerk/localizations": "^4.2.4",
-    "@clerk/nextjs": "^7.0.7",
+    "@clerk/localizations": "^4.5.2",
+    "@clerk/nextjs": "^7.2.2",
     "@marsidev/react-turnstile": "^1.1.0",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -40,6 +41,7 @@
     "date-fns": "^4.1.0",
     "easymde": "^2.20.0",
     "fontkit": "^2.0.4",
+    "fuse.js": "^7.3.0",
     "lucide-react": "^0.525.0",
     "markdown-it": "^14.1.0",
     "markdown-it-chords": "^1.0.3",

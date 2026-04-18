@@ -131,12 +131,12 @@ export function MediaUploader({ onChange, onlyPdf = false, maxPdfs = 20, maxAudi
   return (
     <div className="space-y-8">
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-stone-900 flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-red-50"><FileText className="w-4 h-4 text-red-600" /></div>
-            Partituras (PDFs)
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="font-semibold text-stone-900 flex items-center gap-2 min-w-0">
+            <div className="p-1.5 rounded-lg bg-red-50 shrink-0"><FileText className="w-4 h-4 text-red-600" /></div>
+            <span className="truncate">Partituras (PDFs)</span>
           </h3>
-          <Button size="sm" variant="outline" onClick={() => pdfInputRef.current?.click()} disabled={pdfs.length >= maxPdfs} className="gap-1.5">
+          <Button size="sm" variant="outline" onClick={() => pdfInputRef.current?.click()} disabled={pdfs.length >= maxPdfs} className="gap-1.5 shrink-0">
             <Upload className="w-3.5 h-3.5" />Adicionar
           </Button>
         </div>
@@ -176,12 +176,12 @@ export function MediaUploader({ onChange, onlyPdf = false, maxPdfs = 20, maxAudi
 
       {!onlyPdf && (
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-stone-900 flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-blue-50"><Music className="w-4 h-4 text-blue-600" /></div>
-              Áudios
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="font-semibold text-stone-900 flex items-center gap-2 min-w-0">
+              <div className="p-1.5 rounded-lg bg-blue-50 shrink-0"><Music className="w-4 h-4 text-blue-600" /></div>
+              <span className="truncate">Áudios</span>
             </h3>
-            <Button size="sm" variant="outline" onClick={() => audioInputRef.current?.click()} disabled={audios.length >= maxAudios} className="gap-1.5">
+            <Button size="sm" variant="outline" onClick={() => audioInputRef.current?.click()} disabled={audios.length >= maxAudios} className="gap-1.5 shrink-0">
               <Upload className="w-3.5 h-3.5" />Adicionar
             </Button>
           </div>
