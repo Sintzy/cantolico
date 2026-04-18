@@ -46,8 +46,7 @@ import {
   Search as SearchIcon
 } from "lucide-react";
 import "../../../../../public/styles/chords.css";
-import { FileManager } from '@/components/FileManager';
-import { SubmissionFileViewer } from '@/components/SubmissionFileViewer';
+import { MediaManager } from '@/components/media';
 import { FileType, FileUploadData } from '@/types/song-files';
 
 const SimpleMDE = dynamic(() => import("react-simplemde-editor"), { ssr: false });
@@ -1007,7 +1006,7 @@ export default function ReviewSubmissionPage() {
 
           <TabsContent value="media" className="space-y-6">
             {/* Novo Sistema de Visualização de Ficheiros da Submissão */}
-            <SubmissionFileViewer 
+            <MediaManager
               submissionId={submissionId}
               onDescriptionChange={handleFileDescriptionChange}
             />

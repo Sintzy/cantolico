@@ -8,7 +8,7 @@ import dynamic from "next/dynamic";
 import { useSession } from "@/hooks/useClerkSession";
 import { useRouter } from "next/navigation";
 import { TurnstileCaptcha } from "@/components/TurnstileCaptcha";
-import { FileManager } from "@/components/FileManager";
+import { MediaUploader } from "@/components/media";
 import MarkdownEditor from "@/components/MarkdownEditor";
 import { FileUploadData } from "@/types/song-files";
 
@@ -579,7 +579,7 @@ export default function CreateNewMusicPage() {
                       <p className="text-xs text-stone-500 mt-0.5">Carrega os ficheiros PDF com a partitura e ficheiros MP3 com o áudio.</p>
                     </div>
                     <div className="p-5">
-                      <FileManager mode="create" maxPdfs={20} maxAudios={20} onChange={(updatedFiles) => setFiles(updatedFiles)} />
+                      <MediaUploader maxPdfs={20} maxAudios={20} onChange={(updatedFiles) => setFiles(updatedFiles)} />
                     </div>
                     <div className="border-t border-stone-100 bg-stone-50/30 px-5 py-4 flex justify-between">
                       <button
@@ -622,7 +622,7 @@ export default function CreateNewMusicPage() {
                       <p className="text-xs text-stone-500 mt-0.5">Podes adicionar PDFs (partituras) e MP3s (áudio) também em músicas de acordes.</p>
                     </div>
                     <div className="p-5">
-                      <FileManager mode="create" maxPdfs={20} maxAudios={20} onChange={(updatedFiles) => setFiles(updatedFiles)} />
+                      <MediaUploader maxPdfs={20} maxAudios={20} onChange={(updatedFiles) => setFiles(updatedFiles)} />
                     </div>
                   </div>
                 )}

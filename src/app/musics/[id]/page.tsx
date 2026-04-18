@@ -19,7 +19,6 @@ import { Spinner, type SpinnerProps } from '@/components/ui/shadcn-io/spinner';
 import StarButton from '@/components/StarButton';
 import AddToPlaylistButton from '@/components/AddToPlaylistButton';
 import { LiturgicalMoment, getInstrumentLabel, getLiturgicalMomentLabel } from '@/lib/constants';
-import { FileViewer } from '@/components/FileViewer';
 import { FileType } from '@/types/song-files';
 import { trackEvent } from '@/lib/umami';
 
