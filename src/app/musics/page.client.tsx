@@ -10,15 +10,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { LiturgicalMoment, getInstrumentLabel, getLiturgicalMomentLabel } from '@/lib/constants';
-import * as React from 'react';
-import { cn } from '@/lib/utils';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import removeAccents from 'remove-accents';
 import Link from 'next/link';
-import { Search, Filter, Tags, ArrowDownAZ, Music, ChevronLeft, ChevronRight, X, SlidersHorizontal, RefreshCw, Clock, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Search, Tags, Music, ChevronLeft, ChevronRight, X, SlidersHorizontal, RefreshCw } from 'lucide-react';
 import StarButton from '@/components/StarButton';
 import AddToPlaylistButton from '@/components/AddToPlaylistButton';
 import { MusicListSkeleton } from '@/components/MusicListSkeleton';
