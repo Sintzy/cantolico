@@ -119,13 +119,14 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
     }
 
     // Verificar role ADMIN ou REVIEWER
-    if (userRole !== 'ADMIN' && userRole !== 'REVIEWER') {
+    // Se userRole for undefined (JWT sem metadata), deixar passar — o layout faz o check via DB
+    if (userRole && userRole !== 'ADMIN' && userRole !== 'REVIEWER') {
       url.pathname = '/';
       return NextResponse.redirect(url);
     }
 
     // Rotas exclusivas ADMIN
-    if (isAdminOnlyRoute(req) && userRole !== 'ADMIN') {
+    if (isAdminOnlyRoute(req) && userRole && userRole !== 'ADMIN') {
       url.pathname = '/';
       return NextResponse.redirect(url);
     }

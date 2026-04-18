@@ -3,6 +3,9 @@ import "./globals-blur.css";
 import type { Metadata, Viewport } from "next";
 import { Instrument_Serif, DM_Sans } from "next/font/google";
 import Script from "next/script";
+
+const instrumentSerif = Instrument_Serif({ subsets: ["latin"], variable: "--font-cormorant", weight: "400", style: ["normal","italic"], display: "swap" });
+const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans", display: "swap" });
 import AuthSessionProvider from "@/components/SessionProvider";
 import Navbar from "@/components/Navbar";
 import { Toaster } from "@/components/ui/sonner";
@@ -12,15 +15,14 @@ import EmailVerificationBanner from "@/components/EmailVerificationBanner";
 import { buildMetadata } from "@/lib/seo";
 import { Analytics } from "@vercel/analytics/next";
 
-const instrumentSerif = Instrument_Serif({ subsets: ["latin"], variable: "--font-cormorant", weight: "400", style: ["normal","italic"], display: "swap" });
-const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans", display: "swap" });
-
 export const metadata: Metadata = buildMetadata({
   title: "Cantólico",
   description: "Biblioteca de cânticos católicos com letras, acordes e partituras em português.",
   path: "/",
   type: "website",
 });
+
+export const dynamic = 'force-dynamic';
 
 export const viewport: Viewport = {
   themeColor: '#1e40af',

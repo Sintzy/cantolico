@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "node scripts/git-info.js && next dev --webpack",
     "dev:turbopack": "node scripts/git-info.js && next dev --turbopack",
-    "build": "node scripts/git-info.js && next build",
-    "vercel-build": "node scripts/git-info.js && next build",
+    "build": "node scripts/git-info.js && next build --webpack",
+    "vercel-build": "node scripts/git-info.js && next build --webpack",
     "start": "node scripts/git-info.js && next start",
     "preview": "next dev",
     "lint": "next lint",
@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@clerk/localizations": "^4.5.2",
-    "@clerk/nextjs": "^7.2.2",
+    "@clerk/nextjs": "^7.2.3",
     "@marsidev/react-turnstile": "^1.1.0",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -45,7 +45,7 @@
     "lucide-react": "^0.525.0",
     "markdown-it": "^14.1.0",
     "markdown-it-chords": "^1.0.3",
-    "next": "^16.0.8",
+    "next": "^16.2.4",
     "next-auth": "^4.24.11",
     "next-themes": "^0.4.6",
     "pdf-lib": "^1.17.1",

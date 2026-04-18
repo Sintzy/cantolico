@@ -6,7 +6,7 @@ import { createClerkClient } from '@clerk/nextjs/server';
 import AccountPageClient from './AccountPageClient';
 
 export const metadata = {
-  title: 'Minha Conta | Cantólico',
+  title: 'A Minha Conta | Cantólico',
   description: 'Gerir a minha conta e configurações',
 };
 

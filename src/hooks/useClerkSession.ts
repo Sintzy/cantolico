@@ -1,45 +1,28 @@
 "use client";
 
 import { useUser, useClerk } from "@clerk/nextjs";
+import { useMemo } from "react";
 
-/**
- * Hook de compatibilidade que simula o useSession do NextAuth
- * mas usando dados do Clerk
- */
 export function useSession() {
   const { user, isLoaded, isSignedIn } = useUser();
 
-  if (!isLoaded) {
+  const session = useMemo(() => {
+    if (!isLoaded || !isSignedIn || !user) return null;
     return {
-      data: null,
-      status: "loading" as const,
+      user: {
+        id: (user.publicMetadata?.supabaseUserId as number) || 0,
+        name: user.fullName || null,
+        email: user.primaryEmailAddress?.emailAddress || null,
+        image: user.imageUrl || null,
+        role: (user.publicMetadata?.role as string) || "USER",
+        emailVerified: user.primaryEmailAddress?.verification?.status === "verified",
+      },
     };
-  }
+  }, [user, isLoaded, isSignedIn]);
 
-  if (!isSignedIn || !user) {
-    return {
-      data: null,
-      status: "unauthenticated" as const,
-    };
-  }
-
-  // Simular estrutura da sessão NextAuth
-  const session = {
-    user: {
-      id: (user.publicMetadata?.supabaseUserId as number) || 0,
-      name: user.fullName || null,
-      email: user.primaryEmailAddress?.emailAddress || null,
-      image: user.imageUrl || null,
-      role: (user.publicMetadata?.role as string) || "USER",
-      emailVerified: user.primaryEmailAddress?.verification?.status === "verified",
-    },
-    expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 dias
-  };
-
-  return {
-    data: session,
-    status: "authenticated" as const,
-  };
+  if (!isLoaded) return { data: null, status: "loading" as const };
+  if (!isSignedIn || !user) return { data: null, status: "unauthenticated" as const };
+  return { data: session, status: "authenticated" as const };
 }
 
 export type SessionData = ReturnType<typeof useSession>["data"];

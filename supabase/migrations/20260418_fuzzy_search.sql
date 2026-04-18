@@ -2,9 +2,14 @@
 CREATE EXTENSION IF NOT EXISTS unaccent;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
+-- unaccent() is STABLE, not IMMUTABLE, so it can't be used in index expressions.
+-- This immutable wrapper is the standard workaround — must be created before the index.
+CREATE OR REPLACE FUNCTION immutable_unaccent(text)
+RETURNS text LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$
+  SELECT unaccent($1);
+$$;
+
 -- Full-text + accent-insensitive + fuzzy song search
--- Uses unaccent to strip accents from both stored titles and the query,
--- then falls back to trigram similarity for typo tolerance.
 CREATE OR REPLACE FUNCTION search_songs(
   q        text,
   lim      int  DEFAULT 20,
@@ -19,13 +24,11 @@ RETURNS TABLE(
 LANGUAGE sql STABLE SECURITY DEFINER AS $$
   SELECT id, title, slug, "createdAt"
   FROM   "Song"
-  WHERE  unaccent(lower(title)) ILIKE '%' || unaccent(lower(q)) || '%'
-     OR  similarity(unaccent(lower(title)), unaccent(lower(q))) > 0.25
+  WHERE  immutable_unaccent(lower(title)) ILIKE '%' || immutable_unaccent(lower(q)) || '%'
+     OR  similarity(immutable_unaccent(lower(title)), immutable_unaccent(lower(q))) > 0.25
   ORDER BY
-    -- Exact substring matches first
-    CASE WHEN unaccent(lower(title)) ILIKE '%' || unaccent(lower(q)) || '%' THEN 0 ELSE 1 END,
-    -- Then by trigram similarity (highest first)
-    similarity(unaccent(lower(title)), unaccent(lower(q))) DESC,
+    CASE WHEN immutable_unaccent(lower(title)) ILIKE '%' || immutable_unaccent(lower(q)) || '%' THEN 0 ELSE 1 END,
+    similarity(immutable_unaccent(lower(title)), immutable_unaccent(lower(q))) DESC,
     "createdAt" DESC
   LIMIT  lim
   OFFSET offs;
@@ -37,10 +40,10 @@ RETURNS bigint
 LANGUAGE sql STABLE SECURITY DEFINER AS $$
   SELECT COUNT(*)
   FROM   "Song"
-  WHERE  unaccent(lower(title)) ILIKE '%' || unaccent(lower(q)) || '%'
-     OR  similarity(unaccent(lower(title)), unaccent(lower(q))) > 0.25;
+  WHERE  immutable_unaccent(lower(title)) ILIKE '%' || immutable_unaccent(lower(q)) || '%'
+     OR  similarity(immutable_unaccent(lower(title)), immutable_unaccent(lower(q))) > 0.25;
 $$;
 
 -- GiST trigram index for fast similarity queries
 CREATE INDEX IF NOT EXISTS idx_song_title_trgm
-  ON "Song" USING gist (unaccent(lower(title)) gist_trgm_ops);
+  ON "Song" USING gist (immutable_unaccent(lower(title)) gist_trgm_ops);

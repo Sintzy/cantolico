@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Presentation, Download, Loader2, Music, Calendar, Church, Check, X } from 'lucide-react';
+import { FileText, Layers, Download, Loader2, Music, Calendar, Church, Check, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -64,9 +64,9 @@ const FORMAT_OPTIONS: { id: ExportFormat; label: string; sub: string; icon: Reac
   },
   {
     id: 'ppt',
-    label: 'PowerPoint',
+    label: 'PDF — Apresentação',
     sub: 'Slides para projeção',
-    icon: <Presentation className="h-5 w-5" />,
+    icon: <Layers className="h-5 w-5" />,
   },
 ];
 
@@ -105,12 +105,12 @@ export default function ExportMassPanel({ massId, initialFormat = 'lyrics', onCl
     params.set('fontSize', options.fontSize);
 
     if (selectedFormat === 'ppt') {
+      params.set('format', 'presentation');
       params.set('theme', options.pptTheme);
       params.set('oneVersePerSlide', options.pptOneVersePerSlide ? '1' : '0');
     }
 
-    const endpoint = selectedFormat === 'ppt' ? 'ppt' : 'pdf';
-    window.open(`/api/masses/${massId}/export/${endpoint}?${params.toString()}`, '_blank');
+    window.open(`/api/masses/${massId}/export/pdf?${params.toString()}`, '_blank');
     setTimeout(() => setIsExporting(false), 1200);
   };
 
@@ -265,80 +265,53 @@ export default function ExportMassPanel({ massId, initialFormat = 'lyrics', onCl
           </div>
         )}
 
-        {/* PPT options */}
+        {/* Presentation options */}
         {selectedFormat === 'ppt' && (
           <div>
-            <p className="text-xs font-semibold tracking-widest text-stone-400 uppercase mb-3">Opções dos Slides</p>
-            <div className="space-y-3">
-              <div>
-                <p className="text-xs text-stone-500 mb-2">Tema visual</p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setOptions(p => ({ ...p, pptTheme: 'dark' }))}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all ${
-                      options.pptTheme === 'dark'
-                        ? 'bg-stone-900 text-white border-stone-900'
-                        : 'border-stone-200 text-stone-600 hover:border-stone-300'
-                    }`}
-                  >
-                    <span className="w-3 h-3 rounded-full bg-stone-800 border border-stone-600 inline-block" />
-                    Escuro
-                  </button>
-                  <button
-                    onClick={() => setOptions(p => ({ ...p, pptTheme: 'light' }))}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all ${
-                      options.pptTheme === 'light'
-                        ? 'bg-stone-900 text-white border-stone-900'
-                        : 'border-stone-200 text-stone-600 hover:border-stone-300'
-                    }`}
-                  >
-                    <span className="w-3 h-3 rounded-full bg-white border border-stone-300 inline-block" />
-                    Claro
-                  </button>
-                </div>
-              </div>
-
-              <div className="bg-stone-50 rounded-xl border border-stone-100 divide-y divide-stone-100">
-                <label className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-stone-100/50 transition-colors">
-                  <Checkbox
-                    id="pptOneVersePerSlide"
-                    checked={options.pptOneVersePerSlide}
-                    onCheckedChange={(v) => setOptions(p => ({ ...p, pptOneVersePerSlide: v as boolean }))}
-                    className="border-stone-300"
-                  />
-                  <span>
-                    <span className="block text-sm text-stone-700">Um verso por slide</span>
-                    <span className="block text-xs text-stone-400 mt-0.5">Ideal para projeção em missa</span>
-                  </span>
-                </label>
-                <label className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-stone-100/50 transition-colors">
-                  <Checkbox
-                    id="pptIncludeHeader"
-                    checked={options.includeHeader}
-                    onCheckedChange={(v) => setOptions(p => ({ ...p, includeHeader: v as boolean }))}
-                    className="border-stone-300"
-                  />
-                  <span className="text-sm text-stone-700">Slide de capa da missa</span>
-                </label>
-                <label className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-stone-100/50 transition-colors">
-                  <Checkbox
-                    id="pptMomentTitles"
-                    checked={options.includeMomentTitles}
-                    onCheckedChange={(v) => setOptions(p => ({ ...p, includeMomentTitles: v as boolean }))}
-                    className="border-stone-300"
-                  />
-                  <span className="text-sm text-stone-700">Slides de momentos litúrgicos</span>
-                </label>
-                <label className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-stone-100/50 transition-colors">
-                  <Checkbox
-                    id="pptNotes"
-                    checked={options.includeNotes}
-                    onCheckedChange={(v) => setOptions(p => ({ ...p, includeNotes: v as boolean }))}
-                    className="border-stone-300"
-                  />
-                  <span className="text-sm text-stone-700">Notas das músicas</span>
-                </label>
-              </div>
+            <p className="text-xs font-semibold tracking-widest text-stone-400 uppercase mb-3">Opções da Apresentação</p>
+            <div className="bg-stone-50 rounded-xl border border-stone-100 divide-y divide-stone-100">
+              <label className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-stone-100/50 transition-colors">
+                <Checkbox
+                  id="pptOneVersePerSlide"
+                  checked={options.pptOneVersePerSlide}
+                  onCheckedChange={(v) => setOptions(p => ({ ...p, pptOneVersePerSlide: v as boolean }))}
+                  className="border-stone-300"
+                />
+                <span>
+                  <span className="block text-sm text-stone-700">Um verso por slide</span>
+                  <span className="block text-xs text-stone-400 mt-0.5">Ideal para projeção em missa</span>
+                </span>
+              </label>
+              <label className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-stone-100/50 transition-colors">
+                <Checkbox
+                  id="pptIncludeHeader"
+                  checked={options.includeHeader}
+                  onCheckedChange={(v) => setOptions(p => ({ ...p, includeHeader: v as boolean }))}
+                  className="border-stone-300"
+                />
+                <span className="text-sm text-stone-700">Slide de capa da missa</span>
+              </label>
+              <label className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-stone-100/50 transition-colors">
+                <Checkbox
+                  id="pptMomentTitles"
+                  checked={options.includeMomentTitles}
+                  onCheckedChange={(v) => setOptions(p => ({ ...p, includeMomentTitles: v as boolean }))}
+                  className="border-stone-300"
+                />
+                <span>
+                  <span className="block text-sm text-stone-700">Slides de separação entre momentos</span>
+                  <span className="block text-xs text-stone-400 mt-0.5">Slide clean com o logo entre cada momento</span>
+                </span>
+              </label>
+              <label className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-stone-100/50 transition-colors">
+                <Checkbox
+                  id="pptNotes"
+                  checked={options.includeNotes}
+                  onCheckedChange={(v) => setOptions(p => ({ ...p, includeNotes: v as boolean }))}
+                  className="border-stone-300"
+                />
+                <span className="text-sm text-stone-700">Notas das músicas</span>
+              </label>
             </div>
           </div>
         )}
@@ -379,7 +352,7 @@ export default function ExportMassPanel({ massId, initialFormat = 'lyrics', onCl
           ) : (
             <Download className="h-4 w-4 mr-2" />
           )}
-          {isExporting ? 'A exportar...' : `Exportar ${selectedFormat === 'ppt' ? 'PowerPoint' : 'PDF'}`}
+          {isExporting ? 'A exportar...' : 'Exportar PDF'}
         </Button>
       </div>
     </div>

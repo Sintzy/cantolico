@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { protectApiRoute, applySecurityHeaders } from '@/lib/api-protection';
 import { auth } from '@clerk/nextjs/server';
-import { getSupabaseUserId } from '@/lib/clerk-auth';
+import { createAdminSupabaseClient } from '@/lib/supabase-admin';
 
 /**
  * Sessão compatível com o formato antigo para manter compatibilidade
@@ -89,20 +89,23 @@ export async function getClerkSession(): Promise<ClerkSession | null> {
     return null;
   }
 
-  const supabaseUserId = await getSupabaseUserId(userId);
+  const supabase = createAdminSupabaseClient();
+  const { data: user } = await supabase
+    .from('User')
+    .select('id, role')
+    .eq('clerkUserId', userId)
+    .single();
 
-  if (!supabaseUserId) {
+  if (!user) {
     console.error('❌ [API] Utilizador Clerk não encontrado no Supabase:', userId);
     return null;
   }
 
-  const metadata = sessionClaims?.metadata as { role?: string } | undefined;
-
   return {
     user: {
-      id: supabaseUserId,
+      id: user.id,
       clerkUserId: userId,
-      role: (metadata?.role as 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN' | 'SUPER_ADMIN') || 'USER',
+      role: user.role as 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN' | 'SUPER_ADMIN',
       email: sessionClaims?.email as string | undefined,
       name: sessionClaims?.name as string | undefined,
     }

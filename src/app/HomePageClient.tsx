@@ -29,6 +29,7 @@ export default function HomePageClient() {
   const [newsLoading, setNewsLoading] = useState(true);
 
   useEffect(() => {
+    
     fetch("/api/news?limit=3")
       .then(r => r.json())
       .then(d => setNews(Array.isArray(d) ? d : []))
