@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import { getAuthenticatedUser } from '@/lib/clerk-auth';
 import { redirect } from 'next/navigation';
 import MassesPageClient from './page.client';
-import { supabase } from '@/lib/supabase-client';
+import { adminSupabase as supabase } from '@/lib/supabase-admin';
 
 export const metadata: Metadata = {
   title: 'Missas | Cantólico',

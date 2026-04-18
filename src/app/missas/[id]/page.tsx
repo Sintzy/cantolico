@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { supabase } from '@/lib/supabase-client';
+import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { getAuthenticatedUser } from '@/lib/clerk-auth';
 import { buildMetadata } from '@/lib/seo';
 import MassPageClient from './page.client';
