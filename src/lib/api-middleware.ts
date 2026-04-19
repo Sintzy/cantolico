@@ -101,11 +101,13 @@ export async function getClerkSession(): Promise<ClerkSession | null> {
     return null;
   }
 
+  const metadataRole = (sessionClaims?.metadata as { role?: string } | undefined)?.role;
+
   return {
     user: {
       id: user.id,
       clerkUserId: userId,
-      role: user.role as 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN' | 'SUPER_ADMIN',
+      role: (metadataRole || user.role || 'USER') as 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN' | 'SUPER_ADMIN',
       email: sessionClaims?.email as string | undefined,
       name: sessionClaims?.name as string | undefined,
     }

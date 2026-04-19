@@ -35,7 +35,10 @@
       "Bash(pnpm patch-commit *)",
       "Bash(grep -A10 \"patchedDependencies\\\\|patches\" package.json)",
       "Bash(ls patches/)",
-      "Bash(pnpm install *)"
+      "Bash(pnpm install *)",
+      "Bash(ls src/middleware.ts)",
+      "Bash(ls middleware.ts)",
+      "Bash(git show *)"
     ]
   }
 }
