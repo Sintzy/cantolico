@@ -22,7 +22,7 @@ interface Banner {
   title: string;
   message: string;
   type: 'ANNOUNCEMENT' | 'ALERT' | 'CHANGELOG' | 'WARNING' | 'REQUEST' | 'INFO' | 'SUCCESS' | 'ERROR';
-  position: 'TOP' | 'BOTTOM';
+  position: 'TOP' | 'BOTTOM' | 'POPUP';
   pages: ('HOME' | 'MUSICS' | 'ADMIN' | 'ALL')[];
   isActive: boolean;
   priority: number;
@@ -421,15 +421,11 @@ export default function BannerManagement() {
                     <span className="font-medium">Posição:</span>
                     <div className="flex items-center gap-1 mt-1">
                       {banner.position === 'TOP' ? (
-                        <>
-                          <ArrowUp className="h-4 w-4" />
-                          Topo
-                        </>
+                        <><ArrowUp className="h-4 w-4" />Topo</>
+                      ) : banner.position === 'BOTTOM' ? (
+                        <><ArrowDown className="h-4 w-4" />Fundo</>
                       ) : (
-                        <>
-                          <ArrowDown className="h-4 w-4" />
-                          Fundo
-                        </>
+                        <>🪟 Popup</>
                       )}
                     </div>
                   </div>
@@ -546,6 +542,7 @@ export default function BannerManagement() {
                   <SelectContent>
                     <SelectItem value="TOP">Topo da página</SelectItem>
                     <SelectItem value="BOTTOM">Fundo da página</SelectItem>
+                    <SelectItem value="POPUP">Popup (dialog de boas-vindas)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -12,6 +12,7 @@ import { Toaster } from "@/components/ui/sonner";
 import Footer from "@/components/Footer";
 import { CacheProvider } from "@/components/providers/CacheProvider";
 import EmailVerificationBanner from "@/components/EmailVerificationBanner";
+import AnnouncementPopup from "@/components/AnnouncementPopup";
 import { buildMetadata } from "@/lib/seo";
 import { Analytics } from "@vercel/analytics/next";
 
@@ -50,6 +51,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               {children}
               <Analytics />
             </main>
+            <AnnouncementPopup />
             <Toaster />
             <Footer />
           </AuthSessionProvider>

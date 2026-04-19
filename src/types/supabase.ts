@@ -561,7 +561,7 @@ export interface Database {
           title: string
           message: string
           type: 'ANNOUNCEMENT' | 'ALERT' | 'CHANGELOG' | 'WARNING' | 'REQUEST' | 'INFO' | 'SUCCESS' | 'ERROR'
-          position: 'TOP' | 'BOTTOM'
+          position: 'TOP' | 'BOTTOM' | 'POPUP'
           pages: string[]
           isActive: boolean
           priority: number
@@ -576,7 +576,7 @@ export interface Database {
           title: string
           message: string
           type: 'ANNOUNCEMENT' | 'ALERT' | 'CHANGELOG' | 'WARNING' | 'REQUEST' | 'INFO' | 'SUCCESS' | 'ERROR'
-          position?: 'TOP' | 'BOTTOM'
+          position?: 'TOP' | 'BOTTOM' | 'POPUP'
           pages: string[]
           isActive?: boolean
           priority?: number
@@ -591,7 +591,7 @@ export interface Database {
           title?: string
           message?: string
           type?: 'ANNOUNCEMENT' | 'ALERT' | 'CHANGELOG' | 'WARNING' | 'REQUEST' | 'INFO' | 'SUCCESS' | 'ERROR'
-          position?: 'TOP' | 'BOTTOM'
+          position?: 'TOP' | 'BOTTOM' | 'POPUP'
           pages?: string[]
           isActive?: boolean
           priority?: number
