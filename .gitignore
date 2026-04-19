@@ -11,6 +11,9 @@ TECHNICAL_DOCUMENTATION.md
 !.yarn/releases
 !.yarn/versions
 
+/.claude/
+/CLAUDE.md
+
 # testing
 /coverage
 

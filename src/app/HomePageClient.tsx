@@ -29,7 +29,7 @@ export default function HomePageClient() {
   const [newsLoading, setNewsLoading] = useState(true);
 
   useEffect(() => {
-    
+
     fetch("/api/news?limit=3")
       .then(r => r.json())
       .then(d => setNews(Array.isArray(d) ? d : []))
@@ -57,20 +57,18 @@ export default function HomePageClient() {
               <span className="text-rose-700 text-sm leading-none">✝</span>
               <span className="h-px w-6 bg-stone-300" />
               <span className="text-xs font-medium tracking-[0.18em] text-stone-500 uppercase">
-                Biblioteca de Cânticos Católicos
+                Repretório de Cânticos Católicos
               </span>
             </div>
 
             <h1 className="font-display text-[clamp(2.6rem,6vw,4.8rem)] leading-[1.08] text-stone-900">
               Encontra os cânticos<br />
-              para cada{" "}
-              <em className="italic text-rose-700 not-italic" style={{ fontStyle: "italic" }}>momento</em>
-              <br />da liturgia.
+              para cada momento da liturgia.
             </h1>
 
             <p className="mt-6 max-w-lg text-base leading-relaxed text-stone-500 md:text-lg">
-              Pesquisa imediata, playlists colaborativas e preparação de missas —
-              tudo num só lugar, para equipas litúrgicas em português.
+              Pesquisa imediata, playlists colaborativas e preparação de missas.
+              Tudo num só lugar, para todos os fieis!
             </p>
 
             <div className="mt-10 flex flex-wrap items-center gap-3">
@@ -113,10 +111,10 @@ export default function HomePageClient() {
               </div>
               <div className="divide-y divide-stone-100 px-3 pb-4 pt-1">
                 {[
-                  { title: "Deus está Aqui", moment: "Entrada", extra: "Tradicional" },
-                  { title: "Glória a Deus", moment: "Glória", extra: "Gregoriano" },
-                  { title: "Cordeiro de Deus", moment: "Comunhão", extra: "Tradicional" },
-                  { title: "Ide por Todo o Mundo", moment: "Envio", extra: "Canavarro" },
+                  { title: "Deus está Aqui", moment: "Entrada", extra: "Javier Gacias" },
+                  { title: "Fiat", moment: "Final", extra: "Maite López" },
+                  { title: "Cordeiro de Deus I", moment: "Cordeiro", extra: "Tradicional" },
+                  { title: "Hino Missão País 2025", moment: "Final", extra: "MP" },
                 ].map(s => (
                   <div key={s.title} className="flex items-center gap-3 px-2 py-3">
                     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-rose-50">
