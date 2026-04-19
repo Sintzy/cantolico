@@ -38,7 +38,9 @@
       "Bash(pnpm install *)",
       "Bash(ls src/middleware.ts)",
       "Bash(ls middleware.ts)",
-      "Bash(git show *)"
+      "Bash(git show *)",
+      "Bash(grep -rn \"\\\\\"status\\\\\": 204\\\\|status: 204\\\\|{ status: 204\\\\|, 204\" src --include=\"*.ts\" --include=\"*.tsx\")",
+      "Bash(pnpm tsx *)"
     ]
   }
 }
