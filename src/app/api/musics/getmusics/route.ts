@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminSupabase } from "@/lib/supabase-admin";
+import { getClerkSession } from "@/lib/api-middleware";
 import { logApiRequestError, toErrorContext } from "@/lib/logging-helpers";
 import { protectApiRoute, applySecurityHeaders } from "@/lib/api-protection";
 import { parseTagsFromPostgreSQL, parseMomentsFromPostgreSQL } from "@/lib/utils";
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 
 // In-memory cache with TTL (5 minutes)
 let cachedSongsData: any = null;
@@ -27,13 +26,14 @@ export async function GET(request: NextRequest) {
       return applySecurityHeaders(response, request);
     }
     
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     const userId = session?.user?.id;
+    const numericUserId = userId ? Number(userId) : null;
 
     // Fetch minimal data using admin client with Stars included directly
     const { data: songs, error } = await adminSupabase
       .from('Song')
-      .select('id,title,slug,moments,type,mainInstrument,tags, Star(id, userId)')
+      .select('id,title,slug,moments,type,mainInstrument,tags, Star(userId)')
       .order('title', { ascending: true });
 
     if (error) {
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     const formattedSongs = songs.map(song => {
       const songStars = song.Star || [];
       const starCount = songStars.length;
-      const isStarred = userId ? songStars.some((s: any) => s.userId === userId) : false;
+      const isStarred = numericUserId !== null ? songStars.some((s: any) => s.userId === numericUserId) : false;
 
       return {
         id: song.id,

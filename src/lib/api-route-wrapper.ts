@@ -11,8 +11,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getClerkSession } from '@/lib/api-middleware';
 import {
   createCorrelationContext,
   runWithCorrelationContextAsync,
@@ -109,8 +108,8 @@ function extractNetworkContext(request: NextRequest): NetworkContext {
  */
 async function extractUserContext(request: NextRequest): Promise<UserContext | undefined> {
   try {
-    const session = await getServerSession(authOptions);
-    
+    const session = await getClerkSession();
+
     if (!session?.user) {
       return undefined;
     }
@@ -122,7 +121,6 @@ async function extractUserContext(request: NextRequest): Promise<UserContext | u
       user_name: session.user.name || undefined,
     };
   } catch (error) {
-    // Se falhar ao obter sessão, retorna undefined
     return undefined;
   }
 }

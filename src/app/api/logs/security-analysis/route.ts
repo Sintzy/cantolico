@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { getClerkSession } from '@/lib/api-middleware';
 import { generateSecurityReport, getSecurityMetrics } from '@/lib/security-analysis-engine';
 
 export async function GET(req: NextRequest) {
   try {
-    const token = await getToken({ req });
-    
+    const session = await getClerkSession();
+    const token = session?.user;
+
     if (!token || (token.role !== 'ADMIN' && token.role !== 'REVIEWER')) {
       return NextResponse.json(
         { error: 'Acesso negado. Apenas administradores podem acessar análises de segurança.' },
@@ -102,8 +103,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const token = await getToken({ req });
-    
+    const session = await getClerkSession();
+    const token = session?.user;
+
     if (!token || token.role !== 'ADMIN') {
       return NextResponse.json(
         { error: 'Acesso negado. Apenas administradores podem executar análises.' },

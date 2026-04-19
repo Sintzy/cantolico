@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase-client';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { withUserProtection } from '@/lib/enhanced-api-protection';
 import { randomUUID } from 'crypto';
 import { LiturgicalMoment } from '@/types/mass';
 
+import { getClerkSession } from '@/lib/api-middleware';
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
@@ -159,7 +158,7 @@ export const POST = withUserProtection<any>(async (request: NextRequest, session
 export const GET = async (request: NextRequest, context: RouteParams) => {
   try {
     const { id: massId } = await context.params;
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
 
     // Check mass visibility
     const { data: mass } = await supabase

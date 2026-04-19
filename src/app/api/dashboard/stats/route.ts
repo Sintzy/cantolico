@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
 
+import { getClerkSession } from '@/lib/api-middleware';
 export async function GET(req: NextRequest) {
   try {
 
     
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
 
     if (!session) {
 

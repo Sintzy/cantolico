@@ -1,750 +1,315 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { useSession, signOut } from "next-auth/react";
+import { useEffect, useRef, useState } from "react";
+import { useSession } from "@/hooks/useClerkSession";
+import { useClerk } from "@clerk/nextjs";
 import Link from "next/link";
 import Image from "next/image";
 import * as Icons from "@/lib/site-images";
 import UserAvatar from "./ui/user-avatar";
-import { toast } from "sonner";
-import { 
-  ChevronDown, 
-  ListMusic, 
-  Globe, 
-  Lock, 
-  Music, 
-  Plus, 
-  Shield, 
-  Settings, 
-  User, 
-  LogOut,
-  Search,
-  Menu,
-  X,
-  Home,
-  FileText,
-  UserPlus,
+import Fuse from "fuse.js";
+import {
+  ChevronDown,
+  Church,
   Crown,
   Eye,
-  Star,
-  Church
+  Globe,
+  Heart,
+  ListMusic,
+  LogOut,
+  Menu,
+  Music,
+  Plus,
+  Search,
+  Settings,
+  X,
 } from "lucide-react";
 
-type Music = {
-  id: string;
-  title: string;
-};
+type MusicResult = { id: string; title: string };
 
 export default function Navbar() {
-    const { data: session } = useSession();
-    const [dropdownOpen, setDropdownOpen] = useState(false);
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-    const [playlistsMenuOpen, setPlaylistsMenuOpen] = useState(false);
-    const [playlistsMenuSticky, setPlaylistsMenuSticky] = useState(false);
-    const [userMenuOpen, setUserMenuOpen] = useState(false);
-    const [userMenuSticky, setUserMenuSticky] = useState(false);
-    const [searchQuery, setSearchQuery] = useState("");
-    const [searchResults, setSearchResults] = useState<Music[]>([]);
-    const [isSearching, setIsSearching] = useState(false);
-    const searchTimeout = useRef<NodeJS.Timeout | null>(null);
-    const userMenuRef = useRef<HTMLDivElement>(null);
-    const playlistsMenuRef = useRef<HTMLDivElement>(null);
+  const { data: session } = useSession();
+  const { signOut } = useClerk();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [playlistsOpen, setPlaylistsOpen] = useState(false);
+  const [userOpen, setUserOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<MusicResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
-    // Close menus when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
-                setUserMenuOpen(false);
-                setUserMenuSticky(false);
-            }
-            if (playlistsMenuRef.current && !playlistsMenuRef.current.contains(event.target as Node)) {
-                setPlaylistsMenuOpen(false);
-                setPlaylistsMenuSticky(false);
-            }
-        };
+  const userRef = useRef<HTMLDivElement>(null);
+  const playlistsRef = useRef<HTMLDivElement>(null);
+  const mobileRef = useRef<HTMLDivElement>(null);
 
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, []);
-
-
-    // Busca debounced
-    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
-        setSearchQuery(value);
-        setIsSearching(true);
-        if (searchTimeout.current) clearTimeout(searchTimeout.current);
-        if (value.trim() === "") {
-            setSearchResults([]);
-            setIsSearching(false);
-            return;
-        }
-        searchTimeout.current = setTimeout(async () => {
-            try {
-                const res = await fetch(`/api/musics/search?q=${encodeURIComponent(value)}&limit=10`);
-                if (!res.ok) throw new Error('Erro ao pesquisar músicas');
-                const data = await res.json();
-                setSearchResults(data.songs || []);
-            } catch (error) {
-                setSearchResults([]);
-            }
-            setIsSearching(false);
-        }, 400);
+  useEffect(() => {
+    const onClickOutside = (e: MouseEvent) => {
+      if (userRef.current && !userRef.current.contains(e.target as Node)) setUserOpen(false);
+      if (playlistsRef.current && !playlistsRef.current.contains(e.target as Node)) setPlaylistsOpen(false);
+      if (mobileRef.current && !mobileRef.current.contains(e.target as Node)) setMobileOpen(false);
     };
-
-
-
-    const closeMobileMenu = () => {
-        setMobileMenuOpen(false);
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    document.addEventListener("mousedown", onClickOutside);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      document.removeEventListener("mousedown", onClickOutside);
+      window.removeEventListener("scroll", onScroll);
     };
+  }, []);
 
-    return (
-        <>
-            {/* Floating Navbar */}
-            <nav className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 w-[95vw] max-w-6xl">
-                <div className="bg-white/95 backdrop-blur-xl border border-slate-200/50 rounded-2xl shadow-md hover:shadow-lg transition-shadow duration-300">
-                    <div className="px-5 py-3 flex items-center justify-between max-w-7xl mx-auto">
-                        {/* Logo */}
-                        <Link href="/" className="flex items-center space-x-2 group shrink-0">
-                            <div className="relative">
-                                <Image 
-                                    src={Icons.SITE_IMAGES.logo} 
-                                    alt="Logo" 
-                                    width={28} 
-                                    height={28} 
-                                    className="transition-transform group-hover:scale-110"
-                                />
-                            </div>
-                            <span className="text-base font-black text-slate-900 hidden sm:inline">
-                                Can♱ólico!
-                            </span>
-                        </Link>
+  useEffect(() => {
+    if (!searchQuery.trim()) { setSearchResults([]); setIsSearching(false); return; }
+    setIsSearching(true);
+    const t = setTimeout(async () => {
+      try {
+        // Fetch a wider pool so Fuse.js can re-rank client-side for typos
+        const res = await fetch(`/api/musics/search?q=${encodeURIComponent(searchQuery)}&limit=40`);
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        const pool: MusicResult[] = Array.isArray(data?.songs) ? data.songs : [];
+        if (!pool.length) { setSearchResults([]); return; }
+        const fuse = new Fuse(pool, {
+          keys: ['title'],
+          threshold: 0.45,
+          includeScore: true,
+          ignoreLocation: true,
+          useExtendedSearch: false,
+        });
+        const ranked = fuse.search(searchQuery).map(r => r.item);
+        // If Fuse returns nothing (very different query), fall back to API order
+        setSearchResults((ranked.length ? ranked : pool).slice(0, 8));
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 350);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
 
-                        {/* Desktop nav + Search */}
-                        <div className="hidden lg:flex items-center gap-0.5">
-                        <Link 
-                            href="/musics" 
-                            prefetch={false}
-                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-slate-700 hover:text-rose-600 hover:bg-rose-100/50 transition-all duration-200 font-medium text-sm"
-                        >
-                            <Music className="h-4 w-4" />
-                            <span>Músicas</span>
-                        </Link>
-                        
-                        {/* Playlists Dropdown Menu */}
-                        <div 
-                            ref={playlistsMenuRef}
-                            className="relative"
-                            onMouseEnter={() => !playlistsMenuSticky && setPlaylistsMenuOpen(true)}
-                            onMouseLeave={() => !playlistsMenuSticky && setPlaylistsMenuOpen(false)}
-                        >
-                            <button 
-                                onClick={() => {
-                                    if (playlistsMenuSticky) {
-                                        setPlaylistsMenuSticky(false);
-                                        setPlaylistsMenuOpen(false);
-                                    } else {
-                                        setPlaylistsMenuSticky(true);
-                                        setPlaylistsMenuOpen(true);
-                                    }
-                                }}
-                                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-slate-700 hover:text-orange-600 hover:bg-orange-100/50 transition-all duration-200 font-medium text-sm"
-                            >
-                                <ListMusic className="h-4 w-4" />
-                                <span>Playlists</span>
-                                <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${playlistsMenuOpen ? 'rotate-180' : ''}`} />
-                            </button>
-                            
-                            {playlistsMenuOpen && (
-                                <div className="absolute top-full left-0 mt-1 w-56 bg-white/95 backdrop-blur-sm border border-slate-200/80 rounded-lg shadow-lg z-50 overflow-hidden">
-                                    <div className="py-1">
-                                        <Link
-                                            href="/playlists/explore"
-                                            prefetch={false}
-                                            className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-orange-100/50 hover:text-orange-600 transition-colors"
-                                            onClick={() => {
-                                                setPlaylistsMenuOpen(false);
-                                                setPlaylistsMenuSticky(false);
-                                            }}
-                                        >
-                                            <div className="w-7 h-7 bg-orange-100 rounded-md flex items-center justify-center">
-                                                <Globe className="h-3.5 w-3.5 text-orange-600" />
-                                            </div>
-                                            <div>
-                                                <div className="font-medium text-sm">Públicas</div>
-                                                <div className="text-xs text-gray-500">Descobrir</div>
-                                            </div>
-                                        </Link>
-                                        
-                                        {session ? (
-                                            <Link
-                                                href="/playlists"
-                                                prefetch={false}
-                                                className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-rose-100/50 hover:text-rose-600 transition-colors"
-                                                onClick={() => {
-                                                    setPlaylistsMenuOpen(false);
-                                                    setPlaylistsMenuSticky(false);
-                                                }}
-                                            >
-                                                <div className="w-7 h-7 bg-rose-100 rounded-md flex items-center justify-center">
-                                                    <Lock className="h-3.5 w-3.5 text-rose-600" />
-                                                </div>
-                                                <div>
-                                                    <div className="font-medium text-sm">Minhas</div>
-                                                    <div className="text-xs text-gray-500">Tuas coleções</div>
-                                                </div>
-                                            </Link>
-                                        ) : (
-                                            <div className="px-3 py-2 text-sm text-slate-600">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-7 h-7 bg-slate-100 rounded-md flex items-center justify-center">
-                                                        <Lock className="h-3.5 w-3.5 text-slate-400" />
-                                                    </div>
-                                                    <div>
-                                                        <div className="font-medium text-sm text-slate-500">Minhas Playlists</div>
-                                                        <Link href="/login" className="text-xs text-rose-600 hover:underline">
-                                                            Login
-                                                        </Link>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+  const role = session?.user?.role;
+  const showAdmin = role === "ADMIN";
+  const showReview = role === "ADMIN" || role === "REVIEWER";
+  const close = () => { setMobileOpen(false); setPlaylistsOpen(false); setUserOpen(false); setSearchQuery(""); };
 
-                        {/* Missas Link */}
-                        {session && (
-                            <Link 
-                                href="/missas" 
-                                prefetch={false}
-                                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-slate-700 hover:text-purple-600 hover:bg-purple-100/50 transition-all duration-200 font-medium text-sm"
-                            >
-                                <Church className="h-4 w-4" />
-                                <span>Missas</span>
-                            </Link>
-                        )}
-                        
-                        <Link 
-                            href="/musics/create" 
-                            prefetch={false}
-                            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-slate-700 hover:text-amber-600 hover:bg-amber-100/50 transition-all duration-200 font-medium text-sm"
-                        >
-                            <Plus className="h-4 w-4" />
-                            <span>Nova</span>
-                        </Link>
-                        
-                        {/* Admin/Reviewer Links */}
-                        {session?.user?.role === "ADMIN" && (
-                            <>
-                                <Link 
-                                    href="/admin/dashboard" 
-                                    prefetch={false}
-                                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
-                                >
-                                    <Crown className="h-4 w-4" />
-                                    <span className="font-medium">Admin</span>
-                                </Link>
-                                <Link 
-                                    href="/admin/review" 
-                                    prefetch={false}
-                                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
-                                >
-                                    <Eye className="h-4 w-4" />
-                                    <span className="font-medium">Revisão</span>
-                                </Link>
-                            </>
-                        )}
-                        {session?.user?.role === "REVIEWER" && (
-                            <Link 
-                                href="/admin/review" 
-                                prefetch={false}
-                                className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
-                            >
-                                <Eye className="h-4 w-4" />
-                                <span className="font-medium">Revisão</span>
-                            </Link>
-                        )}
+  const linkCls = "flex items-center gap-2 px-3 py-2 text-sm font-medium text-stone-600 hover:text-stone-900 hover:bg-stone-100 rounded-lg transition-colors";
 
-                        {/* Searchbar */}
-                        <div className="relative ml-4">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Pesquisar músicas..."
-                                    value={searchQuery}
-                                    onChange={handleSearchChange}
-                                    className="pl-10 pr-4 py-2 w-64 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all duration-200"
-                                />
-                            </div>
-                            {searchQuery.trim() !== "" && (
-                                <div className="absolute top-full left-0 w-full bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg shadow-lg mt-2 z-50 overflow-hidden">
-                                    {isSearching ? (
-                                        <div className="px-4 py-3 text-sm text-gray-500 text-center">A procurar...</div>
-                                    ) : searchResults.length > 0 ? (
-                                        <>
-                                            {searchResults.slice(0, 5).map((result) => (
-                                                <Link
-                                                    key={result.id}
-                                                    href={`/musics/${result.id}`}
-                                                    className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                                                    onClick={() => setSearchQuery("")}
-                                                >
-                                                    <Music className="h-4 w-4 text-gray-400" />
-                                                    <span>{result.title}</span>
-                                                </Link>
-                                            ))}
-                                            {searchResults.length > 5 && (
-                                                <div className="px-4 py-2 text-xs text-gray-500 bg-gray-50">
-                                                    +{searchResults.length - 5} mais resultados...
-                                                </div>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <div className="px-4 py-3 text-sm text-gray-500 text-center">Nenhum resultado encontrado.</div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    </div>
+  return (
+    <header className={`fixed top-0 inset-x-0 z-50 transition-shadow duration-200 bg-white ${scrolled ? "border-b border-stone-200 shadow-sm" : "border-b border-stone-100"}`}>
+      <div className="mx-auto flex h-16 max-w-screen-xl items-center gap-4 px-5">
 
-                    {/* User Menu & Mobile Toggle */}
-                    <div className="flex items-center gap-3">
-                        {/* User Menu */}
-                        {session?.user ? (
-                            <div 
-                                ref={userMenuRef}
-                                className="relative"
-                                onMouseEnter={() => !userMenuSticky && setUserMenuOpen(true)}
-                                onMouseLeave={() => !userMenuSticky && setUserMenuOpen(false)}
-                            >
-                                <button
-                                    onClick={() => {
-                                        if (userMenuSticky) {
-                                            setUserMenuSticky(false);
-                                            setUserMenuOpen(false);
-                                        } else {
-                                            setUserMenuSticky(true);
-                                            setUserMenuOpen(true);
-                                        }
-                                    }}
-                                    className="flex items-center gap-2 p-1 rounded-lg hover:bg-gray-50 transition-all duration-200"
-                                >
-                                    <div className="w-8 h-8 rounded-full border-2 border-gray-200 overflow-hidden">
-                                        <UserAvatar 
-                                            user={{
-                                                name: session.user.name || "Utilizador",
-                                                image: session.user.image
-                                            }} 
-                                            size={32} 
-                                        />
-                                    </div>
-                                    <ChevronDown className={`h-3 w-3 text-gray-600 transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''} hidden md:block`} />
-                                </button>
-                                
-                                {userMenuOpen && (
-                                    <div className="absolute right-0 top-full mt-2 w-56 bg-white/95 backdrop-blur-sm border border-gray-200/80 rounded-xl shadow-lg z-50 overflow-hidden">
-                                        <div className="px-4 py-3 border-b border-gray-100">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full border-2 border-gray-200 overflow-hidden">
-                                                    <UserAvatar 
-                                                        user={{
-                                                            name: session.user.name || "Utilizador",
-                                                            image: session.user.image
-                                                        }} 
-                                                        size={40} 
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <div className="font-medium text-gray-900">{session.user.name}</div>
-                                                    <div className="text-xs text-gray-500">{session.user.email}</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="py-2">
-                                            <Link
-                                                href={`/users/${session.user.id}`}
-                                                className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                                                onClick={() => {
-                                                    setUserMenuOpen(false);
-                                                    setUserMenuSticky(false);
-                                                }}
-                                            >
-                                                <User className="h-4 w-4" />
-                                                Ver Perfil
-                                            </Link>
-                                            
-                                            <Link
-                                                href="/starred-songs"
-                                                className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                                                onClick={() => {
-                                                    setUserMenuOpen(false);
-                                                    setUserMenuSticky(false);
-                                                }}
-                                            >
-                                                <Star className="h-4 w-4" />
-                                                Músicas Favoritas
-                                            </Link>
-                                            
-                                            {session.user.role === "ADMIN" && (
-                                                <>
-                                                    <Link
-                                                        href="/admin/dashboard"
-                                                        className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                                                        onClick={() => {
-                                                            setUserMenuOpen(false);
-                                                            setUserMenuSticky(false);
-                                                        }}
-                                                    >
-                                                        <Crown className="h-4 w-4" />
-                                                        Dashboard Admin
-                                                    </Link>
-                                                    <Link
-                                                        href="/admin/review"
-                                                        className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                                                        onClick={() => {
-                                                            setUserMenuOpen(false);
-                                                            setUserMenuSticky(false);
-                                                        }}
-                                                    >
-                                                        <Eye className="h-4 w-4" />
-                                                        Painel Revisão
-                                                    </Link>
-                                                </>
-                                            )}
-                                            {session.user.role === "REVIEWER" && (
-                                                <Link
-                                                    href="/admin/review"
-                                                    className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                                                    onClick={() => {
-                                                        setUserMenuOpen(false);
-                                                        setUserMenuSticky(false);
-                                                    }}
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                    Painel Revisão
-                                                </Link>
-                                            )}
-                                            
-                                            <hr className="my-2" />
-                                            <button
-                                                onClick={() => {
-                                                    signOut();
-                                                    setUserMenuOpen(false);
-                                                    setUserMenuSticky(false);
-                                                }}
-                                                className="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                                            >
-                                                <LogOut className="h-4 w-4" />
-                                                Sair
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                            <div className="hidden md:flex items-center gap-3">
-                                <Link
-                                    href="/login"
-                                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
-                                >
-                                    <User className="h-4 w-4" />
-                                    Login
-                                </Link>
-                            </div>
-                        )}
+        {/* Logo */}
+        <Link href="/" onClick={close} className="flex items-center gap-2 shrink-0 mr-2">
+          <Image src={Icons.SITE_IMAGES.logo} alt="Cantólico" width={26} height={26} />
+          <span className="hidden sm:inline text-base font-semibold text-stone-900 tracking-tight">
+            Can<span className="text-rose-700">♱</span>ólico!
+          </span>
+          <span className="hidden sm:inline text-[10px] font-semibold tracking-wide text-stone-400 bg-stone-100 rounded px-1 py-0.5 leading-none select-none">v2</span>
+        </Link>
 
-                        {/* Mobile menu toggle */}
-                        <button
-                            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                            className="lg:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                        >
-                            {mobileMenuOpen ? (
-                                <X className="w-5 h-5" />
-                            ) : (
-                                <Menu className="w-5 h-5" />
-                            )}
-                        </button>
-                    </div>
-                </div>
-                </div>
-            </nav>
+        {/* Desktop nav */}
+        <nav className="hidden lg:flex items-center gap-0.5 flex-1">
+          <Link href="/musics" prefetch={false} onClick={close} className={linkCls}>
+            <Music className="h-3.5 w-3.5" />
+            Músicas
+          </Link>
 
-            {/* Mobile Sidebar Overlay */}
-            {mobileMenuOpen && (
-                <div className="fixed inset-0 z-60 lg:hidden">
-                    {/* Backdrop */}
-                    <div 
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm"
-                        onClick={closeMobileMenu}
-                    ></div>
-                    
-                    {/* Sidebar */}
-                    <div className="fixed left-0 top-0 h-full w-80 max-w-[85vw] bg-white shadow-2xl transform transition-transform duration-300 ease-out">
-                        {/* Header */}
-                        <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-gradient-to-r from-rose-50 via-orange-50 to-yellow-50">
-                            <div className="flex items-center space-x-2">
-                                <Image 
-                                    src={Icons.SITE_IMAGES.logo} 
-                                    alt="Logo" 
-                                    width={28} 
-                                    height={28} 
-                                />
-                                <span className="text-base font-black text-slate-900">
-                                    Can♱ólico!
-                                </span>
-                            </div>
-                            <button
-                                onClick={closeMobileMenu}
-                                className="p-2 text-slate-500 hover:bg-white/50 rounded-lg transition-colors"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        {/* User Info (if logged in) */}
-                        {session?.user && (
-                            <div className="p-3 bg-slate-50 border-b border-slate-200/50">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="w-10 h-10 rounded-full border-2 border-slate-200 overflow-hidden">
-                                        <UserAvatar 
-                                            user={{
-                                                name: session.user.name || "Utilizador",
-                                                image: session.user.image
-                                            }} 
-                                            size={40} 
-                                        />
-                                    </div>
-                                    <div>
-                                        <div className="font-bold text-slate-900 text-sm">{session.user.name}</div>
-                                        <div className="text-xs text-slate-500">{session.user.email}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Search */}
-                        <div className="p-3 border-b border-slate-200/50">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                                <input
-                                    type="text"
-                                    placeholder="Pesquisar músicas..."
-                                    value={searchQuery}
-                                    onChange={handleSearchChange}
-                                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent text-sm bg-slate-50 focus:bg-white transition-all duration-200"
-                                    autoCapitalize="off"
-                                    autoCorrect="off"
-                                    spellCheck="false"
-                                    autoComplete="off"
-                                />
-                            </div>
-                            
-                            {/* Search Results Mobile */}
-                            {searchQuery.trim() !== "" && (
-                                <div className="mt-2 bg-white border border-slate-200 rounded-lg shadow-md max-h-72 overflow-y-auto">
-                                    {isSearching ? (
-                                        <div className="px-4 py-3 text-sm text-slate-500 text-center">A procurar...</div>
-                                    ) : searchResults.length > 0 ? (
-                                        <>
-                                            {searchResults.slice(0, 8).map((result) => (
-                                                <Link
-                                                    key={result.id}
-                                                    href={`/musics/${result.id}`}
-                                                    className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-slate-700 hover:bg-rose-50 hover:text-rose-600 transition-colors border-b border-slate-100 last:border-b-0"
-                                                    onClick={() => {
-                                                        setSearchQuery("");
-                                                        closeMobileMenu();
-                                                    }}
-                                                >
-                                                    <Music className="h-4 w-4 text-slate-400 shrink-0" />
-                                                    <span className="truncate font-medium">{result.title}</span>
-                                                </Link>
-                                            ))}
-                                            {searchResults.length > 8 && (
-                                                <div className="px-3 py-2 text-xs text-slate-500 bg-slate-50 text-center">
-                                                    +{searchResults.length - 8} mais...
-                                                </div>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <div className="px-4 py-3 text-sm text-slate-500 text-center">Nenhum resultado.</div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Navigation */}
-                        <div className="flex-1 overflow-y-auto">
-                            <div className="py-1">
-                                <Link 
-                                    href="/" 
-                                    className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-slate-700 hover:bg-rose-100/50 hover:text-rose-600 rounded-lg transition-all duration-200 font-medium text-sm"
-                                    onClick={closeMobileMenu}
-                                >
-                                    <Home className="h-4 w-4" />
-                                    <span>Início</span>
-                                </Link>
-                                
-                                <Link 
-                                    href="/musics" 
-                                    prefetch={false}
-                                    className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-slate-700 hover:bg-rose-100/50 hover:text-rose-600 rounded-lg transition-all duration-200 font-medium text-sm"
-                                    onClick={closeMobileMenu}
-                                >
-                                    <Music className="h-4 w-4" />
-                                    <span>Músicas</span>
-                                </Link>
-                                
-                                <Link 
-                                    href="/playlists/explore" 
-                                    prefetch={false}
-                                    className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-slate-700 hover:bg-orange-100/50 hover:text-orange-600 rounded-lg transition-all duration-200 font-medium text-sm"
-                                    onClick={closeMobileMenu}
-                                >
-                                    <Globe className="h-4 w-4" />
-                                    <span>Playlists Públicas</span>
-                                </Link>
-                                
-                                {session ? (
-                                    <>
-                                        <Link 
-                                            href="/playlists" 
-                                            className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-slate-700 hover:bg-orange-100/50 hover:text-orange-600 rounded-lg transition-all duration-200 font-medium text-sm"
-                                            onClick={closeMobileMenu}
-                                        >
-                                            <ListMusic className="h-4 w-4" />
-                                            <span>Minhas Playlists</span>
-                                        </Link>
-
-                                        <Link 
-                                            href="/missas" 
-                                            className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-slate-700 hover:bg-purple-100/50 hover:text-purple-600 rounded-lg transition-all duration-200 font-medium text-sm"
-                                            onClick={closeMobileMenu}
-                                        >
-                                            <Church className="h-4 w-4" />
-                                            <span>Minhas Missas</span>
-                                        </Link>
-                                        
-                                        <Link 
-                                            href="/musics/create" 
-                                            className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-slate-700 hover:bg-amber-100/50 hover:text-amber-600 rounded-lg transition-all duration-200 font-medium text-sm"
-                                            onClick={closeMobileMenu}
-                                        >
-                                            <Plus className="h-4 w-4" />
-                                            <span>Nova Música</span>
-                                        </Link>
-
-                                        <div className="h-px bg-slate-200 my-2 mx-3"></div>
-
-                                        <Link 
-                                            href={`/users/${session.user.id}`} 
-                                            className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-slate-700 hover:bg-slate-100/50 rounded-lg transition-all duration-200 font-medium text-sm"
-                                            onClick={closeMobileMenu}
-                                        >
-                                            <User className="h-4 w-4" />
-                                            <span>Perfil</span>
-                                        </Link>
-                                        
-                                        <Link 
-                                            href="/starred-songs" 
-                                            className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-slate-700 hover:bg-yellow-100/50 hover:text-yellow-600 rounded-lg transition-all duration-200 font-medium text-sm"
-                                            onClick={closeMobileMenu}
-                                        >
-                                            <Star className="h-4 w-4" />
-                                            <span>Favoritas</span>
-                                        </Link>
-                                        
-                                        {/* Admin/Reviewer Links Mobile */}
-                                        {session.user.role === "ADMIN" && (
-                                            <>
-                                                <div className="px-3 py-2 mt-2">
-                                                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Admin</div>
-                                                </div>
-                                                <Link 
-                                                    href="/admin/dashboard" 
-                                                    className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-slate-700 hover:bg-purple-100/50 hover:text-purple-600 rounded-lg transition-all duration-200 font-medium text-sm"
-                                                    onClick={closeMobileMenu}
-                                                >
-                                                    <Crown className="h-4 w-4" />
-                                                    <span>Dashboard</span>
-                                                </Link>
-                                                <Link 
-                                                    href="/admin/review" 
-                                                    className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-slate-700 hover:bg-blue-100/50 hover:text-blue-600 rounded-lg transition-all duration-200 font-medium text-sm"
-                                                    onClick={closeMobileMenu}
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                    <span>Revisão</span>
-                                                </Link>
-                                            </>
-                                        )}
-                                        {session.user.role === "REVIEWER" && (
-                                            <>
-                                                <div className="px-3 py-2 mt-2">
-                                                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Moderação</div>
-                                                </div>
-                                                <Link 
-                                                    href="/admin/review" 
-                                                    className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-slate-700 hover:bg-blue-100/50 hover:text-blue-600 rounded-lg transition-all duration-200 font-medium text-sm"
-                                                    onClick={closeMobileMenu}
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                    <span>Revisão</span>
-                                                </Link>
-                                            </>
-                                        )}
-                                    </>
-                                ) : (
-                                    <>
-                                        <div className="px-3 py-2 mt-2">
-                                            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Conta</div>
-                                        </div>
-                                        <Link 
-                                            href="/login" 
-                                            className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-rose-600 hover:bg-rose-100/50 rounded-lg transition-all duration-200 font-medium text-sm"
-                                            onClick={closeMobileMenu}
-                                        >
-                                            <User className="h-4 w-4" />
-                                            <span>Login</span>
-                                        </Link>
-                                        
-                                        <Link 
-                                            href="/register" 
-                                            className="flex items-center gap-2.5 px-3 py-2.5 mx-2 my-0.5 text-emerald-600 hover:bg-emerald-100/50 rounded-lg transition-all duration-200 font-medium text-sm"
-                                            onClick={closeMobileMenu}
-                                        >
-                                            <UserPlus className="h-4 w-4" />
-                                            <span>Criar Conta</span>
-                                        </Link>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Footer */}
-                        {session && (
-                            <div className="border-t border-slate-200 p-3">
-                                <button
-                                    onClick={() => {
-                                        signOut();
-                                        closeMobileMenu();
-                                    }}
-                                    className="flex items-center gap-2.5 w-full px-3 py-2.5 text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 font-medium text-sm"
-                                >
-                                    <LogOut className="h-4 w-4" />
-                                    <span>Sair</span>
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
+          <div className="relative" ref={playlistsRef}>
+            <button
+              onClick={() => setPlaylistsOpen(v => !v)}
+              aria-expanded={playlistsOpen}
+              aria-haspopup="menu"
+              className={linkCls}
+            >
+              <ListMusic className="h-3.5 w-3.5" />
+              Playlists
+              <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${playlistsOpen ? "rotate-180" : ""}`} />
+            </button>
+            {playlistsOpen && (
+              <div className="absolute left-0 top-full mt-1.5 w-52 rounded-xl border border-stone-200 bg-white shadow-lg shadow-stone-200/50 overflow-hidden" role="menu">
+                <Link href="/playlists/explore" prefetch={false} onClick={close} className="flex items-center gap-2.5 px-4 py-3 text-sm text-stone-700 hover:bg-stone-50">
+                  <Globe className="h-3.5 w-3.5 text-stone-400" />
+                  Playlists públicas
+                </Link>
+                {session?.user ? (
+                  <Link href="/playlists" prefetch={false} onClick={close} className="flex items-center gap-2.5 px-4 py-3 text-sm text-stone-700 hover:bg-stone-50 border-t border-stone-100">
+                    <Heart className="h-3.5 w-3.5 text-stone-400" />
+                    Minhas playlists
+                  </Link>
+                ) : (
+                  <Link href="/sign-in" prefetch={false} onClick={close} className="flex items-center gap-2.5 px-4 py-3 text-sm text-stone-700 hover:bg-stone-50 border-t border-stone-100">
+                    <Heart className="h-3.5 w-3.5 text-stone-400" />
+                    Iniciar sessão
+                  </Link>
+                )}
+              </div>
             )}
-        </>
-    );
+          </div>
+
+          {session?.user && (
+            <Link href="/missas" prefetch={false} onClick={close} className={linkCls}>
+              <Church className="h-3.5 w-3.5" />
+              Missas
+            </Link>
+          )}
+
+          <Link href="/musics/create" prefetch={false} onClick={close} className={linkCls}>
+            <Plus className="h-3.5 w-3.5" />
+            Nova
+          </Link>
+
+          {showAdmin && (
+            <Link href="/admin/dashboard" prefetch={false} onClick={close} className={linkCls}>
+              <Crown className="h-3.5 w-3.5" />
+              Admin
+            </Link>
+          )}
+          {showReview && (
+            <Link href="/admin/review" prefetch={false} onClick={close} className={linkCls}>
+              <Eye className="h-3.5 w-3.5" />
+              Revisão
+            </Link>
+          )}
+        </nav>
+
+        {/* Search + auth */}
+        <div className="hidden lg:flex items-center gap-2.5 ml-auto">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-stone-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Pesquisar cânticos..."
+              className="h-9 w-52 rounded-lg border border-stone-200 bg-stone-50 pl-9 pr-3 text-sm text-stone-800 placeholder:text-stone-400 outline-none focus:border-stone-300 focus:bg-white transition-colors"
+            />
+            {searchQuery.trim() && (
+              <div className="absolute right-0 top-full z-50 mt-1.5 w-80 rounded-xl border border-stone-200 bg-white shadow-lg shadow-stone-200/50 overflow-hidden">
+                {isSearching ? (
+                  <p className="px-4 py-3 text-sm text-stone-500">A procurar...</p>
+                ) : searchResults.length ? (
+                  searchResults.slice(0, 6).map(r => (
+                    <Link key={r.id} href={`/musics/${r.id}`} onClick={close} className="block border-b border-stone-100 px-4 py-3 text-sm text-stone-700 hover:bg-stone-50 last:border-0">
+                      {r.title}
+                    </Link>
+                  ))
+                ) : (
+                  <p className="px-4 py-3 text-sm text-stone-500">Nenhum resultado encontrado.</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {session?.user ? (
+            <div className="relative" ref={userRef}>
+              <button
+                onClick={() => setUserOpen(v => !v)}
+                aria-expanded={userOpen}
+                className="flex items-center gap-2 rounded-lg border border-stone-200 px-2 py-1.5 hover:bg-stone-50 transition-colors"
+              >
+                <UserAvatar user={{ name: session.user.name || "Utilizador", image: session.user.image }} size={24} />
+                <ChevronDown className={`h-3 w-3 text-stone-500 transition-transform duration-200 ${userOpen ? "rotate-180" : ""}`} />
+              </button>
+              {userOpen && (
+                <div className="absolute right-0 top-full mt-1.5 w-52 rounded-xl border border-stone-200 bg-white shadow-lg shadow-stone-200/50 overflow-hidden" role="menu">
+                  <div className="border-b border-stone-100 px-4 py-3">
+                    <p className="text-sm font-semibold text-stone-900 truncate">{session.user.name || "Utilizador"}</p>
+                    <p className="text-xs text-stone-500 truncate">{session.user.email}</p>
+                  </div>
+                  <Link href="/account" onClick={close} className="flex items-center gap-2.5 px-4 py-3 text-sm text-stone-700 hover:bg-stone-50">
+                    <Settings className="h-3.5 w-3.5 text-stone-400" />
+                    Minha Conta
+                  </Link>
+                  <Link href="/starred-songs" onClick={close} className="flex items-center gap-2.5 px-4 py-3 text-sm text-stone-700 hover:bg-stone-50">
+                    <Heart className="h-3.5 w-3.5 text-stone-400" />
+                    Favoritos
+                  </Link>
+                  <button
+                    onClick={() => { close(); signOut({ redirectUrl: "/" }); }}
+                    className="flex w-full items-center gap-2.5 px-4 py-3 text-sm text-red-600 hover:bg-red-50 border-t border-stone-100"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                    Terminar sessão
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Link href="/sign-in" prefetch={false} className="px-4 py-2 text-sm font-medium text-stone-600 hover:text-stone-900 transition-colors">
+                Entrar
+              </Link>
+              <Link href="/sign-up" prefetch={false} className="px-4 py-2 text-sm font-medium text-white bg-stone-900 rounded-lg hover:bg-rose-700 transition-colors duration-200">
+                Criar conta
+              </Link>
+            </div>
+          )}
+        </div>
+
+        {/* Mobile toggle */}
+        <button
+          onClick={() => setMobileOpen(v => !v)}
+          aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"}
+          className="ml-auto lg:hidden inline-flex items-center justify-center rounded-lg border border-stone-200 p-2 text-stone-600 hover:bg-stone-50 transition-colors"
+        >
+          {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+        </button>
+      </div>
+
+      {/* Mobile menu */}
+      {mobileOpen && (
+        <div ref={mobileRef} className="lg:hidden border-t border-stone-200 bg-white">
+          <div className="mx-auto max-w-screen-xl px-5 py-4 space-y-1">
+            <div className="relative mb-3">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-stone-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Pesquisar cânticos..."
+                className="h-10 w-full rounded-lg border border-stone-200 bg-stone-50 pl-9 pr-3 text-sm text-stone-800 outline-none"
+              />
+            </div>
+            {searchQuery.trim() && (
+              <div className="mb-3 rounded-xl border border-stone-200 overflow-hidden">
+                {isSearching ? <p className="px-4 py-3 text-sm text-stone-500">A procurar...</p>
+                  : searchResults.length ? searchResults.slice(0, 5).map(r => (
+                    <Link key={r.id} href={`/musics/${r.id}`} onClick={close} className="block border-b border-stone-100 px-4 py-3 text-sm text-stone-700 last:border-0">{r.title}</Link>
+                  )) : <p className="px-4 py-3 text-sm text-stone-500">Nenhum resultado.</p>}
+              </div>
+            )}
+            {[
+              { href: "/musics", icon: Music, label: "Músicas" },
+              { href: "/playlists/explore", icon: Globe, label: "Playlists públicas" },
+              ...(session?.user ? [{ href: "/playlists", icon: Heart, label: "Minhas playlists" }] : [{ href: "/sign-in", icon: Heart, label: "Iniciar sessão" }]),
+              ...(session?.user ? [{ href: "/missas", icon: Church, label: "Missas" }] : []),
+              { href: "/musics/create", icon: Plus, label: "Nova música" },
+              ...(session?.user ? [{ href: "/account", icon: Settings, label: "Minha Conta" }] : []),
+              ...(session?.user ? [{ href: "/starred-songs", icon: Heart, label: "Favoritos" }] : []),
+              ...(showAdmin ? [{ href: "/admin/dashboard", icon: Crown, label: "Admin" }] : []),
+              ...(showReview ? [{ href: "/admin/review", icon: Eye, label: "Revisão" }] : []),
+            ].map(item => (
+              <Link key={item.href} href={item.href} prefetch={false} onClick={close} className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-stone-700 hover:bg-stone-50">
+                <item.icon className="h-4 w-4 text-stone-400" />
+                {item.label}
+              </Link>
+            ))}
+            {!session?.user ? (
+              <div className="border-t border-stone-100 pt-3 mt-2 flex gap-2">
+                <Link href="/sign-in" prefetch={false} onClick={close} className="flex-1 text-center py-2.5 text-sm font-medium text-stone-700 border border-stone-200 rounded-lg hover:bg-stone-50">Entrar</Link>
+                <Link href="/sign-up" prefetch={false} onClick={close} className="flex-1 text-center py-2.5 text-sm font-medium text-white bg-stone-900 rounded-lg hover:bg-rose-700 transition-colors">Criar conta</Link>
+              </div>
+            ) : (
+              <div className="border-t border-stone-100 pt-3 mt-2">
+                <button onClick={() => { close(); signOut({ redirectUrl: "/" }); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50">
+                  <LogOut className="h-4 w-4" />
+                  Terminar sessão
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </header>
+  );
 }

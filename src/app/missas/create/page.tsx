@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -17,11 +16,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ArrowLeft, Calendar, Church, Loader2, User } from 'lucide-react';
-import { 
-  MassVisibility, 
-  LITURGICAL_COLORS, 
+import {
+  MassVisibility,
+  LITURGICAL_COLORS,
   LITURGICAL_COLOR_LABELS,
-  LiturgicalColor 
+  LiturgicalColor
 } from '@/types/mass';
 
 export default function CreateMassPage() {
@@ -41,7 +40,7 @@ export default function CreateMassPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name.trim()) {
       toast.error('O nome da missa é obrigatório');
       return;
@@ -53,7 +52,7 @@ export default function CreateMassPage() {
       // Combine date and time
       let dateTime = null;
       if (formData.date) {
-        dateTime = formData.time 
+        dateTime = formData.time
           ? `${formData.date}T${formData.time}:00`
           : `${formData.date}T10:00:00`;
       }
@@ -90,196 +89,199 @@ export default function CreateMassPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 -mt-16 pt-20">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="max-w-2xl mx-auto">
-          {/* Header */}
-          <div className="mb-6">
-            <Button variant="ghost" size="sm" asChild className="mb-4">
-              <Link href="/missas" className="flex items-center gap-2">
-                <ArrowLeft className="w-4 h-4" />
-                Voltar
-              </Link>
-            </Button>
-            <h1 className="text-2xl font-bold text-gray-900">Nova Missa</h1>
-            <p className="text-gray-600 mt-1">
-              Cria uma nova missa e adiciona os cânticos para cada momento
-            </p>
+    <div className="relative w-full min-h-screen bg-white">
+      {/* Header */}
+      <div className="border-b border-stone-100 bg-white pt-20 pb-8">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 md:px-8">
+          <Link href="/missas" className="inline-flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-900 transition-colors mb-6">
+            <ArrowLeft className="h-3.5 w-3.5" /> Missas
+          </Link>
+          <div className="flex items-center gap-3 mb-3">
+            <span className="text-rose-700 text-sm">✝</span>
+            <span className="h-px w-6 bg-stone-300" />
+            <span className="text-xs font-medium tracking-[0.18em] text-stone-400 uppercase">Nova Missa</span>
+          </div>
+          <h1 className="font-display text-4xl text-stone-900 leading-tight">Criar Missa</h1>
+        </div>
+      </div>
+
+      {/* Form */}
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 md:px-8 py-8 md:py-12">
+        <form onSubmit={handleSubmit}>
+          <div className="rounded-xl border border-stone-200 bg-white overflow-hidden">
+            <div className="px-6 py-5 border-b border-stone-100 bg-stone-50/50">
+              <h2 className="text-sm font-semibold text-stone-900">Detalhes da Missa</h2>
+              <p className="text-xs text-stone-500 mt-0.5">Preenche as informações sobre a celebração</p>
+            </div>
+            <div className="px-6 py-6 space-y-5">
+              {/* Name */}
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-stone-700 text-sm font-medium">Nome da Missa *</Label>
+                <Input
+                  id="name"
+                  placeholder="Ex: Missa do 1º Domingo do Advento"
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  required
+                  className="border-stone-200 bg-white rounded-lg text-stone-900 focus:border-stone-400 focus-visible:ring-0 placeholder:text-stone-400"
+                />
+              </div>
+
+              {/* Date and Time */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="date" className="text-stone-700 text-sm font-medium flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    Data
+                  </Label>
+                  <Input
+                    id="date"
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                    className="border-stone-200 bg-white rounded-lg text-stone-900 focus:border-stone-400 focus-visible:ring-0 placeholder:text-stone-400"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="time" className="text-stone-700 text-sm font-medium">Hora</Label>
+                  <Input
+                    id="time"
+                    type="time"
+                    value={formData.time}
+                    onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
+                    className="border-stone-200 bg-white rounded-lg text-stone-900 focus:border-stone-400 focus-visible:ring-0 placeholder:text-stone-400"
+                  />
+                </div>
+              </div>
+
+              {/* Celebration */}
+              <div className="space-y-2">
+                <Label htmlFor="celebration" className="text-stone-700 text-sm font-medium">Celebração</Label>
+                <Input
+                  id="celebration"
+                  placeholder="Ex: 1º Domingo do Advento"
+                  value={formData.celebration}
+                  onChange={(e) => setFormData(prev => ({ ...prev, celebration: e.target.value }))}
+                  className="border-stone-200 bg-white rounded-lg text-stone-900 focus:border-stone-400 focus-visible:ring-0 placeholder:text-stone-400"
+                />
+              </div>
+
+              {/* Liturgical Color */}
+              <div className="space-y-2">
+                <Label htmlFor="liturgicalColor" className="text-stone-700 text-sm font-medium">Cor Litúrgica</Label>
+                <Select
+                  value={formData.liturgicalColor}
+                  onValueChange={(value) => setFormData(prev => ({
+                    ...prev,
+                    liturgicalColor: value as LiturgicalColor
+                  }))}
+                >
+                  <SelectTrigger className="border-stone-200 bg-white rounded-lg text-stone-900 focus:ring-0 h-9">
+                    <SelectValue placeholder="Selecionar cor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LITURGICAL_COLORS.map((color) => (
+                      <SelectItem key={color} value={color}>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-3 h-3 rounded-full border"
+                            style={{
+                              backgroundColor: color === 'BRANCO' ? '#f5f5f5' :
+                                color === 'VERDE' ? '#22c55e' :
+                                color === 'ROXO' ? '#7c3aed' :
+                                color === 'VERMELHO' ? '#ef4444' : '#ec4899'
+                            }}
+                          />
+                          {LITURGICAL_COLOR_LABELS[color]}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Parish */}
+              <div className="space-y-2">
+                <Label htmlFor="parish" className="text-stone-700 text-sm font-medium flex items-center gap-2">
+                  <Church className="w-4 h-4" />
+                  Paróquia/Local
+                </Label>
+                <Input
+                  id="parish"
+                  placeholder="Ex: Paróquia de São João"
+                  value={formData.parish}
+                  onChange={(e) => setFormData(prev => ({ ...prev, parish: e.target.value }))}
+                  className="border-stone-200 bg-white rounded-lg text-stone-900 focus:border-stone-400 focus-visible:ring-0 placeholder:text-stone-400"
+                />
+              </div>
+
+              {/* Celebrant */}
+              <div className="space-y-2">
+                <Label htmlFor="celebrant" className="text-stone-700 text-sm font-medium flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  Celebrante
+                </Label>
+                <Input
+                  id="celebrant"
+                  placeholder="Ex: Padre António"
+                  value={formData.celebrant}
+                  onChange={(e) => setFormData(prev => ({ ...prev, celebrant: e.target.value }))}
+                  className="border-stone-200 bg-white rounded-lg text-stone-900 focus:border-stone-400 focus-visible:ring-0 placeholder:text-stone-400"
+                />
+              </div>
+
+              {/* Description */}
+              <div className="space-y-2">
+                <Label htmlFor="description" className="text-stone-700 text-sm font-medium">Notas/Descrição</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Notas adicionais sobre a missa..."
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  rows={3}
+                  className="border-stone-200 bg-white rounded-lg text-stone-900 focus:border-stone-400 focus-visible:ring-0 placeholder:text-stone-400"
+                />
+              </div>
+
+              {/* Visibility */}
+              <div className="space-y-2">
+                <Label htmlFor="visibility" className="text-stone-700 text-sm font-medium">Visibilidade</Label>
+                <Select
+                  value={formData.visibility}
+                  onValueChange={(value) => setFormData(prev => ({
+                    ...prev,
+                    visibility: value as MassVisibility
+                  }))}
+                >
+                  <SelectTrigger className="border-stone-200 bg-white rounded-lg text-stone-900 focus:ring-0 h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PRIVATE">
+                      🔒 Privada - Só tu podes ver
+                    </SelectItem>
+                    <SelectItem value="NOT_LISTED">
+                      👁 Não listada - Quem tiver o link pode ver
+                    </SelectItem>
+                    <SelectItem value="PUBLIC">
+                      🌍 Pública - Todos podem ver e duplicar
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit}>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Informações da Missa</CardTitle>
-                <CardDescription>
-                  Preenche os detalhes da celebração
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Name */}
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome da Missa *</Label>
-                  <Input
-                    id="name"
-                    placeholder="Ex: Missa do 1º Domingo do Advento"
-                    value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    required
-                  />
-                </div>
-
-                {/* Date and Time */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="date" className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4" />
-                      Data
-                    </Label>
-                    <Input
-                      id="date"
-                      type="date"
-                      value={formData.date}
-                      onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="time">Hora</Label>
-                    <Input
-                      id="time"
-                      type="time"
-                      value={formData.time}
-                      onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
-                    />
-                  </div>
-                </div>
-
-                {/* Celebration */}
-                <div className="space-y-2">
-                  <Label htmlFor="celebration">Celebração</Label>
-                  <Input
-                    id="celebration"
-                    placeholder="Ex: 1º Domingo do Advento"
-                    value={formData.celebration}
-                    onChange={(e) => setFormData(prev => ({ ...prev, celebration: e.target.value }))}
-                  />
-                </div>
-
-                {/* Liturgical Color */}
-                <div className="space-y-2">
-                  <Label htmlFor="liturgicalColor">Cor Litúrgica</Label>
-                  <Select
-                    value={formData.liturgicalColor}
-                    onValueChange={(value) => setFormData(prev => ({ 
-                      ...prev, 
-                      liturgicalColor: value as LiturgicalColor 
-                    }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecionar cor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {LITURGICAL_COLORS.map((color) => (
-                        <SelectItem key={color} value={color}>
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-3 h-3 rounded-full border"
-                              style={{ 
-                                backgroundColor: color === 'BRANCO' ? '#f5f5f5' : 
-                                  color === 'VERDE' ? '#22c55e' :
-                                  color === 'ROXO' ? '#7c3aed' :
-                                  color === 'VERMELHO' ? '#ef4444' : '#ec4899'
-                              }}
-                            />
-                            {LITURGICAL_COLOR_LABELS[color]}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Parish */}
-                <div className="space-y-2">
-                  <Label htmlFor="parish" className="flex items-center gap-2">
-                    <Church className="w-4 h-4" />
-                    Paróquia/Local
-                  </Label>
-                  <Input
-                    id="parish"
-                    placeholder="Ex: Paróquia de São João"
-                    value={formData.parish}
-                    onChange={(e) => setFormData(prev => ({ ...prev, parish: e.target.value }))}
-                  />
-                </div>
-
-                {/* Celebrant */}
-                <div className="space-y-2">
-                  <Label htmlFor="celebrant" className="flex items-center gap-2">
-                    <User className="w-4 h-4" />
-                    Celebrante
-                  </Label>
-                  <Input
-                    id="celebrant"
-                    placeholder="Ex: Padre António"
-                    value={formData.celebrant}
-                    onChange={(e) => setFormData(prev => ({ ...prev, celebrant: e.target.value }))}
-                  />
-                </div>
-
-                {/* Description */}
-                <div className="space-y-2">
-                  <Label htmlFor="description">Notas/Descrição</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Notas adicionais sobre a missa..."
-                    value={formData.description}
-                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                    rows={3}
-                  />
-                </div>
-
-                {/* Visibility */}
-                <div className="space-y-2">
-                  <Label htmlFor="visibility">Visibilidade</Label>
-                  <Select
-                    value={formData.visibility}
-                    onValueChange={(value) => setFormData(prev => ({ 
-                      ...prev, 
-                      visibility: value as MassVisibility 
-                    }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="PRIVATE">
-                        🔒 Privada - Só tu podes ver
-                      </SelectItem>
-                      <SelectItem value="NOT_LISTED">
-                        👁 Não listada - Quem tiver o link pode ver
-                      </SelectItem>
-                      <SelectItem value="PUBLIC">
-                        🌍 Pública - Todos podem ver e duplicar
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Actions */}
-            <div className="flex justify-end gap-3 mt-6">
-              <Button type="button" variant="outline" asChild>
-                <Link href="/missas">Cancelar</Link>
-              </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Criar Missa
-              </Button>
-            </div>
-          </form>
-        </div>
+          <div className="flex gap-3 justify-end mt-6">
+            <Link href="/missas" className="inline-flex items-center px-4 py-2 text-sm text-stone-600 hover:text-stone-900 transition-colors">
+              Cancelar
+            </Link>
+            <Button type="submit" disabled={isLoading} className="bg-stone-900 hover:bg-rose-700 transition-colors text-white">
+              {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Criar Missa
+            </Button>
+          </div>
+        </form>
       </div>
     </div>
   );

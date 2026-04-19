@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-
+import { getClerkSession } from '@/lib/api-middleware';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -79,7 +77,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verificar se o usuário está logado
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     if (!session) {
       // Redirecionar para login com return URL
       return NextResponse.redirect(new URL(`/login?callbackUrl=${encodeURIComponent(`/playlists/invite/accept?token=${token}`)}`, request.url));
@@ -115,7 +113,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     if (!session) {
       return NextResponse.json(
         { error: 'Não autenticado' },

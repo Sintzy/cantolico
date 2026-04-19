@@ -1,20 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/hooks/useClerkSession';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Globe, Lock, Plus, EyeOff, Users, Mail, X, Check, Music, ListMusic } from 'lucide-react';
+import { ArrowLeft, Globe, Lock, Plus, EyeOff, Mail, X, Check, ListMusic } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { getVisibilityLabel, getVisibilityFlags } from '@/types/playlist';
 import { trackEvent } from '@/lib/umami';
 
 interface CreatePlaylistForm {
@@ -43,7 +40,7 @@ export default function CreatePlaylistPage() {
   // Verificar autenticação
   useEffect(() => {
     if (status === "loading") return;
-    
+
     if (!session) {
       router.push("/login");
       return;
@@ -90,19 +87,10 @@ export default function CreatePlaylistPage() {
     toast.success('Email removido');
   };
 
-  const getVisibilityIcon = (visibility: string) => {
-    switch (visibility) {
-      case 'PUBLIC': return Globe;
-      case 'PRIVATE': return Lock;
-      case 'NOT_LISTED': return EyeOff;
-      default: return Globe;
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     trackEvent('playlist_create_attempt', { visibility: form.visibility, members: form.memberEmails.length });
-    
+
     if (!form.name.trim()) {
       toast.error('O nome da playlist é obrigatório');
       return;
@@ -156,8 +144,8 @@ export default function CreatePlaylistPage() {
             <ListMusic className="h-8 w-8 text-white" />
           </div>
           <div className="space-y-2">
-            <h3 className="text-xl font-semibold text-gray-900"><span className="sr-only">A carregar...</span><span aria-hidden data-nosnippet>A carregar...</span></h3>
-            <p className="text-gray-600">A verificar a tua autenticação</p>
+            <h3 className="text-xl font-semibold text-stone-900"><span className="sr-only">A carregar...</span><span aria-hidden data-nosnippet>A carregar...</span></h3>
+            <p className="text-stone-500">A verificar a tua autenticação</p>
           </div>
         </div>
       </div>
@@ -168,248 +156,238 @@ export default function CreatePlaylistPage() {
   if (!session) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-4">
-        <Card className="max-w-md w-full border-0 shadow-lg">
-          <CardContent className="flex flex-col items-center justify-center py-12 px-6">
+        <div className="max-w-md w-full rounded-xl border border-stone-200 bg-white overflow-hidden shadow-lg">
+          <div className="flex flex-col items-center justify-center py-12 px-6">
             <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-rose-500 to-orange-400 shadow-lg flex items-center justify-center mb-6">
               <ListMusic className="h-8 w-8 text-white" />
             </div>
-            <h3 className="text-2xl font-bold mb-3 text-center text-gray-900">Autenticação Necessária</h3>
-            <p className="text-gray-700 text-center mb-6 leading-relaxed">
+            <h3 className="text-2xl font-bold mb-3 text-center text-stone-900">Autenticação Necessária</h3>
+            <p className="text-stone-500 text-center mb-6 leading-relaxed">
               Para criares e personalizares as tuas próprias playlists, precisas de estar autenticado na tua conta.
             </p>
-            <Button asChild size="lg" className="bg-gradient-to-t from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700">
+            <Button asChild size="lg" className="bg-stone-900 hover:bg-rose-700 transition-colors text-white">
               <Link href="/login">
                 <Plus className="h-4 w-4 mr-2" />
                 Fazer Login
               </Link>
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header simples */}
-      <div className="border-b">
-        <div className="container mx-auto px-4 py-6">
-          <div className="max-w-2xl mx-auto">
-            <div className="flex items-center gap-4 mb-6">
-              <Button
-                variant="ghost"
-                size="sm"
-                asChild
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <Link href="/playlists">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Voltar
-                </Link>
-              </Button>
-            </div>
-            
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight mb-2">
-                Nova playlist
-              </h1>
-              <p className="text-muted-foreground">
-                Organiza as tuas músicas favoritas
-              </p>
-            </div>
+    <div className="relative w-full min-h-screen bg-white">
+      {/* Header */}
+      <div className="border-b border-stone-100 bg-white pt-20 pb-8">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 md:px-8">
+          <Link
+            href="/playlists"
+            className="inline-flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-900 transition-colors mb-6"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> Playlists
+          </Link>
+          <div className="flex items-center gap-3 mb-3">
+            <span className="text-rose-700 text-sm">✝</span>
+            <span className="h-px w-6 bg-stone-300" />
+            <span className="text-xs font-medium tracking-[0.18em] text-stone-400 uppercase">Nova Playlist</span>
           </div>
+          <h1 className="font-display text-4xl text-stone-900 leading-tight">Criar Playlist</h1>
         </div>
       </div>
 
-      {/* Formulário minimalista */}
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
-          <form onSubmit={handleSubmit} className="space-y-8">
-            
-            {/* Card único com todas as informações */}
-            <Card>
-              <CardContent className="p-6 space-y-6">
-                
-                {/* Nome da playlist */}
-                <div className="space-y-2">
-                  <Label htmlFor="name">
-                    Nome da playlist
-                  </Label>
-                  <Input
-                    id="name"
-                    type="text"
-                    value={form.name}
-                    onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="As minhas favoritas"
-                    maxLength={100}
-                    required
-                  />
-                </div>
-
-                {/* Descrição */}
-                <div className="space-y-2">
-                  <Label htmlFor="description">
-                    Descrição <span className="text-muted-foreground">(opcional)</span>
-                  </Label>
-                  <Textarea
-                    id="description"
-                    value={form.description}
-                    onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Uma breve descrição da playlist..."
-                    className="min-h-[80px] resize-none"
-                    maxLength={500}
-                  />
-                </div>
-
-                <Separator />
-
-                {/* Privacidade simples */}
-                <div className="space-y-4">
-                  <Label>Privacidade</Label>
-                  
-                  <div className="grid gap-3">
-                    {[
-                      { value: 'PRIVATE', label: 'Privada', icon: Lock, desc: 'Só tu e convidados' },
-                      { value: 'NOT_LISTED', label: 'Não listada', icon: EyeOff, desc: 'Visível com link' },
-                      { value: 'PUBLIC', label: 'Pública', icon: Globe, desc: 'Visível para todos' }
-                    ].map((option) => {
-                      const Icon = option.icon;
-                      const isSelected = form.visibility === option.value;
-                      
-                      return (
-                        <div
-                          key={option.value}
-                          onClick={() => setForm(prev => ({ ...prev, visibility: option.value as any }))}
-                          className={cn(
-                            "flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors",
-                            isSelected
-                              ? "border-primary bg-primary/5"
-                              : "border-border hover:bg-accent"
-                          )}
-                        >
-                          <Icon className={cn(
-                            "h-4 w-4",
-                            isSelected ? "text-primary" : "text-muted-foreground"
-                          )} />
-                          <div className="flex-1">
-                            <div className={cn(
-                              "font-medium text-sm",
-                              isSelected ? "text-primary" : "text-foreground"
-                            )}>
-                              {option.label}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {option.desc}
-                            </div>
-                          </div>
-                          {isSelected && (
-                            <Check className="h-4 w-4 text-primary" />
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Membros colaboradores - layout compacto */}
-                {form.visibility !== 'PUBLIC' && (
-                  <>
-                    <Separator />
-                    
-                    <div className="space-y-4">
-                      <div>
-                        <Label>Colaboradores <span className="text-muted-foreground">(opcional)</span></Label>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Adiciona pessoas que podem editar esta playlist
-                        </p>
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <Input
-                          type="email"
-                          value={newMemberEmail}
-                          onChange={(e) => setNewMemberEmail(e.target.value)}
-                          placeholder="email@exemplo.com"
-                          className="text-sm"
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              handleAddMemberEmail();
-                            }
-                          }}
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={handleAddMemberEmail}
-                          disabled={!newMemberEmail.trim()}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-
-                      {form.memberEmails.length > 0 && (
-                        <div className="space-y-2">
-                          {form.memberEmails.map((email, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center justify-between px-3 py-2 bg-accent rounded-md"
-                            >
-                              <div className="flex items-center gap-2">
-                                <Mail className="h-3 w-3 text-muted-foreground" />
-                                <span className="text-sm">{email}</span>
-                                <Badge variant="secondary" className="text-xs">
-                                  Pendente
-                                </Badge>
-                              </div>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleRemoveMemberEmail(email)}
-                                className="h-auto p-1 text-muted-foreground hover:text-foreground"
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
-
-              </CardContent>
-            </Card>
-
-            {/* Ações */}
-            <div className="flex gap-3 justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                asChild
-              >
-                <Link href="/playlists">
-                  Cancelar
-                </Link>
-              </Button>
-              <Button
-                type="submit"
-                disabled={isLoading || !form.name.trim()}
-              >
-                {isLoading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
-                    A criar...
-                  </>
-                ) : (
-                  'Criar playlist'
-                )}
-              </Button>
+      {/* Form */}
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 md:px-8 py-8 md:py-12">
+        <form onSubmit={handleSubmit}>
+          <div className="rounded-xl border border-stone-200 bg-white overflow-hidden">
+            <div className="px-6 py-5 border-b border-stone-100 bg-stone-50/50">
+              <h2 className="text-sm font-semibold text-stone-900">Detalhes da Playlist</h2>
+              <p className="text-xs text-stone-500 mt-0.5">Preenche as informações sobre a tua coleção</p>
             </div>
-          </form>
-        </div>
+            <div className="px-6 py-6 space-y-5">
+
+              {/* Nome da playlist */}
+              <div className="space-y-1.5">
+                <Label htmlFor="name" className="text-stone-700 text-sm font-medium">
+                  Nome da playlist
+                </Label>
+                <Input
+                  id="name"
+                  type="text"
+                  value={form.name}
+                  onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="As minhas favoritas"
+                  maxLength={100}
+                  required
+                  className="border-stone-200 bg-white rounded-lg text-stone-900 focus:border-stone-400 focus-visible:ring-0 placeholder:text-stone-400"
+                />
+              </div>
+
+              {/* Descrição */}
+              <div className="space-y-1.5">
+                <Label htmlFor="description" className="text-stone-700 text-sm font-medium">
+                  Descrição <span className="text-stone-400 font-normal">(opcional)</span>
+                </Label>
+                <Textarea
+                  id="description"
+                  value={form.description}
+                  onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Uma breve descrição da playlist..."
+                  className="min-h-[80px] resize-none border-stone-200 bg-white rounded-lg text-stone-900 focus:border-stone-400 focus-visible:ring-0 placeholder:text-stone-400"
+                  maxLength={500}
+                />
+              </div>
+
+              <div className="h-px bg-stone-100" />
+
+              {/* Privacidade */}
+              <div className="space-y-3">
+                <Label className="text-stone-700 text-sm font-medium">Privacidade</Label>
+
+                <div className="grid gap-2.5">
+                  {[
+                    { value: 'PRIVATE', label: 'Privada', icon: Lock, desc: 'Só tu e convidados' },
+                    { value: 'NOT_LISTED', label: 'Não listada', icon: EyeOff, desc: 'Visível com link' },
+                    { value: 'PUBLIC', label: 'Pública', icon: Globe, desc: 'Visível para todos' }
+                  ].map((option) => {
+                    const Icon = option.icon;
+                    const isSelected = form.visibility === option.value;
+
+                    return (
+                      <div
+                        key={option.value}
+                        onClick={() => setForm(prev => ({ ...prev, visibility: option.value as 'PUBLIC' | 'PRIVATE' | 'NOT_LISTED' }))}
+                        className={cn(
+                          "flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors",
+                          isSelected
+                            ? "border-rose-200 bg-rose-50/60"
+                            : "border-stone-200 hover:bg-stone-50"
+                        )}
+                      >
+                        <Icon className={cn(
+                          "h-4 w-4",
+                          isSelected ? "text-rose-700" : "text-stone-400"
+                        )} />
+                        <div className="flex-1">
+                          <div className={cn(
+                            "font-medium text-sm",
+                            isSelected ? "text-rose-700" : "text-stone-900"
+                          )}>
+                            {option.label}
+                          </div>
+                          <div className="text-xs text-stone-500">
+                            {option.desc}
+                          </div>
+                        </div>
+                        {isSelected && (
+                          <Check className="h-4 w-4 text-rose-700" />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Membros colaboradores */}
+              {form.visibility !== 'PUBLIC' && (
+                <>
+                  <div className="h-px bg-stone-100" />
+
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-stone-700 text-sm font-medium">
+                        Colaboradores <span className="text-stone-400 font-normal">(opcional)</span>
+                      </Label>
+                      <p className="text-xs text-stone-500 mt-1">
+                        Adiciona pessoas que podem editar esta playlist
+                      </p>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Input
+                        type="email"
+                        value={newMemberEmail}
+                        onChange={(e) => setNewMemberEmail(e.target.value)}
+                        placeholder="email@exemplo.com"
+                        className="text-sm border-stone-200 bg-white rounded-lg text-stone-900 focus:border-stone-400 focus-visible:ring-0 placeholder:text-stone-400"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddMemberEmail();
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleAddMemberEmail}
+                        disabled={!newMemberEmail.trim()}
+                        className="border-stone-200 text-stone-600 hover:text-stone-900 hover:bg-stone-50"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </div>
+
+                    {form.memberEmails.length > 0 && (
+                      <div className="space-y-2">
+                        {form.memberEmails.map((email, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between px-3 py-2 bg-stone-100 rounded-md"
+                          >
+                            <div className="flex items-center gap-2">
+                              <Mail className="h-3 w-3 text-stone-400" />
+                              <span className="text-sm text-stone-900">{email}</span>
+                              <Badge variant="secondary" className="text-xs">
+                                Pendente
+                              </Badge>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveMemberEmail(email)}
+                              className="h-auto p-1 text-stone-400 hover:text-stone-900"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+            </div>
+          </div>
+
+          {/* Ações */}
+          <div className="flex gap-3 justify-end mt-6">
+            <Link
+              href="/playlists"
+              className="inline-flex items-center px-4 py-2 text-sm text-stone-600 hover:text-stone-900 transition-colors"
+            >
+              Cancelar
+            </Link>
+            <Button
+              type="submit"
+              disabled={isLoading || !form.name.trim()}
+              className="bg-stone-900 hover:bg-rose-700 transition-colors text-white"
+            >
+              {isLoading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                  A criar...
+                </>
+              ) : (
+                'Criar Playlist'
+              )}
+            </Button>
+          </div>
+        </form>
       </div>
     </div>
   );

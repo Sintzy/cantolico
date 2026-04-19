@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
-import { supabase } from '@/lib/supabase-client';
+import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { transposeText, detectChordFormat, processAboveChords, extractChords, detectKey } from '@/lib/chord-processor';
 import { parseMomentsFromPostgreSQL } from '@/lib/utils';
 import { LiturgicalMoment } from '@/lib/constants';

@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/hooks/useClerkSession';
 import { Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -76,21 +76,6 @@ export default function StarButton({
     if (!session) {
       trackEvent('song_star_login_required');
       toast.error('Precisas de fazer login para dares estrela às músicas');
-      return;
-    }
-
-    // Verificar se o email está verificado
-    try {
-      const verificationResponse = await fetch('/api/user/email-verification-status');
-      const verificationData = await verificationResponse.json();
-      
-      if (verificationData.success && !verificationData.emailVerified) {
-        toast.error('Precisas de verificar o teu email antes de dar estrelas às músicas');
-        return;
-      }
-    } catch (error) {
-      console.error('Error checking email verification:', error);
-      toast.error('Erro ao verificar status da conta');
       return;
     }
 

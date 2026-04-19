@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { supabase } from '@/lib/supabase-client';
+import { adminSupabase as supabase } from '@/lib/supabase-admin';
 
+import { getClerkSession } from '@/lib/api-middleware';
 // ================================================
 // API PARA LOG ESPECÍFICO - GET
 // ================================================
@@ -13,7 +12,7 @@ export async function GET(
 ) {
   try {
     const { id } = await context.params;
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     
     // Verificar autorização
     if (!session || !['ADMIN', 'REVIEWER'].includes(session.user.role)) {
@@ -96,7 +95,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await context.params;
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     
     // Apenas admins podem atualizar logs
     if (!session || session.user.role !== 'ADMIN') {

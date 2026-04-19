@@ -1,11 +1,17 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Music, Sparkles, Users, Heart, Play, ArrowRight, Zap, Shield, Globe } from 'lucide-react';
-import { useSession } from 'next-auth/react';
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import {
+  ArrowRight,
+  Globe,
+  Heart,
+  Music,
+  Search,
+  Shield,
+  Users,
+} from "lucide-react";
+import { useSession } from "@/hooks/useClerkSession";
 
 interface NewsItem {
   id: string;
@@ -23,449 +29,297 @@ export default function HomePageClient() {
   const [newsLoading, setNewsLoading] = useState(true);
 
   useEffect(() => {
-    const loadNews = async () => {
-      try {
-        const res = await fetch('/api/news?limit=3');
-        const data = await res.json();
-        setNews(Array.isArray(data) ? data : []);
-      } catch {
-        setNews([]);
-      } finally {
-        setNewsLoading(false);
-      }
-    };
 
-    loadNews();
+    fetch("/api/news?limit=3")
+      .then(r => r.json())
+      .then(d => setNews(Array.isArray(d) ? d : []))
+      .catch(() => setNews([]))
+      .finally(() => setNewsLoading(false));
   }, []);
 
-  const formatDate = (value?: string | null) => {
-    if (!value) return '';
+  const formatDate = (v?: string | null) => {
+    if (!v) return "";
     try {
-      return new Date(value).toLocaleDateString('pt-PT', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric'
-      });
-    } catch {
-      return '';
-    }
+      return new Date(v).toLocaleDateString("pt-PT", { day: "2-digit", month: "long", year: "numeric" });
+    } catch { return ""; }
   };
 
   return (
-    <>
-      {/* Hero Section - Modern White */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-white">
-        {/* Animated background elements */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-rose-200/15 rounded-full mix-blend-screen filter blur-3xl animate-float"></div>
-          <div className="absolute top-40 right-1/4 w-96 h-96 bg-orange-200/15 rounded-full mix-blend-screen filter blur-3xl animate-float-delayed"></div>
-          <div className="absolute -bottom-32 left-1/2 w-96 h-96 bg-yellow-200/10 rounded-full mix-blend-screen filter blur-3xl animate-float"></div>
-        </div>
+    <div className="bg-white text-stone-900">
 
-        {/* Content */}
-        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-16 text-center">
-          {/* Badge */}
-          <div className="mb-5 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-rose-50 border border-rose-200/60 text-rose-600">
-            <Sparkles className="w-4 h-4" />
-            <span className="text-sm font-semibold">Cânticos católicos num só lugar</span>
-          </div>
+      {/* ─── HERO ─────────────────────────────────────────────────── */}
+      <section className="relative border-b border-stone-100 px-5 pb-20 pt-16 md:pt-20 lg:pb-28">
+        <div className="mx-auto grid max-w-screen-xl gap-12 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
 
-          {/* Main Heading */}
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-black mb-4 text-slate-900 leading-tight">
-            A melhor forma de encontrar
-            <span className="block text-rose-600">canticos católicos</span>
-          </h1>
+          {/* Left */}
+          <div>
+            <div className="mb-8 flex items-center gap-3">
+              <span className="text-rose-700 text-sm leading-none">✝</span>
+              <span className="h-px w-6 bg-stone-300" />
+              <span className="text-xs font-medium tracking-[0.18em] text-stone-500 uppercase">
+                Repretório de Cânticos Católicos
+              </span>
+            </div>
 
-          {/* Subheading */}
-          <p className="text-lg md:text-xl text-slate-700 max-w-2xl mx-auto mb-10 font-medium">
-            Pesquisa, cria playlists e prepara celebrações em minutos. Simples, bonito e feito para a comunidade.
-          </p>
+            <h1 className="font-display text-[clamp(2.6rem,6vw,4.8rem)] leading-[1.08] text-stone-900">
+              Encontra os cânticos<br />
+              para cada momento da liturgia.
+            </h1>
 
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 justify-center mb-10">
-            <Button 
-              asChild 
-              size="lg" 
-              className="bg-rose-600 hover:bg-rose-700 text-white text-lg px-8 py-5 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group font-semibold"
-            >
-              <Link href="/musics" prefetch={false} className="flex items-center gap-2">
-                Ver Cânticos
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </Button>
-            {!hasUser && (
-              <Button 
-                asChild 
-                size="lg" 
-                className="border-2 border-slate-300 hover:border-slate-400 bg-white text-slate-800 text-lg px-8 py-5 rounded-xl transition-all duration-300 font-semibold"
+            <p className="mt-6 max-w-lg text-base leading-relaxed text-stone-500 md:text-lg">
+              Pesquisa imediata, playlists colaborativas e preparação de missas.
+              Tudo num só lugar, para todos os fieis!
+            </p>
+
+            <div className="mt-10 flex flex-wrap items-center gap-3">
+              <Link
+                href="/musics"
+                prefetch={false}
+                className="inline-flex items-center gap-2 rounded-full bg-stone-900 px-7 py-3.5 text-sm font-medium tracking-wide text-white transition-colors duration-200 hover:bg-rose-700"
               >
-                <Link href="/register" prefetch={false}>
-                  Criar Conta
+                Explorar Cânticos
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+              {!hasUser && (
+                <Link
+                  href="/register"
+                  prefetch={false}
+                  className="inline-flex items-center gap-2 rounded-full border border-stone-300 px-7 py-3.5 text-sm font-medium tracking-wide text-stone-700 transition-colors duration-200 hover:border-stone-400 hover:text-stone-900"
+                >
+                  Criar conta
                 </Link>
-              </Button>
-            )}
+              )}
+            </div>
           </div>
 
-        </div>
-
-        {/* Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20">
-          <div className="animate-bounce">
-            <div className="w-6 h-10 border-2 border-slate-400 rounded-full flex items-start justify-center p-2">
-              <div className="w-1 h-2 bg-slate-400 rounded-full animate-scroll"></div>
+          {/* Right: product preview card */}
+          <div className="hidden lg:block">
+            <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl shadow-stone-200/40">
+              <div className="flex items-center justify-between border-b border-stone-100 px-5 py-3.5">
+                <span className="text-sm font-semibold text-stone-800">Cânticos</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-full bg-stone-200" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-stone-200" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-rose-400" />
+                </div>
+              </div>
+              <div className="px-5 pt-4 pb-2">
+                <div className="flex items-center gap-2 rounded-lg bg-stone-50 border border-stone-200 px-3 py-2.5">
+                  <Search className="h-3.5 w-3.5 text-stone-400" />
+                  <span className="text-sm text-stone-400">Pesquisar cânticos...</span>
+                </div>
+              </div>
+              <div className="divide-y divide-stone-100 px-3 pb-4 pt-1">
+                {[
+                  { title: "Deus está Aqui", moment: "Entrada", extra: "Javier Gacias" },
+                  { title: "Fiat", moment: "Final", extra: "Maite López" },
+                  { title: "Cordeiro de Deus I", moment: "Cordeiro", extra: "Tradicional" },
+                  { title: "Hino Missão País 2025", moment: "Final", extra: "MP" },
+                ].map(s => (
+                  <div key={s.title} className="flex items-center gap-3 px-2 py-3">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-rose-50">
+                      <Music className="h-3.5 w-3.5 text-rose-600" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-stone-900">{s.title}</p>
+                      <p className="text-xs text-stone-400">{s.moment} · {s.extra}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Features Section - Modern Cards */}
-      <section className="py-16 bg-white relative">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          {/* Section Header */}
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-rose-50 text-rose-600 mb-3 border border-rose-200">
-              <Zap className="w-4 h-4" />
-              <span className="text-sm font-bold">Funcionalidades</span>
+      {/* ─── FEATURES ────────────────────────────────────────────── */}
+      <section className="border-b border-stone-100 px-5 py-20 md:py-24">
+        <div className="mx-auto max-w-screen-xl">
+          <div className="grid gap-16 lg:grid-cols-[1fr_1.6fr] lg:items-start">
+
+            {/* Left: sticky heading */}
+            <div className="lg:sticky lg:top-24">
+              <p className="mb-4 text-xs font-medium uppercase tracking-[0.2em] text-rose-700">
+                Funcionalidades
+              </p>
+              <h2 className="font-display text-[clamp(1.9rem,3.2vw,3rem)] leading-tight text-stone-900">
+                Tudo para preparar e partilhar música litúrgica.
+              </h2>
+              <p className="mt-4 text-base leading-relaxed text-stone-500">
+                Desenhado para coros, músicos e equipas pastorais que precisam de rapidez e organização.
+              </p>
+              <Link
+                href="/musics"
+                prefetch={false}
+                className="mt-8 inline-flex items-center gap-2 text-sm font-medium text-stone-900 hover:text-rose-700 transition-colors"
+              >
+                Explorar a biblioteca
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </div>
-            <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-4 leading-tight">
-              Tudo o que precisas
+
+            {/* Right: feature grid */}
+            <div className="grid gap-px rounded-2xl border border-stone-200 bg-stone-200 overflow-hidden">
+              {[
+                { icon: Music,  title: "Biblioteca completa",  text: "Cânticos organizados por momento litúrgico, tema e contexto celebrativo." },
+                { icon: Search, title: "Pesquisa eficiente",   text: "Encontra por título, letra, acordes ou momento em menos de um segundo." },
+                { icon: Heart,  title: "Playlists pessoais",   text: "Cria e guarda repertórios para missas, grupos e ensaios." },
+                { icon: Shield, title: "Conteúdo revisto",     text: "Submissões verificadas por moderadores para garantir consistência." },
+                { icon: Globe,  title: "Acesso gratuito",      text: "Plataforma aberta para todas as comunidades de língua portuguesa." },
+                { icon: Users,  title: "Comunidade ativa",     text: "Contribuições contínuas de músicos e equipas pastorais de todo o mundo." },
+              ].map(f => (
+                <div key={f.title} className="group flex items-start gap-4 bg-white p-6 transition-colors hover:bg-stone-50/70">
+                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-stone-100 transition-colors group-hover:bg-rose-100">
+                    <f.icon className="h-4 w-4 text-stone-600 group-hover:text-rose-700 transition-colors" />
+                  </div>
+                  <div>
+                    <h3 className="mb-1 text-sm font-semibold text-stone-900">{f.title}</h3>
+                    <p className="text-sm leading-relaxed text-stone-500">{f.text}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── HOW IT WORKS ────────────────────────────────────────── */}
+      <section className="border-b border-stone-100 bg-stone-50/50 px-5 py-20 md:py-24">
+        <div className="mx-auto max-w-screen-xl">
+          <div className="mb-14 text-center">
+            <p className="mb-4 text-xs font-medium uppercase tracking-[0.2em] text-rose-700">Processo</p>
+            <h2 className="font-display text-[clamp(1.7rem,3.2vw,2.8rem)] text-stone-900">
+              Da submissão à partilha em 3 passos.
             </h2>
-            <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto font-medium">
-              Pesquisa rápida, playlists e gestão simples num só sítio
-            </p>
           </div>
 
-          {/* Feature Grid */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* Feature 1 */}
-            <Card className="group relative border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden bg-white">
-              <CardContent className="p-6 relative z-10">
-                <div className="w-11 h-11 bg-rose-50 rounded-xl flex items-center justify-center mb-4">
-                  <Music className="w-6 h-6 text-rose-600" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">Biblioteca</h3>
-                <p className="text-slate-700 leading-relaxed font-medium text-sm">
-                  Cânticos organizados por momento litúrgico e tema.
-                </p>
-              </CardContent>
-            </Card>
+          <div className="relative grid gap-10 md:grid-cols-3">
+            {/* Connecting line */}
+            <div className="absolute top-5 left-[calc(16.7%+20px)] right-[calc(16.7%+20px)] hidden h-px bg-stone-200 md:block" />
 
-            {/* Feature 2 */}
-            <Card className="group relative border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden bg-white">
-              <CardContent className="p-6 relative z-10">
-                <div className="w-11 h-11 bg-orange-50 rounded-xl flex items-center justify-center mb-4">
-                  <Play className="w-6 h-6 text-orange-600" />
+            {[
+              { n: "01", title: "Submeter", text: "Envia letra, acordes e contexto litúrgico pelo formulário simples." },
+              { n: "02", title: "Revisar",  text: "A equipa de moderadores valida o conteúdo para garantir qualidade." },
+              { n: "03", title: "Partilhar", text: "Cântico publicado e disponível para toda a comunidade." },
+            ].map(s => (
+              <div key={s.n} className="relative z-10 flex flex-col items-center gap-4 text-center">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-200 bg-white">
+                  <span className="font-mono text-xs font-semibold text-stone-400">{s.n}</span>
                 </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">Pesquisa rápida</h3>
-                <p className="text-slate-700 leading-relaxed font-medium text-sm">
-                  Encontra por título, letra, momento ou instrumento.
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Feature 3 */}
-            <Card className="group relative border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden bg-white">
-              <CardContent className="p-6 relative z-10">
-                <div className="w-11 h-11 bg-amber-50 rounded-xl flex items-center justify-center mb-4">
-                  <Heart className="w-6 h-6 text-amber-600" />
+                <div>
+                  <h3 className="mb-2 text-base font-semibold text-stone-900">{s.title}</h3>
+                  <p className="mx-auto max-w-[200px] text-sm leading-relaxed text-stone-500">{s.text}</p>
                 </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">Playlists</h3>
-                <p className="text-slate-700 leading-relaxed font-medium text-sm">
-                  Cria coleções para missas e ensaios.
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Feature 4 */}
-            <Card className="group relative border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden bg-white">
-              <CardContent className="p-6 relative z-10">
-                <div className="w-11 h-11 bg-yellow-50 rounded-xl flex items-center justify-center mb-4">
-                  <Shield className="w-6 h-6 text-yellow-600" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">Revisão</h3>
-                <p className="text-slate-700 leading-relaxed font-medium text-sm">
-                  Conteúdo revisto por moderadores.
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Feature 5 */}
-            <Card className="group relative border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden bg-white">
-              <CardContent className="p-6 relative z-10">
-                <div className="w-11 h-11 bg-pink-50 rounded-xl flex items-center justify-center mb-4">
-                  <Globe className="w-6 h-6 text-pink-600" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">Sem custos</h3>
-                <p className="text-slate-700 leading-relaxed font-medium text-sm">
-                  Acesso livre a toda a biblioteca.
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Feature 6 */}
-            <Card className="group relative border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden bg-white">
-              <CardContent className="p-6 relative z-10">
-                <div className="w-11 h-11 bg-red-50 rounded-xl flex items-center justify-center mb-4">
-                  <Users className="w-6 h-6 text-red-600" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">Comunidade ativa</h3>
-                <p className="text-slate-700 leading-relaxed font-medium text-sm">
-                  Partilha, cria e ajuda a melhorar.
-                </p>
-              </CardContent>
-            </Card>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* News Section */}
-      <section className="py-16 bg-white relative">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-10">
-            <div className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-rose-50 text-rose-600 mb-3 border border-rose-200">
-              <Sparkles className="w-4 h-4" />
-              <span className="text-sm font-bold">Notícias</span>
-            </div>
-            <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-4 leading-tight">
-              Novidades do Cantólico
-            </h2>
-            <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto font-medium">
-              Atualizações rápidas para a comunidade
-            </p>
-          </div>
-
-          {newsLoading ? (
-            <div className="text-center text-slate-600">A carregar notícias...</div>
-          ) : news.length === 0 ? (
-            <div className="text-center text-slate-600">Sem notícias ainda.</div>
-          ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {news.map((item) => {
-                const link = item.slug ? `/noticia/${item.slug}` : `/noticia/${item.id}`;
-                return (
-                  <Card key={item.id} className="border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden bg-white">
-                    {item.coverImageUrl && (
-                      <div className="h-40 w-full overflow-hidden">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={item.coverImageUrl} alt={item.title} className="h-full w-full object-cover" />
-                      </div>
-                    )}
-                    <CardContent className="p-5">
-                      <p className="text-xs text-slate-500 mb-2">{formatDate(item.publishedAt)}</p>
-                      <h3 className="text-lg font-bold text-slate-900 mb-2">{item.title}</h3>
-                      {item.summary && (
-                        <p className="text-sm text-slate-600 mb-3">{item.summary}</p>
-                      )}
-                      <Link href={link} className="text-sm font-semibold text-rose-600 hover:underline">
-                        Ler notícia
-                      </Link>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* About Section - Modern Layout */}
-      <section className="py-16 bg-slate-50 relative overflow-hidden">
-        <div className="absolute top-1/2 -right-40 w-96 h-96 bg-rose-200/20 rounded-full -translate-y-1/2 blur-3xl opacity-60"></div>
-        
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-10 items-center">
-            {/* Left Content */}
-            <div className="space-y-5">
+      {/* ─── NEWS ────────────────────────────────────────────────── */}
+      {(newsLoading || news.length > 0) && (
+        <section className="border-b border-stone-100 px-5 py-20 md:py-24">
+          <div className="mx-auto max-w-screen-xl">
+            <div className="mb-12 flex items-end justify-between">
               <div>
-                <div className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-white text-rose-600 mb-3 border border-slate-200">
-                  <Sparkles className="w-4 h-4" />
-                  <span className="text-sm font-semibold">Sobre o Cantólico</span>
-                </div>
-                <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 leading-tight mb-4">
-                  Tudo o que precisas para cantar na missa
+                <p className="mb-3 text-xs font-medium uppercase tracking-[0.2em] text-rose-700">Novidades</p>
+                <h2 className="font-display text-[clamp(1.7rem,3.2vw,2.8rem)] text-stone-900">
+                  Notícias do Cantólico.
                 </h2>
-                <p className="text-slate-700 text-lg leading-relaxed">
-                  Uma plataforma pensada para facilitar a vida de quem canta nas celebrações. Organização simples, pesquisa rápida e conteúdos sempre à mão.
-                </p>
               </div>
-
-              <Button asChild size="lg" className="bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white rounded-xl shadow-md w-auto group">
-                <Link href="/musics" className="flex items-center gap-2">
-                  Explorar
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </Link>
-              </Button>
-            </div>
-
-            {/* Right Side - Clean Preview */}
-            <div className="relative">
-              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-                  <div className="flex items-center gap-2">
-                    <div className="w-9 h-9 rounded-xl bg-rose-50 flex items-center justify-center">
-                      <Sparkles className="w-4 h-4 text-rose-600" />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-bold text-slate-900">Tudo pronto a usar</h3>
-                      <p className="text-xs text-slate-600">Pesquisa rápida e organização clara</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="divide-y divide-slate-100">
-                  <div className="flex items-center gap-3 py-3">
-                    <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center">
-                      <Music className="w-4 h-4 text-rose-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">Organizadas por momento</p>
-                      <p className="text-xs text-slate-600">Entrada, comunhão, envio…</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 py-3">
-                    <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
-                      <Play className="w-4 h-4 text-amber-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">Informações pertinentes</p>
-                      <p className="text-xs text-slate-600">Acordes, partituras, audios, etc...</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 py-3">
-                    <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
-                      <Globe className="w-4 h-4 text-orange-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">Partilha fácil</p>
-                      <p className="text-xs text-slate-600">Cria playlists com as tuas músicas favoritas</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* How it Works Section */}
-      <section className="py-16 bg-white relative">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          {/* Section Header */}
-          <div className="text-center mb-10">
-            <div className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-rose-50 text-rose-600 mb-3 border border-rose-200">
-              <Zap className="w-4 h-4" />
-              <span className="text-sm font-bold">Como Funciona</span>
-            </div>
-            <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-4 leading-tight">
-              Em três passos
-            </h2>
-            <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto font-medium">
-              Submete, revê e publica. Simples e rápido.
-            </p>
-          </div>
-
-          {/* Process Timeline */}
-          <div className="grid md:grid-cols-3 gap-5 relative">
-            {/* Connecting Line */}
-            <div className="hidden md:block absolute top-16 left-0 right-0 h-1 bg-gradient-to-r from-rose-200 via-orange-200 to-amber-200"></div>
-
-            {/* Step 1 */}
-            <div className="relative">
-              <div className="flex flex-col items-center">
-                <div className="w-14 h-14 bg-rose-600 rounded-full flex items-center justify-center mb-5 shadow-lg relative z-20">
-                  <span className="text-2xl font-black text-white">1</span>
-                </div>
-                <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-200 text-center">
-                  <h3 className="text-lg font-bold text-slate-900 mb-2">Submete</h3>
-                  <p className="text-slate-600 leading-relaxed text-sm">
-                    Envia letra, acordes e tags.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Step 2 */}
-            <div className="relative">
-              <div className="flex flex-col items-center">
-                <div className="w-14 h-14 bg-orange-500 rounded-full flex items-center justify-center mb-5 shadow-lg relative z-20">
-                  <span className="text-2xl font-black text-white">2</span>
-                </div>
-                <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-200 text-center">
-                  <h3 className="text-lg font-bold text-slate-900 mb-2">Revisão</h3>
-                  <p className="text-slate-600 leading-relaxed text-sm">
-                    A equipa valida e melhora.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Step 3 */}
-            <div className="relative">
-              <div className="flex flex-col items-center">
-                <div className="w-14 h-14 bg-amber-500 rounded-full flex items-center justify-center mb-5 shadow-lg relative z-20">
-                  <span className="text-2xl font-black text-white">3</span>
-                </div>
-                <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-200 text-center">
-                  <h3 className="text-lg font-bold text-slate-900 mb-2">Online</h3>
-                  <p className="text-slate-600 leading-relaxed text-sm">
-                    Fica disponível para todos.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Final Section */}
-      <section className="py-16 bg-white relative overflow-hidden">
-        {/* Background decorations */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-rose-200/15 rounded-full mix-blend-screen filter blur-3xl"></div>
-          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-amber-200/15 rounded-full mix-blend-screen filter blur-3xl"></div>
-        </div>
-
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 relative z-10 text-center">
-          <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-4 leading-tight">
-            Pronto para começar?
-          </h2>
-          <p className="text-lg md:text-xl text-slate-700 mb-10 max-w-2xl mx-auto font-medium">
-            Explora, cria playlists e prepara a tua próxima celebração.
-          </p>
-
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 justify-center mb-6">
-            <Button 
-              asChild 
-              size="lg" 
-              className="bg-rose-600 hover:bg-rose-700 text-white text-lg px-8 py-5 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group font-semibold"
-            >
-              <Link href="/musics" className="flex items-center gap-2">
-                Ver Cânticos
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              <Link href="/noticia" className="flex items-center gap-1.5 text-sm font-medium text-stone-500 transition-colors hover:text-stone-900">
+                Ver todas <ArrowRight className="h-3.5 w-3.5" />
               </Link>
-            </Button>
-            {!hasUser && (
-              <Button 
-                asChild 
-                size="lg" 
-                className="border-2 border-slate-300 text-slate-800 hover:bg-slate-50 text-lg px-8 py-5 rounded-xl bg-white transition-all duration-300 font-semibold"
-              >
-                <Link href="/register">
-                  Criar Conta
-                </Link>
-              </Button>
+            </div>
+
+            {newsLoading ? (
+              <div className="grid gap-6 md:grid-cols-3">
+                {[0, 1, 2].map(i => (
+                  <div key={i} className="h-64 animate-pulse rounded-2xl bg-stone-100" />
+                ))}
+              </div>
+            ) : (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {news.map(item => {
+                  const href = item.slug ? `/noticia/${item.slug}` : `/noticia/${item.id}`;
+                  return (
+                    <Link key={item.id} href={href} className="group overflow-hidden rounded-2xl border border-stone-200 bg-white transition-all duration-300 hover:shadow-lg hover:shadow-stone-200/60">
+                      {item.coverImageUrl && (
+                        <div className="h-44 overflow-hidden bg-stone-100">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={item.coverImageUrl} alt={item.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                        </div>
+                      )}
+                      <div className="p-6">
+                        {item.publishedAt && (
+                          <p className="mb-2 font-mono text-xs text-stone-400">{formatDate(item.publishedAt)}</p>
+                        )}
+                        <h3 className="mb-2 text-base font-semibold leading-snug text-stone-900 transition-colors group-hover:text-rose-700">
+                          {item.title}
+                        </h3>
+                        {item.summary && (
+                          <p className="line-clamp-2 text-sm leading-relaxed text-stone-500">{item.summary}</p>
+                        )}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
             )}
           </div>
+        </section>
+      )}
 
-          {/* Footer note */}
-          <p className="text-sm text-slate-600 font-medium">
-            100% gratuito • Sem publicidade
-          </p>
+      {/* ─── CTA ─────────────────────────────────────────────────── */}
+      <section className="px-5 py-20 md:py-24">
+        <div className="mx-auto max-w-screen-xl">
+          <div className="relative overflow-hidden rounded-3xl bg-stone-900 px-8 py-16 text-center sm:px-14">
+            {/* Subtle texture overlay */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 opacity-[0.035]"
+              style={{
+                backgroundImage: `radial-gradient(circle, #fff 1px, transparent 1px)`,
+                backgroundSize: "24px 24px",
+              }}
+            />
+
+            <div className="relative z-10">
+              <p className="mb-5 text-xs font-medium uppercase tracking-[0.2em] text-rose-400">
+                Começa agora
+              </p>
+              <h2 className="font-display text-[clamp(1.9rem,4.5vw,3.8rem)] leading-tight text-white">
+                Pronto para preparar<br />
+                a próxima celebração?
+              </h2>
+              <p className="mx-auto mt-5 max-w-md text-base leading-relaxed text-stone-400">
+                Organiza o repertório, cria playlists e trabalha com a tua equipa num só lugar.
+              </p>
+              <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                <Link
+                  href="/musics"
+                  className="inline-flex items-center gap-2 rounded-full bg-white px-8 py-3.5 text-sm font-medium tracking-wide text-stone-900 transition-colors duration-200 hover:bg-rose-50"
+                >
+                  Ver Cânticos
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+                {!hasUser && (
+                  <Link
+                    href="/register"
+                    className="inline-flex items-center gap-2 rounded-full border border-stone-600 px-8 py-3.5 text-sm font-medium tracking-wide text-stone-300 transition-colors duration-200 hover:border-stone-400 hover:text-white"
+                  >
+                    Criar conta gratuita
+                  </Link>
+                )}
+              </div>
+              <p className="mt-8 text-xs font-medium text-stone-600">
+                100% gratuito · Sem publicidade · Sem cartão de crédito
+              </p>
+            </div>
+          </div>
         </div>
       </section>
-    </>
+
+    </div>
   );
 }

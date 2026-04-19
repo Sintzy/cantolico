@@ -1,18 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase-client';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-import { withAuthApiProtection, withApiProtection } from '@/lib/api-middleware';
+import { adminSupabase } from '@/lib/supabase-admin';
+import { withAuthApiProtection, withApiProtection, getClerkSession } from '@/lib/api-middleware';
 import { logSongStarred } from '@/lib/logging-helpers';
-import { requireEmailVerification } from '@/lib/email';
 
 export const POST = withAuthApiProtection(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) => {
   try {
-    const session = await getServerSession(authOptions);
-    
+    const session = await getClerkSession();
+
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'Authentication required' },
@@ -24,24 +21,14 @@ export const POST = withAuthApiProtection(async (
     const songIdOrSlug = id;
     const userId = session.user.id;
 
-    // Verificar se email está verificado
-    const emailVerificationResult = await requireEmailVerification(userId);
-    if (!emailVerificationResult.success) {
-      return NextResponse.json(
-        { error: emailVerificationResult.error },
-        { status: 403 }
-      );
-    }
-
     // Buscar música por ID ou slug
-    const { data: songs, error: songError } = await supabase
+    const { data: songs, error: songError } = await adminSupabase
       .from('Song')
       .select('id, title, slug')
       .or(`id.eq.${songIdOrSlug},slug.eq.${songIdOrSlug}`)
       .limit(1);
 
     if (songError || !songs || songs.length === 0) {
-      console.log('Song not found for star operation:', songIdOrSlug);
       return NextResponse.json(
         { error: 'Song not found' },
         { status: 404 }
@@ -52,7 +39,7 @@ export const POST = withAuthApiProtection(async (
     const songId = song.id;
 
     // Verificar se já tem star
-    const { data: existingStars, error: starError } = await supabase
+    const { data: existingStars, error: starError } = await adminSupabase
       .from('Star')
       .select('userId')
       .eq('userId', userId)
@@ -64,7 +51,6 @@ export const POST = withAuthApiProtection(async (
     }
 
     if (existingStars && existingStars.length > 0) {
-      console.log('Song already starred:', { songId: song.id, songTitle: song.title });
       return NextResponse.json(
         { error: 'Song already starred' },
         { status: 400 }
@@ -72,7 +58,7 @@ export const POST = withAuthApiProtection(async (
     }
 
     // Criar star
-    const { error: createError } = await supabase
+    const { error: createError } = await adminSupabase
       .from('Star')
       .insert({
         userId,
@@ -84,7 +70,6 @@ export const POST = withAuthApiProtection(async (
       throw createError;
     }
 
-    // Log de sucesso usando o novo sistema
     await logSongStarred({
       song_id: song.id,
       details: {
@@ -95,14 +80,10 @@ export const POST = withAuthApiProtection(async (
     });
 
     // Retornar contagem atualizada
-    const { count: starCount, error: countError } = await supabase
+    const { count: starCount } = await adminSupabase
       .from('Star')
       .select('*', { count: 'exact', head: true })
       .eq('songId', songId);
-
-    if (countError) {
-      throw countError;
-    }
 
     return NextResponse.json({
       success: true,
@@ -124,8 +105,8 @@ export const DELETE = withAuthApiProtection(async (
   { params }: { params: Promise<{ id: string }> }
 ) => {
   try {
-    const session = await getServerSession(authOptions);
-    
+    const session = await getClerkSession();
+
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'Authentication required' },
@@ -137,24 +118,14 @@ export const DELETE = withAuthApiProtection(async (
     const songIdOrSlug = id;
     const userId = session.user.id;
 
-    // Verificar se email está verificado
-    const emailVerificationResult = await requireEmailVerification(userId);
-    if (!emailVerificationResult.success) {
-      return NextResponse.json(
-        { error: emailVerificationResult.error },
-        { status: 403 }
-      );
-    }
-
     // Buscar música por ID ou slug
-    const { data: songs, error: songError } = await supabase
+    const { data: songs, error: songError } = await adminSupabase
       .from('Song')
       .select('id, title, slug')
       .or(`id.eq.${songIdOrSlug},slug.eq.${songIdOrSlug}`)
       .limit(1);
 
     if (songError || !songs || songs.length === 0) {
-      console.log('Song not found for unstar operation:', songIdOrSlug);
       return NextResponse.json(
         { error: 'Song not found' },
         { status: 404 }
@@ -164,8 +135,8 @@ export const DELETE = withAuthApiProtection(async (
     const song = songs[0];
     const songId = song.id;
 
-    // Remover star se existir
-    const { error: deleteError } = await supabase
+    // Remover star
+    const { error: deleteError } = await adminSupabase
       .from('Star')
       .delete()
       .eq('userId', userId)
@@ -176,17 +147,11 @@ export const DELETE = withAuthApiProtection(async (
       throw deleteError;
     }
 
-    console.log('Song unstarred successfully:', { songId: song.id, songTitle: song.title });
-
     // Retornar contagem atualizada
-    const { count: starCount, error: countError } = await supabase
+    const { count: starCount } = await adminSupabase
       .from('Star')
       .select('*', { count: 'exact', head: true })
       .eq('songId', songId);
-
-    if (countError) {
-      throw countError;
-    }
 
     return NextResponse.json({
       success: true,
@@ -208,12 +173,12 @@ export const GET = withApiProtection(async (
   { params }: { params: Promise<{ id: string }> }
 ) => {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     const { id } = await params;
     const songIdOrSlug = id;
 
     // Buscar música por ID ou slug
-    const { data: songs, error: songError } = await supabase
+    const { data: songs, error: songError } = await adminSupabase
       .from('Song')
       .select('id')
       .or(`id.eq.${songIdOrSlug},slug.eq.${songIdOrSlug}`)
@@ -229,29 +194,20 @@ export const GET = withApiProtection(async (
     const songId = songs[0].id;
 
     // Contagem total de stars
-    const { count: starCount, error: countError } = await supabase
+    const { count: starCount } = await adminSupabase
       .from('Star')
       .select('*', { count: 'exact', head: true })
       .eq('songId', songId);
 
-    if (countError) {
-      throw countError;
-    }
-
     // Verificar se o usuário atual deu star (se logado)
     let isStarred = false;
     if (session?.user?.id) {
-      const userId = session.user.id;
-      const { data: userStars, error: userStarError } = await supabase
+      const { data: userStars } = await adminSupabase
         .from('Star')
         .select('userId')
-        .eq('userId', userId)
+        .eq('userId', session.user.id)
         .eq('songId', songId)
         .limit(1);
-
-      if (userStarError) {
-        throw userStarError;
-      }
 
       isStarred = !!(userStars && userStars.length > 0);
     }

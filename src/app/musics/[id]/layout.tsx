@@ -1,55 +1,37 @@
 import { Metadata } from "next";
+import { cache } from "react";
 import { supabase } from "@/lib/supabase-client";
 import { findSongBySlug } from "@/lib/slugs";
-import { buildMetadata } from "@/lib/seo";
+import { buildMetadata, absoluteUrl } from "@/lib/seo";
+import { getLiturgicalMomentLabel } from "@/lib/constants";
 
 interface MusicLayoutProps {
   children: React.ReactNode;
   params: Promise<{ id: string }>;
 }
 
+const getSongForLayout = cache(async (id: string) => {
+  let { data: song } = await supabase
+    .from('Song')
+    .select('id, title, slug, tags, moments, author, createdAt')
+    .eq('id', id)
+    .single();
+
+  if (!song) {
+    const bySlug = await findSongBySlug(id);
+    if (bySlug) song = bySlug as typeof song;
+  }
+
+  return song;
+});
+
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
-  
+
   try {
-    // Tentar encontrar por ID primeiro, depois por slug
-    let { data: song } = await supabase
-      .from('Song')
-      .select(`
-        id,
-        title,
-        slug,
-        tags,
-        moments,
-        mainInstrument,
-        currentVersion:SongVersion!Song_currentVersionId_fkey(
-          sourceText,
-          createdBy:User!SongVersion_createdById_fkey(name)
-        )
-      `)
-      .eq('id', id)
-      .single();
+    const song = await getSongForLayout(id);
 
-    // Se não encontrou por ID, tentar por slug
-    if (!song) {
-      const songBySlug = await findSongBySlug(id);
-      if (songBySlug) {
-        song = {    
-          id: (songBySlug as any).id,
-          title: (songBySlug as any).title,
-          slug: (songBySlug as any).slug,
-          tags: (songBySlug as any).tags,
-          moments: (songBySlug as any).moments,
-          mainInstrument: (songBySlug as any).mainInstrument,
-          currentVersion: (songBySlug as any).currentVersion ? {
-            sourceText: (songBySlug as any).currentVersion.sourceText,
-            createdBy: (songBySlug as any).currentVersion.createdBy
-          } : null
-        } as any;
-      }
-    }
-
-    if (!song) {
+    if (!song?.slug) {
       return buildMetadata({
         title: "Música não encontrada",
         description: "Esta música não existe no nosso cancioneiro.",
@@ -58,36 +40,67 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       });
     }
 
-    const title = (song as any)?.title || "Cântico";
-    const slug = (song as any)?.slug;
-    const moments = Array.isArray((song as any)?.moments) ? (song as any)?.moments : [];
+    const moments = Array.isArray(song.moments) ? song.moments : [];
+    const momentLabels = moments.map(m => getLiturgicalMomentLabel(m)).filter(Boolean);
 
-    // Always use slug for canonical URL, never ID
-    if (!slug) {
-      return buildMetadata({
-        title: "Música não encontrada",
-        description: "Esta música não tem um identificador válido.",
-        path: `/musics/${id}`,
-        index: false,
-      });
-    }
+    const descParts = [`${song.title} com letra e acordes`];
+    if (song.author) descParts.push(`por ${song.author}`);
+    if (momentLabels.length) descParts.push(`para ${momentLabels.join(', ')}`);
+    descParts.push('em português');
 
     return buildMetadata({
-      title: `${title} | Letra e Acordes`,
-      description: `${title} com letra e acordes para celebrações litúrgicas.`,
-      path: `/musics/${slug}`,
+      title: `${song.title} | Letra e Acordes`,
+      description: descParts.join(' ') + '.',
+      path: `/musics/${song.slug}`,
       type: "article",
     });
-  } catch (error) {
+  } catch {
     return buildMetadata({
       title: "Erro ao carregar música",
       description: "Ocorreu um erro ao carregar esta música.",
-      path: `/musics/${await params.then(p => p.id)}`,
+      path: `/musics/${id}`,
       index: false,
     });
   }
 }
 
-export default function MusicLayout({ children }: MusicLayoutProps) {
-  return children;
+export default async function MusicLayout({ children, params }: MusicLayoutProps) {
+  const { id } = await params;
+  const song = await getSongForLayout(id);
+
+  const jsonLd = song?.slug
+    ? JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "MusicComposition",
+        name: song.title,
+        composer: { "@type": "Person", name: song.author || "Tradicional" },
+        genre: ["Música Católica", "Liturgia", "Sacred Music"],
+        inLanguage: "pt-PT",
+        url: absoluteUrl(`/musics/${song.slug}`),
+        keywords: [
+          song.title,
+          `${song.title} letra`,
+          `${song.title} acordes`,
+          ...(Array.isArray(song.moments) ? song.moments.map(m => getLiturgicalMomentLabel(m)) : []),
+          ...(song.tags || []),
+          "cânticos católicos",
+          "música litúrgica",
+        ].join(", "),
+        publisher: { "@type": "Organization", name: "Cantólico", url: absoluteUrl("/") },
+        datePublished: song.createdAt,
+        audience: { "@type": "Audience", audienceType: "Católicos" },
+      })
+    : null;
+
+  return (
+    <>
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: jsonLd }}
+        />
+      )}
+      {children}
+    </>
+  );
 }

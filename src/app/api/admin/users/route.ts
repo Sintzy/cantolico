@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAdminProtection, logUserModerationAction } from '@/lib/enhanced-api-protection';
-import { supabase } from '@/lib/supabase-client';
+import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { z } from 'zod';
 
 const UpdateUserSchema = z.object({

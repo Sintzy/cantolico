@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 import { supabase } from '@/lib/supabase-client';
 
 interface NewsPageProps {
@@ -40,31 +41,86 @@ export default async function NewsPage({ params }: NewsPageProps) {
   const paragraphs = (news.content || '').split('\n').filter(Boolean);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10">
-      <div className="mb-6">
-        <Link href="/" className="text-sm text-rose-600 hover:underline">Voltar</Link>
-      </div>
-
-      {news.coverImageUrl && (
-        <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={news.coverImageUrl} alt={news.title} className="w-full h-72 object-cover" />
+    <div className="min-h-screen bg-white">
+      {/* Header bar */}
+      <div className="border-b border-stone-100">
+        <div className="mx-auto max-w-3xl px-5 py-4">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-900 transition-colors"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Voltar
+          </Link>
         </div>
-      )}
-
-      <h1 className="text-3xl md:text-4xl font-black text-slate-900 mb-2">{news.title}</h1>
-      {news.summary && (
-        <p className="text-slate-700 text-lg mb-4">{news.summary}</p>
-      )}
-      {news.publishedAt && (
-        <p className="text-sm text-slate-500 mb-6">{formatDate(news.publishedAt)}</p>
-      )}
-
-      <div className="space-y-4 text-slate-700">
-        {paragraphs.map((p: string, idx: number) => (
-          <p key={idx} className="leading-relaxed">{p}</p>
-        ))}
       </div>
+
+      <article className="mx-auto max-w-3xl px-5 pb-24 pt-12">
+        {/* Eyebrow */}
+        <div className="mb-6 flex items-center gap-3">
+          <span className="text-rose-700 text-sm">✝</span>
+          <span className="h-px w-6 bg-stone-300" />
+          <span className="text-xs font-medium tracking-[0.18em] text-stone-500 uppercase">Notícias</span>
+        </div>
+
+        {/* Title */}
+        <h1 className="font-display text-[clamp(2rem,5vw,3.2rem)] leading-[1.1] text-stone-900">
+          {news.title}
+        </h1>
+
+        {/* Summary */}
+        {news.summary && (
+          <p className="mt-4 text-lg leading-relaxed text-stone-500">
+            {news.summary}
+          </p>
+        )}
+
+        {/* Meta */}
+        {news.publishedAt && (
+          <p className="mt-4 font-mono text-xs text-stone-400">
+            {formatDate(news.publishedAt)}
+          </p>
+        )}
+
+        {/* Cover image */}
+        {news.coverImageUrl && (
+          <div className="mt-10 overflow-hidden rounded-2xl border border-stone-200">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={news.coverImageUrl}
+              alt={news.title}
+              className="w-full h-72 sm:h-96 object-cover"
+            />
+          </div>
+        )}
+
+        {/* Divider */}
+        <div className="my-10 border-t border-stone-100" />
+
+        {/* Body */}
+        <div className="space-y-5">
+          {paragraphs.map((p: string, idx: number) => (
+            <p key={idx} className="text-base leading-[1.8] text-stone-700">
+              {p}
+            </p>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div className="mt-16 flex items-center justify-between border-t border-stone-100 pt-6">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-500 hover:text-stone-900 transition-colors"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Voltar ao início
+          </Link>
+          <span className="text-xs text-stone-400 flex items-center gap-1.5">
+            <span className="text-rose-700">✝</span>
+            Qui bene cantat, bis orat
+          </span>
+        </div>
+      </article>
     </div>
   );
 }

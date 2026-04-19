@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
-import { supabase } from '@/lib/supabase-client'
-import { withAuthApiProtection } from '@/lib/api-middleware'
+import { adminSupabase as supabase } from '@/lib/supabase-admin'
+import { withAuthApiProtection, getClerkSession} from '@/lib/api-middleware'
 
 export const GET = withAuthApiProtection(async (request: NextRequest) => {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await getClerkSession()
     
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })

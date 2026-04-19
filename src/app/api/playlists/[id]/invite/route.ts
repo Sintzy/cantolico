@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { sendEmail, createPlaylistInviteEmailTemplate } from '@/lib/email'
 import crypto from 'crypto'
 
+import { getClerkSession } from '@/lib/api-middleware';
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     if (!session) {
       return NextResponse.json(
         { error: 'Não autenticado' },

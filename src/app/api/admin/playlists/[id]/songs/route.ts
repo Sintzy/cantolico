@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase-client';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { randomUUID } from "crypto";
 
+import { getClerkSession } from '@/lib/api-middleware';
 // ADMIN: Adicionar música à playlist
 export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     if (!session || session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }
@@ -72,7 +71,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
 // ADMIN: Remover música da playlist
 export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     if (!session || session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }

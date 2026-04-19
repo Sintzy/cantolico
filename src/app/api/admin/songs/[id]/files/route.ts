@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { supabase } from '@/lib/supabase-client';
+import { adminSupabase as supabase } from '@/lib/supabase-admin';
+import { getClerkSession } from '@/lib/api-middleware';
 import { FileType } from '@/types/song-files';
 import { logger } from '@/lib/logger';
 import { LogCategory, LogLevel } from '@/types/logging';
@@ -146,7 +145,7 @@ export async function POST(
   const startTime = Date.now();
   
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'REVIEWER')) {
       logger.warn('Unauthorized file upload attempt', {
         category: LogCategory.SECURITY,
@@ -570,7 +569,7 @@ export async function DELETE(
   const startTime = Date.now();
   
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'REVIEWER')) {
       logger.warn('Unauthorized file delete attempt', {
         category: LogCategory.SECURITY,
@@ -746,7 +745,7 @@ export async function PATCH(
   const startTime = Date.now();
   
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'REVIEWER')) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }

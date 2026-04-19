@@ -1,50 +1,49 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { NextResponse } from 'next/server';
+import { getClerkSession, ClerkSession } from '@/lib/api-middleware';
 
 /**
  * Fast admin authentication check for API routes
  * Returns user session if admin, or error response if not
  */
-export async function requireAdmin() {
-  const session = await getServerSession(authOptions);
-  
+export async function requireAdmin(): Promise<{ error: NextResponse | null; session: ClerkSession | null }> {
+  const session = await getClerkSession();
+
   if (!session) {
-    return { 
+    return {
       error: NextResponse.json({ error: 'Não autenticado' }, { status: 401 }),
-      session: null 
+      session: null
     };
   }
-  
+
   if (session.user.role !== 'ADMIN') {
-    return { 
+    return {
       error: NextResponse.json({ error: 'Acesso negado' }, { status: 403 }),
-      session: null 
+      session: null
     };
   }
-  
+
   return { error: null, session };
 }
 
 /**
  * Fast reviewer or admin authentication check
  */
-export async function requireReviewer() {
-  const session = await getServerSession(authOptions);
-  
+export async function requireReviewer(): Promise<{ error: NextResponse | null; session: ClerkSession | null }> {
+  const session = await getClerkSession();
+
   if (!session) {
-    return { 
+    return {
       error: NextResponse.json({ error: 'Não autenticado' }, { status: 401 }),
-      session: null 
+      session: null
     };
   }
-  
+
   if (session.user.role !== 'ADMIN' && session.user.role !== 'REVIEWER') {
-    return { 
+    return {
       error: NextResponse.json({ error: 'Acesso negado' }, { status: 403 }),
-      session: null 
+      session: null
     };
   }
-  
+
   return { error: null, session };
 }

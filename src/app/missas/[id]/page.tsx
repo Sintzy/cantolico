@@ -1,8 +1,8 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { supabase } from '@/lib/supabase-client';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+import { adminSupabase as supabase } from '@/lib/supabase-admin';
+import { getAuthenticatedUser } from '@/lib/clerk-auth';
+import { buildMetadata } from '@/lib/seo';
 import MassPageClient from './page.client';
 
 interface PageProps {
@@ -19,15 +19,24 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     .single();
 
   if (!mass) {
-    return {
-      title: 'Missa não encontrada | Cantólico',
-    };
+    return buildMetadata({
+      title: 'Missa não encontrada',
+      description: 'Esta missa não existe no Cantólico.',
+      path: `/missas/${id}`,
+      index: false,
+    });
   }
 
-  return {
-    title: `${mass.name} | Cantólico`,
-    description: mass.description || mass.celebration || 'Organização de cânticos para missa',
-  };
+  const description = mass.description
+    || (mass.celebration ? `Cânticos para ${mass.celebration}` : null)
+    || 'Organização de cânticos para celebração litúrgica';
+
+  return buildMetadata({
+    title: mass.name,
+    description,
+    path: `/missas/${id}`,
+    type: 'article',
+  });
 }
 
 async function getMass(id: string, userId?: number) {
@@ -135,9 +144,9 @@ async function getMass(id: string, userId?: number) {
 
 export default async function MassPage({ params }: PageProps) {
   const { id } = await params;
-  const session = await getServerSession(authOptions);
-  
-  const mass = await getMass(id, session?.user?.id);
+  const user = await getAuthenticatedUser();
+
+  const mass = await getMass(id, user?.supabaseUserId);
 
   if (!mass) {
     notFound();

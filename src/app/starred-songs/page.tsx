@@ -1,7 +1,6 @@
 import { Metadata } from 'next';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { adminSupabase } from '@/lib/supabase-admin';
+import { getAuthenticatedUser } from '@/lib/clerk-auth';
+import { createAdminSupabaseClient } from '@/lib/supabase-admin';
 import { buildMetadata } from '@/lib/seo';
 import { redirect } from 'next/navigation';
 import StarredSongsClient from './page.client';
@@ -13,34 +12,17 @@ export const metadata: Metadata = buildMetadata({
   index: false,
 });
 
-interface StarredSong {
-  id: string;
-  title: string;
-  slug: string;
-  author: string;
-  mainInstrument?: string;
-  moments: string[];
-  tags: string[];
-  created_at: string;
-  updated_at: string;
-  starred_at: string;
-  starCount?: number;
-  isStarred?: boolean;
-  User: {
-    id: string;
-    name: string;
-  };
-}
-
 export default async function StarredSongsPage() {
-  const session = await getServerSession(authOptions);
+  const user = await getAuthenticatedUser();
 
-  if (!session?.user?.id) {
-    redirect('/login?callbackUrl=/starred-songs');
+  if (!user?.supabaseUserId) {
+    redirect('/sign-in?redirect_url=/starred-songs');
   }
 
-  // Fetch starred songs from database (Server Component)
-  const { data: starredData, error } = await adminSupabase
+  const supabase = createAdminSupabaseClient();
+
+  // Fetch starred songs with song data
+  const { data: starredData, error } = await supabase
     .from('Star')
     .select(`
       createdAt,
@@ -51,37 +33,58 @@ export default async function StarredSongsPage() {
         author,
         mainInstrument,
         moments,
-        tags,
-        createdAt,
-        updatedAt,
-        User:submitterId (
-          id,
-          name
-        )
+        tags
       )
     `)
-    .eq('userId', session.user.id)
+    .eq('userId', user.supabaseUserId)
     .order('createdAt', { ascending: false });
-
-  let songs: StarredSong[] = [];
-  
-  if (starredData && Array.isArray(starredData) && starredData.length > 0) {
-    songs = starredData.map((star: any) => ({
-      ...star.Song,
-      starred_at: star.createdAt,
-      created_at: star.Song.createdAt,
-      updated_at: star.Song.updatedAt,
-      isStarred: true,
-      moments: Array.isArray(star.Song.moments) ? star.Song.moments : [],
-      tags: Array.isArray(star.Song.tags) ? star.Song.tags : [],
-      User: star.Song.User
-    }));
-  }
 
   if (error) {
     console.error('Error fetching starred songs:', error);
   }
 
-  const initialSongs = Array.isArray(songs) ? songs : [];
-  return <StarredSongsClient initialSongs={initialSongs} />;
+  // Get star counts for all starred songs
+  const songIds = (starredData || [])
+    .filter((s: any) => s.Song)
+    .map((s: any) => s.Song.id);
+
+  let starCounts: Record<string, number> = {};
+
+  if (songIds.length > 0) {
+    // Fetch star counts in batches if needed
+    const { data: countData } = await supabase
+      .from('Star')
+      .select('songId')
+      .in('songId', songIds);
+
+    if (countData) {
+      for (const row of countData) {
+        starCounts[row.songId] = (starCounts[row.songId] || 0) + 1;
+      }
+    }
+  }
+
+  const parseTags = (tags: any): string[] => {
+    if (Array.isArray(tags)) return tags;
+    if (typeof tags === 'string' && tags.startsWith('{') && tags.endsWith('}')) {
+      return tags.slice(1, -1).split(',').map((t: string) => t.trim()).filter(Boolean);
+    }
+    return [];
+  };
+
+  const songs = (starredData || [])
+    .filter((star: any) => star.Song)
+    .map((star: any) => ({
+      id: star.Song.id,
+      title: star.Song.title,
+      slug: star.Song.slug,
+      author: star.Song.author || '',
+      mainInstrument: star.Song.mainInstrument || '',
+      moments: Array.isArray(star.Song.moments) ? star.Song.moments : [],
+      tags: parseTags(star.Song.tags),
+      starredAt: star.createdAt,
+      starCount: starCounts[star.Song.id] || 0,
+    }));
+
+  return <StarredSongsClient songs={songs} />;
 }

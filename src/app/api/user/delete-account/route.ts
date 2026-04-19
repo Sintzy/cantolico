@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { supabase } from "@/lib/supabase-client";
+import { adminSupabase as supabase } from "@/lib/supabase-admin";
 import { logApiRequestError, logUnauthorizedAccess, logForbiddenAccess, toErrorContext } from "@/lib/logging-helpers";
 
+import { getClerkSession } from '@/lib/api-middleware';
 export async function DELETE(req: NextRequest) {
   try {
     // Verificar autenticação
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: "Não autorizado. É necessário fazer login." },
@@ -208,7 +207,27 @@ export async function DELETE(req: NextRequest) {
       .eq('uploadedBy', userIdToDelete)
       .select('id, title');
 
-    // 8. Finalmente, eliminar o utilizador
+    // 8. Eliminar do Clerk se tiver clerkUserId
+    if (userToDelete.clerkUserId && process.env.CLERK_SECRET_KEY) {
+      try {
+        const clerkResponse = await fetch(`https://api.clerk.com/v1/users/${userToDelete.clerkUserId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${process.env.CLERK_SECRET_KEY}`,
+          },
+        });
+
+        if (!clerkResponse.ok) {
+          console.warn('⚠️ Erro ao eliminar do Clerk (continuando):', await clerkResponse.text());
+        } else {
+          console.log('✅ Utilizador eliminado do Clerk');
+        }
+      } catch (clerkError) {
+        console.warn('⚠️ Erro ao eliminar do Clerk (continuando):', clerkError);
+      }
+    }
+
+    // 9. Finalmente, eliminar o utilizador
     const { error: deleteUserError } = await supabase
       .from('User')
       .delete()

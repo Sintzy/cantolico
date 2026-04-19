@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase-client';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { logApiRequestError, logUnauthorizedAccess, logForbiddenAccess, toErrorContext, logPlaylistUpdated } from '@/lib/logging-helpers';
 
+import { getClerkSession } from '@/lib/api-middleware';
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     const { id } = await params;
     const playlistId = id;
 
@@ -226,7 +225,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -407,7 +406,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -517,7 +516,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
 
     if (!session?.user?.id) {
       return NextResponse.json(

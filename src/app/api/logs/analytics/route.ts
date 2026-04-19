@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { supabase } from '@/lib/supabase-client';
+import { adminSupabase as supabase } from '@/lib/supabase-admin';
 
+import { getClerkSession } from '@/lib/api-middleware';
 // ================================================
 // API PARA ANALYTICS DE LOGS
 // ================================================
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     
     // Verificar autorização
     if (!session || !['ADMIN', 'REVIEWER'].includes(session.user.role)) {

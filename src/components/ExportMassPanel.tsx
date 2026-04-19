@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Presentation, Download, Loader2, Music, Calendar, Church, Check } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { FileText, Layers, Download, Loader2, Music, Calendar, Church, Check, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 
 export type ExportFormat = 'lyrics' | 'chords' | 'ppt';
@@ -51,6 +49,27 @@ interface ExportMassPanelProps {
   onClose?: () => void;
 }
 
+const FORMAT_OPTIONS: { id: ExportFormat; label: string; sub: string; icon: React.ReactNode }[] = [
+  {
+    id: 'lyrics',
+    label: 'PDF — Letras',
+    sub: 'Texto limpo sem acordes',
+    icon: <FileText className="h-5 w-5" />,
+  },
+  {
+    id: 'chords',
+    label: 'PDF — Com Acordes',
+    sub: 'Letras com cifras',
+    icon: <FileText className="h-5 w-5" />,
+  },
+  {
+    id: 'ppt',
+    label: 'PDF — Apresentação',
+    sub: 'Slides para projeção',
+    icon: <Layers className="h-5 w-5" />,
+  },
+];
+
 export default function ExportMassPanel({ massId, initialFormat = 'lyrics', onClose }: ExportMassPanelProps) {
   const [exportData, setExportData] = useState<ExportData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -62,12 +81,14 @@ export default function ExportMassPanel({ massId, initialFormat = 'lyrics', onCl
     includeMomentTitles: true,
     pageBreakPerMoment: false,
     fontSize: 'medium' as 'small' | 'medium' | 'large',
+    pptTheme: 'dark' as 'dark' | 'light',
+    pptOneVersePerSlide: true,
   });
 
   useEffect(() => {
     setIsLoading(true);
     fetch(`/api/masses/${massId}/export`)
-      .then(res => res.ok ? res.json() : Promise.reject('Missa não encontrada'))
+      .then(res => res.ok ? res.json() : Promise.reject())
       .then(data => setExportData(data))
       .catch(() => setExportData(null))
       .finally(() => setIsLoading(false));
@@ -75,7 +96,6 @@ export default function ExportMassPanel({ massId, initialFormat = 'lyrics', onCl
 
   const handleExport = () => {
     setIsExporting(true);
-    // Monta a URL de exportação PDF
     const params = new URLSearchParams();
     params.set('format', selectedFormat);
     params.set('includeHeader', options.includeHeader ? '1' : '0');
@@ -84,204 +104,255 @@ export default function ExportMassPanel({ massId, initialFormat = 'lyrics', onCl
     params.set('pageBreakPerMoment', options.pageBreakPerMoment ? '1' : '0');
     params.set('fontSize', options.fontSize);
 
-    const pdfUrl = `/api/masses/${massId}/export/pdf?${params.toString()}`;
-    window.open(pdfUrl, '_blank');
-    setTimeout(() => {
-      setIsExporting(false);
-    }, 1200);
+    if (selectedFormat === 'ppt') {
+      params.set('format', 'presentation');
+      params.set('theme', options.pptTheme);
+      params.set('oneVersePerSlide', options.pptOneVersePerSlide ? '1' : '0');
+    }
+
+    window.open(`/api/masses/${massId}/export/pdf?${params.toString()}`, '_blank');
+    setTimeout(() => setIsExporting(false), 1200);
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-6 w-6 animate-spin text-stone-400" />
       </div>
     );
   }
 
   if (!exportData) {
-    return <div className="flex items-center justify-center h-[60vh] text-gray-500">Erro ao carregar dados da missa.</div>;
+    return (
+      <div className="flex items-center justify-center h-64 text-stone-500 text-sm">
+        Erro ao carregar dados da missa.
+      </div>
+    );
   }
 
-  return (
-    <div className="p-6">
-      {/* Header */}
-      <h2 className="text-2xl font-bold text-gray-900 mb-2">{exportData.mass.name}</h2>
-      <p className="text-gray-600 mb-4">{exportData.mass.celebration || ''}</p>
+  const isPdf = selectedFormat === 'lyrics' || selectedFormat === 'chords';
 
-      {/* Mass Summary */}
-      <Card className="mb-6">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Resumo</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-4 text-sm">
-            <div className="flex items-center gap-2 text-gray-600">
-              <Music className="w-4 h-4" />
-              {exportData.stats.totalSongs} músicas
+  return (
+    <div className="flex flex-col h-full overflow-y-auto">
+      {/* Header */}
+      <div className="px-6 pt-6 pb-4 border-b border-stone-100 shrink-0">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-rose-700 text-xs">✝</span>
+              <span className="h-px w-4 bg-stone-200" />
+              <span className="text-xs font-medium tracking-widest text-stone-400 uppercase">Exportar</span>
             </div>
-            <div className="flex items-center gap-2 text-gray-600">
-              <Calendar className="w-4 h-4" />
-              {exportData.stats.totalMoments} momentos
-            </div>
-            {exportData.mass.parish && (
-              <div className="flex items-center gap-2 text-gray-600">
-                <Church className="w-4 h-4" />
-                {exportData.mass.parish}
-              </div>
+            <h2 className="font-display text-2xl text-stone-900 leading-tight">{exportData.mass.name}</h2>
+            {exportData.mass.celebration && (
+              <p className="text-sm text-stone-500 mt-0.5">{exportData.mass.celebration}</p>
             )}
           </div>
-          {exportData.stats.uniqueChords.length > 0 && (
-            <div className="mt-4">
-              <p className="text-sm text-gray-500 mb-2">Acordes utilizados:</p>
-              <div className="flex flex-wrap gap-1">
-                {exportData.stats.uniqueChords.slice(0, 15).map((chord, i) => (
-                  <Badge key={i} variant="outline" className="text-xs">
-                    {chord}
-                  </Badge>
-                ))}
-                {exportData.stats.uniqueChords.length > 15 && (
-                  <Badge variant="outline" className="text-xs">
-                    +{exportData.stats.uniqueChords.length - 15}
-                  </Badge>
-                )}
-              </div>
-            </div>
+          {onClose && (
+            <button onClick={onClose} className="text-stone-400 hover:text-stone-600 transition-colors mt-1">
+              <X className="h-5 w-5" />
+            </button>
           )}
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Format Selection */}
-      <Card className="mb-6">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Formato de Exportação</CardTitle>
-          <CardDescription>Escolhe o formato que pretendes</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <button
-              onClick={() => setSelectedFormat('lyrics')}
-              className={`p-4 rounded-lg border-2 text-left transition-all ${selectedFormat === 'lyrics' ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}
-            >
-              <FileText className={`w-6 h-6 mb-2 ${selectedFormat === 'lyrics' ? 'text-blue-600' : 'text-gray-400'}`} />
-              <p className="font-medium text-gray-900">PDF - Só Letras</p>
-              <p className="text-sm text-gray-500">Letras limpas sem acordes</p>
-            </button>
-            <button
-              onClick={() => setSelectedFormat('chords')}
-              className={`p-4 rounded-lg border-2 text-left transition-all ${selectedFormat === 'chords' ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}
-            >
-              <FileText className={`w-6 h-6 mb-2 ${selectedFormat === 'chords' ? 'text-blue-600' : 'text-gray-400'}`} />
-              <p className="font-medium text-gray-900">PDF - Com Acordes</p>
-              <p className="text-sm text-gray-500">Letras com cifras</p>
-            </button>
-            <button
-              onClick={() => setSelectedFormat('ppt')}
-              className={`p-4 rounded-lg border-2 text-left transition-all ${selectedFormat === 'ppt' ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}
-            >
-              <Presentation className={`w-6 h-6 mb-2 ${selectedFormat === 'ppt' ? 'text-blue-600' : 'text-gray-400'}`} />
-              <p className="font-medium text-gray-900">PowerPoint</p>
-              <p className="text-sm text-gray-500">Slides para projeção</p>
-            </button>
+        {/* Stats row */}
+        <div className="flex flex-wrap gap-4 mt-4 text-xs text-stone-500">
+          <span className="flex items-center gap-1.5">
+            <Music className="h-3.5 w-3.5" />
+            {exportData.stats.totalSongs} músicas
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Calendar className="h-3.5 w-3.5" />
+            {exportData.stats.totalMoments} momentos
+          </span>
+          {exportData.mass.parish && (
+            <span className="flex items-center gap-1.5">
+              <Church className="h-3.5 w-3.5" />
+              {exportData.mass.parish}
+            </span>
+          )}
+        </div>
+
+        {exportData.stats.uniqueChords.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-3">
+            {exportData.stats.uniqueChords.slice(0, 12).map((chord, i) => (
+              <span key={i} className="inline-flex items-center px-2 py-0.5 rounded text-[11px] bg-stone-100 text-stone-600 font-mono">
+                {chord}
+              </span>
+            ))}
+            {exportData.stats.uniqueChords.length > 12 && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] bg-stone-100 text-stone-400">
+                +{exportData.stats.uniqueChords.length - 12}
+              </span>
+            )}
           </div>
-        </CardContent>
-      </Card>
+        )}
+      </div>
 
-      {/* PDF Options */}
-      {(selectedFormat === 'lyrics' || selectedFormat === 'chords') && (
-        <Card className="mb-6">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Opções do PDF</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="includeHeader"
-                checked={options.includeHeader}
-                onCheckedChange={(checked) => setOptions(prev => ({ ...prev, includeHeader: checked as boolean }))}
-              />
-              <Label htmlFor="includeHeader">Incluir cabeçalho com informação da missa</Label>
+      {/* Body */}
+      <div className="flex-1 px-6 py-5 space-y-6">
+        {/* Format selector */}
+        <div>
+          <p className="text-xs font-semibold tracking-widest text-stone-400 uppercase mb-3">Formato</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {FORMAT_OPTIONS.map(opt => (
+              <button
+                key={opt.id}
+                onClick={() => setSelectedFormat(opt.id)}
+                className={`flex items-start gap-3 p-3.5 rounded-xl border text-left transition-all ${
+                  selectedFormat === opt.id
+                    ? 'border-stone-900 bg-stone-900 text-white'
+                    : 'border-stone-200 hover:border-stone-300 bg-white text-stone-700'
+                }`}
+              >
+                <span className={`mt-0.5 shrink-0 ${selectedFormat === opt.id ? 'text-stone-300' : 'text-stone-400'}`}>
+                  {opt.icon}
+                </span>
+                <span>
+                  <span className={`block text-sm font-medium ${selectedFormat === opt.id ? 'text-white' : 'text-stone-900'}`}>
+                    {opt.label}
+                  </span>
+                  <span className={`block text-xs mt-0.5 ${selectedFormat === opt.id ? 'text-stone-400' : 'text-stone-500'}`}>
+                    {opt.sub}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* PDF options */}
+        {isPdf && (
+          <div>
+            <p className="text-xs font-semibold tracking-widest text-stone-400 uppercase mb-3">Opções do PDF</p>
+            <div className="bg-stone-50 rounded-xl border border-stone-100 divide-y divide-stone-100">
+              {[
+                { id: 'includeHeader', label: 'Cabeçalho com informação da missa', key: 'includeHeader' as const },
+                { id: 'includeMomentTitles', label: 'Títulos dos momentos litúrgicos', key: 'includeMomentTitles' as const },
+                { id: 'includeNotes', label: 'Notas das músicas', key: 'includeNotes' as const },
+                { id: 'pageBreakPerMoment', label: 'Nova página por momento', key: 'pageBreakPerMoment' as const },
+              ].map(opt => (
+                <label key={opt.id} className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-stone-100/50 transition-colors">
+                  <Checkbox
+                    id={opt.id}
+                    checked={options[opt.key]}
+                    onCheckedChange={(v) => setOptions(p => ({ ...p, [opt.key]: v as boolean }))}
+                    className="border-stone-300"
+                  />
+                  <span className="text-sm text-stone-700">{opt.label}</span>
+                </label>
+              ))}
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="includeMomentTitles"
-                checked={options.includeMomentTitles}
-                onCheckedChange={(checked) => setOptions(prev => ({ ...prev, includeMomentTitles: checked as boolean }))}
-              />
-              <Label htmlFor="includeMomentTitles">Incluir títulos dos momentos litúrgicos</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="includeNotes"
-                checked={options.includeNotes}
-                onCheckedChange={(checked) => setOptions(prev => ({ ...prev, includeNotes: checked as boolean }))}
-              />
-              <Label htmlFor="includeNotes">Incluir notas das músicas</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="pageBreakPerMoment"
-                checked={options.pageBreakPerMoment}
-                onCheckedChange={(checked) => setOptions(prev => ({ ...prev, pageBreakPerMoment: checked as boolean }))}
-              />
-              <Label htmlFor="pageBreakPerMoment">Nova página por momento</Label>
-            </div>
-            <Separator />
-            <div className="space-y-2">
-              <Label>Tamanho da letra</Label>
+
+            <div className="mt-3">
+              <p className="text-xs text-stone-500 mb-2">Tamanho da letra</p>
               <div className="flex gap-2">
-                {(['small', 'medium', 'large'] as const).map((size) => (
-                  <Button
+                {(['small', 'medium', 'large'] as const).map(size => (
+                  <button
                     key={size}
-                    type="button"
-                    variant={options.fontSize === size ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setOptions(prev => ({ ...prev, fontSize: size }))}
+                    onClick={() => setOptions(p => ({ ...p, fontSize: size }))}
+                    className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${
+                      options.fontSize === size
+                        ? 'bg-stone-900 text-white border-stone-900'
+                        : 'border-stone-200 text-stone-600 hover:border-stone-300'
+                    }`}
                   >
                     {size === 'small' ? 'Pequena' : size === 'medium' ? 'Média' : 'Grande'}
-                  </Button>
+                  </button>
                 ))}
               </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        )}
 
-      {/* Preview */}
-      <Card className="mb-6">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Conteúdo a exportar</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3 max-h-64 overflow-y-auto">
-            {exportData.items.map((item, index) => (
-              <div key={index}>
-                <p className="text-sm font-medium text-blue-600">{item.momentLabel}</p>
-                <ul className="ml-4 text-sm text-gray-600">
-                  {item.songs.map((song, songIndex) => (
-                    <li key={songIndex} className="flex items-center gap-2 py-1">
-                      <Check className="w-3 h-3 text-green-500" />
-                      {song.title}
-                      {song.author && <span className="text-gray-400">- {song.author}</span>}
+        {/* Presentation options */}
+        {selectedFormat === 'ppt' && (
+          <div>
+            <p className="text-xs font-semibold tracking-widest text-stone-400 uppercase mb-3">Opções da Apresentação</p>
+            <div className="bg-stone-50 rounded-xl border border-stone-100 divide-y divide-stone-100">
+              <label className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-stone-100/50 transition-colors">
+                <Checkbox
+                  id="pptOneVersePerSlide"
+                  checked={options.pptOneVersePerSlide}
+                  onCheckedChange={(v) => setOptions(p => ({ ...p, pptOneVersePerSlide: v as boolean }))}
+                  className="border-stone-300"
+                />
+                <span>
+                  <span className="block text-sm text-stone-700">Um verso por slide</span>
+                  <span className="block text-xs text-stone-400 mt-0.5">Ideal para projeção em missa</span>
+                </span>
+              </label>
+              <label className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-stone-100/50 transition-colors">
+                <Checkbox
+                  id="pptIncludeHeader"
+                  checked={options.includeHeader}
+                  onCheckedChange={(v) => setOptions(p => ({ ...p, includeHeader: v as boolean }))}
+                  className="border-stone-300"
+                />
+                <span className="text-sm text-stone-700">Slide de capa da missa</span>
+              </label>
+              <label className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-stone-100/50 transition-colors">
+                <Checkbox
+                  id="pptMomentTitles"
+                  checked={options.includeMomentTitles}
+                  onCheckedChange={(v) => setOptions(p => ({ ...p, includeMomentTitles: v as boolean }))}
+                  className="border-stone-300"
+                />
+                <span>
+                  <span className="block text-sm text-stone-700">Slides de separação entre momentos</span>
+                  <span className="block text-xs text-stone-400 mt-0.5">Slide clean com o logo entre cada momento</span>
+                </span>
+              </label>
+              <label className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-stone-100/50 transition-colors">
+                <Checkbox
+                  id="pptNotes"
+                  checked={options.includeNotes}
+                  onCheckedChange={(v) => setOptions(p => ({ ...p, includeNotes: v as boolean }))}
+                  className="border-stone-300"
+                />
+                <span className="text-sm text-stone-700">Notas das músicas</span>
+              </label>
+            </div>
+          </div>
+        )}
+
+        {/* Content preview */}
+        <div>
+          <p className="text-xs font-semibold tracking-widest text-stone-400 uppercase mb-3">Conteúdo</p>
+          <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+            {exportData.items.map((item, i) => (
+              <div key={i} className="rounded-lg border border-stone-100 bg-stone-50 px-4 py-3">
+                <p className="text-xs font-semibold text-rose-700 uppercase tracking-wide mb-2">{item.momentLabel}</p>
+                <ul className="space-y-1">
+                  {item.songs.map((song, j) => (
+                    <li key={j} className="flex items-center gap-2 text-sm text-stone-700">
+                      <Check className="h-3 w-3 text-stone-400 shrink-0" />
+                      <span className="truncate">{song.title}</span>
+                      {song.author && (
+                        <span className="text-stone-400 text-xs shrink-0">— {song.author}</span>
+                      )}
                     </li>
                   ))}
                 </ul>
               </div>
             ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* Export Button */}
-      <div className="flex justify-end gap-3">
-        {onClose && <Button variant="outline" onClick={onClose}>Fechar</Button>}
-        <Button onClick={handleExport} disabled={isExporting} size="lg">
+      {/* Footer */}
+      <div className="px-6 pb-6 pt-4 border-t border-stone-100 shrink-0">
+        <Button
+          onClick={handleExport}
+          disabled={isExporting}
+          className="w-full bg-stone-900 hover:bg-rose-700 text-white transition-colors duration-200 h-11"
+        >
           {isExporting ? (
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
           ) : (
-            <Download className="w-4 h-4 mr-2" />
+            <Download className="h-4 w-4 mr-2" />
           )}
-          Exportar {selectedFormat === 'ppt' ? 'PowerPoint' : 'PDF'}
+          {isExporting ? 'A exportar...' : 'Exportar PDF'}
         </Button>
       </div>
     </div>

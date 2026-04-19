@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/hooks/useClerkSession';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,8 @@ import {
   Music,
   Play,
   ArrowLeft,
+  ListMusic,
+  Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import PlaylistEditModal from '@/components/PlaylistEditModal';
@@ -62,9 +64,7 @@ interface PlaylistPageClientProps {
   initialPlaylist: Playlist;
 }
 
-export default function PlaylistPageClient({
-  initialPlaylist
-}: PlaylistPageClientProps) {
+export default function PlaylistPageClient({ initialPlaylist }: PlaylistPageClientProps) {
   const { data: session } = useSession();
   const router = useRouter();
   const [playlist, setPlaylist] = useState<Playlist>(initialPlaylist);
@@ -76,52 +76,26 @@ export default function PlaylistPageClient({
   const isAdmin = session?.user?.role === 'ADMIN';
   const canEdit = isOwner || isAdmin;
 
-  const getVisibilityIcon = (visibility: string) => {
-    switch (visibility) {
-      case 'PUBLIC':
-        return <Globe className="w-4 h-4" />;
-      case 'PRIVATE':
-        return <Lock className="w-4 h-4" />;
-      case 'NOT_LISTED':
-        return <EyeOff className="w-4 h-4" />;
-      default:
-        return <Lock className="w-4 h-4" />;
-    }
+  const visibilityConfig = {
+    PUBLIC:     { icon: <Globe className="w-3 h-3" />,  label: 'Pública',      cls: 'bg-stone-100 text-stone-600 border-stone-200' },
+    PRIVATE:    { icon: <Lock className="w-3 h-3" />,   label: 'Privada',      cls: 'bg-stone-100 text-stone-600 border-stone-200' },
+    NOT_LISTED: { icon: <EyeOff className="w-3 h-3" />, label: 'Não listada',  cls: 'bg-stone-100 text-stone-600 border-stone-200' },
   };
-
-  const getVisibilityLabel = (visibility: string) => {
-    switch (visibility) {
-      case 'PUBLIC':
-        return 'Pública';
-      case 'PRIVATE':
-        return 'Privada';
-      case 'NOT_LISTED':
-        return 'Não listada';
-      default:
-        return 'Privada';
-    }
-  };
+  const vis = visibilityConfig[playlist.visibility] ?? visibilityConfig.PRIVATE;
 
   const handleDeletePlaylist = async () => {
-    if (!confirm('Tem certeza que deseja excluir esta playlist? Esta ação não pode ser desfeita.')) {
-      return;
-    }
-
+    if (!confirm('Tens a certeza que queres eliminar esta playlist? Esta ação não pode ser desfeita.')) return;
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/playlists/${playlist.id}`, {
-        method: 'DELETE',
-      });
-
+      const response = await fetch(`/api/playlists/${playlist.id}`, { method: 'DELETE' });
       if (response.ok) {
-        toast.success('Playlist excluída com sucesso');
+        toast.success('Playlist eliminada');
         router.push('/playlists');
       } else {
-        toast.error('Erro ao excluir playlist');
+        toast.error('Erro ao eliminar playlist');
       }
-    } catch (error) {
-      console.error('Erro ao excluir playlist:', error);
-      toast.error('Erro ao excluir playlist');
+    } catch {
+      toast.error('Erro ao eliminar playlist');
     } finally {
       setIsDeleting(false);
     }
@@ -129,7 +103,6 @@ export default function PlaylistPageClient({
 
   const handlePlaylistUpdate = () => {
     setEditModalOpen(false);
-    // Refresh the page to get latest data
     router.refresh();
   };
 
@@ -139,88 +112,55 @@ export default function PlaylistPageClient({
 
   const handleSaveEdits = async () => {
     try {
-      // Salvar reordenação no servidor
       const response = await fetch(`/api/playlists/${playlist.id}/reorder`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          items: playlist.items.map(item => ({
-            id: item.id,
-            order: item.order
-          }))
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: playlist.items.map(item => ({ id: item.id, order: item.order })) }),
       });
-
-      if (!response.ok) {
-        throw new Error('Falha ao salvar alterações');
-      }
-
+      if (!response.ok) throw new Error('Falha ao guardar alterações');
       setIsEditMode(false);
-      toast.success('Alterações salvas com sucesso');
-    } catch (error) {
-      console.error('Erro ao salvar edições:', error);
-      toast.error('Erro ao salvar alterações');
+      toast.success('Alterações guardadas');
+    } catch {
+      toast.error('Erro ao guardar alterações');
     }
   };
 
   const handleDiscardEdits = () => {
-    // Recarregar dados da página
     router.refresh();
     setIsEditMode(false);
     toast.info('Edições descartadas');
   };
 
   return (
-    <div className="min-h-screen bg-white -mt-16">
-      {/* Hero Section */}
-      <div className="relative h-64 md:h-80 w-full flex items-center justify-center overflow-hidden pt-16">
-        <div className="absolute inset-0">
-          <img 
-            src="/banner.jpg" 
-            alt="Banner" 
-            className="w-full h-full object-cover object-center scale-110 blur-sm brightness-75"
-          />
-          <div className="absolute inset-0 bg-linear-to-b from-black/60 to-transparent" />
-        </div>
-        
-        {/* Back Button - positioned below the floating navbar */}
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          asChild 
-          className="absolute top-20 left-4 sm:top-24 sm:left-6 z-20 text-white hover:bg-white/20 border-white/30 shadow backdrop-blur-sm"
-        >
-          <Link href="/playlists" className="flex items-center gap-1 sm:gap-2">
-            <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4" />
-            <span className="text-xs sm:text-sm">Voltar</span>
+    <div className="min-h-screen bg-white">
+      {/* Page header */}
+      <div className="border-b border-stone-100">
+        <div className="mx-auto max-w-screen-xl px-5 py-4 flex items-center justify-between">
+          <Link
+            href="/playlists"
+            className="inline-flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-900 transition-colors"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Playlists
           </Link>
-        </Button>
 
-        {/* Owner/Admin Actions - positioned below the floating navbar */}
-        {canEdit && (
-          <div className="absolute top-20 right-4 sm:top-24 sm:right-6 z-20">
+          {canEdit && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-white hover:bg-white/20 border-white/30 shadow backdrop-blur-sm p-1.5 sm:p-2"
-                >
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-stone-500 hover:text-stone-900">
                   <MoreVertical className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-white/95 backdrop-blur-sm">
+              <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => setEditModalOpen(true)}>
                   <Edit className="w-4 h-4 mr-2" />
-                  Editar
+                  Editar detalhes
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setIsEditMode(!isEditMode)}>
                   <Music className="w-4 h-4 mr-2" />
                   {isEditMode ? 'Sair do modo edição' : 'Editar músicas'}
                 </DropdownMenuItem>
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   onClick={handleDeletePlaylist}
                   disabled={isDeleting}
                   className="text-red-600 focus:text-red-600"
@@ -230,77 +170,77 @@ export default function PlaylistPageClient({
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
-        )}
-
-        {/* Hero Content */}
-        <div className="relative z-10 flex flex-col items-center justify-center w-full px-4 sm:px-6 text-center">
-          <h1 className="text-3xl md:text-5xl font-extrabold text-white drop-shadow-lg tracking-tight text-center mb-2 md:mb-4">
-            {playlist.name}
-          </h1>
-          
-          {playlist.description && (
-            <div className="mx-auto mb-4">
-              <div className="inline-block bg-white text-gray-900 font-medium px-3 py-1 rounded-md shadow-sm max-w-full">
-                <p className="text-sm sm:text-base leading-relaxed truncate max-w-[40ch]">
-                  {playlist.description}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Metadata */}
-          <div className="flex flex-wrap items-center gap-2 justify-center mb-2">
-            <div className="bg-white/80 text-gray-900 font-semibold px-3 py-1 text-xs shadow-sm rounded-full flex items-center gap-1">
-              {getVisibilityIcon(playlist.visibility)}
-              <span>{getVisibilityLabel(playlist.visibility)}</span>
-            </div>
-            
-            <div className="bg-white/80 text-gray-900 font-semibold px-3 py-1 text-xs shadow-sm rounded-full flex items-center gap-1">
-              <Music className="w-3 h-3" />
-              <span>{playlist.items?.length || 0} músicas</span>
-            </div>
-            
-            {playlist.user && (
-              <div className="bg-white/80 text-gray-900 font-semibold px-3 py-1 text-xs shadow-sm rounded-full">
-                por {playlist.user.name}
-              </div>
-            )}
-          </div>
-
-          {/* Action Buttons */}
-          {canEdit && (
-            <div className="flex gap-3 justify-center mt-4">
-              <Button 
-                variant="default" 
-                className="bg-white text-blue-600 hover:bg-gray-100 shadow-lg"
-                onClick={() => setEditModalOpen(true)}
-              >
-                <Edit className="w-4 h-4 mr-2" />
-                Editar Playlist
-              </Button>
-              <Button 
-                variant="outline" 
-                className="bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200"
-                onClick={() => setIsEditMode(!isEditMode)}
-              >
-                {isEditMode ? 'Sair de Edição' : 'Editar Músicas'}
-              </Button>
-            </div>
           )}
         </div>
       </div>
 
-      {/* Edit Mode */}
+      {/* Playlist info */}
+      <div className="border-b border-stone-100">
+        <div className="mx-auto max-w-screen-xl px-5 py-10 sm:py-14">
+          <div className="flex items-start gap-5">
+            <div className="hidden sm:flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-stone-100 border border-stone-200">
+              <ListMusic className="h-7 w-7 text-rose-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h1 className="font-display text-3xl sm:text-4xl text-stone-900 leading-tight">
+                {playlist.name}
+              </h1>
+              {playlist.description && (
+                <p className="mt-2 text-base text-stone-500 max-w-2xl">
+                  {playlist.description}
+                </p>
+              )}
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <Badge variant="outline" className={`flex items-center gap-1 text-xs ${vis.cls}`}>
+                  {vis.icon}
+                  {vis.label}
+                </Badge>
+                <Badge variant="outline" className="flex items-center gap-1 text-xs bg-stone-50 text-stone-500 border-stone-200">
+                  <Music className="w-3 h-3" />
+                  {playlist.items?.length || 0} músicas
+                </Badge>
+                {playlist.user && (
+                  <Badge variant="outline" className="flex items-center gap-1 text-xs bg-stone-50 text-stone-500 border-stone-200">
+                    <Users className="w-3 h-3" />
+                    por {playlist.user.name}
+                  </Badge>
+                )}
+              </div>
+
+              {canEdit && (
+                <div className="mt-5 flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-stone-200 text-stone-700 hover:bg-stone-50"
+                    onClick={() => setEditModalOpen(true)}
+                  >
+                    <Edit className="w-3.5 h-3.5 mr-1.5" />
+                    Editar playlist
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-stone-200 text-stone-700 hover:bg-stone-50"
+                    onClick={() => setIsEditMode(!isEditMode)}
+                  >
+                    {isEditMode ? 'Sair de edição' : 'Editar músicas'}
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Edit mode */}
       {isEditMode && canEdit && (
-        <div className="border-b border-gray-200 bg-white">
-          <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="border-b border-stone-100 bg-stone-50/50">
+          <div className="mx-auto max-w-screen-xl px-5 py-8">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-lg font-bold text-gray-900 mb-1">Editar Playlist</h2>
-                <p className="text-sm text-gray-600">
-                  Arraste para reordenar, adicione notas ou remova músicas
-                </p>
+                <h2 className="text-base font-semibold text-stone-900">Modo de edição</h2>
+                <p className="text-sm text-stone-500">Arrasta para reordenar, adiciona notas ou remove músicas.</p>
               </div>
             </div>
             <PlaylistEditItems
@@ -309,129 +249,92 @@ export default function PlaylistPageClient({
               canEdit={true}
               onItemsChange={handleItemsChange}
             />
-            <div className="flex gap-3 justify-end mt-8 pt-6 border-t border-gray-200">
-              <Button
-                variant="outline"
-                onClick={handleDiscardEdits}
-                className="border-gray-300 text-gray-700 hover:bg-gray-50"
-              >
+            <div className="flex gap-3 justify-end mt-8 pt-6 border-t border-stone-200">
+              <Button variant="outline" onClick={handleDiscardEdits} className="border-stone-200 text-stone-700">
                 Descartar
               </Button>
-              <Button
-                onClick={handleSaveEdits}
-                className="bg-blue-600 text-white hover:bg-blue-700"
-              >
-                Salvar
+              <Button onClick={handleSaveEdits} className="bg-stone-900 hover:bg-rose-700 transition-colors text-white">
+                Guardar
               </Button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Songs List - Esconder quando em modo edição */}
+      {/* Songs list */}
       {!isEditMode && (
-        <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        {playlist.items && playlist.items.length > 0 ? (
-          <div className="space-y-1">
-            {playlist.items.map((item, index) => (
-              <div
-                key={item.id}
-                className="group flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg hover:bg-gray-50/80 transition-all duration-200 border border-transparent hover:border-gray-200"
-              >
-                <div className="shrink-0 w-6 sm:w-8 text-center">
-                  <span className="text-xs sm:text-sm text-gray-500 group-hover:hidden font-medium">
-                    {index + 1}
-                  </span>
-                  <Play className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600 hidden group-hover:block cursor-pointer hover:text-gray-900 transition-colors" />
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  {item.song ? (
-                    <>
-                      <Link
-                        href={`/musics/${item.song.slug}`}
-                        className="block hover:text-gray-900 transition-colors"
-                      >
-                        <h4 className="font-semibold text-gray-800 truncate text-sm sm:text-base">
-                          {item.song.title}
-                        </h4>
-                        <div className="flex items-center gap-1 sm:gap-2 mt-1 sm:mt-2">
-                          {item.song.tags && Array.isArray(item.song.tags) && item.song.tags.length > 0 && (
-                            <div className="flex gap-1">
+        <div className="mx-auto max-w-screen-xl px-5 py-8">
+          {playlist.items && playlist.items.length > 0 ? (
+            <div className="divide-y divide-stone-100">
+              {playlist.items.map((item, index) => (
+                <div
+                  key={item.id}
+                  className="group flex items-center gap-4 py-3 hover:bg-stone-50/60 rounded-lg px-2 transition-colors"
+                >
+                  <div className="shrink-0 w-7 text-center">
+                    <span className="text-sm text-stone-400 group-hover:hidden font-mono">{index + 1}</span>
+                    <Play className="w-3.5 h-3.5 text-stone-500 hidden group-hover:block cursor-pointer" />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    {item.song ? (
+                      <>
+                        <Link
+                          href={`/musics/${item.song.slug}`}
+                          className="block"
+                        >
+                          <h4 className="font-medium text-stone-900 truncate text-sm sm:text-base group-hover:text-rose-700 transition-colors">
+                            {item.song.title}
+                          </h4>
+                          {item.song.tags && item.song.tags.length > 0 && (
+                            <div className="flex gap-1 mt-1">
                               {item.song.tags.slice(0, 2).map((tag: string) => (
-                                <Badge 
-                                  key={tag} 
-                                  variant="secondary" 
-                                  className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors px-1.5 py-0.5"
-                                >
-                                  {tag}
-                                </Badge>
+                                <span key={tag} className="inline-flex items-center rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-500">
+                                  #{tag}
+                                </span>
                               ))}
                             </div>
                           )}
-                        </div>
-                      </Link>
-                      {item.note && (
-                        <p className="text-xs text-gray-500 mt-2">
-                          📝 <span className="italic">{item.note}</span>
-                        </p>
-                      )}
-                    </>
-                  ) : (
-                    <div className="text-gray-500">
-                      <span className="text-sm italic">Música não encontrada</span>
-                    </div>
-                  )}
-                </div>
+                        </Link>
+                        {item.note && (
+                          <p className="text-xs text-stone-400 mt-1 italic">{item.note}</p>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-sm italic text-stone-400">Música não encontrada</span>
+                    )}
+                  </div>
 
-                <div className="flex items-center gap-2">
                   {item.song && (
-                    <>
-                      <StarButton 
-                        songId={item.song.id}
-                        initialStarCount={0}
-                        initialIsStarred={false}
-                      />
+                    <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <StarButton songId={item.song.id} initialStarCount={0} initialIsStarred={false} />
                       <Button
                         variant="ghost"
                         size="sm"
                         asChild
-                        className="opacity-0 group-hover:opacity-100 transition-all duration-200 text-gray-600 hover:text-gray-900"
+                        className="h-7 text-xs text-stone-500 hover:text-stone-900 px-2"
                       >
-                        <Link href={`/musics/${item.song.slug}`}>
-                          Ver
-                        </Link>
+                        <Link href={`/musics/${item.song.slug}`}>Ver</Link>
                       </Button>
-                    </>
+                    </div>
                   )}
                 </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12 sm:py-16 px-4">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
-              <Music className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-gray-400" />
+              ))}
             </div>
-            <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-2 sm:mb-3">
-              Nenhuma música ainda
-            </h3>
-            <p className="text-sm sm:text-base text-gray-600 mb-6 sm:mb-8 max-w-xs sm:max-w-md mx-auto">
-              Esta playlist ainda não possui músicas. {canEdit ? 'Adicione algumas para começar!' : ''}
-            </p>
-            {canEdit && (
-              <Button asChild className="bg-gray-900 hover:bg-gray-800 text-white">
-                <Link href={`/playlists/${playlist.id}/edit`}>
-                  Adicionar Músicas
-                </Link>
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
+          ) : (
+            <div className="text-center py-12">
+              <ListMusic className="h-8 w-8 mx-auto mb-2 text-stone-200" />
+              <p className="text-sm text-stone-500">Nenhuma música nesta playlist</p>
+              {canEdit && (
+                <Button asChild className="mt-6 bg-stone-900 hover:bg-rose-700 transition-colors text-white">
+                  <Link href="/musics">Explorar cânticos</Link>
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
-      {/* Edit Playlist Modal */}
       <PlaylistEditModal
         isOpen={editModalOpen}
         onClose={() => setEditModalOpen(false)}

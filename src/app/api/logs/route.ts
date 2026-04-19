@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { supabase } from '@/lib/supabase-client';
+import { adminSupabase as supabase } from '@/lib/supabase-admin';
 
+import { getClerkSession } from '@/lib/api-middleware';
 // ================================================
 // API PRINCIPAL DE LOGS - GET (Listar logs)
 // ================================================
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     
     // Verificar se é admin ou reviewer
     if (!session || !['ADMIN', 'REVIEWER'].includes(session.user.role)) {
@@ -105,7 +104,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     const logData = await req.json();
 
     // Validações básicas
@@ -186,7 +185,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     
     // Apenas admins podem apagar logs
     if (!session || session.user.role !== 'ADMIN') {

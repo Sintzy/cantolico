@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getAuthenticatedUser } from '@/lib/clerk-auth';
 import { logger } from '@/lib/logger';
 import { logUnauthorizedAccess as logUnauthorizedHelper, logForbiddenAccess, logApiRequestError, toErrorContext } from '@/lib/logging-helpers';
 import { LogCategory } from '@/types/logging';
@@ -16,8 +15,18 @@ interface PerformanceMetrics {
   statusCode: number;
   userAgent?: string;
   ip?: string;
-  userId?: string;
+  userId?: string | number;
   userEmail?: string;
+}
+
+interface LoggingSession {
+  user: {
+    id: number;
+    clerkUserId: string;
+    role: string;
+    email?: string;
+    name?: string;
+  };
 }
 
 // Threshold para logs de performance (3 segundos)
@@ -37,16 +46,28 @@ export async function withPerformanceMonitoring<T>(
   
   let response: NextResponse<T>;
   let statusCode = 200;
-  let session: any = null;
+  let session: LoggingSession | null = null;
 
   try {
     // Executar o handler
     response = await handler(req, ...args);
     statusCode = response.status;
     
-    // Tentar obter sessão para contexto adicional
+    // Tentar obter sessão Clerk para contexto adicional
     try {
-      session = await getServerSession(authOptions);
+      const authenticatedUser = await getAuthenticatedUser();
+
+      if (authenticatedUser) {
+        session = {
+          user: {
+            id: authenticatedUser.supabaseUserId,
+            clerkUserId: authenticatedUser.clerkUserId,
+            role: authenticatedUser.role,
+            email: authenticatedUser.email,
+            name: authenticatedUser.name || undefined,
+          }
+        };
+      }
     } catch (sessionError) {
       // Ignorar erros de sessão
     }
@@ -70,7 +91,7 @@ export async function withPerformanceMonitoring<T>(
       statusCode,
       userAgent,
       ip,
-      userId: session?.user?.id,
+      userId: session?.user?.id ? String(session.user.id) : undefined,
       userEmail: session?.user?.email
     };
 

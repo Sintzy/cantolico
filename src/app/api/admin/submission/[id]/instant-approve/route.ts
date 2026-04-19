@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { adminSupabase as supabase } from "@/lib/supabase-admin";
 import { randomUUID } from 'crypto';
 import { formatTagsForPostgreSQL } from '@/lib/utils';
 import { logApiRequestError } from '@/lib/logging-helpers';
 
+import { getClerkSession } from '@/lib/api-middleware';
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     
     if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'REVIEWER')) {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase-client';
+import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { protectApiRoute, applySecurityHeaders } from '@/lib/api-protection';
 
 type BannerPage = 'HOME' | 'MUSICS' | 'ADMIN' | 'ALL';

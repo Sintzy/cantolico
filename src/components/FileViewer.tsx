@@ -6,9 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FileType } from '@/types/song-files';
-import { 
-  FileText, 
-  Music, 
+import {
+  FileText,
+  Music,
   Download,
   Play,
   Pause,
@@ -82,7 +82,7 @@ export function FileViewer({ files }: FileViewerProps) {
     } else {
       setCurrentAudio(fileId);
       setCurrentTime(0);
-      
+
       if (audioRef.current) {
         audioRef.current.src = url;
         audioRef.current.load();
@@ -165,8 +165,8 @@ export function FileViewer({ files }: FileViewerProps) {
     <div className="space-y-6">
       <Tabs defaultValue={pdfs.length > 0 ? 'pdfs' : 'audios'} className="w-full">
         <TabsList className="grid w-full grid-cols-2 h-12 p-1">
-          <TabsTrigger 
-            value="pdfs" 
+          <TabsTrigger
+            value="pdfs"
             disabled={pdfs.length === 0}
             className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm"
           >
@@ -174,8 +174,8 @@ export function FileViewer({ files }: FileViewerProps) {
             <span className="font-medium">Partituras</span>
             <Badge variant="secondary" className="ml-1">{pdfs.length}</Badge>
           </TabsTrigger>
-          <TabsTrigger 
-            value="audios" 
+          <TabsTrigger
+            value="audios"
             disabled={audios.length === 0}
             className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm"
           >
@@ -188,8 +188,8 @@ export function FileViewer({ files }: FileViewerProps) {
         {/* Tab PDFs */}
         <TabsContent value="pdfs" className="space-y-3 mt-6">
           {pdfs.map((pdf, index) => (
-            <Card 
-              key={pdf.id} 
+            <Card
+              key={pdf.id}
               className="group overflow-hidden border-2 hover:border-red-200 hover:shadow-lg transition-all duration-200"
             >
               <CardContent className="p-4 sm:p-5">
@@ -197,7 +197,7 @@ export function FileViewer({ files }: FileViewerProps) {
                   <div className="p-3 rounded-xl bg-linear-to-br from-red-50 to-red-100 group-hover:from-red-100 group-hover:to-red-200 transition-all">
                     <FileText className="w-5 h-5 text-red-600" />
                   </div>
-                  
+
                   <div className="flex-1 min-w-0">
                     <h4 className="font-semibold text-base mb-1 truncate">
                       {getDisplayTitle(pdf, index)}
@@ -249,11 +249,11 @@ export function FileViewer({ files }: FileViewerProps) {
             const isAudioPlaying = isCurrentAudio && isPlaying;
 
             return (
-              <Card 
-                key={audio.id} 
+              <Card
+                key={audio.id}
                 className={`group overflow-hidden border-2 transition-all duration-200 ${
-                  isCurrentAudio 
-                    ? 'border-primary shadow-lg bg-primary/5' 
+                  isCurrentAudio
+                    ? 'border-primary shadow-lg bg-primary/5'
                     : 'hover:border-blue-200 hover:shadow-lg'
                 }`}
               >
@@ -323,7 +323,7 @@ export function FileViewer({ files }: FileViewerProps) {
                   </div>
                 </div>
               </CardHeader>
-              
+
               <CardContent className="space-y-4 sm:space-y-5 p-4 sm:p-6 pt-0">
                 {/* Timeline with time display */}
                 <div className="space-y-2">
@@ -357,7 +357,7 @@ export function FileViewer({ files }: FileViewerProps) {
                     >
                       <SkipBack className="w-4 h-4 sm:w-5 sm:h-5" />
                     </Button>
-                    
+
                     <Button
                       size="icon"
                       onClick={() => currentAudioFile.signedUrl && playAudio(currentAudioFile.id, currentAudioFile.signedUrl)}

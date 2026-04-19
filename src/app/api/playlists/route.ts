@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase-client';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+import { adminSupabase as supabase } from '@/lib/supabase-admin';
+import { getClerkSession } from '@/lib/api-middleware';
 import { withUserProtection, withPublicMonitoring, logPlaylistAction } from '@/lib/enhanced-api-protection';
 import { randomUUID } from 'crypto';
 import { requireEmailVerification } from '@/lib/email';
@@ -10,7 +9,7 @@ import { extractUserContext, logUserCreate, logUserRead } from '@/lib/user-actio
 
 export const GET = withPublicMonitoring<any>(async (request: NextRequest) => {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     const userContext = extractUserContext(request, session);
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');

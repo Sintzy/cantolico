@@ -2,7 +2,7 @@
 
 import "easymde/dist/easymde.min.css";
 import { useState, useEffect, useMemo } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/hooks/useClerkSession';
 import { useRouter, useParams } from 'next/navigation';
 import dynamic from "next/dynamic";
 import MarkdownIt from "markdown-it";

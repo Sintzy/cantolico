@@ -3,7 +3,7 @@
 import "easymde/dist/easymde.min.css";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/hooks/useClerkSession";
 import dynamic from "next/dynamic";
 import MarkdownIt from "markdown-it";
 import chords from "markdown-it-chords";
@@ -46,8 +46,7 @@ import {
   Search as SearchIcon
 } from "lucide-react";
 import "../../../../../public/styles/chords.css";
-import { FileManager } from '@/components/FileManager';
-import { SubmissionFileViewer } from '@/components/SubmissionFileViewer';
+import { MediaManager } from '@/components/media';
 import { FileType, FileUploadData } from '@/types/song-files';
 
 const SimpleMDE = dynamic(() => import("react-simplemde-editor"), { ssr: false });
@@ -1007,7 +1006,7 @@ export default function ReviewSubmissionPage() {
 
           <TabsContent value="media" className="space-y-6">
             {/* Novo Sistema de Visualização de Ficheiros da Submissão */}
-            <SubmissionFileViewer 
+            <MediaManager
               submissionId={submissionId}
               onDescriptionChange={handleFileDescriptionChange}
             />

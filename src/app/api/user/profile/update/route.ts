@@ -1,11 +1,10 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { supabase } from "@/lib/supabase-client";
+import { adminSupabase as supabase } from "@/lib/supabase-admin";
 import { NextRequest, NextResponse } from "next/server";
 
+import { getClerkSession } from '@/lib/api-middleware';
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

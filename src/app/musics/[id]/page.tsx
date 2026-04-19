@@ -13,13 +13,12 @@ import { supabase } from '@/lib/supabase';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useState, useRef, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/hooks/useClerkSession';
 import { Pencil } from 'lucide-react';
 import { Spinner, type SpinnerProps } from '@/components/ui/shadcn-io/spinner';
 import StarButton from '@/components/StarButton';
 import AddToPlaylistButton from '@/components/AddToPlaylistButton';
 import { LiturgicalMoment, getInstrumentLabel, getLiturgicalMomentLabel } from '@/lib/constants';
-import { FileViewer } from '@/components/FileViewer';
 import { FileType } from '@/types/song-files';
 import { trackEvent } from '@/lib/umami';
 
@@ -39,7 +38,7 @@ function BetaBadgeWithNotice() {
 
   return (
     <div className="relative" ref={ref}>
-      <Badge className="bg-yellow-100 text-yellow-800 cursor-pointer" onClick={() => setOpen(v => !v)} onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
+      <Badge className="bg-stone-100 text-stone-600 cursor-pointer" onClick={() => setOpen(v => !v)} onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
         BETA
       </Badge>
       {open && (
@@ -504,135 +503,74 @@ export default function SongPage() {
 
   return (
     <>
-      {/* Structured Data for SEO */}
-      <script 
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "MusicComposition",
-            "name": title,
-            "composer": {
-              "@type": "Person", 
-              "name": author || currentVersion?.createdBy?.name || "Autor desconhecido"
-            },
-            "musicalKey": mainInstrument,
-            "genre": "Sacred Music",
-            "keywords": [
-              title.toLowerCase(),
-              `${title.toLowerCase()} letra`, 
-              `${title.toLowerCase()} acordes`,
-              "canticos catolicos",
-              "musica liturgica",
-              ...tags.map(t => t.toLowerCase()),
-              ...moments.map(m => getMomentDisplayName(m).toLowerCase())
-            ].join(", "),
-            "inLanguage": "pt-PT",
-            "audience": {
-              "@type": "Audience",
-              "audienceType": "Catholics"
-            },
-            "publisher": {
-              "@type": "Organization",
-              "name": "Cantólico - Cânticos Católicos",
-              "url": "https://cantolico.pt"
-            },
-            "datePublished": new Date().toISOString(),
-            "description": `${title} - Cântico católico com letra e acordes para ${moments.map(m => getMomentDisplayName(m).toLowerCase()).join(', ')}`,
-            "url": `https://cantolico.pt/musics/${id}`,
-            ...(currentVersion?.youtubeLink && {
-              "video": {
-                "@type": "VideoObject",
-                "name": title,
-                "embedUrl": currentVersion.youtubeLink,
-                "uploadDate": new Date().toISOString()
-              }
-            })
-          })
-        }}
-      />
-      
       <div className="relative w-full min-h-screen bg-white">
-      {/* Hero Section with blurred background and overlay */}
-      <div className="relative h-80 md:h-96 lg:h-112 w-full flex items-center justify-center overflow-hidden -mt-16 pt-16">
-        {/* Back Button */}
-        <div className="absolute top-20 left-4 z-20">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-white hover:bg-white/20 border border-white/30 shadow backdrop-blur-sm"
-            onClick={handleBackToList}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            <span className="hidden sm:inline">Voltar à Lista</span>
-            <span className="sm:hidden">Voltar</span>
-          </Button>
-        </div>
-        
-        <div className="absolute inset-0">
-          <img src="/banner.jpg" alt="Banner" className="w-full h-full object-cover object-center scale-110 blur-sm brightness-75" />
-          <div className="absolute inset-0 bg-linear-to-b from-black/60 to-transparent" />
-        </div>
-        <div className="relative z-10 flex flex-col items-center justify-center w-full px-4">
-          <h1 className="text-2xl sm:text-3xl md:text-5xl font-extrabold text-white drop-shadow-lg tracking-tight text-center mb-2 md:mb-4 leading-tight">
+      {/* Page Header */}
+      <div className="border-b border-stone-100 bg-white pt-20 pb-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+          <div className="flex items-center justify-between mb-6">
+            <button
+              onClick={handleBackToList}
+              className="flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-900 transition-colors"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Músicas
+            </button>
+            <div className="hidden sm:flex items-center gap-2">
+              <StarButton songId={id as string} />
+              <AddToPlaylistButton songId={id as string} />
+              {song?.type !== 'PARTITURA' && (
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => openGeneratedPdf('hero_desktop')}>
+                  <FileText className="h-3.5 w-3.5" /> PDF
+                </Button>
+              )}
+              {pdfUrl && (
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => openOriginalPdf('hero_desktop')}>
+                  <Download className="h-3.5 w-3.5" /> Original
+                </Button>
+              )}
+              {isAdmin && adminEditUrl && (
+                <Button asChild variant="outline" size="sm" className="gap-1.5">
+                  <a href={adminEditUrl} target="_blank" rel="noopener noreferrer">
+                    <Pencil className="h-3.5 w-3.5" /> Editar
+                  </a>
+                </Button>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-3 mb-3">
+            <span className="text-rose-700 text-sm">✝</span>
+            <span className="h-px w-6 bg-stone-300" />
+            <span className="text-xs font-medium tracking-[0.18em] text-stone-400 uppercase">Cântico</span>
+          </div>
+          <h1 className="font-display text-3xl sm:text-4xl md:text-5xl text-stone-900 leading-tight mb-4">
             {title}
           </h1>
-          <div className="flex flex-wrap gap-1.5 sm:gap-2 justify-center mb-2 max-w-full">
+          <div className="flex flex-wrap gap-1.5">
             {moments.map((m: string, i: number) => (
-              <Badge key={i} className="bg-white/80 text-blue-900 font-semibold px-2 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs shadow-sm">
+              <Badge key={i} className="bg-stone-100 text-stone-600 font-medium px-2.5 py-0.5 text-xs">
                 {getMomentDisplayName(m)}
               </Badge>
             ))}
-          </div>
-          {/* Botões do header - escondidos em mobile pois temos floating bar */}
-          <div className="hidden sm:flex gap-3 justify-center mt-2">
-            <StarButton songId={id as string} className="bg-white/20 hover:bg-white/40 text-white border-white/30 shadow" />
-            <AddToPlaylistButton songId={id as string} className="bg-white/20 hover:bg-white/40 text-white border-white/30 shadow" />
-            <Button 
-              variant="ghost" 
-              className="text-white hover:bg-white/20 border-white/30 shadow"
-              onClick={() => openGeneratedPdf('hero_desktop')}
-            >
-              <FileText className="h-4 w-4 mr-1" /> PDF
-            </Button>
-            {pdfUrl && (
-              <Button
-                variant="ghost"
-                className="text-white hover:bg-white/20 border-white/30 shadow"
-                onClick={() => openOriginalPdf('hero_desktop')}
-              >
-                <Download className="h-4 w-4 mr-1" /> PDF Original
-              </Button>
-            )}
-            {isAdmin && adminEditUrl && (
-              <Button
-                asChild
-                variant="ghost"
-                className="text-white hover:bg-white/20 border-white/30 shadow"
-              >
-                <a href={adminEditUrl} target="_blank" rel="noopener noreferrer">
-                  <Pencil className="h-4 w-4 mr-1" /> Editar
-                </a>
-              </Button>
-            )}
           </div>
         </div>
       </div>
 
       {/* Floating Action Bar (mobile/tablet) - mais espaçoso e tocável */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 sm:hidden bg-white/95 backdrop-blur-md border-t border-blue-100 shadow-lg safe-area-pb">
+      <div className="fixed bottom-0 left-0 right-0 z-30 sm:hidden bg-white/95 backdrop-blur-md border-t border-stone-200 shadow-lg safe-area-pb">
         <div className="flex justify-around items-center py-2 px-2">
-          <StarButton songId={id as string} className="text-blue-700 p-3 touch-manipulation" />
-          <AddToPlaylistButton songId={id as string} className="text-blue-700 p-3 touch-manipulation" />
-          <Button 
-            variant="ghost" 
-            className="text-blue-700 p-3 touch-manipulation"
-            onClick={() => openGeneratedPdf('hero_mobile')}
-          >
-            <FileText className="h-5 w-5" />
-          </Button>
+          <StarButton songId={id as string} className="text-stone-700 p-3 touch-manipulation" />
+          <AddToPlaylistButton songId={id as string} className="text-stone-700 p-3 touch-manipulation" />
+          {song?.type !== 'PARTITURA' && (
+            <Button
+              variant="ghost"
+              className="text-stone-700 p-3 touch-manipulation"
+              onClick={() => openGeneratedPdf('hero_mobile')}
+            >
+              <FileText className="h-5 w-5" />
+            </Button>
+          )}
           {pdfUrl && (
-            <Button variant="ghost" className="text-blue-700 p-3 touch-manipulation" onClick={() => openOriginalPdf('hero_mobile')}>
+            <Button variant="ghost" className="text-stone-700 p-3 touch-manipulation" onClick={() => openOriginalPdf('hero_mobile')}>
               <Download className="h-5 w-5" />
             </Button>
           )}
@@ -640,7 +578,7 @@ export default function SongPage() {
             <Button
               asChild
               variant="ghost"
-              className="text-blue-700 p-3 touch-manipulation"
+              className="text-stone-700 p-3 touch-manipulation"
             >
               <a href={adminEditUrl} target="_blank" rel="noopener noreferrer">
                 <Pencil className="h-5 w-5" />
@@ -653,7 +591,7 @@ export default function SongPage() {
       {/* Botão de próxima música se veio de missa */}
       {nextMusicUrl && (
         <div className="fixed bottom-8 right-8 z-50">
-          <Button asChild variant="default" size="lg" className="shadow-lg bg-blue-600 text-white">
+          <Button asChild variant="default" size="lg" className="shadow-lg bg-stone-900 hover:bg-rose-700 text-white transition-colors">
             <Link href={nextMusicUrl} onClick={() => trackEvent('mass_next_song_clicked')}>
               Próxima música →
             </Link>
@@ -667,7 +605,7 @@ export default function SongPage() {
         <div className="lg:hidden space-y-6">
           {/* Transpose Controls - Only for ACORDES type */}
           {song?.type === 'ACORDES' && (
-            <div className="bg-white/80 rounded-xl shadow p-5 flex flex-col gap-3 border border-blue-100">
+            <div className="bg-white rounded-xl border border-stone-200 p-5 flex flex-col gap-3">
               <SidebarTitle>Transpor Tom</SidebarTitle>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => changeTransposition(-1, 'mobile_sidebar')}>-</Button>
@@ -694,9 +632,9 @@ export default function SongPage() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              {/* Botão PDF com transposição */}
-              <Button 
-                className="w-full mt-2" 
+              {/* Botão PDF com transposição — apenas para ACORDES (bloco pai já garante isso) */}
+              <Button
+                className="w-full mt-2"
                 variant="outline"
                 onClick={() => openGeneratedPdf('mobile_sidebar')}
               >
@@ -707,24 +645,24 @@ export default function SongPage() {
           )}
 
           {/* Song Info */}
-          <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100 space-y-3">
+          <div className="bg-white rounded-xl border border-stone-200 p-5 space-y-3">
             <SidebarTitle>Informações</SidebarTitle>
-            <div className="flex items-center gap-2 text-sm text-blue-900/80">
+            <div className="flex items-center gap-2 text-sm text-stone-500">
               <FileText className="h-4 w-4 mr-1" />
               <span className="font-medium">Enviado por:</span> {currentVersion?.createdBy?.name || 'Desconhecido'}
             </div>
-            <div className="flex items-center gap-2 text-sm text-blue-900/80">
+            <div className="flex items-center gap-2 text-sm text-stone-500">
               <Music className="h-4 w-4 mr-1" />
               <span className="font-medium">Instrumento:</span> {getInstrumentLabel(mainInstrument)}
             </div>
             {song?.capo && song.capo > 0 && (
-              <div className="flex items-center gap-2 text-sm text-blue-900/80">
+              <div className="flex items-center gap-2 text-sm text-stone-500">
                 <Guitar className="h-4 w-4 mr-1" />
                 <span className="font-medium">Capo:</span> <Badge className="bg-amber-100 text-amber-800 font-semibold">{song.capo}ª casa</Badge>
               </div>
             )}
             {author && (
-              <div className="flex items-center gap-2 text-sm text-blue-900/80">
+              <div className="flex items-center gap-2 text-sm text-stone-500">
                 <FileText className="h-4 w-4 mr-1" />
                 <span className="font-medium">Autor:</span> {author}
               </div>
@@ -733,11 +671,11 @@ export default function SongPage() {
 
           {/* Tags */}
           {tags?.length > 0 && (
-            <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100">
+            <div className="bg-white rounded-xl border border-stone-200 p-5">
               <SidebarTitle>Tags</SidebarTitle>
               <div className="flex flex-wrap gap-2 mt-2">
                 {tags.map((t, tagIndex) => (
-                  <Badge key={tagIndex} className="bg-blue-100 text-blue-800 font-semibold px-3 py-1 text-xs">
+                  <Badge key={tagIndex} className="bg-stone-100 text-stone-600 font-medium px-3 py-1 text-xs">
                     {t}
                   </Badge>
                 ))}
@@ -747,7 +685,7 @@ export default function SongPage() {
 
           {/* Separate Chords box - Only for ACORDES type */}
           {currentVersion?.sourceText && song?.type === 'ACORDES' && (
-            <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100">
+            <div className="bg-white rounded-xl border border-stone-200 p-5">
                 <div className="flex items-center justify-between">
                   <SidebarTitle>Acordes</SidebarTitle>
                   {/* Beta badge with hover/click notice */}
@@ -778,7 +716,7 @@ export default function SongPage() {
 
           {/* Download PDF */}
           {pdfUrl && (
-            <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100">
+            <div className="bg-white rounded-xl border border-stone-200 p-5">
               <SidebarTitle>PDF</SidebarTitle>
               <Button asChild className="w-full" variant="outline">
                 <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
@@ -797,7 +735,7 @@ export default function SongPage() {
         <aside className="hidden lg:flex lg:flex-col lg:w-80 shrink-0 space-y-5 lg:sticky lg:top-24 lg:self-start">
           {/* Transpose Controls - Only for ACORDES type */}
           {song?.type === 'ACORDES' && (
-            <div className="bg-white/80 rounded-xl shadow p-5 flex flex-col gap-3 border border-blue-100">
+            <div className="bg-white rounded-xl border border-stone-200 p-5 flex flex-col gap-3">
               <SidebarTitle>Transpor Tom</SidebarTitle>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => changeTransposition(-1, 'desktop_sidebar')}>-</Button>
@@ -824,9 +762,9 @@ export default function SongPage() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              {/* Botão PDF com transposição */}
-              <Button 
-                className="w-full mt-2" 
+              {/* Botão PDF com transposição — apenas para ACORDES (bloco pai já garante isso) */}
+              <Button
+                className="w-full mt-2"
                 variant="outline"
                 onClick={() => openGeneratedPdf('desktop_sidebar')}
               >
@@ -837,24 +775,24 @@ export default function SongPage() {
           )}
 
           {/* Song Info */}
-          <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100 space-y-3">
+          <div className="bg-white rounded-xl border border-stone-200 p-5 space-y-3">
             <SidebarTitle>Informações</SidebarTitle>
-            <div className="flex items-center gap-2 text-sm text-blue-900/80">
+            <div className="flex items-center gap-2 text-sm text-stone-500">
               <FileText className="h-4 w-4 mr-1" />
               <span className="font-medium">Enviado por:</span> {currentVersion?.createdBy?.name || 'Desconhecido'}
             </div>
-            <div className="flex items-center gap-2 text-sm text-blue-900/80">
+            <div className="flex items-center gap-2 text-sm text-stone-500">
               <Music className="h-4 w-4 mr-1" />
               <span className="font-medium">Instrumento:</span> {getInstrumentLabel(mainInstrument)}
             </div>
             {song?.capo && song.capo > 0 && (
-              <div className="flex items-center gap-2 text-sm text-blue-900/80">
+              <div className="flex items-center gap-2 text-sm text-stone-500">
                 <Guitar className="h-4 w-4 mr-1" />
                 <span className="font-medium">Capo:</span> <Badge className="bg-amber-100 text-amber-800 font-semibold">{song.capo}ª casa</Badge>
               </div>
             )}
             {author && (
-              <div className="flex items-center gap-2 text-sm text-blue-900/80">
+              <div className="flex items-center gap-2 text-sm text-stone-500">
                 <FileText className="h-4 w-4 mr-1" />
                 <span className="font-medium">Autor:</span> {author}
               </div>
@@ -863,11 +801,11 @@ export default function SongPage() {
 
           {/* Tags */}
           {tags?.length > 0 && (
-            <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100">
+            <div className="bg-white rounded-xl border border-stone-200 p-5">
               <SidebarTitle>Tags</SidebarTitle>
               <div className="flex flex-wrap gap-2 mt-2">
                 {tags.map((t, tagIndex) => (
-                  <Badge key={tagIndex} className="bg-blue-100 text-blue-800 font-semibold px-3 py-1 text-xs">
+                  <Badge key={tagIndex} className="bg-stone-100 text-stone-600 font-medium px-3 py-1 text-xs">
                     {t}
                   </Badge>
                 ))}
@@ -877,7 +815,7 @@ export default function SongPage() {
 
           {/* Separate Chords box - Only for ACORDES type */}
           {currentVersion?.sourceText && song?.type === 'ACORDES' && (
-            <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100">
+            <div className="bg-white rounded-xl border border-stone-200 p-5">
                 <div className="flex items-center justify-between">
                   <SidebarTitle>Acordes</SidebarTitle>
                   {/* Beta badge with hover/click notice */}
@@ -910,7 +848,7 @@ export default function SongPage() {
 
           {/* Download PDF */}
           {pdfUrl && (
-            <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100">
+            <div className="bg-white rounded-xl border border-stone-200 p-5">
               <SidebarTitle>PDF</SidebarTitle>
               <Button asChild className="w-full" variant="outline">
                 <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
@@ -925,12 +863,12 @@ export default function SongPage() {
         <main className="flex-1 min-w-0 space-y-10">
           {/* Lyrics Section */}
           {currentVersion?.sourceText && (
-            <section className="bg-white/90 rounded-2xl shadow-lg p-6 md:p-10 border border-blue-100">
+            <section className="bg-white rounded-2xl p-6 md:p-10 border border-stone-200">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-6">
                 <SectionTitle>Letra</SectionTitle>
                 <div className="flex flex-wrap gap-2 mt-2 md:mt-0">
                   {moments.map((m, i) => (
-                    <Badge key={i} className="bg-blue-50 text-blue-700 font-semibold px-3 py-1 text-xs">
+                    <Badge key={i} className="bg-stone-50 text-stone-600 font-medium px-3 py-1 text-xs">
                       {getMomentDisplayName(m)}
                     </Badge>
                   ))}
@@ -950,18 +888,18 @@ export default function SongPage() {
 
           {/* YouTube Section */}
           {currentVersion?.youtubeLink && (
-            <section className="bg-white/90 rounded-2xl shadow-lg p-6 md:p-10 border border-blue-100">
+            <section className="bg-white rounded-2xl p-6 md:p-10 border border-stone-200">
               <SectionTitle>YouTube</SectionTitle>
               <div className="aspect-video max-w-2xl mx-auto rounded-lg overflow-hidden shadow">
                 <YouTube videoId={getYoutubeId(currentVersion.youtubeLink)} className="w-full h-full" />
               </div>
-              <a href={currentVersion.youtubeLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-700 mt-2 text-sm hover:underline"><Youtube className="h-4 w-4" /> Abrir no YouTube</a>
+              <a href={currentVersion.youtubeLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-rose-700 mt-2 text-sm hover:underline"><Youtube className="h-4 w-4" /> Abrir no YouTube</a>
             </section>
           )}
 
           {/* Audio Section */}
           {audioUrl && (
-            <section className="bg-white/90 rounded-2xl shadow-lg p-6 md:p-10 border border-blue-100">
+            <section className="bg-white rounded-2xl p-6 md:p-10 border border-stone-200">
               <SectionTitle>Áudio</SectionTitle>
               <div className="flex flex-col items-center gap-2">
                 <audio controls className="w-full max-w-lg">
@@ -974,7 +912,7 @@ export default function SongPage() {
 
           {/* Novo Sistema de Ficheiros - Partituras e Áudio */}
           {files.length > 0 && (
-            <section className="bg-white/90 rounded-2xl shadow-lg p-6 md:p-10 border border-blue-100">
+            <section className="bg-white rounded-2xl p-6 md:p-10 border border-stone-200">
               {(() => {
                 const pdfFiles = files.filter(f => f.fileType === FileType.PDF);
                 const audioFiles = files.filter(f => f.fileType === FileType.AUDIO);
@@ -1000,8 +938,8 @@ export default function SongPage() {
                                 onClick={() => setSelectedPdfIndex(index)}
                                 className={`shrink-0 text-xs md:text-sm px-3 md:px-4 py-2 min-h-10 touch-manipulation ${
                                   selectedPdfIndex === index
-                                    ? "bg-blue-600 text-white"
-                                    : "text-blue-700 border-blue-200 hover:bg-blue-50"
+                                    ? "bg-stone-900 text-white"
+                                    : "text-stone-700 border-stone-200 hover:bg-stone-50"
                                 }`}
                               >
                                 {file.description || `PDF ${index + 1}`}
@@ -1011,7 +949,7 @@ export default function SongPage() {
                         )}
 
                         <div className="flex items-center justify-between gap-2">
-                          <h3 className="text-base md:text-lg font-semibold text-blue-900 truncate">
+                          <h3 className="text-base md:text-lg font-semibold text-stone-900 truncate">
                             {selectedPdf?.description || 'Partitura'}
                           </h3>
                           {selectedPdf?.signedUrl && (
@@ -1047,7 +985,7 @@ export default function SongPage() {
                         <SectionTitle>Áudios</SectionTitle>
                         <div className="space-y-3">
                           {audioFiles.map((file) => (
-                            <div key={file.id} className="bg-white/80 rounded-xl shadow p-4 border border-blue-100">
+                            <div key={file.id} className="bg-white rounded-xl border border-stone-200 p-4">
                               <div className="flex items-center justify-between gap-3">
                                 <p className="text-sm font-medium text-gray-900 truncate flex-1">
                                   {file.description || file.fileName}
@@ -1099,8 +1037,8 @@ export default function SongPage() {
             {/* Mobile/Tablet: Informações em cards horizontais compactos */}
             <div className="lg:hidden space-y-4">
               {/* Info compacta em linha */}
-              <div className="bg-white/80 rounded-xl shadow p-4 border border-blue-100">
-                <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-blue-900/80">
+              <div className="bg-white rounded-xl border border-stone-200 p-4">
+                <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-stone-500">
                   <div className="flex items-center gap-1">
                     <FileText className="h-4 w-4" />
                     <span className="font-medium">Por:</span> {currentVersion?.createdBy?.name || 'Desconhecido'}
@@ -1125,7 +1063,7 @@ export default function SongPage() {
                   {tags?.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mt-3">
                       {tags.map((t, tagIndex) => (
-                        <Badge key={tagIndex} className="bg-blue-100 text-blue-800 font-semibold px-2 py-0.5 text-xs">
+                        <Badge key={tagIndex} className="bg-stone-100 text-stone-600 font-medium px-2 py-0.5 text-xs">
                           {t}
                         </Badge>
                       ))}
@@ -1135,8 +1073,8 @@ export default function SongPage() {
 
                 {/* Áudios em mobile - player compacto */}
                 {files.filter(f => f.fileType === 'AUDIO').length > 0 && (
-                  <div className="bg-white/80 rounded-xl shadow p-4 border border-blue-100">
-                    <h3 className="text-sm font-semibold text-blue-900 mb-3">Áudios</h3>
+                  <div className="bg-white rounded-xl border border-stone-200 p-4">
+                    <h3 className="text-sm font-semibold text-stone-900 mb-3">Áudios</h3>
                     <div className="space-y-3">
                       {files.filter(f => f.fileType === 'AUDIO').map((file) => (
                         <div key={file.id} className="space-y-1">
@@ -1167,24 +1105,24 @@ export default function SongPage() {
                 {/* Sidebar Esquerda - Só visível em desktop */}
                 <aside className="hidden lg:block lg:w-72 xl:w-80 shrink-0 space-y-5">
                   {/* Song Info */}
-                  <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100 space-y-3">
+                  <div className="bg-white rounded-xl border border-stone-200 p-5 space-y-3">
                     <SidebarTitle>Informações</SidebarTitle>
-                    <div className="flex items-center gap-2 text-sm text-blue-900/80">
+                    <div className="flex items-center gap-2 text-sm text-stone-500">
                       <FileText className="h-4 w-4 mr-1" />
                       <span className="font-medium">Enviado por:</span> {currentVersion?.createdBy?.name || 'Desconhecido'}
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-blue-900/80">
+                    <div className="flex items-center gap-2 text-sm text-stone-500">
                       <Music className="h-4 w-4 mr-1" />
                       <span className="font-medium">Instrumento:</span> {getInstrumentLabel(mainInstrument)}
                     </div>
                     {song?.capo && song.capo > 0 && (
-                      <div className="flex items-center gap-2 text-sm text-blue-900/80">
+                      <div className="flex items-center gap-2 text-sm text-stone-500">
                         <Guitar className="h-4 w-4 mr-1" />
                         <span className="font-medium">Capo:</span> <Badge className="bg-amber-100 text-amber-800 font-semibold">{song.capo}ª casa</Badge>
                       </div>
                     )}
                     {author && (
-                      <div className="flex items-center gap-2 text-sm text-blue-900/80">
+                      <div className="flex items-center gap-2 text-sm text-stone-500">
                         <FileText className="h-4 w-4 mr-1" />
                         <span className="font-medium">Autor:</span> {author}
                       </div>
@@ -1193,11 +1131,11 @@ export default function SongPage() {
 
                   {/* Tags */}
                   {tags?.length > 0 && (
-                    <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100">
+                    <div className="bg-white rounded-xl border border-stone-200 p-5">
                       <SidebarTitle>Tags</SidebarTitle>
                       <div className="flex flex-wrap gap-2 mt-2">
                         {tags.map((t, tagIndex) => (
-                          <Badge key={tagIndex} className="bg-blue-100 text-blue-800 font-semibold px-3 py-1 text-xs">
+                          <Badge key={tagIndex} className="bg-stone-100 text-stone-600 font-medium px-3 py-1 text-xs">
                             {t}
                           </Badge>
                         ))}
@@ -1207,7 +1145,7 @@ export default function SongPage() {
 
                   {/* Áudios na Sidebar desktop */}
                   {files.filter(f => f.fileType === 'AUDIO').length > 0 && (
-                    <div className="bg-white/80 rounded-xl shadow p-5 border border-blue-100">
+                    <div className="bg-white rounded-xl border border-stone-200 p-5">
                       <SidebarTitle>Áudios</SidebarTitle>
                       <div className="space-y-4 mt-3">
                         {files.filter(f => f.fileType === 'AUDIO').map((file) => (
@@ -1253,7 +1191,7 @@ export default function SongPage() {
                     }
 
                     return (
-                      <section className="bg-white/90 rounded-2xl shadow-lg p-4 md:p-6 border border-blue-100">
+                      <section className="bg-white rounded-2xl p-4 md:p-6 border border-stone-200">
                         {/* Seletor de PDFs - scrollable em mobile */}
                         {pdfFiles.length > 1 && (
                           <div className="flex gap-2 mb-4 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
@@ -1265,8 +1203,8 @@ export default function SongPage() {
                                 onClick={() => setSelectedPdfIndex(index)}
                                 className={`shrink-0 text-xs md:text-sm px-3 md:px-4 py-2 min-h-10 touch-manipulation ${
                                   selectedPdfIndex === index 
-                                    ? "bg-blue-600 text-white" 
-                                    : "text-blue-700 border-blue-200 hover:bg-blue-50"
+                                    ? "bg-stone-900 text-white" 
+                                    : "text-stone-700 border-stone-200 hover:bg-stone-50"
                                 }`}
                               >
                                 {file.description || `PDF ${index + 1}`}
@@ -1277,7 +1215,7 @@ export default function SongPage() {
 
                         {/* Header do PDF selecionado */}
                         <div className="flex items-center justify-between mb-3 md:mb-4 gap-2">
-                          <h2 className="text-base md:text-lg font-semibold text-blue-900 truncate">
+                          <h2 className="text-base md:text-lg font-semibold text-stone-900 truncate">
                             {selectedPdf?.description || 'Partitura'}
                           </h2>
                           {selectedPdf?.signedUrl && (
@@ -1329,15 +1267,15 @@ const ScrollToTopButton = dynamic(() => import("@/components/ScrollToTopButton")
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
     <h2 className="text-lg font-semibold tracking-wide">
-      <span className="border-b-2 border-sky-500 pb-1">{children}</span>
+      <span className="border-b-2 border-rose-700 pb-1">{children}</span>
     </h2>
   );
 }
 
 function SidebarTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="uppercase text-sm tracking-widest text-muted-foreground font-semibold">
-      <span className="border-b-2 border-sky-500 pb-1">{children}</span>
+    <h3 className="uppercase text-xs tracking-widest text-stone-400 font-semibold">
+      <span className="border-b border-stone-200 pb-1">{children}</span>
     </h3>
   );
 }

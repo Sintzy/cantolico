@@ -22,10 +22,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
   global: {
     fetch: (url, options = {}) => {
-      // Create AbortController for timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-      
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
       return fetch(url, {
         ...options,
         signal: controller.signal,
@@ -37,12 +36,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 // Helper function to handle Supabase errors
 export function handleSupabaseError(error: any, operation: string) {
   console.error(`Supabase error in ${operation}:`, error);
-  
-  // Check if it's a connectivity issue
+
   if (error?.message?.includes('fetch failed') || error?.message?.includes('network')) {
     throw new Error(`Database connectivity issue: ${operation}`);
   }
-  
+
   throw new Error(`Database operation failed: ${operation}`);
 }
 

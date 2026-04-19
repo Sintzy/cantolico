@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import ExploreMassesClient from './page.client';
-import { supabase } from '@/lib/supabase-client';
+import { adminSupabase as supabase } from '@/lib/supabase-admin';
 
 export const metadata: Metadata = {
   title: 'Explorar Missas | Cantólico',

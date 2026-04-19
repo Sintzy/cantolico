@@ -1,11 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Configuração do Turbopack (Next.js 16+)
-  turbopack: {
-    root: process.cwd(),
-  },
-  
   // Image optimization
   images: {
     // Enable modern image formats
@@ -23,6 +18,16 @@ const nextConfig: NextConfig = {
         hostname: '*.googleusercontent.com',
         pathname: '**',
       },
+      {
+        protocol: 'https',
+        hostname: 'img.clerk.com',
+        pathname: '**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.clerk.com',
+        pathname: '**',
+      },
     ],
   },
   
@@ -32,12 +37,7 @@ const nextConfig: NextConfig = {
   // Performance optimization
   experimental: {
     // Tree shake unused code more aggressively
-    optimizePackageImports: [
-      '@/components',
-      '@/lib',
-      '@/hooks',
-      'lucide-react'
-    ],
+    optimizePackageImports: ['lucide-react'],
   },
   
   env: {
@@ -47,6 +47,14 @@ const nextConfig: NextConfig = {
   },
   
   webpack: (config, { isServer }) => {
+    // pnpm on Windows resolves symlinks starting from different base path casings
+    // ("cantolico" CWD vs "Cantolico" real path), producing duplicate module IDs.
+    // The warning is cosmetic — modules load correctly — so we suppress it.
+    config.ignoreWarnings = [
+      ...(config.ignoreWarnings ?? []),
+      /There are multiple modules with names that only differ in casing/,
+    ];
+
     // Exclude native binaries from webpack bundling
     if (isServer) {
       config.externals = config.externals || [];
@@ -59,5 +67,5 @@ const nextConfig: NextConfig = {
   },
 };
 
-module.exports = nextConfig;
+export default nextConfig;
   

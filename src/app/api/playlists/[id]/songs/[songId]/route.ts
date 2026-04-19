@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase-client'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
-
+import { adminSupabase as supabase } from '@/lib/supabase-admin'
+import { getClerkSession } from '@/lib/api-middleware';
 interface Params {
   id: string
   songId: string
@@ -11,7 +9,7 @@ interface Params {
 // DELETE - Remover música da playlist
 export async function DELETE(request: NextRequest, { params }: { params: Promise<Params> }) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await getClerkSession()
     
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })

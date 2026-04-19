@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { supabase } from '@/lib/supabase-client';
+import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { logger } from '@/lib/logger';
 import { LogCategory } from '@/types/logging';
 import { getClientIP } from '@/lib/utils';
 
+import { getClerkSession } from '@/lib/api-middleware';
 /**
  * PATCH /api/admin/songs/[id]/files/[fileId]
  * Atualiza informações de um ficheiro (ex: descrição)
@@ -18,7 +17,7 @@ export async function PATCH(
   const startTime = Date.now();
 
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     if (!session?.user) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     }
@@ -123,7 +122,7 @@ export async function DELETE(
   const startTime = Date.now();
 
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     if (!session?.user) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     }

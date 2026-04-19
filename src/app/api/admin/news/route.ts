@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { adminSupabase } from '@/lib/supabase-admin';
 import { titleToSlug } from '@/lib/slugs';
 
+import { getClerkSession } from '@/lib/api-middleware';
 async function generateUniqueNewsSlug(title: string) {
   const baseSlug = titleToSlug(title);
   if (!baseSlug) {
@@ -38,7 +37,7 @@ async function generateUniqueNewsSlug(title: string) {
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     if (!session || session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }
@@ -60,7 +59,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     if (!session || session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }

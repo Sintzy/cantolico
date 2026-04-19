@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { adminSupabase as supabaseAdmin } from '@/lib/supabase-admin';
 
+import { getClerkSession } from '@/lib/api-middleware';
 type DeleteOptions = {
   deleteSongs?: boolean;
   deletePlaylists?: boolean;
@@ -12,7 +11,7 @@ type DeleteOptions = {
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     if (!session || session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }

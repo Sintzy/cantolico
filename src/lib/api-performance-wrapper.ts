@@ -9,8 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logger } from './logger';
 import { LogCategory } from '@/types/logging';
 import { getCorrelationContext, runWithCorrelationContextAsync, createCorrelationContext } from './correlation-context';
-import { getServerSession } from 'next-auth';
-import { authOptions } from './auth';
+import { getClerkSession } from './api-middleware';
 
 // Threshold de performance (configurável via env)
 const SLOW_REQUEST_THRESHOLD_MS = parseInt(process.env.SLOW_REQUEST_THRESHOLD_MS || '500', 10);
@@ -44,7 +43,7 @@ interface PerformanceWrapperOptions {
  */
 async function getUserContext(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     if (session?.user) {
       return {
         user_id: session.user.id,

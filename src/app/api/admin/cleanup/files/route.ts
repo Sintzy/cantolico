@@ -2,10 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cleanupExpiredFiles, findAndMarkOrphanedFiles } from '@/lib/file-cleanup';
 import { logger } from '@/lib/logger';
 import { LogCategory, LogLevel } from '@/types/logging';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { getClientIP } from '@/lib/utils';
 
+import { getClerkSession } from '@/lib/api-middleware';
 /**
  * API para limpeza automática de ficheiros
  * 
@@ -25,7 +24,7 @@ export async function GET(request: NextRequest) {
     const isCronJob = request.headers.get('authorization') === `Bearer ${process.env.CRON_SECRET}`;
     
     if (!isCronJob) {
-      const session = await getServerSession(authOptions);
+      const session = await getClerkSession();
       
       if (!session?.user) {
         logger.warn('Unauthorized cleanup attempt - no session', {
@@ -48,7 +47,7 @@ export async function GET(request: NextRequest) {
           user: {
             user_id: session.user.id,
             user_email: session.user.email || null,
-            user_role: session.user.role
+            user_role: (session.user.role as 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN' | 'SUPER_ADMIN') || 'USER'
           },
           network: { ip_address: clientIp },
           tags: ['unauthorized', 'file-cleanup']
@@ -152,7 +151,7 @@ export async function POST(request: NextRequest) {
   
   try {
     // Apenas admins podem executar este endpoint
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     
     if (!session?.user) {
       logger.warn('Unauthorized orphan scan attempt - no session', {
@@ -175,7 +174,7 @@ export async function POST(request: NextRequest) {
         user: {
           user_id: session.user.id,
           user_email: session.user.email || null,
-          user_role: session.user.role
+          user_role: (session.user.role as 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN' | 'SUPER_ADMIN') || 'USER'
         },
         network: { ip_address: clientIp },
         tags: ['unauthorized', 'orphan-scan']

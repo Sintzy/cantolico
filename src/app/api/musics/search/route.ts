@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase-client";
+import { adminSupabase as supabase } from "@/lib/supabase-admin";
 
 // /api/musics/search?q=...&page=1&limit=20
 export async function GET(req: NextRequest) {
@@ -9,38 +9,33 @@ export async function GET(req: NextRequest) {
   const limit = parseInt(searchParams.get("limit") || "20", 10);
   const skip = (page - 1) * limit;
 
-  // Build query
-  let songsQuery = supabase
-    .from('Song')
-    .select('id, title, slug, createdAt')
-    .order('createdAt', { ascending: false });
-
-  let countQuery = supabase
-    .from('Song')
-    .select('*', { count: 'exact', head: true });
-
-  // Apply search filter if provided
-  if (q) {
-    songsQuery = songsQuery.ilike('title', `%${q}%`);
-    countQuery = countQuery.ilike('title', `%${q}%`);
+  if (!q.trim()) {
+    const { data, error } = await supabase
+      .from('Song')
+      .select('id, title, slug, createdAt')
+      .order('createdAt', { ascending: false })
+      .range(skip, skip + limit - 1);
+    if (error) return NextResponse.json({ error: "Error searching songs" }, { status: 500 });
+    return NextResponse.json({ songs: data || [], totalPages: 1 });
   }
 
-  // Apply pagination
-  songsQuery = songsQuery.range(skip, skip + limit - 1);
-
-  const [songsResult, totalResult] = await Promise.all([
-    songsQuery,
-    countQuery
+  // Fuzzy + accent-insensitive search via pg_trgm + unaccent RPC functions.
+  // Fallback to ilike if the RPC functions are not yet deployed.
+  const [songsResult, countResult] = await Promise.all([
+    supabase.rpc('search_songs', { q, lim: limit, offs: skip }),
+    supabase.rpc('count_search_songs', { q }),
   ]);
 
-  if (songsResult.error) {
-    console.error('Error searching songs:', songsResult.error);
-    return NextResponse.json({ error: "Error searching songs" }, { status: 500 });
+  if (songsResult.error || countResult.error) {
+    // Fallback: plain ilike (works without the migration)
+    const [fb, fbc] = await Promise.all([
+      supabase.from('Song').select('id, title, slug, createdAt').ilike('title', `%${q}%`).order('createdAt', { ascending: false }).range(skip, skip + limit - 1),
+      supabase.from('Song').select('*', { count: 'exact', head: true }).ilike('title', `%${q}%`),
+    ]);
+    if (fb.error) return NextResponse.json({ error: "Error searching songs" }, { status: 500 });
+    return NextResponse.json({ songs: fb.data || [], totalPages: Math.ceil((fbc.count || 0) / limit) });
   }
 
-  const songs = songsResult.data || [];
-  const total = totalResult.count || 0;
-  const totalPages = Math.ceil(total / limit);
-
-  return NextResponse.json({ songs, totalPages });
+  const total = Number(countResult.data) || 0;
+  return NextResponse.json({ songs: songsResult.data || [], totalPages: Math.ceil(total / limit) });
 }

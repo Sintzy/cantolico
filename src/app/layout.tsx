@@ -1,18 +1,20 @@
 import "./globals.css";
 import "./globals-blur.css";
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Instrument_Serif, DM_Sans } from "next/font/google";
 import Script from "next/script";
+
+const instrumentSerif = Instrument_Serif({ subsets: ["latin"], variable: "--font-cormorant", weight: "400", style: ["normal","italic"], display: "swap" });
+const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans", display: "swap" });
 import AuthSessionProvider from "@/components/SessionProvider";
 import Navbar from "@/components/Navbar";
 import { Toaster } from "@/components/ui/sonner";
 import Footer from "@/components/Footer";
 import { CacheProvider } from "@/components/providers/CacheProvider";
 import EmailVerificationBanner from "@/components/EmailVerificationBanner";
+import AnnouncementPopup from "@/components/AnnouncementPopup";
 import { buildMetadata } from "@/lib/seo";
 import { Analytics } from "@vercel/analytics/next";
-
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = buildMetadata({
   title: "Cantólico",
@@ -21,18 +23,19 @@ export const metadata: Metadata = buildMetadata({
   type: "website",
 });
 
+export const dynamic = 'force-dynamic';
+
 export const viewport: Viewport = {
   themeColor: '#1e40af',
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt">
+    <html lang="pt" className={`${instrumentSerif.variable} ${dmSans.variable}`}>
       <head />
-      <body className={inter.className + " flex flex-col min-h-screen"}>
+      <body className={`${dmSans.className} flex flex-col min-h-screen antialiased`}>
         <Script
           defer
           src="https://truenas-scale.fold-pence.ts.net:8443/script.js"
@@ -42,13 +45,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <CacheProvider>
           <AuthSessionProvider>
             <Navbar />
-            {/* Spacer for floating navbar */}
-            <div className="h-16"></div>
+            <div className="h-16" />
             <EmailVerificationBanner />
             <main className="flex-1">
               {children}
               <Analytics />
             </main>
+            <AnnouncementPopup />
             <Toaster />
             <Footer />
           </AuthSessionProvider>

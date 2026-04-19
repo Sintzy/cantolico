@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase } from '@/lib/supabase-admin';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import { logApiRequestError, logPlaylistSongAdded, logPlaylistSongRemoved, toErrorContext } from '@/lib/logging-helpers';
 
+import { getClerkSession } from '@/lib/api-middleware';
 // GET: List playlist members
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     const { id: playlistId } = await params;
 
     if (!session?.user?.id) {
@@ -127,7 +126,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     const { id: playlistId } = await params;
     const { userEmail, role = 'EDITOR' } = await request.json();
 
@@ -257,7 +256,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getClerkSession();
     const { id: playlistId } = await params;
     const url = new URL(request.url);
     const memberId = url.searchParams.get('memberId');
