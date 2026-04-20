@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
+  Church,
   Globe,
   Heart,
   Music,
@@ -161,12 +162,12 @@ export default function HomePageClient() {
             {/* Right: feature grid */}
             <div className="grid gap-px rounded-2xl border border-stone-200 bg-stone-200 overflow-hidden">
               {[
-                { icon: Music,  title: "Biblioteca completa",  text: "Cânticos organizados por momento litúrgico, tema e contexto celebrativo." },
+                { icon: Music,  title: "Biblioteca completa",  text: "Aqui encontras cânticos organizados por momento litúrgico, tema, tags, e compositor." },
                 { icon: Search, title: "Pesquisa eficiente",   text: "Encontra por título, letra, acordes ou momento em menos de um segundo." },
                 { icon: Heart,  title: "Playlists pessoais",   text: "Cria e guarda repertórios para missas, grupos e ensaios." },
-                { icon: Shield, title: "Conteúdo revisto",     text: "Submissões verificadas por moderadores para garantir consistência." },
-                { icon: Globe,  title: "Acesso gratuito",      text: "Plataforma aberta para todas as comunidades de língua portuguesa." },
-                { icon: Users,  title: "Comunidade ativa",     text: "Contribuições contínuas de músicos e equipas pastorais de todo o mundo." },
+                { icon: Church, title: "Sistema de Missas",     text: "Organiza os teus canticos em missas com possibilidades de exportar o PowerPoint, pdf, etc..." },
+                { icon: Globe,  title: "Acesso gratuito",      text: "Plataforma aberta e sem custos para todas as comunidades de língua portuguesa." },
+                { icon: Users,  title: "Comunidade ativa",     text: "Contribuições contínuas de músicos e equipas pastorais em vários paises de lingua oficial portuguesa." },
               ].map(f => (
                 <div key={f.title} className="group flex items-start gap-4 bg-white p-6 transition-colors hover:bg-stone-50/70">
                   <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-stone-100 transition-colors group-hover:bg-rose-100">
@@ -198,9 +199,9 @@ export default function HomePageClient() {
             <div className="absolute top-5 left-[calc(16.7%+20px)] right-[calc(16.7%+20px)] hidden h-px bg-stone-200 md:block" />
 
             {[
-              { n: "01", title: "Submeter", text: "Envia letra, acordes e contexto litúrgico pelo formulário simples." },
-              { n: "02", title: "Revisar",  text: "A equipa de moderadores valida o conteúdo para garantir qualidade." },
-              { n: "03", title: "Partilhar", text: "Cântico publicado e disponível para toda a comunidade." },
+              { n: "01", title: "Submeter", text: "Envia a letra, acordes e momento litúrgico e tags pelo formulário simples." },
+              { n: "02", title: "Revisar",  text: "A equipa de moderadores valida o conteúdo para garantir qualidade e fidelidade." },
+              { n: "03", title: "Partilhar", text: "O teu cântico foi publicado e disponível para toda a comunidade." },
             ].map(s => (
               <div key={s.n} className="relative z-10 flex flex-col items-center gap-4 text-center">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-200 bg-white">
@@ -227,9 +228,6 @@ export default function HomePageClient() {
                   Notícias do Cantólico.
                 </h2>
               </div>
-              <Link href="/noticia" className="flex items-center gap-1.5 text-sm font-medium text-stone-500 transition-colors hover:text-stone-900">
-                Ver todas <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
             </div>
 
             {newsLoading ? (
@@ -270,7 +268,7 @@ export default function HomePageClient() {
         </section>
       )}
 
-      {/* ─── CTA ─────────────────────────────────────────────────── */}
+      {/*  CTA  */}
       <section className="px-5 py-20 md:py-24">
         <div className="mx-auto max-w-screen-xl">
           <div className="relative overflow-hidden rounded-3xl bg-stone-900 px-8 py-16 text-center sm:px-14">
@@ -290,10 +288,10 @@ export default function HomePageClient() {
               </p>
               <h2 className="font-display text-[clamp(1.9rem,4.5vw,3.8rem)] leading-tight text-white">
                 Pronto para preparar<br />
-                a próxima celebração?
+                a tua próxima celebração connosco?
               </h2>
               <p className="mx-auto mt-5 max-w-md text-base leading-relaxed text-stone-400">
-                Organiza o repertório, cria playlists e trabalha com a tua equipa num só lugar.
+                Organiza o repertório, cria playlists/missas e trabalha com a tua equipa num só lugar.
               </p>
               <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <Link
@@ -313,7 +311,7 @@ export default function HomePageClient() {
                 )}
               </div>
               <p className="mt-8 text-xs font-medium text-stone-600">
-                100% gratuito · Sem publicidade · Sem cartão de crédito
+                100% gratuito · Sem cartão de crédito
               </p>
             </div>
           </div>
