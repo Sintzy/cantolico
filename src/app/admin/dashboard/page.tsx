@@ -172,6 +172,9 @@ export default function AdminDashboard() {
             <Link href="/admin/dashboard/news">Gestão Notícias</Link>
           </Button>
           <Button asChild variant="outline" className="w-full sm:w-auto">
+            <Link href="/admin/dashboard/fastcreate">Publicação Rápida</Link>
+          </Button>
+          <Button asChild variant="outline" className="w-full sm:w-auto">
             <Link href="http://100.99.107.118:3101/grafana/goto/ef4ttwjjiq680f?orgId=1">Logs</Link>
           </Button>
         </div>
@@ -413,6 +416,14 @@ export default function AdminDashboard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
                 </svg>
                 <span className="text-sm">Gestão Banners</span>
+              </Link>
+            </Button>
+            <Button asChild className="h-16 flex-col text-center p-4" variant="outline">
+              <Link href="/admin/dashboard/fastcreate">
+                <svg className="h-5 w-5 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <span className="text-sm">Publicação Rápida</span>
               </Link>
             </Button>
           </div>
