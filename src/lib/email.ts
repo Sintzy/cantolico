@@ -874,6 +874,54 @@ export function createPlaylistInviteEmailTemplate(
   );
 }
 
+export function createMassInviteEmailTemplate(
+  invitedUserName: string,
+  massName: string,
+  massDate: string | null,
+  inviterName: string,
+  inviteToken: string,
+  massId: string
+): string {
+  const content = `
+    <p style="margin:0;Margin:0;font-family:Poppins,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif;line-height:22px;font-weight:500;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#333333;text-align:left;mso-line-height-rule:exactly;mso-text-raise:2px;">Olá <strong>${invitedUserName}</strong>,</p>
+
+    <p style="margin:16px 0 8px 0;Margin:16px 0 8px 0;font-family:Poppins,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif;line-height:22px;font-weight:400;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#333333;text-align:left;mso-line-height-rule:exactly;mso-text-raise:2px;"><strong>${inviterName}</strong> convidou-te para colaborares na preparação da missa <strong>"${massName}"</strong> no Cantólico.</p>
+
+    ${createDetailsBox('Detalhes do Convite', [
+      {label: '⛪ Missa', value: massName},
+      {label: '👤 Convidado por', value: inviterName},
+      {label: '🎯 Papel', value: 'Editor - Podes adicionar e organizar músicas'},
+      ...(massDate ? [{label: '📅 Data', value: massDate}] : []),
+      {label: '⏰ Validade', value: '7 dias'}
+    ])}
+
+    <p style="margin:20px 0 8px 0;Margin:20px 0 8px 0;font-family:Poppins,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif;line-height:22px;font-weight:500;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#333333;text-align:left;mso-line-height-rule:exactly;mso-text-raise:2px;">🎼 Como Editor, poderás:</p>
+    ${createSimpleList([
+      'Adicionar músicas a cada momento litúrgico',
+      'Remover e reorganizar músicas existentes',
+      'Exportar a missa em PDF ou apresentação',
+      'Colaborar com outros editores em tempo real'
+    ])}
+
+    <p style="margin:16px 0 8px 0;Margin:16px 0 8px 0;font-family:Poppins,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif;line-height:22px;font-weight:400;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#333333;text-align:left;mso-line-height-rule:exactly;mso-text-raise:2px;">Aceita o convite abaixo para começares a colaborar na preparação desta celebração!</p>
+  `;
+
+  return createModernEmailTemplate(
+    '⛪ Convite para Colaborar numa Missa',
+    content,
+    {
+      text: 'Aceitar Convite',
+      url: `https://cantolico.pt/missas/invite/accept?token=${inviteToken}`,
+      color: '#28a745'
+    },
+    {
+      text: 'Ver Missa',
+      url: `https://cantolico.pt/missas/${massId}`,
+      color: '#17a2b8'
+    }
+  );
+}
+
 export function createWelcomeEmailTemplate(userName: string): string {
   const content = `
     <p style="margin:0;Margin:0;font-family:Poppins,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif;line-height:22px;font-weight:500;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#333333;text-align:left;mso-line-height-rule:exactly;mso-text-raise:2px;">Olá <strong>${userName}</strong>,</p>
