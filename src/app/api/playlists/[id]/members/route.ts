@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { adminSupabase } from '@/lib/supabase-admin';
 import { logApiRequestError, logPlaylistSongAdded, logPlaylistSongRemoved, toErrorContext } from '@/lib/logging-helpers';
-
+import { sendEmail, createPlaylistInviteEmailTemplate } from '@/lib/email';
 import { getClerkSession } from '@/lib/api-middleware';
 // GET: List playlist members
 export async function GET(
@@ -145,7 +146,7 @@ export async function POST(
     // Check if user is playlist owner
     const { data: playlist, error: playlistError } = await adminSupabase
       .from('Playlist')
-      .select('userId, name')
+      .select('userId, name, description')
       .eq('id', playlistId)
       .single();
 
@@ -192,7 +193,8 @@ export async function POST(
         userEmail,
         role,
         status: 'PENDING',
-        invitedBy: session.user.id
+        invitedBy: session.user.id,
+        invitedAt: new Date().toISOString(),
       })
       .select(`
         id,
@@ -230,6 +232,34 @@ export async function POST(
         role
       }
     });
+
+    // Send invite email
+    try {
+      const { data: inviter } = await adminSupabase
+        .from('User')
+        .select('name')
+        .eq('id', session.user.id)
+        .single();
+
+      const inviteToken = `${invitation.id}-${crypto.randomBytes(16).toString('hex')}`;
+      const emailTemplate = createPlaylistInviteEmailTemplate(
+        invitedUser.name || userEmail,
+        playlist.name,
+        (playlist as any).description ?? null,
+        inviter?.name || session.user.email || 'Um utilizador',
+        inviteToken,
+        playlistId
+      );
+
+      await sendEmail({
+        to: userEmail,
+        subject: `🎵 Convite para colaborar na playlist "${playlist.name}"`,
+        html: emailTemplate,
+      });
+    } catch (emailErr) {
+      console.error('[PLAYLIST INVITE EMAIL]', emailErr);
+      // Non-fatal: invitation record was created, email failure is logged
+    }
 
     return NextResponse.json({
       success: true,
