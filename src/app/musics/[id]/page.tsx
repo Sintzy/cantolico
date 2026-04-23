@@ -18,6 +18,7 @@ import { Pencil } from 'lucide-react';
 import { Spinner, type SpinnerProps } from '@/components/ui/shadcn-io/spinner';
 import StarButton from '@/components/StarButton';
 import AddToPlaylistButton from '@/components/AddToPlaylistButton';
+import SongExportModal from '@/components/SongExportModal';
 import { LiturgicalMoment, getInstrumentLabel, getLiturgicalMomentLabel } from '@/lib/constants';
 import { FileType } from '@/types/song-files';
 import { trackEvent } from '@/lib/umami';
@@ -128,6 +129,7 @@ export default function SongPage() {
   const [song, setSong] = React.useState<SongData | null>(null);
   const [pdfUrl, setPdfUrl] = React.useState<string | null>(null);
   const [audioUrl, setAudioUrl] = React.useState<string | null>(null);
+  const [exportModalOpen, setExportModalOpen] = React.useState(false);
   const [transposition, setTransposition] = React.useState<number>(0);
   const [showChords, setShowChords] = React.useState<boolean>(true);
   const [loading, setLoading] = React.useState(true);
@@ -147,9 +149,8 @@ export default function SongPage() {
   };
 
   const openGeneratedPdf = (source: string) => {
-    trackEvent('song_pdf_generated', { source, transposition });
-    const generatedPdfUrl = `/api/musics/${id}/pdf?transposition=${transposition}`;
-    window.open(generatedPdfUrl, '_blank');
+    trackEvent('song_pdf_opened', { source });
+    setExportModalOpen(true);
   };
 
   const openOriginalPdf = (source: string) => {
@@ -1293,6 +1294,16 @@ export default function SongPage() {
         <ScrollToTopButton />
       </div>
     </div>
+
+    {/* PDF Export Modal */}
+    <SongExportModal
+      open={exportModalOpen}
+      onClose={() => setExportModalOpen(false)}
+      songTitle={title}
+      songId={id as string}
+      transposition={transposition}
+      showChordsDefault={showChords}
+    />
     </>
   );
 }
