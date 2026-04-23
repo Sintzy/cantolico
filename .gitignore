@@ -3,7 +3,6 @@ TECHNICAL_DOCUMENTATION.md
 grafana.json
 rls-policies.sql
 /docs/
-/patches/
 /scripts/scrapper
 # dependencies
 /node_modules
