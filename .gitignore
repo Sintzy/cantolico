@@ -9,7 +9,6 @@ grafana.json
 rls-policies.sql
 /.claude/
 /docs/
-/patches/
 # dependencies
 /node_modules
 /.pnp
