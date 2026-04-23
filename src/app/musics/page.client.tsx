@@ -597,14 +597,6 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
                                 initialIsStarred={song.isStarred}
                               />
                               <AddToPlaylistButton songId={song.id} size="sm" />
-                              <Link
-                                href={`/musics/${song.slug || song.id}`}
-                                onClick={() => handleNavigateToSong(song.slug || song.id)}
-                                className="inline-flex items-center gap-1 rounded-lg border border-stone-200 px-2 py-1 text-xs font-medium text-stone-700 hover:bg-stone-50 transition-colors"
-                              >
-                                <span className="hidden sm:inline">Ver Cântico</span>
-                                <span className="sm:hidden">Ver</span>
-                              </Link>
                             </div>
                           </div>
 

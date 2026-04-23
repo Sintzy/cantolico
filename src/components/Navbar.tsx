@@ -111,7 +111,7 @@ export default function Navbar() {
         <nav className="hidden lg:flex items-center gap-0.5 flex-1">
           <Link href="/musics" prefetch={false} onClick={close} className={linkCls}>
             <Music className="h-3.5 w-3.5" />
-            Músicas
+            Cânticos
           </Link>
 
           <div className="relative" ref={playlistsRef}>
