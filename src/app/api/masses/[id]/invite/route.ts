@@ -1,6 +1,8 @@
+import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { getClerkSession } from '@/lib/api-middleware';
+import { sendEmail, createMassInviteEmailTemplate } from '@/lib/email';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -22,7 +24,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
   const { data: mass } = await supabase
     .from('Mass')
-    .select('userId, name')
+    .select('userId, name, date')
     .eq('id', massId)
     .single();
 
@@ -69,7 +71,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (existing.status === 'ACCEPTED') {
       return NextResponse.json({ error: 'Utilizador já é membro desta missa' }, { status: 409 });
     }
-    // DECLINED — allow re-invite by deleting old record and creating new
+    // DECLINED — allow re-invite
     await supabase.from('MassMember').delete().eq('id', existing.id);
   }
 
@@ -79,10 +81,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       massId,
       userEmail: email.toLowerCase(),
       role: 'EDITOR',
-      status: 'ACCEPTED', // direct access — no email flow needed
+      status: 'PENDING',
       invitedBy: session.user.id,
       invitedAt: new Date().toISOString(),
-      acceptedAt: new Date().toISOString(),
     })
     .select()
     .single();
@@ -90,6 +91,40 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   if (insertError) {
     console.error('[MASS INVITE]', insertError);
     return NextResponse.json({ error: 'Erro ao criar convite' }, { status: 500 });
+  }
+
+  // Send invite email
+  try {
+    const { data: inviter } = await supabase
+      .from('User')
+      .select('name')
+      .eq('id', session.user.id)
+      .single();
+
+    const massDateFormatted = mass.date
+      ? new Date(mass.date).toLocaleDateString('pt-PT', {
+          weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+        })
+      : null;
+
+    const inviteToken = `${invite.id}-${crypto.randomBytes(16).toString('hex')}`;
+    const emailTemplate = createMassInviteEmailTemplate(
+      invitedUser.name || email,
+      mass.name,
+      massDateFormatted,
+      inviter?.name || session.user.email || 'Um utilizador',
+      inviteToken,
+      massId
+    );
+
+    await sendEmail({
+      to: email,
+      subject: `⛪ Convite para colaborar na missa "${mass.name}"`,
+      html: emailTemplate,
+    });
+  } catch (emailErr) {
+    console.error('[MASS INVITE EMAIL]', emailErr);
+    // Non-fatal: record was created, email failure is logged
   }
 
   return NextResponse.json({ success: true, member: invite });
