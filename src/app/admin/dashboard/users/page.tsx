@@ -15,14 +15,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { TableSkeleton } from '@/components/ui/skeleton';
 import { 
-  Users, 
-  Search, 
-  Filter, 
-  ChevronLeft, 
-  ChevronRight, 
-  UserCheck, 
-  UserX, 
-  Crown, 
+  Users,
+  Search,
+  Filter,
+  ChevronLeft,
+  ChevronRight,
+  UserCheck,
+  UserX,
+  Crown,
   Shield,
   AlertCircle,
   Mail,
@@ -36,7 +36,8 @@ import {
   Clock,
   Eye,
   X,
-  RefreshCw
+  RefreshCw,
+  UserPlus
 } from 'lucide-react';
 import { toast } from 'sonner';
 import UserAvatar from '@/components/ui/user-avatar';
@@ -154,6 +155,9 @@ export default function UsersManagement() {
   });
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
+  const [syncClerkId, setSyncClerkId] = useState('');
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Use optimization hooks
   const debouncedSearchTerm = useDebounce(searchTerm, 400);
@@ -388,7 +392,37 @@ export default function UsersManagement() {
 
   const handleStatusFilter = (value: string) => {
     setStatusFilter(value);
-    setCurrentPage(1); // Reset to first page when filtering
+    setCurrentPage(1);
+  };
+
+  const handleSyncFromClerk = async () => {
+    if (!syncClerkId.trim()) return;
+    setIsSyncing(true);
+    try {
+      const res = await fetch('/api/admin/users/sync-from-clerk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clerkUserId: syncClerkId.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Erro ao sincronizar utilizador');
+        return;
+      }
+      toast.success(
+        data.action === 'created'
+          ? `Utilizador criado: ${data.email}`
+          : `Utilizador atualizado: ${data.email}`
+      );
+      if (data.warning) toast.warning(data.warning);
+      setSyncDialogOpen(false);
+      setSyncClerkId('');
+      refreshData();
+    } catch {
+      toast.error('Erro de rede ao sincronizar');
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   if (status === 'loading') {
@@ -442,20 +476,62 @@ export default function UsersManagement() {
             Gerir roles e permissões dos utilizadores ({totalCount} total)
           </p>
         </div>
-        <Button 
-          onClick={handleManualRefresh} 
-          variant="outline" 
-          size="sm"
-          disabled={isRefreshing}
-        >
-          {isRefreshing ? (
-            <Spinner variant="circle" size={16} className="text-black mr-2" />
-          ) : (
-            <RefreshCw className="h-4 w-4 mr-2" />
-          )}
-          Atualizar
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={handleManualRefresh}
+            variant="outline"
+            size="sm"
+            disabled={isRefreshing}
+          >
+            {isRefreshing ? (
+              <Spinner variant="circle" size={16} className="text-black mr-2" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            Atualizar
+          </Button>
+          <Button
+            onClick={() => setSyncDialogOpen(true)}
+            variant="outline"
+            size="sm"
+          >
+            <UserPlus className="h-4 w-4 mr-2" />
+            Importar do Clerk
+          </Button>
+        </div>
       </div>
+
+      {/* Dialog: Importar utilizador do Clerk */}
+      <Dialog open={syncDialogOpen} onOpenChange={setSyncDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Importar utilizador do Clerk</DialogTitle>
+            <DialogDescription>
+              Cola o Clerk User ID (começa por <code className="text-xs bg-stone-100 px-1 rounded">user_</code>).
+              O utilizador será criado no Cantólico e a metadata do Clerk será atualizada.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Label htmlFor="clerkUserId">Clerk User ID</Label>
+            <Input
+              id="clerkUserId"
+              placeholder="user_xxxxxxxxxxxxxxxxxx"
+              value={syncClerkId}
+              onChange={(e) => setSyncClerkId(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSyncFromClerk()}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSyncDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSyncFromClerk} disabled={isSyncing || !syncClerkId.trim()}>
+              {isSyncing ? <Spinner variant="circle" size={16} className="text-white mr-2" /> : null}
+              Sincronizar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Filters */}
       <Card>

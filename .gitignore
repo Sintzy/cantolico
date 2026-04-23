@@ -1,5 +1,8 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 TECHNICAL_DOCUMENTATION.md
+grafana.json
+rls-policies.sql
+/docs/
 /scripts/scrapper
 
 # Private / local files
@@ -58,3 +61,4 @@ next-env.d.ts
 
 .vercel
 .devcontainer/devcontainer.json
+

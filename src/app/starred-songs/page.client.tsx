@@ -347,7 +347,7 @@ export default function StarredSongsClient({ songs }: StarredSongsClientProps) {
                                     initialIsStarred={true}
                                   />
                                   <AddToPlaylistButton songId={song.id} size="sm" />
-                                  <Button
+                                  {/* <Button
                                     asChild
                                     variant="outline"
                                     size="sm"
@@ -357,7 +357,7 @@ export default function StarredSongsClient({ songs }: StarredSongsClientProps) {
                                       <span className="hidden sm:inline">Ver Cântico</span>
                                       <span className="sm:hidden">Ver</span>
                                     </Link>
-                                  </Button>
+                                  </Button> */}
                                 </div>
                               </div>
 

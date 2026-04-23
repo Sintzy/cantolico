@@ -25,7 +25,7 @@ export const LITURGICAL_MOMENT_LABELS: Record<LiturgicalMoment, string> = {
   GLORIA: 'Glória',
   SALMO_RESPONSORIAL: 'Salmo Responsorial',
   ACLAMACAO_EVANGELHO: 'Aclamação ao Evangelho',
-  OFERENDAS: 'Oferendas',
+  OFERENDAS: 'Ofertório',
   SANTO: 'Santo',
   PAI_NOSSO: 'Pai Nosso',
   SAUDACAO_PAZ: 'Saudação da Paz',

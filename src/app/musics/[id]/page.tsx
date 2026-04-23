@@ -3,7 +3,7 @@ import "../../../../public/styles/chords.css";
 import ChordDiagrams from '@/components/ChordDiagrams';
 import { extractChords } from '@/lib/chord-processor';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { Guitar, ChevronDown, FileText, Music, Youtube, Download, ArrowLeft } from 'lucide-react';
+import { Guitar, ChevronDown, ChevronRight, FileText, Music, Youtube, Download, ArrowLeft, Church, X } from 'lucide-react';
 import YouTube from 'react-youtube';
 import * as React from "react";
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
@@ -121,6 +121,9 @@ export default function SongPage() {
   const searchParams = useSearchParams();
   const massId = searchParams.get('massId');
   const [nextMusicUrl, setNextMusicUrl] = React.useState<string | null>(null);
+  const [nextMusicTitle, setNextMusicTitle] = React.useState<string | null>(null);
+  const [massName, setMassName] = React.useState<string | null>(null);
+  const [currentMomentLabel, setCurrentMomentLabel] = React.useState<string | null>(null);
   const { data: session } = useSession();
   const [song, setSong] = React.useState<SongData | null>(null);
   const [pdfUrl, setPdfUrl] = React.useState<string | null>(null);
@@ -138,6 +141,10 @@ export default function SongPage() {
     description?: string;
     signedUrl?: string;
   }>>([]);
+
+  const exitMassMode = () => {
+    router.replace(`/musics/${id}`, { scroll: false });
+  };
 
   const openGeneratedPdf = (source: string) => {
     trackEvent('song_pdf_generated', { source, transposition });
@@ -226,29 +233,32 @@ export default function SongPage() {
             if (!audioError) setAudioUrl(signedAudioUrlData?.signedUrl || null);
           }
 
-          // Se veio de uma missa, busca próxima música
+          // Se veio de uma missa, busca contexto e próxima música
           if (massId) {
             try {
-              const massRes = await fetch(`/api/masses/${massId}/export?format=full`);
+              const massRes = await fetch(`/api/masses/${massId}`);
               if (massRes.ok) {
                 const massData = await massRes.json();
-                // Encontra próxima música
+                setMassName(massData.name || null);
+
+                const massItems: any[] = massData.items || [];
                 let found = false;
-                let nextUrl = null;
-                for (const moment of massData.items) {
-                  for (const song of moment.songs) {
-                    if (found) {
-                      nextUrl = `/musics/${song.slug || song.id}?massId=${massId}`;
-                      break;
-                    }
-                    if (song.id === data.id || song.slug === data.slug) {
-                      found = true;
-                    }
+                for (const item of massItems) {
+                  if (found) {
+                    const slug = item.song?.slug || item.songId;
+                    setNextMusicUrl(`/musics/${slug}?massId=${massId}`);
+                    setNextMusicTitle(item.song?.title || null);
+                    break;
                   }
-                  if (nextUrl) break;
+                  if (
+                    item.song?.slug === data.slug ||
+                    item.song?.id === data.id ||
+                    item.songId === data.id
+                  ) {
+                    found = true;
+                    setCurrentMomentLabel(getLiturgicalMomentLabel(item.moment));
+                  }
                 }
-                console.log('Próxima música URL:', nextUrl);
-                setNextMusicUrl(nextUrl);
               }
             } catch (err) {
               // ignora erro
@@ -555,6 +565,44 @@ export default function SongPage() {
         </div>
       </div>
 
+      {/* Mass Mode Banner */}
+      {massId && massName && (
+        <div className="sticky top-16 z-40 border-b border-rose-100 bg-rose-50/90 backdrop-blur-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-2 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <Church className="h-3.5 w-3.5 shrink-0 text-rose-500" />
+              <span className="text-sm font-medium text-rose-800 truncate">{massName}</span>
+              {currentMomentLabel && (
+                <>
+                  <span className="text-rose-300 hidden sm:inline">·</span>
+                  <span className="text-xs text-rose-600 truncate hidden sm:inline">{currentMomentLabel}</span>
+                </>
+              )}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {nextMusicUrl && (
+                <Link
+                  href={nextMusicUrl}
+                  onClick={() => trackEvent('mass_next_song_clicked')}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-rose-700 bg-white border border-rose-200 hover:bg-rose-50 rounded-md px-2.5 py-1 transition-colors"
+                >
+                  <span className="hidden sm:inline">{nextMusicTitle || 'Próxima'}</span>
+                  <span className="sm:hidden">Próxima</span>
+                  <ChevronRight className="h-3 w-3" />
+                </Link>
+              )}
+              <button
+                onClick={exitMassMode}
+                className="text-rose-300 hover:text-rose-500 transition-colors p-0.5"
+                aria-label="Sair do modo missa"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Floating Action Bar (mobile/tablet) - mais espaçoso e tocável */}
       <div className="fixed bottom-0 left-0 right-0 z-30 sm:hidden bg-white/95 backdrop-blur-md border-t border-stone-200 shadow-lg safe-area-pb">
         <div className="flex justify-around items-center py-2 px-2">
@@ -588,16 +636,6 @@ export default function SongPage() {
         </div>
       </div>
 
-      {/* Botão de próxima música se veio de missa */}
-      {nextMusicUrl && (
-        <div className="fixed bottom-8 right-8 z-50">
-          <Button asChild variant="default" size="lg" className="shadow-lg bg-stone-900 hover:bg-rose-700 text-white transition-colors">
-            <Link href={nextMusicUrl} onClick={() => trackEvent('mass_next_song_clicked')}>
-              Próxima música →
-            </Link>
-          </Button>
-        </div>
-      )}
       {/* Main Content - padding inferior para não sobrepor floating bar em mobile */}
       <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-8 py-6 sm:py-8 md:py-14 pb-20 sm:pb-8 flex flex-col gap-6 sm:gap-8 md:gap-10">
         {/* Mobile/Tablet: Information and Controls BEFORE Lyrics - Only for ACORDES */}

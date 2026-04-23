@@ -4,7 +4,7 @@ import { buildMetadata, buildOrganizationJsonLd, buildWebsiteJsonLd } from '@/li
 
 export const metadata = buildMetadata({
   title: 'Cantólico | Biblioteca de Cânticos Católicos',
-  description: 'Plataforma gratuita para descobrir, organizar e partilhar cânticos católicos em português.',
+  description: 'Plataforma gratuita para descobrir, organizar e partilhar cânticos católicos da lingua portuguesa.',
   path: '/',
   type: 'website',
 });
