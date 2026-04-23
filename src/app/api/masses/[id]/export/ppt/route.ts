@@ -12,7 +12,7 @@ const MOMENT_ORDER: Record<string, number> = {
 const MOMENT_LABELS: Record<string, string> = {
   ENTRADA: 'Entrada', ATO_PENITENCIAL: 'Ato Penitencial', GLORIA: 'Glória',
   SALMO_RESPONSORIAL: 'Salmo Responsorial', ACLAMACAO_EVANGELHO: 'Aclamação ao Evangelho',
-  OFERENDAS: 'Oferendas', SANTO: 'Santo', PAI_NOSSO: 'Pai Nosso',
+  OFERENDAS: 'Ofertório', SANTO: 'Santo', PAI_NOSSO: 'Pai Nosso',
   SAUDACAO_PAZ: 'Saudação da Paz', CORDEIRO_DEUS: 'Cordeiro de Deus',
   COMUNHAO: 'Comunhão', ACAO_GRACAS: 'Ação de Graças', FINAL: 'Final', OUTRO: 'Outro',
 };

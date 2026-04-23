@@ -25,7 +25,15 @@ export async function POST(req: NextRequest) {
 
     const title = formData.get('title')?.toString().trim() ?? '';
     const author = formData.get('author')?.toString().trim() || null;
-    const type = (formData.get('type')?.toString() ?? 'ACORDES') as 'ACORDES' | 'PARTITURA';
+
+    const rawType = formData.get('type')?.toString() ?? '';
+    const typeMap: Record<string, string> = {
+      Acordes: 'ACORDES',
+      Partitura: 'PARTITURA',
+      ACORDES: 'ACORDES',
+      PARTITURA: 'PARTITURA',
+    };
+    const type = (typeMap[rawType] ?? rawType.toUpperCase()) as 'ACORDES' | 'PARTITURA';
     const instrument = formData.get('instrument')?.toString() ?? 'GUITARRA';
     const capo = parseInt(formData.get('capo')?.toString() ?? '0') || 0;
     const markdown = formData.get('markdown')?.toString() ?? '';

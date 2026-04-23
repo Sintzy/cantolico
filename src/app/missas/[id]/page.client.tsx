@@ -472,19 +472,6 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
                 {isExpanded && hasItems && (
                   <div className="border-t border-stone-100 divide-y divide-stone-100">
                     {items.map((item, index) => {
-                      let nextLink = null;
-                      const momentIdx = sortedMoments.indexOf(moment);
-                      let found = false;
-                      for (let m = momentIdx; m < sortedMoments.length; m++) {
-                        const nextMoment = sortedMoments[m];
-                        const nextItems = itemsByMoment[nextMoment] || [];
-                        for (let i = 0; i < nextItems.length; i++) {
-                          if (found) { nextLink = `/musics/${nextItems[i].song?.slug || nextItems[i].songId}`; break; }
-                          if (nextMoment === moment && nextItems[i].id === item.id) found = true;
-                        }
-                        if (nextLink) break;
-                      }
-
                       return (
                         <div key={item.id} className="group flex items-center gap-3 px-4 py-3 hover:bg-stone-50 transition-colors">
                           <span className="text-xs text-stone-400 w-5 text-center font-mono shrink-0">{index + 1}</span>
@@ -508,11 +495,6 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
                             </Badge>
                           )}
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                            {nextLink && (
-                              <Button variant="ghost" size="sm" asChild className="h-7 text-xs text-stone-400 hover:text-stone-700 px-2">
-                                <Link href={nextLink}>Próxima →</Link>
-                              </Button>
-                            )}
                             <Button variant="ghost" size="sm" asChild className="h-7 w-7 p-0 text-stone-400 hover:text-stone-700">
                               <Link href={`/musics/${item.song?.slug || item.songId}?massId=${mass.id}`}>
                                 <ExternalLink className="w-3.5 h-3.5" />
