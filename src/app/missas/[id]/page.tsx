@@ -39,7 +39,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   });
 }
 
-async function getMass(id: string, userId?: number) {
+async function getMass(id: string, userId?: number, userEmail?: string) {
   const { data: mass, error } = await supabase
     .from('Mass')
     .select(`
@@ -100,9 +100,8 @@ async function getMass(id: string, userId?: number) {
   const isOwner = userId === mass.userId;
   
   if (mass.visibility === 'PRIVATE' && !isOwner) {
-    // Check if user is a member
-    const isMember = mass.MassMember?.some(
-      (m: any) => m.status === 'ACCEPTED'
+    const isMember = userEmail && mass.MassMember?.some(
+      (m: any) => m.status === 'ACCEPTED' && m.userEmail.toLowerCase() === userEmail.toLowerCase()
     );
     if (!isMember) {
       return null;
@@ -146,7 +145,7 @@ export default async function MassPage({ params }: PageProps) {
   const { id } = await params;
   const user = await getAuthenticatedUser();
 
-  const mass = await getMass(id, user?.supabaseUserId);
+  const mass = await getMass(id, user?.supabaseUserId, user?.email);
 
   if (!mass) {
     notFound();

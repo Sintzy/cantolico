@@ -32,7 +32,7 @@ function AcceptInviteContent() {
 
     if (!session) {
       // Utilizador não está logado, redirecionar para login
-      router.push(`/login?callbackUrl=${encodeURIComponent(window.location.href)}`);
+      router.push(`/sign-in?redirect_url=${encodeURIComponent(window.location.href)}`);
       return;
     }
 
