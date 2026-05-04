@@ -86,7 +86,7 @@ function transposeChord(chord: string, interval: number): string {
   
   // Mapeamento de bemóis para sustenidos para normalização
   const flatToSharp: Record<string, string> = {
-    'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#'
+    'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#'
   };
 
   // Regex melhorada para capturar acordes complexos
