@@ -29,7 +29,7 @@ function AcceptMassInviteContent() {
       return;
     }
     if (!session) {
-      router.push(`/login?callbackUrl=${encodeURIComponent(window.location.href)}`);
+      router.push(`/sign-in?redirect_url=${encodeURIComponent(window.location.href)}`);
       return;
     }
     fetchDetails();

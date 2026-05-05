@@ -1,19 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
-import { transposeText, detectChordFormat, processAboveChords, extractChords, detectKey } from '@/lib/chord-processor';
+import { transposeText, detectKey } from '@/lib/chord-processor';
 import { parseMomentsFromPostgreSQL } from '@/lib/utils';
 import { LiturgicalMoment } from '@/lib/constants';
 import * as fs from 'fs';
 import * as path from 'path';
 
-// Import fontkit dinamicamente
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const fontkit = require('fontkit');
 
-// Helper function para converter chaves do enum para valores bonitos
-const getMomentDisplayName = (momentKey: string): string => {
-  return LiturgicalMoment[momentKey as keyof typeof LiturgicalMoment] || momentKey.replaceAll('_', ' ');
-};
+const getMomentDisplayName = (momentKey: string): string =>
+  LiturgicalMoment[momentKey as keyof typeof LiturgicalMoment] || momentKey.replaceAll('_', ' ');
+
+// Chord-only line: optional parens, one or more [Chord] tokens
+const CHORD_ONLY_RE = /^(\s*\(?\s*\[[A-G][#b]?[^\]]*\]\s*\)?\s*)+\s*$/;
+// Section header alone: Intro, Ponte, Refrão…
+const SECTION_ONLY_RE = /^(Intro|Ponte|Solo|Bridge|Instrumental|Interlude|Refrão|Estrofe|Verso|Chorus|Verse|Pre-Chorus|Coda|Pré-Refrão)(:?)?\s*$/i;
+// Section header followed by chord tokens on the same line: "Intro: [C] [G]"
+const SECTION_WITH_CHORDS_RE = /^(Intro|Ponte|Solo|Bridge|Instrumental|Interlude|Refrão|Estrofe|Verso|Chorus|Verse|Pre-Chorus|Coda|Pré-Refrão):\s*((\s*\(?\s*\[[A-G][#b]?[^\]]*\]\s*\)?\s*)+)\s*$/i;
+
+const stripChords = (line: string) => line.replace(/\[[A-G][#b]?[^\]]*\]/g, '');
 
 export async function GET(
   request: NextRequest,
@@ -23,33 +30,22 @@ export async function GET(
     const { id } = await params;
     const { searchParams } = new URL(request.url);
     const transposition = parseInt(searchParams.get('transposition') || '0');
+    const showChords = searchParams.get('showChords') !== 'false';
+    const fontSizeParam = searchParams.get('fontSize') || 'medium';
+    const baseFontSize = fontSizeParam === 'small' ? 10 : fontSizeParam === 'large' ? 13 : 11;
 
-    console.log('Buscando música com ID:', id);
-    
-    // Primeira query: buscar a música
     const { data: songData, error: songError } = await supabase
       .from('Song')
-      .select(`
-        id,
-        title,
-        author,
-        tags,
-        moments,
-        mainInstrument,
-        currentVersionId
-      `)
+      .select('id, title, author, tags, moments, mainInstrument, currentVersionId')
       .or(`id.eq.${id},slug.eq.${id}`)
       .limit(1);
 
     if (songError || !songData || songData.length === 0) {
-      console.log('Song error:', songError);
       return NextResponse.json({ error: 'Música não encontrada' }, { status: 404 });
     }
 
     const song = songData[0];
-    console.log('Música encontrada:', song.title, 'currentVersionId:', song.currentVersionId);
 
-    // Segunda query: buscar a versão atual
     const { data: versionData, error: versionError } = await supabase
       .from('SongVersion')
       .select('sourceText, sourceType')
@@ -57,584 +53,328 @@ export async function GET(
       .limit(1);
 
     if (versionError || !versionData || versionData.length === 0) {
-      console.log('Version error:', versionError);
       return NextResponse.json({ error: 'Versão da música não encontrada' }, { status: 404 });
     }
 
     const version = versionData[0];
-    console.log('Versão encontrada, sourceText length:', version.sourceText?.length);
 
-    // Criar documento PDF
     const pdfDoc = await PDFDocument.create();
-    
-    // Registrar fontkit para suporte a fontes personalizadas
+    try { pdfDoc.registerFontkit(fontkit); } catch {}
+
+    const page = pdfDoc.addPage([595.28, 841.89]);
+
+    let font: any, boldFont: any;
     try {
-      pdfDoc.registerFontkit(fontkit);
-      console.log('Fontkit registrado com sucesso');
-    } catch (error) {
-      console.log('Erro ao registrar fontkit:', error);
-    }
-    
-    const page = pdfDoc.addPage([595.28, 841.89]); // A4 size
-    
-    // Carregar fontes personalizadas Montserrat
-    let font, boldFont, lightFont;
-    
-    try {
-      // Tentar carregar Montserrat da pasta public
-      const fontPath = path.join(process.cwd(), 'public', 'fonts', 'Montserrat-Regular.ttf');
-      const boldFontPath = path.join(process.cwd(), 'public', 'fonts', 'Montserrat-Bold.ttf');
-      
-      console.log('Tentando carregar fontes de:', fontPath);
-      
-      const fontBytes = fs.readFileSync(fontPath);
-      const boldFontBytes = fs.readFileSync(boldFontPath);
-      
+      const fontBytes = fs.readFileSync(path.join(process.cwd(), 'public', 'fonts', 'Montserrat-Regular.ttf'));
+      const boldFontBytes = fs.readFileSync(path.join(process.cwd(), 'public', 'fonts', 'Montserrat-Bold.ttf'));
       font = await pdfDoc.embedFont(fontBytes);
       boldFont = await pdfDoc.embedFont(boldFontBytes);
-      
-      font = await pdfDoc.embedFont(fontBytes);
-      boldFont = await pdfDoc.embedFont(boldFontBytes);
-      lightFont = font;
-      
-      console.log('Fontes Montserrat carregadas com sucesso');
-    } catch (fontError) {
-      console.log('Erro ao carregar Montserrat, usando fontes padrão:', fontError);
-      // Fallback para fontes padrão
+    } catch {
       font = await pdfDoc.embedFont(StandardFonts.Helvetica);
       boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-      lightFont = font;
     }
-    
-    // Carregar logo do Cantólico
-    let logoImage;
-    try {
-      const logoPath = path.join(process.cwd(), 'public', 'cantolicoemail.png');
-      const logoBytes = fs.readFileSync(logoPath);
-      logoImage = await pdfDoc.embedPng(logoBytes);
-      console.log('Logo carregado com sucesso');
-    } catch (logoError) {
-      console.log('Logo não encontrado, usando texto:', logoError);
-    }
-    
-    const { width, height } = page.getSize();
-    let y = height - 40; // Movido mais para cima (era height - 50)
 
-    // Logo Cantólico no topo - pequeno e centrado
+    let logoImage: any;
+    try {
+      const logoBytes = fs.readFileSync(path.join(process.cwd(), 'public', 'cantolicoemail.png'));
+      logoImage = await pdfDoc.embedPng(logoBytes);
+    } catch {}
+
+    const { width } = page.getSize();
+    let y = page.getSize().height - 40;
+
+    // Logo
     if (logoImage) {
-      const logoSize = 30; // Logo quadrado pequeno
-      page.drawImage(logoImage, {
-        x: width / 2 - logoSize / 2,
-        y: y - logoSize,
-        width: logoSize,
-        height: logoSize,
-      });
+      const logoSize = 30;
+      page.drawImage(logoImage, { x: width / 2 - logoSize / 2, y: y - logoSize, width: logoSize, height: logoSize });
       y -= logoSize + 15;
     } else {
-      // Fallback para texto
-      page.drawText('Cantolico', {
-        x: width / 2 - 30,
-        y: y,
-        size: 12,
-        font: boldFont,
-        color: rgb(0.2, 0.4, 0.8),
-      });
+      page.drawText('Cantolico', { x: width / 2 - 30, y, size: 12, font: boldFont, color: rgb(0.2, 0.4, 0.8) });
       y -= 25;
     }
 
-    y -= 10; // Espaço adicional antes do título
+    y -= 10;
 
-    // Título da música - sempre centrado
+    // Title
     const titleFontSize = Math.min(22, Math.max(16, 350 / song.title.length));
-    const titleWidth = song.title.length * titleFontSize * 0.6; // Estimativa da largura do texto
-    const titleX = (width - titleWidth) / 2; // Centrado horizontalmente
-    
     page.drawText(song.title, {
-      x: titleX,
-      y: y,
+      x: (width - song.title.length * titleFontSize * 0.6) / 2,
+      y,
       size: titleFontSize,
       font: boldFont,
-      color: rgb(0.1, 0.1, 0.1), // Preto mais suave
+      color: rgb(0.1, 0.1, 0.1),
     });
+    y -= 28;
 
-    y -= 30; // Ligeiramente mais espaço após o título
-
-    // Autor - tipografia mais refinada
+    // Author
     if (song.author) {
-      page.drawText(`por ${song.author}`, {
-        x: 60,
-        y: y,
-        size: 12,
-        font: font, // Fonte regular mais moderna
-        color: rgb(0.4, 0.4, 0.4), // Cinza mais elegante
-      });
+      page.drawText(`por ${song.author}`, { x: 60, y, size: 11, font, color: rgb(0.45, 0.45, 0.45) });
       y -= 20;
     }
 
-    // Detectar tom da música antes da transposição
+    // Key
     const originalKey = detectKey(version.sourceText || '');
     let currentKey = originalKey;
-    
-    // Se há transposição, calcular o novo tom
     if (transposition !== 0 && originalKey) {
-      const keyMap: { [key: string]: number } = {
+      const keyMap: Record<string, number> = {
         'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3, 'E': 4, 'F': 5,
-        'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8, 'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11
+        'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8, 'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11,
       };
       const reverseKeyMap = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-      
-      const originalSemitone = keyMap[originalKey];
-      if (originalSemitone !== undefined) {
-        const newSemitone = (originalSemitone + transposition + 12) % 12;
-        currentKey = reverseKeyMap[newSemitone];
-      }
+      const orig = keyMap[originalKey];
+      if (orig !== undefined) currentKey = reverseKeyMap[(orig + transposition + 12) % 12];
     }
 
-    // Layout com momentos à esquerda e tom à direita
+    // Moments + key row
     const momentsArray = parseMomentsFromPostgreSQL(song.moments);
-    const hasMoments = momentsArray && momentsArray.length > 0;
-    const hasKey = currentKey !== null;
-    
-    if (hasMoments || hasKey) {
-      const momentsY = y;
-      
-      // Momentos à esquerda
-      if (hasMoments) {
-        const moments = momentsArray.map((m: string) => getMomentDisplayName(m)).join(' • ');
-        page.drawText(`${moments}`, {
-          x: 60,
-          y: momentsY,
-          size: 10,
-          font: font,
-          color: rgb(0.5, 0.5, 0.5),
+    if ((momentsArray && momentsArray.length > 0) || currentKey) {
+      if (momentsArray?.length) {
+        page.drawText(momentsArray.map((m: string) => getMomentDisplayName(m)).join(' • '), {
+          x: 60, y, size: 10, font, color: rgb(0.5, 0.5, 0.5),
         });
       }
-      
-      // Tom à direita
-      if (hasKey) {
-        const keyText = transposition !== 0 ? `Tom: ${currentKey}` : `Tom: ${currentKey}`;
-        const keyTextWidth = keyText.length * 6; // Estimativa da largura
-        
+      if (currentKey) {
+        const keyText = `Tom: ${currentKey}`;
         page.drawText(keyText, {
-          x: width - 60 - keyTextWidth,
-          y: momentsY,
-          size: 10,
-          font: boldFont,
-          color: rgb(0.2, 0.5, 0.8),
+          x: width - 60 - keyText.length * 6, y, size: 10, font: boldFont, color: rgb(0.2, 0.5, 0.8),
         });
       }
-      
       y -= 16;
     }
 
-    y -= 15;
+    y -= 14;
 
-    // Processar texto da música
-    let sourceText = version.sourceText || '';
-    console.log('Texto original (primeiros 200 chars):', sourceText.substring(0, 200));
-    
-    sourceText = sourceText.replace(/^#mic#\s*\n?/, '').trim();
-    console.log('Texto após remoção do #mic# (primeiros 200 chars):', sourceText.substring(0, 200));
-    
-    // Aplicar transposição
-    if (transposition !== 0) {
-      sourceText = transposeText(sourceText, transposition);
-      console.log('Transposição aplicada:', transposition);
-    }
+    // Source text
+    let sourceText = (version.sourceText || '').replace(/^#mic#\s*\n?/, '').trim();
+    if (transposition !== 0) sourceText = transposeText(sourceText, transposition);
 
-    // Detectar formato e processar acordes
-    const chordFormat = detectChordFormat(sourceText);
-    console.log('Formato detectado:', chordFormat);
+    // ─── Rendering helpers ────────────────────────────────────────────────────
+    const lineHeight = baseFontSize + 3;
 
-    // Função para calcular altura necessária para o conteúdo
-    const calculateContentHeight = (text: string): number => {
-      const lines = text.split('\n');
-      const lineHeight = 14;
-      let totalHeight = 0;
-      
-      for (const line of lines) {
-        if (!line.trim()) {
-          totalHeight += lineHeight / 2;
-        } else if (line.includes('[') && line.includes(']') && line.trim() !== line.match(/^(\s*\[[A-G][#b]?[^\]]*\]\s*)+$/)?.[0]) {
-          // Linha com acordes inline precisa de espaço extra
-          totalHeight += lineHeight + 4;
+    // Word-wrap a plain text string into lines that fit within maxWidth px
+    const wrapWords = (text: string, maxWidth: number): string[] => {
+      const avgCharWidth = baseFontSize * 0.62;
+      if (text.length * avgCharWidth <= maxWidth) return [text];
+      const words = text.split(' ');
+      const lines: string[] = [];
+      let current = '';
+      for (const word of words) {
+        const candidate = current ? `${current} ${word}` : word;
+        if (candidate.length * avgCharWidth <= maxWidth) {
+          current = candidate;
         } else {
-          totalHeight += lineHeight;
-          // Seções precisam de espaço extra
-          if (/^(Intro|Ponte|Solo|Bridge|Instrumental|Interlude|Refrão|Estrofe|Verso):?\s*$/i.test(line.trim())) {
-            totalHeight += 4;
-          }
+          if (current) lines.push(current);
+          // Single word longer than column — force it on its own line
+          current = word;
         }
       }
-      
-      return totalHeight;
+      if (current) lines.push(current);
+      return lines.length ? lines : [text];
+    };
+    const chordSize = baseFontSize - 1;
+    const chordLift = chordSize + 2;
+
+    const drawChordToken = (chord: string, cx: number, cy: number, maxX: number): number => {
+      if (cx >= maxX) return cx;
+      page.drawText(chord, { x: cx, y: cy, size: chordSize, font: boldFont, color: rgb(0.1, 0.4, 0.7) });
+      return cx + chord.length * (chordSize * 0.7) + 12;
     };
 
-    // Função para renderizar uma linha individual
-    const renderLine = (line: string, x: number, currentY: number, columnWidth: number): number => {
-      const fontSize = 11;
-      const lineHeight = 14;
-      const chordFontSize = 10;
-      
-      if (!line.trim()) {
-        return currentY - lineHeight / 2;
+    const drawParenToken = (ch: string, cx: number, cy: number, maxX: number): number => {
+      if (cx >= maxX) return cx;
+      page.drawText(ch, { x: cx, y: cy, size: chordSize, font: boldFont, color: rgb(0.2, 0.2, 0.2) });
+      return cx + chordSize * 0.4;
+    };
+
+    // Render a string that contains [Chord] tokens at a given Y; returns final X
+    const renderChordTokens = (raw: string, startX: number, cy: number, maxX: number): number => {
+      let cx = startX;
+      let i = 0;
+      while (i < raw.length) {
+        const ch = raw[i];
+        if (ch === ' ' || ch === '\t') { cx += 6; i++; continue; }
+        if (ch === '(') { cx = drawParenToken('(', cx, cy, maxX); i++; continue; }
+        if (ch === ')') { cx = drawParenToken(')', cx, cy, maxX); i++; continue; }
+        if (ch === '[') {
+          const close = raw.indexOf(']', i);
+          if (close !== -1) {
+            cx = drawChordToken(raw.substring(i + 1, close), cx, cy, maxX);
+            i = close + 1;
+            continue;
+          }
+        }
+        i++;
+      }
+      return cx;
+    };
+
+    const renderLine = (line: string, x: number, currentY: number, colWidth: number): number => {
+      const maxX = x + colWidth;
+
+      if (!line.trim()) return currentY - lineHeight / 2;
+
+      // 1. Section header alone — "Intro", "Refrão:", etc.
+      if (SECTION_ONLY_RE.test(line.trim())) {
+        const label = line.trim().replace(/:?\s*$/, '');
+        page.drawText(label, { x, y: currentY, size: baseFontSize + 1, font: boldFont, color: rgb(0.2, 0.3, 0.5) });
+        return currentY - lineHeight - 5;
       }
 
-      // Verificar se é linha de seção (Intro, Ponte, etc.)
-      const isIntroLine = /^(Intro|Ponte|Solo|Bridge|Instrumental|Interlude|Refrão|Estrofe|Verso):?\s*$/i.test(line.trim());
-      
-      // Verificar se é linha só com acordes (incluindo parênteses opcionais)
-      const isChordOnlyLine = /^(\s*\(?\s*\[[A-G][#b]?[^\]]*\]\s*\)?\s*)+\s*$/.test(line.trim());
-      
-      if (isIntroLine) {
-        // Renderizar título da seção em negrito e cor moderna
-        page.drawText(line.trim(), {
-          x: x,
-          y: currentY,
-          size: fontSize + 2,
-          font: boldFont,
-          color: rgb(0.2, 0.3, 0.5),
-        });
-        console.log('Renderizada seção:', line.trim());
-        return currentY - lineHeight - 4;
-        
-      } else if (isChordOnlyLine) {
-        // Renderizar linha de acordes com suporte a parênteses
-        let chordX = x;
+      // 2. Section label + chords on same line — "Intro: [C] [G] [Am]"
+      const scMatch = SECTION_WITH_CHORDS_RE.exec(line.trim());
+      if (scMatch) {
+        const label = scMatch[1] + ':';
+        page.drawText(label, { x, y: currentY, size: baseFontSize + 1, font: boldFont, color: rgb(0.2, 0.3, 0.5) });
+        if (showChords) {
+          const lw = label.length * (baseFontSize + 1) * 0.62 + 10;
+          renderChordTokens(scMatch[2], x + lw, currentY, maxX);
+        }
+        return currentY - lineHeight - 5;
+      }
+
+      // 3. Chord-only line (no lyrics)
+      if (CHORD_ONLY_RE.test(line.trim())) {
+        if (showChords) renderChordTokens(line.trim(), x, currentY, maxX);
+        return showChords ? currentY - lineHeight : currentY;
+      }
+
+      // 4. Mixed line: chords inline with lyrics
+      if (showChords && line.includes('[') && line.includes(']')) {
+        let tx = x;
         let i = 0;
-        const lineText = line.trim();
-        
-        while (i < lineText.length) {
-          const char = lineText[i];
-          
-          // Pular espaços
-          if (char === ' ' || char === '\t') {
-            chordX += 5;
-            i++;
-            continue;
+        while (i < line.length) {
+          const ch = line[i];
+
+          if (ch === '(' && /^\s*\[/.test(line.substring(i + 1))) {
+            tx = drawParenToken('(', tx, currentY + chordLift, maxX);
+            i++; continue;
           }
-          
-          // Renderizar parêntese de abertura (cor preta)
-          if (char === '(') {
-            if (chordX + 6 <= x + columnWidth) {
-              page.drawText('(', {
-                x: chordX,
-                y: currentY,
-                size: chordFontSize,
-                font: boldFont,
-                color: rgb(0.15, 0.15, 0.15), // Preto como o texto
-              });
-              chordX += 6;
-            }
-            i++;
-            continue;
+          if (ch === ')' && /\]\s*$/.test(line.substring(0, i))) {
+            tx = drawParenToken(')', tx, currentY + chordLift, maxX);
+            i++; continue;
           }
-          
-          // Renderizar parêntese de fechamento (cor preta)
-          if (char === ')') {
-            if (chordX + 6 <= x + columnWidth) {
-              page.drawText(')', {
-                x: chordX,
-                y: currentY,
-                size: chordFontSize,
-                font: boldFont,
-                color: rgb(0.15, 0.15, 0.15), // Preto como o texto
-              });
-              chordX += 6;
-            }
-            i++;
-            continue;
-          }
-          
-          // Renderizar acorde [X]
-          if (char === '[') {
-            const closeIndex = lineText.indexOf(']', i);
-            if (closeIndex !== -1) {
-              const cleanChord = lineText.substring(i + 1, closeIndex);
-              if (chordX + cleanChord.length * 7.5 <= x + columnWidth) {
-                page.drawText(cleanChord, {
-                  x: chordX,
-                  y: currentY,
-                  size: chordFontSize,
-                  font: boldFont,
-                  color: rgb(0.1, 0.4, 0.7), // Azul para acordes
-                });
-                chordX += cleanChord.length * 7.5 + 8;
-              }
-              i = closeIndex + 1;
-              continue;
+          if (ch === '[') {
+            const close = line.indexOf(']', i);
+            if (close !== -1) {
+              const chord = line.substring(i + 1, close);
+              if (/^[A-G]/.test(chord)) tx = drawChordToken(chord, tx, currentY + chordLift, maxX);
+              i = close + 1; continue;
             }
           }
-          
+
+          // Accumulate plain text
+          let end = i;
+          while (end < line.length) {
+            const nc = line[end];
+            if (nc === '[') break;
+            if (nc === '(' && /^\s*\[/.test(line.substring(end + 1))) break;
+            if (nc === ')' && /\]\s*$/.test(line.substring(0, end))) break;
+            end++;
+          }
+          if (end > i) {
+            const seg = line.substring(i, end);
+            if (seg.trim() && tx + seg.length * (baseFontSize * 0.62) <= maxX) {
+              page.drawText(seg, { x: tx, y: currentY, size: baseFontSize, font, color: rgb(0.15, 0.15, 0.15) });
+              tx += seg.length * (baseFontSize * 0.62);
+            }
+            i = end; continue;
+          }
           i++;
         }
-        
-        console.log('Renderizada linha de acordes com parênteses');
-        return currentY - lineHeight;
-        
-      } else {
-        // Renderizar letra (pode ter acordes inline com parênteses)
-        if (line.includes('[') && line.includes(']')) {
-          // Linha com acordes inline - processar caractere por caractere para suportar parênteses
-          let textX = x;
-          let hasText = false;
-          let i = 0;
-          const lineText = line;
-          
-          while (i < lineText.length) {
-            const char = lineText[i];
-            
-            // Detectar parêntese de abertura seguido de acordes
-            if (char === '(' && lineText.substring(i + 1).match(/^\s*\[/)) {
-              if (textX + 6 <= x + columnWidth) {
-                page.drawText('(', {
-                  x: textX,
-                  y: currentY + 9,
-                  size: chordFontSize,
-                  font: boldFont,
-                  color: rgb(0.15, 0.15, 0.15), // Preto
-                });
-                textX += 6;
-              }
-              i++;
-              continue;
-            }
-            
-            // Detectar parêntese de fechamento após acordes
-            if (char === ')') {
-              // Verificar se estamos num contexto de acordes
-              const beforeParen = lineText.substring(0, i);
-              if (beforeParen.match(/\]\s*$/)) {
-                if (textX + 6 <= x + columnWidth) {
-                  page.drawText(')', {
-                    x: textX,
-                    y: currentY + 9,
-                    size: chordFontSize,
-                    font: boldFont,
-                    color: rgb(0.15, 0.15, 0.15), // Preto
-                  });
-                  textX += 6;
-                }
-                i++;
-                continue;
-              }
-            }
-            
-            // Detectar acorde [X]
-            if (char === '[') {
-              const closeIndex = lineText.indexOf(']', i);
-              if (closeIndex !== -1) {
-                const cleanChord = lineText.substring(i + 1, closeIndex);
-                if (/^[A-G][#b]?/.test(cleanChord)) {
-                  if (textX + cleanChord.length * 6.5 <= x + columnWidth) {
-                    page.drawText(cleanChord, {
-                      x: textX,
-                      y: currentY + 9,
-                      size: chordFontSize,
-                      font: boldFont,
-                      color: rgb(0.1, 0.4, 0.7), // Azul
-                    });
-                    textX += cleanChord.length * 6.5 + 6;
-                  }
-                  i = closeIndex + 1;
-                  hasText = true;
-                  continue;
-                }
-              }
-            }
-            
-            // Texto normal - acumular até encontrar acorde ou parêntese especial
-            let textEnd = i;
-            while (textEnd < lineText.length) {
-              const nextChar = lineText[textEnd];
-              if (nextChar === '[') break;
-              if (nextChar === '(' && lineText.substring(textEnd + 1).match(/^\s*\[/)) break;
-              if (nextChar === ')' && lineText.substring(0, textEnd).match(/\]\s*$/)) break;
-              textEnd++;
-            }
-            
-            if (textEnd > i) {
-              const textPart = lineText.substring(i, textEnd);
-              
-              // Processar formatação **bold**
-              if (textPart.includes('**')) {
-                const boldParts = textPart.split(/(\*\*[^*]+\*\*)/);
-                for (const boldPart of boldParts) {
-                  if (boldPart.match(/^\*\*[^*]+\*\*$/)) {
-                    const boldText = boldPart.replace(/\*\*/g, '');
-                    if (textX + boldText.length * 7 <= x + columnWidth) {
-                      page.drawText(boldText, {
-                        x: textX,
-                        y: currentY,
-                        size: fontSize,
-                        font: boldFont,
-                        color: rgb(0.1, 0.1, 0.1),
-                      });
-                      textX += boldText.length * 7;
-                    }
-                  } else if (boldPart) {
-                    if (textX + boldPart.length * 6.5 <= x + columnWidth) {
-                      page.drawText(boldPart, {
-                        x: textX,
-                        y: currentY,
-                        size: fontSize,
-                        font: font,
-                        color: rgb(0.15, 0.15, 0.15),
-                      });
-                      textX += boldPart.length * 6.5;
-                    }
-                  }
-                }
-              } else if (textPart) {
-                if (textX + textPart.length * 6.5 <= x + columnWidth) {
-                  page.drawText(textPart, {
-                    x: textX,
-                    y: currentY,
-                    size: fontSize,
-                    font: font,
-                    color: rgb(0.15, 0.15, 0.15),
-                  });
-                  textX += textPart.length * 6.5;
-                }
-              }
-              
-              hasText = true;
-              i = textEnd;
-              continue;
-            }
-            
-            i++;
-          }
-          
-          if (hasText) {
-            return currentY - lineHeight - 4;
-          }
-          
-        } else {
-          // Linha simples de texto
-          const textLine = line.trim();
-          if (textLine) {
-            // Verificar se contém formatação **bold**
-            if (textLine.includes('**')) {
-              const parts = textLine.split(/(\*\*[^*]+\*\*)/);
-              let textX = x;
-              
-              for (const part of parts) {
-                if (part.match(/^\*\*[^*]+\*\*$/)) {
-                  // É texto em bold
-                  const boldText = part.replace(/\*\*/g, '');
-                  if (textX + boldText.length * 7 <= x + columnWidth) {
-                    page.drawText(boldText, {
-                      x: textX,
-                      y: currentY,
-                      size: fontSize,
-                      font: boldFont,
-                      color: rgb(0.1, 0.1, 0.1),
-                    });
-                    textX += boldText.length * 7;
-                  }
-                } else if (part.trim()) {
-                  // É texto normal
-                  if (textX + part.length * 6.5 <= x + columnWidth) {
-                    page.drawText(part, {
-                      x: textX,
-                      y: currentY,
-                      size: fontSize,
-                      font: font,
-                      color: rgb(0.15, 0.15, 0.15),
-                    });
-                    textX += part.length * 6.5;
-                  }
-                }
-              }
-            } else {
-              // Texto simples sem formatação - verificar se cabe na coluna
-              if (textLine.length * 6.5 <= columnWidth) {
-                page.drawText(textLine, {
-                  x: x,
-                  y: currentY,
-                  size: fontSize,
-                  font: font,
-                  color: rgb(0.15, 0.15, 0.15),
-                });
-              }
-            }
-            console.log('Renderizada letra:', textLine.substring(0, 50));
-            return currentY - lineHeight;
-          }
-        }
+        return currentY - lineHeight - chordLift;
       }
-      
+
+      // 5. Plain text (strip chords if showChords=false) — word-wrapped
+      const textLine = (showChords ? line : stripChords(line)).trim();
+      if (textLine) {
+        const wrapped = wrapWords(textLine, colWidth);
+        let cy = currentY;
+        for (const wl of wrapped) {
+          if (wl.includes('**')) {
+            let tx = x;
+            for (const part of wl.split(/(\*\*[^*]+\*\*)/)) {
+              if (/^\*\*[^*]+\*\*$/.test(part)) {
+                const bold = part.replace(/\*\*/g, '');
+                page.drawText(bold, { x: tx, y: cy, size: baseFontSize, font: boldFont, color: rgb(0.1, 0.1, 0.1) });
+                tx += bold.length * (baseFontSize * 0.65);
+              } else if (part.trim()) {
+                page.drawText(part, { x: tx, y: cy, size: baseFontSize, font, color: rgb(0.15, 0.15, 0.15) });
+                tx += part.length * (baseFontSize * 0.62);
+              }
+            }
+          } else {
+            page.drawText(wl, { x, y: cy, size: baseFontSize, font, color: rgb(0.15, 0.15, 0.15) });
+          }
+          cy -= lineHeight;
+        }
+        return cy;
+      }
+
       return currentY;
     };
 
-    // Função para renderizar conteúdo em múltiplas colunas
-    const renderMusicContent = (text: string, startY: number): number => {
-      const lines = text.split('\n');
-      const availableHeight = startY - 80; // Espaço até o rodapé
-      const contentHeight = calculateContentHeight(text);
-      
-      console.log(`Renderizando ${lines.length} linhas de música`);
-      console.log(`Altura disponível: ${availableHeight}, Altura do conteúdo: ${contentHeight}`);
-      
-      const leftMargin = 50;
-      const rightMargin = width - 50;
-      const totalWidth = rightMargin - leftMargin;
-      
-      // Se o conteúdo cabe em uma coluna, usar layout tradicional
-      if (contentHeight <= availableHeight) {
-        let currentY = startY;
-        
-        for (const line of lines) {
-          currentY = renderLine(line, leftMargin, currentY, totalWidth);
-          if (currentY < 80) break;
+    // ─── Height estimation (column-width aware) ───────────────────────────────
+    const estimateHeight = (text: string, colWidth: number): number => {
+      let h = 0;
+      for (const raw of text.split('\n')) {
+        const t = raw.trim();
+        if (!t) { h += lineHeight / 2; continue; }
+        if (SECTION_ONLY_RE.test(t) || SECTION_WITH_CHORDS_RE.test(t)) { h += lineHeight + 5; continue; }
+        if (CHORD_ONLY_RE.test(t)) { h += showChords ? lineHeight : 0; continue; }
+        if (showChords && t.includes('[') && t.includes(']')) { h += lineHeight + chordLift; continue; }
+        // Plain text — account for word wrapping
+        const plain = (showChords ? t : stripChords(t)).trim();
+        if (plain) {
+          const numLines = wrapWords(plain, colWidth).length;
+          h += lineHeight * numLines;
         }
-        
-        return currentY;
       }
-      
-      // Conteúdo muito longo - usar duas colunas
-      const columnWidth = (totalWidth - 30) / 2; // 30px de espaço entre colunas
-      const leftColumnX = leftMargin;
-      const rightColumnX = leftMargin + columnWidth + 30;
-      
-      // Dividir linhas entre as duas colunas
-      const midPoint = Math.ceil(lines.length / 2);
-      const leftColumnLines = lines.slice(0, midPoint);
-      const rightColumnLines = lines.slice(midPoint);
-      
-      // Renderizar coluna esquerda
-      let leftY = startY;
-      for (const line of leftColumnLines) {
-        leftY = renderLine(line, leftColumnX, leftY, columnWidth);
-        if (leftY < 80) break;
-      }
-      
-      // Renderizar coluna direita
-      let rightY = startY;
-      for (const line of rightColumnLines) {
-        rightY = renderLine(line, rightColumnX, rightY, columnWidth);
-        if (rightY < 80) break;
-      }
-      
-      return Math.min(leftY, rightY);
+      return h;
     };
 
-    // Renderizar o conteúdo da música
-    renderMusicContent(sourceText, y);
+    // ─── Multi-column layout ──────────────────────────────────────────────────
+    const renderContent = (text: string, startY: number) => {
+      const lines = text.split('\n');
+      const available = startY - 80;
+      const leftMargin = 50;
+      const totalWidth = width - 100;
 
-    // Rodapé moderno
-    page.drawText('cantolico.pt', {
-      x: width / 2 - 38,
-      y: 30,
-      size: 9,
-      font: font,
-      color: rgb(0.6, 0.6, 0.6), // Cinza mais moderno
-    });
+      if (estimateHeight(text, totalWidth) <= available) {
+        let cy = startY;
+        for (const line of lines) {
+          cy = renderLine(line, leftMargin, cy, totalWidth);
+          if (cy < 80) break;
+        }
+        return;
+      }
 
-    // Gerar PDF
+      // Two-column: find split point at an empty line near the midpoint
+      const colWidth = (totalWidth - 30) / 2;
+      const targetMid = Math.ceil(lines.length / 2);
+      let splitAt = targetMid;
+      for (let r = 1; r <= 15; r++) {
+        if (targetMid - r >= 0 && !lines[targetMid - r]?.trim()) { splitAt = targetMid - r; break; }
+        if (targetMid + r < lines.length && !lines[targetMid + r]?.trim()) { splitAt = targetMid + r; break; }
+      }
+
+      let ly = startY;
+      for (const line of lines.slice(0, splitAt)) {
+        ly = renderLine(line, leftMargin, ly, colWidth);
+        if (ly < 80) break;
+      }
+      let ry = startY;
+      for (const line of lines.slice(splitAt)) {
+        ry = renderLine(line, leftMargin + colWidth + 30, ry, colWidth);
+        if (ry < 80) break;
+      }
+    };
+
+    renderContent(sourceText, y);
+
+    // Footer
+    page.drawText('cantolico.pt', { x: width / 2 - 38, y: 30, size: 9, font, color: rgb(0.6, 0.6, 0.6) });
+
     const pdfBytes = await pdfDoc.save();
-
     return new NextResponse(Buffer.from(pdfBytes), {
       status: 200,
       headers: {
