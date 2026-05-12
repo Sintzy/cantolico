@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Layers, Download, Loader2, Music, Calendar, Church, Check, X } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { FileText, Layers, Download, Loader2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 
 export type ExportFormat = 'lyrics' | 'chords' | 'ppt';
@@ -70,7 +68,7 @@ const FORMAT_OPTIONS: { id: ExportFormat; label: string; sub: string; icon: Reac
   },
 ];
 
-export default function ExportMassPanel({ massId, initialFormat = 'lyrics', onClose }: ExportMassPanelProps) {
+export default function ExportMassPanel({ massId, initialFormat = 'lyrics' }: ExportMassPanelProps) {
   const [exportData, setExportData] = useState<ExportData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
@@ -136,56 +134,14 @@ export default function ExportMassPanel({ massId, initialFormat = 'lyrics', onCl
     <div className="flex flex-col h-full overflow-y-auto">
       {/* Header */}
       <div className="px-6 pt-6 pb-4 border-b border-stone-100 shrink-0">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-rose-700 text-xs">✝</span>
-              <span className="h-px w-4 bg-stone-200" />
-              <span className="text-xs font-medium tracking-widest text-stone-400 uppercase">Exportar</span>
-            </div>
-            <h2 className="font-display text-2xl text-stone-900 leading-tight">{exportData.mass.name}</h2>
-            {exportData.mass.celebration && (
-              <p className="text-sm text-stone-500 mt-0.5">{exportData.mass.celebration}</p>
-            )}
-          </div>
-          {onClose && (
-            <button onClick={onClose} className="text-stone-400 hover:text-stone-600 transition-colors mt-1">
-              <X className="h-5 w-5" />
-            </button>
-          )}
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-rose-700 text-xs">✝</span>
+          <span className="h-px w-4 bg-stone-200" />
+          <span className="text-xs font-medium tracking-widest text-stone-400 uppercase">Exportar</span>
         </div>
-
-        {/* Stats row */}
-        <div className="flex flex-wrap gap-4 mt-4 text-xs text-stone-500">
-          <span className="flex items-center gap-1.5">
-            <Music className="h-3.5 w-3.5" />
-            {exportData.stats.totalSongs} músicas
-          </span>
-          <span className="flex items-center gap-1.5">
-            <Calendar className="h-3.5 w-3.5" />
-            {exportData.stats.totalMoments} momentos
-          </span>
-          {exportData.mass.parish && (
-            <span className="flex items-center gap-1.5">
-              <Church className="h-3.5 w-3.5" />
-              {exportData.mass.parish}
-            </span>
-          )}
-        </div>
-
-        {exportData.stats.uniqueChords.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-3">
-            {exportData.stats.uniqueChords.slice(0, 12).map((chord, i) => (
-              <span key={i} className="inline-flex items-center px-2 py-0.5 rounded text-[11px] bg-stone-100 text-stone-600 font-mono">
-                {chord}
-              </span>
-            ))}
-            {exportData.stats.uniqueChords.length > 12 && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] bg-stone-100 text-stone-400">
-                +{exportData.stats.uniqueChords.length - 12}
-              </span>
-            )}
-          </div>
+        <h2 className="font-display text-2xl text-stone-900 leading-tight">{exportData.mass.name}</h2>
+        {exportData.mass.celebration && (
+          <p className="text-sm text-stone-500 mt-0.5">{exportData.mass.celebration}</p>
         )}
       </div>
 
@@ -316,28 +272,6 @@ export default function ExportMassPanel({ massId, initialFormat = 'lyrics', onCl
           </div>
         )}
 
-        {/* Content preview */}
-        <div>
-          <p className="text-xs font-semibold tracking-widest text-stone-400 uppercase mb-3">Conteúdo</p>
-          <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
-            {exportData.items.map((item, i) => (
-              <div key={i} className="rounded-lg border border-stone-100 bg-stone-50 px-4 py-3">
-                <p className="text-xs font-semibold text-rose-700 uppercase tracking-wide mb-2">{item.momentLabel}</p>
-                <ul className="space-y-1">
-                  {item.songs.map((song, j) => (
-                    <li key={j} className="flex items-center gap-2 text-sm text-stone-700">
-                      <Check className="h-3 w-3 text-stone-400 shrink-0" />
-                      <span className="truncate">{song.title}</span>
-                      {song.author && (
-                        <span className="text-stone-400 text-xs shrink-0">— {song.author}</span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* Footer */}
