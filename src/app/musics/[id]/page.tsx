@@ -375,27 +375,33 @@ export default function SongPage() {
     // Remove a tag #mic# do texto para processamento se presente
     let src = song.currentVersion.sourceText.replace(/^#mic#\s*\n?/, '').trim();
   
-    if (!showChords) {
-      src = strippedMarkdown(src);
-    } else {
+    if (showChords) {
       // Aplica transposição se necessário
       if (transposition !== 0) {
         src = transposeMarkdownChords(src, transposition);
       }
     }
-  
+
     // Usa o novo sistema de processamento
     if (showChords) {
       return processChords(src);
     } else {
-      // Se não mostra acordes, só converte texto simples
+      // Modo sem acordes: remove linhas de acordes por completo (não substitui por <br>)
+      // Nota: não chamamos strippedMarkdown antecipadamente porque precisamos identificar
+      // as linhas de apenas-acordes para as eliminar sem deixar espaços vazios.
+      const CHORD_ONLY = /^(?:\s*\(?[A-G][#b]?[^\s[\]]*\)?\s*)+$|^(?:\s*\(?\s*\[[A-G][#b]?[^\]]*\]\s*\)?\s*)+$/;
       const lines = src.split('\n');
-      const textOnly = lines.map(line => {
-        if (/^(?:\s*\[[A-G][#b]?[^\]]*\]\s*)+\s*$/.test(line.trim())) {
-          return ''; // Remove linhas só com acordes
-        }
-        return line.trim() ? `<p>${line}</p>` : '<br>';
-      }).filter(line => line).join('\n');
+      const textOnly = lines
+        .map(line => {
+          const trimmed = line.trim();
+          // Linha só com acordes → eliminar por completo (sem <br>)
+          if (CHORD_ONLY.test(trimmed)) return null;
+          // Linha com texto (pode ter acordes misturados) → remover colchetes
+          const stripped = trimmed.replace(/\[[^\]]*\]/g, '');
+          return stripped ? `<p>${stripped}</p>` : '<br>';
+        })
+        .filter((l): l is string => l !== null)
+        .join('\n');
       return `<div class="chord-container-above">${textOnly}</div>`;
     }
   }, [song?.currentVersion?.sourceText, showChords, transposition]);
