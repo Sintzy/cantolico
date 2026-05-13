@@ -483,35 +483,69 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
       if (hasInlineChords) {
         ensureSpace(lineHeight + chordLift + 2);
-        let tx = lyricsX;
-        let i = 0;
-        while (i < rawLine.length) {
-          if (rawLine[i] === '[') {
-            const close = rawLine.indexOf(']', i);
-            if (close !== -1) {
-              const chord = rawLine.substring(i + 1, close);
-              if (/^[A-G]/.test(chord)) {
-                page.drawText(chord, { x: tx, y: y + chordLift, size: chordFontSize, font: boldFont, color: rgb(0.1, 0.4, 0.7) });
-                tx += boldFont.widthOfTextAtSize(chord, chordFontSize) + 5;
-              }
-              i = close + 1;
-              continue;
-            }
-          }
-          let end = i;
-          while (end < rawLine.length && rawLine[end] !== '[') end++;
-          if (end > i) {
-            const seg = rawLine.substring(i, end);
-            if (seg.trim()) {
-              tx = drawBoldText(seg, tx, y, baseFontSize);
-            } else {
-              tx += font.widthOfTextAtSize(seg, baseFontSize);
-            }
-            i = end;
-            continue;
-          }
-          i++;
+
+        // Parse line into (chord, text) segments — chord appears above the text it precedes
+        const segments: { chord: string | null; text: string }[] = [];
+        let pos = 0;
+
+        const firstBracket = rawLine.indexOf('[');
+        if (firstBracket > 0) {
+          segments.push({ chord: null, text: rawLine.substring(0, firstBracket) });
+          pos = firstBracket;
+        } else if (firstBracket === -1) {
+          segments.push({ chord: null, text: rawLine });
+          pos = rawLine.length;
         }
+
+        while (pos < rawLine.length) {
+          if (rawLine[pos] !== '[') { pos++; continue; }
+          const close = rawLine.indexOf(']', pos);
+          if (close === -1) { pos++; continue; }
+
+          const chord = rawLine.substring(pos + 1, close);
+          pos = close + 1;
+
+          const nextBracket = rawLine.indexOf('[', pos);
+          const textEnd = nextBracket === -1 ? rawLine.length : nextBracket;
+          const text = rawLine.substring(pos, textEnd);
+          pos = textEnd;
+
+          if (/^[A-G]/.test(chord)) {
+            segments.push({ chord, text });
+          } else {
+            // Non-chord bracket — append as plain text to previous segment
+            const tail = `[${chord}]${text}`;
+            if (segments.length > 0) {
+              segments[segments.length - 1].text += tail;
+            } else {
+              segments.push({ chord: null, text: tail });
+            }
+          }
+        }
+
+        // Chord and its following text start at the same x; advance by whichever is wider
+        let tx = lyricsX;
+        for (const seg of segments) {
+          const x0 = tx;
+          let chordW = 0;
+          let textW = 0;
+
+          if (seg.chord) {
+            page.drawText(seg.chord, {
+              x: x0, y: y + chordLift,
+              size: chordFontSize, font: boldFont, color: rgb(0.1, 0.4, 0.7),
+            });
+            chordW = boldFont.widthOfTextAtSize(seg.chord, chordFontSize);
+          }
+
+          if (seg.text) {
+            const endX = drawBoldText(seg.text, x0, y, baseFontSize);
+            textW = endX - x0;
+          }
+
+          tx += Math.max(seg.chord ? chordW + 6 : 0, textW);
+        }
+
         y -= lineHeight + chordLift;
       } else {
         ensureSpace(lineHeight + 2);

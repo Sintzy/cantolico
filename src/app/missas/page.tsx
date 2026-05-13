@@ -9,32 +9,35 @@ export const metadata: Metadata = {
   description: 'Organiza as tuas missas com cânticos para cada momento litúrgico',
 };
 
-async function getMasses(userId: number) {
-  const { data: masses, error } = await supabase
+const MASS_SELECT = `
+  id,
+  name,
+  description,
+  date,
+  parish,
+  celebrant,
+  celebration,
+  liturgicalColor,
+  visibility,
+  userId,
+  createdAt,
+  updatedAt,
+  User!Mass_userId_fkey (
+    id,
+    name,
+    email,
+    image
+  ),
+  MassItem (
+    id
+  )
+` as const;
+
+async function getMasses(userId: number, userEmail: string) {
+  // Owned masses
+  const { data: ownedMasses, error } = await supabase
     .from('Mass')
-    .select(`
-      id,
-      name,
-      description,
-      date,
-      parish,
-      celebrant,
-      celebration,
-      liturgicalColor,
-      visibility,
-      userId,
-      createdAt,
-      updatedAt,
-      User!Mass_userId_fkey (
-        id,
-        name,
-        email,
-        image
-      ),
-      MassItem (
-        id
-      )
-    `)
+    .select(MASS_SELECT)
     .eq('userId', userId)
     .order('date', { ascending: false, nullsFirst: false });
 
@@ -43,13 +46,41 @@ async function getMasses(userId: number) {
     return [];
   }
 
-  return (masses || []).map(mass => ({
-    ...mass,
-    user: mass.User || null,
-    _count: {
-      items: (mass.MassItem || []).length
-    }
-  }));
+  // Masses where the user is an accepted collaborator
+  const { data: memberships } = await supabase
+    .from('MassMember')
+    .select('massId')
+    .eq('userEmail', userEmail)
+    .eq('status', 'ACCEPTED');
+
+  const collaboratedIds = (memberships || [])
+    .map(m => m.massId)
+    .filter(id => !(ownedMasses || []).some(m => m.id === id));
+
+  let collaboratedMasses: typeof ownedMasses = [];
+  if (collaboratedIds.length > 0) {
+    const { data } = await supabase
+      .from('Mass')
+      .select(MASS_SELECT)
+      .in('id', collaboratedIds)
+      .order('date', { ascending: false, nullsFirst: false });
+    collaboratedMasses = data || [];
+  }
+
+  const allMasses = [...(ownedMasses || []), ...(collaboratedMasses || [])];
+
+  return allMasses
+    .map(mass => ({
+      ...mass,
+      user: (mass as any).User || null,
+      _count: { items: ((mass as any).MassItem || []).length },
+    }))
+    .sort((a, b) => {
+      if (!a.date && !b.date) return 0;
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    });
 }
 
 export default async function MassesPage() {
@@ -59,7 +90,7 @@ export default async function MassesPage() {
     redirect('/sign-in?redirect_url=/missas');
   }
 
-  const masses = await getMasses(user.supabaseUserId);
+  const masses = await getMasses(user.supabaseUserId, user.email);
 
   return <MassesPageClient initialMasses={masses as any} />;
 }
