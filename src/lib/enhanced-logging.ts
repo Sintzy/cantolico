@@ -205,8 +205,21 @@ export async function logCriticalAction(
   session: any,
   req?: NextRequest
 ) {
-  const ip = req?.headers.get('x-forwarded-for') || req?.headers.get('x-real-ip') || 'unknown';
-  console.log(`🔐 [CRITICAL ACTION] ${action} by ${session?.user?.email || 'unknown'}: ${description}`);
+  const ip = req?.headers.get('x-forwarded-for')?.split(',')[0].trim()
+    || req?.headers.get('x-real-ip')
+    || 'unknown';
+
+  logger.warn(`CRITICAL ACTION: ${action} — ${description}`, {
+    category: LogCategory.SECURITY,
+    user: session?.user ? {
+      user_id: session.user.id,
+      user_email: session.user.email || undefined,
+      user_role: session.user.role,
+    } : undefined,
+    network: { ip_address: ip },
+    tags: ['critical-action', 'security', action.toLowerCase().replace(/\s+/g, '-')],
+    details: { action, description, ...details },
+  });
 }
 
 // ================================================
@@ -219,8 +232,17 @@ export async function logSystemEvent(
   details: Record<string, any>,
   level: 'INFO' | 'WARN' | 'ERROR' = 'INFO'
 ) {
-  const logFunc = level === 'ERROR' ? console.error : level === 'WARN' ? console.warn : console.log;
-  logFunc(`🖥️  [SYSTEM EVENT] ${event}: ${description}`);
+  const logFn = level === 'ERROR'
+    ? (msg: string, ctx: any) => logger.error(msg, ctx)
+    : level === 'WARN'
+    ? (msg: string, ctx: any) => logger.warn(msg, ctx)
+    : (msg: string, ctx: any) => logger.info(msg, ctx);
+
+  logFn(`SYSTEM EVENT: ${event} — ${description}`, {
+    category: LogCategory.SYSTEM,
+    tags: ['system-event', event.toLowerCase().replace(/\s+/g, '-')],
+    details: { event, description, ...details },
+  });
 }
 
 // ================================================// ================================================
@@ -236,30 +258,34 @@ export async function logFileOperation(
   req?: NextRequest,
   additionalDetails?: Record<string, any>
 ) {
-  const ip = req?.headers.get('x-forwarded-for') || req?.headers.get('x-real-ip') || 'unknown';
-  const fileSizeMB = Math.round(fileSize / (1024 * 1024) * 100) / 100;
-  console.log(`📁 [FILE ${operation.toUpperCase()}] ${fileName} (${fileSizeMB}MB) by ${session?.user?.email || 'unknown'}`);
+  const ip = req?.headers.get('x-forwarded-for')?.split(',')[0].trim()
+    || req?.headers.get('x-real-ip')
+    || 'unknown';
+  const fileSizeMB = Math.round((fileSize / (1024 * 1024)) * 100) / 100;
 
-  // Log large file uploads
+  logger.info(`FILE ${operation.toUpperCase()}: ${fileName} (${fileSizeMB}MB)`, {
+    category: LogCategory.SYSTEM,
+    user: session?.user ? {
+      user_id: session.user.id,
+      user_email: session.user.email || undefined,
+      user_role: session.user.role,
+    } : undefined,
+    network: { ip_address: ip },
+    tags: ['file-operation', operation],
+    details: { operation, fileName, fileSize, fileSizeMB, fileType, ...additionalDetails },
+  });
+
   if (operation === 'upload' && fileSize > 50 * 1024 * 1024) {
-    logger.warn('Large file upload detected', {
+    logger.warn(`LARGE FILE UPLOAD: ${fileName} (${fileSizeMB}MB)`, {
       category: LogCategory.SYSTEM,
       user: session?.user ? {
         user_id: session.user.id,
         user_email: session.user.email || undefined,
-        user_role: session.user.role
+        user_role: session.user.role,
       } : undefined,
-      network: {
-        ip_address: ip
-      },
+      network: { ip_address: ip },
       tags: ['file-upload', 'large-file', 'security'],
-      details: {
-        fileName,
-        fileSize,
-        fileSizeMB: Math.round(fileSize / (1024 * 1024) * 100) / 100,
-        operation,
-        fileType
-      }
+      details: { fileName, fileSizeMB, fileType },
     });
   }
 }
