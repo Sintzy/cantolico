@@ -35,46 +35,131 @@ import { FileType, FileUploadData } from '@/types/song-files';
 
 const SimpleMDE = dynamic(() => import("react-simplemde-editor"), { ssr: false });
 
-// Estilos CSS para acordes - copiados do arquivo chords.css
+// Estilos CSS para acordes — sincronizados com public/styles/chords.css
 const chordsCSS = `
-.chord-container-inline .chord,
-.chord-container-inline .above-chord,
-.chord-container-inline .intro-chord {
-  position: relative;
-  display: inline-block;
-  margin-right: 4px;
+:root {
+  --chord-color: hsl(221.2 83.2% 53.3%);
+  --text-color: hsl(222.2 84% 4.9%);
 }
 
-.chord-container-inline .chord .inner,
-.chord-container-inline .above-chord .inner,
-.chord-container-inline .intro-chord .inner {
-  color: #1e293b !important;
+/* === SISTEMA INLINE: flex-column (acorde em cima, letra em baixo) === */
+.chord-container-inline {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  color: var(--text-color);
+  line-height: 1.6;
+}
+
+.chord-container-inline p {
+  margin: 0.3em 0;
+  padding: 0;
+}
+
+/* Linha com acordes: flex-row para alinhar grupos side-by-side */
+.chord-container-inline p.cl {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: flex-end !important;
+  line-height: normal !important;
+  margin: 0.5em 0 !important;
+}
+
+/* Grupo acorde + sílaba/palavra */
+.chord-container-inline .cw {
+  display: inline-flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+}
+
+/* O acorde (aparece por cima da letra) */
+.chord-container-inline .ch {
+  color: var(--chord-color) !important;
+  font-weight: 600 !important;
+  font-size: 0.82em !important;
+  font-family: ui-monospace, monospace !important;
+  line-height: 1.3 !important;
+  white-space: nowrap !important;
+  display: block !important;
+  padding-bottom: 2px !important;
+}
+
+/* Parênteses dentro de grupos inline */
+.chord-container-inline .ch-paren {
+  color: var(--text-color) !important;
+  font-family: ui-monospace, monospace !important;
+  font-weight: 600 !important;
+}
+
+/* === SISTEMA ABOVE: acorde na linha de cima, letra na linha de baixo === */
+.chord-container-above {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  color: var(--text-color);
+  line-height: 1.6;
+}
+
+.chord-container-above .chord-section {
+  margin-bottom: 0.8em;
+}
+
+.chord-container-above .chord-line {
+  display: flex;
+  gap: 6px;
+  margin-bottom: -3px;
+  min-height: 1em;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.chord-container-above .text-line {
+  line-height: 1.35;
+  color: var(--text-color);
+}
+
+.chord-container-above .above-chord {
+  display: inline-block;
+  margin-right: 8px;
+  vertical-align: baseline;
+}
+
+.chord-container-above .above-chord .inner {
+  color: var(--chord-color) !important;
   background: transparent !important;
-  font-family: monospace !important;
-  font-weight: bold !important;
-  font-style: italic !important;
+  font-family: ui-monospace, monospace !important;
+  font-weight: 600 !important;
+  font-size: 0.875em !important;
   display: inline-block !important;
   white-space: nowrap !important;
   padding: 0 !important;
 }
 
-.chord-container-above .above-chord {
-  position: relative;
-  display: inline-block;
-  margin-right: 8px;
-  vertical-align: top;
+/* Intro/ponte sections */
+.chord-container-above .intro-section,
+.chord-container-inline .intro-section {
+  margin: 1.5em 0;
 }
 
-.chord-container-above .above-chord .inner {
-  color: #1e293b !important;
-  background: transparent !important;
-  font-family: monospace !important;
-  font-weight: bold !important;
-  font-style: italic !important;
-  display: block !important;
-  white-space: nowrap !important;
-  padding: 0 !important;
-  margin-bottom: 2px !important;
+.chord-container-above .intro-label,
+.chord-container-inline .intro-label {
+  font-weight: 600;
+  color: var(--chord-color);
+  font-size: 0.875em;
+  margin-bottom: 0.5em;
+}
+
+.chord-container-above .intro-line,
+.chord-container-inline .intro-line {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.chord-container-above .intro-chord .inner,
+.chord-container-inline .intro-chord .inner {
+  color: var(--chord-color) !important;
+  font-family: ui-monospace, monospace !important;
+  font-weight: 600 !important;
+  font-size: 0.875em !important;
+  display: inline-block !important;
 }
 `;
 
