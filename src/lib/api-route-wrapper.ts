@@ -31,7 +31,7 @@ import { UserContext, NetworkContext, DomainContext } from '@/types/logging';
  */
 type ApiRouteHandler = (
   request: NextRequest,
-  context?: { params?: any }
+  context: { params: Promise<any> }
 ) => Promise<NextResponse> | NextResponse;
 
 /**
@@ -187,7 +187,7 @@ export function withLogging(
     routeName,
   } = options;
 
-  return async (request: NextRequest, context?: { params?: any }) => {
+  return async (request: NextRequest, context: { params: Promise<any> }) => {
     // Criar contexto de correlação
     const correlationContext = createCorrelationContext();
 
