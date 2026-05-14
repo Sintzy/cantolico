@@ -570,10 +570,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           y -= lineHeight + chordLift;
         }
       } else {
-        ensureSpace(lineHeight + 2);
         const stripped = rawLine.replace(/\[[^\]]+\]/g, '').trim();
-        if (stripped) drawBoldText(stripped, lyricsX, y, baseFontSize);
-        y -= lineHeight;
+        if (stripped) {
+          // Normal lyric line (or inline chord stripped to just text)
+          ensureSpace(lineHeight + 2);
+          drawBoldText(stripped, lyricsX, y, baseFontSize);
+          y -= lineHeight;
+        }
+        // If stripped is empty (chord-only line in lyrics mode), skip entirely — no blank line
       }
     };
 
