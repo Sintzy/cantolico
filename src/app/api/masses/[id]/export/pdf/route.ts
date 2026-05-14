@@ -523,30 +523,52 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           }
         }
 
-        // Chord and its following text start at the same x; advance by whichever is wider
-        let tx = lyricsX;
-        for (const seg of segments) {
-          const x0 = tx;
-          let chordW = 0;
-          let textW = 0;
+        // Detect "above" format: chord-only line (no lyric text, just chords)
+        // e.g. "[Em][G]" — draw chords at y, advance only chordLift so next lyric is tight below
+        const lyricContent = segments
+          .map(s => (s.text || '').replace(/[()]/g, ''))
+          .join('')
+          .trim();
+        const isChordOnlyLine = lyricContent.length === 0 && segments.some(s => s.chord);
 
-          if (seg.chord) {
-            page.drawText(seg.chord, {
-              x: x0, y: y + chordLift,
-              size: chordFontSize, font: boldFont, color: rgb(0.1, 0.4, 0.7),
-            });
-            chordW = boldFont.widthOfTextAtSize(seg.chord, chordFontSize);
+        if (isChordOnlyLine) {
+          // Above format: draw chords at current y, leave room for lyric on the next renderLine call
+          let tx = lyricsX;
+          for (const seg of segments) {
+            if (seg.chord) {
+              page.drawText(seg.chord, {
+                x: tx, y,
+                size: chordFontSize, font: boldFont, color: rgb(0.1, 0.4, 0.7),
+              });
+              tx += boldFont.widthOfTextAtSize(seg.chord, chordFontSize) + 6;
+            }
           }
+          y -= chordLift; // only reserve space for the chord itself
+        } else {
+          // Inline format: chord and its following text start at same x; advance by whichever is wider
+          let tx = lyricsX;
+          for (const seg of segments) {
+            const x0 = tx;
+            let chordW = 0;
+            let textW = 0;
 
-          if (seg.text) {
-            const endX = drawBoldText(seg.text, x0, y, baseFontSize);
-            textW = endX - x0;
+            if (seg.chord) {
+              page.drawText(seg.chord, {
+                x: x0, y: y + chordLift,
+                size: chordFontSize, font: boldFont, color: rgb(0.1, 0.4, 0.7),
+              });
+              chordW = boldFont.widthOfTextAtSize(seg.chord, chordFontSize);
+            }
+
+            if (seg.text) {
+              const endX = drawBoldText(seg.text, x0, y, baseFontSize);
+              textW = endX - x0;
+            }
+
+            tx += Math.max(seg.chord ? chordW + 6 : 0, textW);
           }
-
-          tx += Math.max(seg.chord ? chordW + 6 : 0, textW);
+          y -= lineHeight + chordLift;
         }
-
-        y -= lineHeight + chordLift;
       } else {
         ensureSpace(lineHeight + 2);
         const stripped = rawLine.replace(/\[[^\]]+\]/g, '').trim();
