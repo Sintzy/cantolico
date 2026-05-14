@@ -88,42 +88,42 @@ function processChordLineWithParentheses(line: string, chordClass: string): stri
 }
 
 /**
- * Processa texto inline com acordes e suporte a parênteses
- * Preserva formatação markdown e parênteses ao redor de acordes
+ * Processa texto inline com acordes usando estrutura flex-column (acorde em cima, texto abaixo).
+ * Agrupa cada acorde com o texto que se segue dentro de um <span class="cw">.
+ * Retorna { html, hasChords }.
  */
-function processInlineTextWithChords(line: string): string {
-  // Regex para encontrar acordes e parênteses relacionados
-  // Captura: texto normal, (acordes), ou acordes simples
-  
-  const segments: { type: 'text' | 'chord' | 'paren-open' | 'paren-close'; content: string }[] = [];
+function processInlineTextWithChords(line: string): { html: string; hasChords: boolean } {
+  type Seg = { type: 'text' | 'chord' | 'paren-open' | 'paren-close'; content: string };
+  const segments: Seg[] = [];
   let i = 0;
-  
+
   while (i < line.length) {
-    // Detecta parêntese de abertura seguido de acordes
+    // Parêntese de abertura seguido de acordes
     if (line[i] === '(' && line.substring(i + 1).match(/^\s*\[/)) {
       segments.push({ type: 'paren-open', content: '(' });
       i++;
       continue;
     }
-    
-    // Detecta parêntese de fechamento após acordes
+
+    // Parêntese de fechamento após acordes
     if (line[i] === ')') {
-      // Verifica se o segmento anterior é um acorde ou espaço após acorde
       const lastSeg = segments[segments.length - 1];
       const prevSeg = segments[segments.length - 2];
-      if (lastSeg?.type === 'chord' || (lastSeg?.type === 'text' && lastSeg.content.trim() === '' && prevSeg?.type === 'chord')) {
+      if (
+        lastSeg?.type === 'chord' ||
+        (lastSeg?.type === 'text' && lastSeg.content.trim() === '' && prevSeg?.type === 'chord')
+      ) {
         segments.push({ type: 'paren-close', content: ')' });
         i++;
         continue;
       }
     }
-    
-    // Detecta acorde [X]
+
+    // Acorde [X]
     if (line[i] === '[') {
       const closeIndex = line.indexOf(']', i);
       if (closeIndex !== -1) {
         const chord = line.substring(i + 1, closeIndex);
-        // Verifica se é um acorde válido
         if (/^[A-G][#b]?/.test(chord)) {
           segments.push({ type: 'chord', content: chord });
           i = closeIndex + 1;
@@ -131,8 +131,8 @@ function processInlineTextWithChords(line: string): string {
         }
       }
     }
-    
-    // Acumula texto normal
+
+    // Texto normal
     if (segments.length > 0 && segments[segments.length - 1].type === 'text') {
       segments[segments.length - 1].content += line[i];
     } else {
@@ -140,27 +140,51 @@ function processInlineTextWithChords(line: string): string {
     }
     i++;
   }
-  
-  // Converte segmentos em HTML
-  let result = '';
+
+  const hasChords = segments.some(s => s.type === 'chord');
+  if (!hasChords) {
+    return { html: processMarkdownFormatting(line), hasChords: false };
+  }
+
+  // Agrupa acordes com o texto que se segue
+  type Group = { chord?: string; text: string; parenBefore?: boolean };
+  const groups: Group[] = [];
+  let cur: Group = { text: '' };
+
   for (const seg of segments) {
-    switch (seg.type) {
-      case 'text':
-        result += processMarkdownFormatting(seg.content);
-        break;
-      case 'chord':
-        result += `<span class="chord" data-chord-length="${seg.content.length}"><span class="inner">${seg.content}</span></span>`;
-        break;
-      case 'paren-open':
-        result += '<span class="chord-parenthesis">(</span>';
-        break;
-      case 'paren-close':
-        result += '<span class="chord-parenthesis">)</span>';
-        break;
+    if (seg.type === 'chord') {
+      if (cur.chord !== undefined || cur.text || cur.parenBefore) {
+        groups.push(cur);
+        cur = { text: '' };
+      }
+      cur.chord = seg.content;
+    } else if (seg.type === 'paren-open') {
+      if (cur.chord !== undefined || cur.text) {
+        groups.push(cur);
+        cur = { text: '' };
+      }
+      cur.parenBefore = true;
+    } else if (seg.type === 'paren-close') {
+      cur.text += ')';
+    } else {
+      cur.text += seg.content;
     }
   }
-  
-  return result;
+  groups.push(cur);
+
+  // Gera HTML: cada acorde + texto → <span class="cw"><b class="ch">Acorde</b>texto</span>
+  let html = '';
+  for (const g of groups) {
+    if (g.chord !== undefined) {
+      const paren = g.parenBefore ? '<span class="ch-paren">(</span>' : '';
+      html += `<span class="cw">${paren}<b class="ch">${g.chord}</b>${processMarkdownFormatting(g.text)}</span>`;
+    } else {
+      const paren = g.parenBefore ? '(' : '';
+      html += processMarkdownFormatting(paren + g.text);
+    }
+  }
+
+  return { html, hasChords: true };
 }
 
 /**
@@ -318,15 +342,21 @@ export function processAboveChords(text: string): string {
       const chordHtml = processChordLineWithParentheses(currentLine, 'intro-chord');
       result.push(`<div class="intro-line standalone">${chordHtml}</div>`);
     } else {
-      // Linha normal de texto
+      // Linha normal de texto (pode ter acordes embutidos ou ser texto puro)
       if (currentLine.trim()) {
-        result.push(`<p>${processMarkdownFormatting(currentLine)}</p>`);
+        if (/\[[A-G][#b]?[^\]]*\]/.test(currentLine)) {
+          // Linha com acordes embutidos — usa estrutura flex-column (cw/ch)
+          const { html, hasChords } = processInlineTextWithChords(currentLine);
+          result.push(`<p${hasChords ? ' class="cl"' : ''}>${html}</p>`);
+        } else {
+          result.push(`<p>${processMarkdownFormatting(currentLine)}</p>`);
+        }
       } else {
         result.push('<br>');
       }
     }
   }
-  
+
   return result.join('\n');
 }
 
@@ -364,18 +394,18 @@ export function processChords(text: string, format: ChordFormat): string {
 export function processMixedChords(text: string): string {
   const lines = text.split('\n');
   const result: string[] = [];
-  
+
   for (let i = 0; i < lines.length; i++) {
     const currentLine = lines[i];
-    
+
     // Pula qualquer linha que contenha apenas #mic# (com ou sem espaços)
     if (currentLine.trim() === '#mic#' || currentLine.trim() === '') {
       continue;
     }
-    
+
     // Verifica se é uma linha de intro/ponte (com ou sem dois pontos)
     const isIntroLine = /^(Intro|Ponte|Solo|Bridge|Instrumental|Interlude):?\s*$/i.test(currentLine.trim());
-    
+
     if (isIntroLine && i + 1 < lines.length) {
       const chordLine = lines[i + 1];
       // Verifica se a próxima linha tem apenas acordes (formato intro/ponte) - com suporte a parênteses
@@ -390,20 +420,20 @@ export function processMixedChords(text: string): string {
         continue;
       }
     }
-    
+
     // Processa linha normal (pode ter acordes inline)
     if (currentLine.trim()) {
       if (/\[[A-G][#b]?[^\]]*\]/.test(currentLine)) {
-        // Linha com acordes inline - processa acordes e markdown separadamente com suporte a parênteses
-        const processedLine = processInlineTextWithChords(currentLine);
-        result.push(`<p>${processedLine}</p>`);
+        // Linha com acordes inline — usa estrutura flex-column (cw/ch)
+        const { html, hasChords } = processInlineTextWithChords(currentLine);
+        result.push(`<p${hasChords ? ' class="cl"' : ''}>${html}</p>`);
       } else {
         // Linha de texto normal
         result.push(`<p>${processMarkdownFormatting(currentLine)}</p>`);
       }
     }
   }
-  
+
   return result.join('\n');
 }
 
@@ -413,21 +443,21 @@ export function processMixedChords(text: string): string {
 export function processSimpleInline(text: string): string {
   // Remove #mic# se presente e limpa linhas vazias
   const lines = text.split('\n')
-    .filter(line => line.trim() !== '#mic#') // Remove linhas com apenas #mic#
-    .filter(line => line.trim() !== ''); // Remove linhas vazias
-  
+    .filter(line => line.trim() !== '#mic#')
+    .filter(line => line.trim() !== '');
+
   const result: string[] = [];
-  
+
   for (const line of lines) {
     if (/\[[A-G][#b]?[^\]]*\]/.test(line)) {
-      // Linha com acordes - processa com suporte a parênteses
-      const processedLine = processInlineTextWithChords(line);
-      result.push(`<p>${processedLine}</p>`);
+      // Linha com acordes — usa estrutura flex-column (cw/ch)
+      const { html, hasChords } = processInlineTextWithChords(line);
+      result.push(`<p${hasChords ? ' class="cl"' : ''}>${html}</p>`);
     } else {
       // Linha normal
       result.push(`<p>${processMarkdownFormatting(line)}</p>`);
     }
   }
-  
+
   return result.join('\n');
 }

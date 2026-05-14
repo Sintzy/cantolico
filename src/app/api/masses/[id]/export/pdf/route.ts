@@ -417,113 +417,233 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     // ── Portrait PDF (lyrics / chords) ───────────────────────────────
     const pageWidth = 595.28, pageHeight = 841.89;
-    const margin = 50;
-    const baseFontSize = fontSize === 'small' ? 10 : fontSize === 'large' ? 14 : 12;
+    const margin = 48;
+    const baseFontSize = fontSize === 'small' ? 9 : fontSize === 'large' ? 12 : 10;
     const chordFontSize = baseFontSize - 1;
-    const lineHeight = baseFontSize + 6;
+    const lineHeight = baseFontSize + 4;
+    const chordLift = chordFontSize + 3; // vertical space above lyric reserved for chord
+    const lyricsX = margin + 10;
 
-    const itemsByMoment: Record<string, any> = {};
-    for (const item of massData.MassItem) {
+    // Sort by moment liturgical order, then by item order within moment
+    const sortedMassItems = [...massData.MassItem].sort((a: any, b: any) => {
+      const oA = MOMENT_ORDER[a.moment] ?? 99;
+      const oB = MOMENT_ORDER[b.moment] ?? 99;
+      return oA !== oB ? oA - oB : (a.order ?? 0) - (b.order ?? 0);
+    });
+
+    const itemsByMoment: Record<string, any[]> = {};
+    for (const item of sortedMassItems) {
       if (!itemsByMoment[item.moment]) itemsByMoment[item.moment] = [];
       itemsByMoment[item.moment].push(item);
     }
 
+    const orderedMoments = Object.keys(itemsByMoment).sort(
+      (a, b) => (MOMENT_ORDER[a] ?? 99) - (MOMENT_ORDER[b] ?? 99)
+    );
+
     const drawFooter = (pg: PDFPage) => {
-      pg.drawText('cantolico.pt', {
-        x: pageWidth / 2 - 38, y: 30, size: 9, font, color: rgb(0.6, 0.6, 0.6),
-      });
+      pg.drawText('cantolico.pt', { x: pageWidth / 2 - 38, y: 28, size: 9, font, color: rgb(0.6, 0.6, 0.6) });
     };
 
     let page = pdfDoc.addPage([pageWidth, pageHeight]);
     let y = pageHeight - margin;
+
+    const ensureSpace = (needed: number) => {
+      if (y < margin + needed) {
+        drawFooter(page);
+        page = pdfDoc.addPage([pageWidth, pageHeight]);
+        y = pageHeight - margin;
+      }
+    };
+
+    // Render text with **bold** support; returns final x position
+    const drawBoldText = (text: string, x: number, cy: number, fSize: number): number => {
+      const parts = text.split(/(\*\*[^*]+\*\*)/);
+      let tx = x;
+      for (const part of parts) {
+        if (!part) continue;
+        const isBold = /^\*\*[^*]+\*\*$/.test(part);
+        const t = isBold ? part.replace(/\*\*/g, '') : part;
+        if (!t) continue;
+        const f = isBold ? boldFont : font;
+        page.drawText(t, { x: tx, y: cy, size: fSize, font: f, color: rgb(0.15, 0.15, 0.15) });
+        tx += f.widthOfTextAtSize(t, fSize);
+      }
+      return tx;
+    };
+
+    // Render one source-text line: chords drawn above the lyric, bold parsed
+    const renderLine = (rawLine: string) => {
+      if (!rawLine.trim()) {
+        y -= Math.round(lineHeight * 0.45);
+        return;
+      }
+
+      const hasInlineChords = format === 'chords' && /\[[A-G][^\]]*\]/.test(rawLine);
+
+      if (hasInlineChords) {
+        ensureSpace(lineHeight + chordLift + 2);
+
+        // Parse line into (chord, text) segments — chord appears above the text it precedes
+        const segments: { chord: string | null; text: string }[] = [];
+        let pos = 0;
+
+        const firstBracket = rawLine.indexOf('[');
+        if (firstBracket > 0) {
+          segments.push({ chord: null, text: rawLine.substring(0, firstBracket) });
+          pos = firstBracket;
+        } else if (firstBracket === -1) {
+          segments.push({ chord: null, text: rawLine });
+          pos = rawLine.length;
+        }
+
+        while (pos < rawLine.length) {
+          if (rawLine[pos] !== '[') { pos++; continue; }
+          const close = rawLine.indexOf(']', pos);
+          if (close === -1) { pos++; continue; }
+
+          const chord = rawLine.substring(pos + 1, close);
+          pos = close + 1;
+
+          const nextBracket = rawLine.indexOf('[', pos);
+          const textEnd = nextBracket === -1 ? rawLine.length : nextBracket;
+          const text = rawLine.substring(pos, textEnd);
+          pos = textEnd;
+
+          if (/^[A-G]/.test(chord)) {
+            segments.push({ chord, text });
+          } else {
+            // Non-chord bracket — append as plain text to previous segment
+            const tail = `[${chord}]${text}`;
+            if (segments.length > 0) {
+              segments[segments.length - 1].text += tail;
+            } else {
+              segments.push({ chord: null, text: tail });
+            }
+          }
+        }
+
+        // Detect "above" format: chord-only line (no lyric text, just chords)
+        // e.g. "[Em][G]" — draw chords at y, advance only chordLift so next lyric is tight below
+        const lyricContent = segments
+          .map(s => (s.text || '').replace(/[()]/g, ''))
+          .join('')
+          .trim();
+        const isChordOnlyLine = lyricContent.length === 0 && segments.some(s => s.chord);
+
+        if (isChordOnlyLine) {
+          // Above format: draw chords at current y, leave room for lyric on the next renderLine call
+          let tx = lyricsX;
+          for (const seg of segments) {
+            if (seg.chord) {
+              page.drawText(seg.chord, {
+                x: tx, y,
+                size: chordFontSize, font: boldFont, color: rgb(0.1, 0.4, 0.7),
+              });
+              tx += boldFont.widthOfTextAtSize(seg.chord, chordFontSize) + 6;
+            }
+          }
+          y -= chordLift; // only reserve space for the chord itself
+        } else {
+          // Inline format: chord and its following text start at same x; advance by whichever is wider
+          let tx = lyricsX;
+          for (const seg of segments) {
+            const x0 = tx;
+            let chordW = 0;
+            let textW = 0;
+
+            if (seg.chord) {
+              page.drawText(seg.chord, {
+                x: x0, y: y + chordLift,
+                size: chordFontSize, font: boldFont, color: rgb(0.1, 0.4, 0.7),
+              });
+              chordW = boldFont.widthOfTextAtSize(seg.chord, chordFontSize);
+            }
+
+            if (seg.text) {
+              const endX = drawBoldText(seg.text, x0, y, baseFontSize);
+              textW = endX - x0;
+            }
+
+            tx += Math.max(seg.chord ? chordW + 6 : 0, textW);
+          }
+          y -= lineHeight + chordLift;
+        }
+      } else {
+        const stripped = rawLine.replace(/\[[^\]]+\]/g, '').trim();
+        if (stripped) {
+          // Normal lyric line (or inline chord stripped to just text)
+          ensureSpace(lineHeight + 2);
+          drawBoldText(stripped, lyricsX, y, baseFontSize);
+          y -= lineHeight;
+        }
+        // If stripped is empty (chord-only line in lyrics mode), skip entirely — no blank line
+      }
+    };
 
     if (includeHeader) {
       const dateStr = massData.date
         ? new Date(massData.date).toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
         : '';
       const descStr = massData.celebration || '';
-      const headerLine = `${dateStr}${dateStr && descStr ? ' \u00b7 ' : ''}${descStr}`;
-      const headerFontSize = baseFontSize - 2;
-      const headerTextWidth = boldFont.widthOfTextAtSize(headerLine, headerFontSize);
-      page.drawText(headerLine, { x: (pageWidth - headerTextWidth) / 2, y, size: headerFontSize, font: boldFont, color: rgb(0.3, 0.3, 0.3) });
-      y -= headerFontSize + 8;
+      const hLine = `${dateStr}${dateStr && descStr ? ' \u00b7 ' : ''}${descStr}`;
+      if (hLine) {
+        const hfs = baseFontSize - 1;
+        const hw = boldFont.widthOfTextAtSize(hLine, hfs);
+        page.drawText(hLine, { x: (pageWidth - hw) / 2, y, size: hfs, font: boldFont, color: rgb(0.4, 0.4, 0.4) });
+        y -= hfs + 6;
+      }
       const titleFontSize = baseFontSize + 8;
-      const titleTextWidth = boldFont.widthOfTextAtSize(massData.name, titleFontSize);
-      page.drawText(massData.name, { x: (pageWidth - titleTextWidth) / 2, y, size: titleFontSize, font: boldFont, color: rgb(0.1, 0.1, 0.1) });
-      y -= titleFontSize + 12;
+      const tw = boldFont.widthOfTextAtSize(massData.name, titleFontSize);
+      page.drawText(massData.name, { x: (pageWidth - tw) / 2, y, size: titleFontSize, font: boldFont, color: rgb(0.1, 0.1, 0.1) });
+      y -= titleFontSize + 16;
     }
 
-    for (const moment of Object.keys(itemsByMoment)) {
-      if (y < margin + 120) {
-        drawFooter(page);
-        page = pdfDoc.addPage([pageWidth, pageHeight]);
-        y = pageHeight - margin;
-      }
+    for (const moment of orderedMoments) {
+      const momentLabel = MOMENT_LABELS[moment] || moment.replace(/_/g, ' ');
+
       if (includeMomentTitles) {
-        const momentTitle = moment.replaceAll('_', ' ');
-        const momentFontSize = baseFontSize + 2;
-        const momentTextWidth = boldFont.widthOfTextAtSize(momentTitle, momentFontSize);
-        page.drawText(momentTitle, { x: (pageWidth - momentTextWidth) / 2, y, size: momentFontSize, font: boldFont, color: rgb(0.2, 0.3, 0.5) });
-        y -= momentFontSize + 6;
+        ensureSpace(lineHeight * 4);
+        const mfs = baseFontSize + 2;
+        const mlw = boldFont.widthOfTextAtSize(momentLabel, mfs);
+        page.drawText(momentLabel, { x: (pageWidth - mlw) / 2, y, size: mfs, font: boldFont, color: rgb(0.55, 0.1, 0.2) });
+        y -= mfs + 8;
       }
+
       for (const item of itemsByMoment[moment]) {
         const song = item.Song;
         if (!song) continue;
         const version = song.SongVersion?.[0];
-        let text = format === 'chords' ? version?.sourceText || '' : version?.lyricsPlain || '';
+        const text = format === 'chords' ? version?.sourceText || '' : version?.lyricsPlain || '';
         if (!text) continue;
 
-        const songFontSize = baseFontSize + 1;
-        const songTextWidth = boldFont.widthOfTextAtSize(song.title, songFontSize);
-        page.drawText(song.title, { x: (pageWidth - songTextWidth) / 2, y, size: songFontSize, font: boldFont, color: rgb(0.1, 0.1, 0.1) });
-        y -= songFontSize + 6;
+        ensureSpace(lineHeight * 4);
+        const tfs = baseFontSize + 1;
+        const tlw = boldFont.widthOfTextAtSize(song.title, tfs);
+        page.drawText(song.title, { x: (pageWidth - tlw) / 2, y, size: tfs, font: boldFont, color: rgb(0.1, 0.1, 0.1) });
+        y -= tfs + 5;
 
-        const lines = text.split('\n');
-        const lyricsLeftMargin = margin + 10;
-        const lyricsLineHeight = baseFontSize + 1;
-        for (let i = 0; i < lines.length; i++) {
-          let line = lines[i];
-          let lineFont = font;
-          let isBold = false;
-          if (format === 'chords') {
-            if (/\[[A-G][^\]]*\]/.test(line)) {
-              let chordLine = '';
-              let lastIdx = 0;
-              for (const m of line.matchAll(/\[([^\]]+)\]/g)) {
-                chordLine += ' '.repeat(m.index - lastIdx) + m[1];
-                lastIdx = m.index + m[0].length;
-              }
-              page.drawText(chordLine, { x: lyricsLeftMargin, y, size: chordFontSize, font: boldFont, color: rgb(0.1, 0.4, 0.7) });
-              y -= lyricsLineHeight;
-              line = line.replace(/\[[^\]]+\]/g, '');
-            }
-            page.drawText(line, { x: lyricsLeftMargin, y, size: baseFontSize, font, color: rgb(0.15, 0.15, 0.15) });
-            y -= lyricsLineHeight;
-          } else {
-            line = line.replace(/\[[^\]]+\]/g, '');
-            const boldParts = line.split(/(\*\*[^*]+\*\*)/);
-            let textX = lyricsLeftMargin;
-            for (const part of boldParts) {
-              isBold = !!part.match(/^\*\*[^*]+\*\*$/);
-              lineFont = isBold ? boldFont : font;
-              const partText = isBold ? part.replace(/\*\*/g, '') : part;
-              page.drawText(partText, { x: textX, y, size: baseFontSize, font: lineFont, color: rgb(0.15, 0.15, 0.15) });
-              textX += lineFont.widthOfTextAtSize(partText, baseFontSize);
-            }
-            y -= lyricsLineHeight;
-          }
+        const cleanText = text.replace(/^#mic#\s*\n?/, '').trim();
+        for (const line of cleanText.split('\n')) {
+          renderLine(line);
         }
-        y -= 6;
-        if (includeNotes && item.note) {
-          page.drawText('Nota: ' + item.note, { x: pageWidth / 2 - 60, y, size: baseFontSize - 2, font, color: rgb(0.5, 0.2, 0.2) });
-          y -= lineHeight;
-        }
+
         y -= 8;
+
+        if (includeNotes && item.note) {
+          ensureSpace(lineHeight + 4);
+          page.drawText('Nota: ' + item.note, { x: lyricsX, y, size: baseFontSize - 1, font, color: rgb(0.5, 0.2, 0.2) });
+          y -= lineHeight + 4;
+        }
       }
+
       if (pageBreakPerMoment) {
-        drawFooter(page);
-        page = pdfDoc.addPage([pageWidth, pageHeight]);
-        y = pageHeight - margin;
+        const isLast = moment === orderedMoments[orderedMoments.length - 1];
+        if (!isLast) {
+          drawFooter(page);
+          page = pdfDoc.addPage([pageWidth, pageHeight]);
+          y = pageHeight - margin;
+        }
       }
     }
 
