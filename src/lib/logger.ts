@@ -17,7 +17,9 @@ import {
 /**
  * Configuração do logger a partir de variáveis de ambiente
  */
-const LOKI_URL = process.env.LOKI_URL || process.env.NEXT_PUBLIC_LOKI_URL || 'http://localhost:3100';
+const LOKI_URL = process.env.LOKI_URL || 'http://localhost:3100';
+const LOKI_USERNAME = process.env.LOKI_USERNAME;
+const LOKI_PASSWORD = process.env.LOKI_PASSWORD;
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'cantolico';
 const SERVICE_NAME = 'nextjs';
 const ENVIRONMENT = (process.env.NODE_ENV || 'development') as 'development' | 'production' | 'staging' | 'test';
@@ -252,12 +254,18 @@ async function sendToLoki(event: LogEvent, labels: Record<string, string>): Prom
     };
 
     const url = `${LOKI_URL}/loki/api/v1/push`;
-    
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (LOKI_USERNAME && LOKI_PASSWORD) {
+      const credentials = Buffer.from(`${LOKI_USERNAME}:${LOKI_PASSWORD}`).toString('base64');
+      headers['Authorization'] = `Basic ${credentials}`;
+    }
+
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(payload),
     });
 
