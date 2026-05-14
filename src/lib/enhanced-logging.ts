@@ -4,34 +4,94 @@ import { logger } from '@/lib/logger';
 import { logUnauthorizedAccess as logUnauthorizedHelper, logForbiddenAccess, logApiRequestError, toErrorContext } from '@/lib/logging-helpers';
 import { LogCategory } from '@/types/logging';
 
-// ================================================
-// MIDDLEWARE DE PERFORMANCE E MONITORIZAÇÃO
-// ================================================
-
-interface PerformanceMetrics {
-  url: string;
-  method: string;
-  responseTime: number;
-  statusCode: number;
-  userAgent?: string;
-  ip?: string;
-  userId?: string | number;
-  userEmail?: string;
-}
-
-interface LoggingSession {
-  user: {
-    id: number;
-    clerkUserId: string;
-    role: string;
-    email?: string;
-    name?: string;
-  };
-}
-
 // Threshold para logs de performance (3 segundos)
 const SLOW_REQUEST_THRESHOLD = 3000;
 const VERY_SLOW_REQUEST_THRESHOLD = 10000;
+
+// ================================================
+// HELPER: Log de request para Loki (fire-and-forget)
+// ================================================
+
+async function logRequestToLoki(
+  method: string,
+  path: string,
+  url: string,
+  statusCode: number,
+  responseTime: number,
+  userAgent: string,
+  ip: string,
+  error?: unknown
+): Promise<void> {
+  let userPayload: { user_id?: number; user_email?: string; user_role?: any } | undefined;
+  try {
+    const u = await getAuthenticatedUser();
+    if (u) {
+      userPayload = { user_id: u.supabaseUserId, user_email: u.email, user_role: u.role };
+    }
+  } catch { /* unauthenticated route — no user */ }
+
+  const networkPayload = { ip_address: ip, user_agent: userAgent.substring(0, 200) };
+  const httpPayload = {
+    method: method as any,
+    url,
+    path,
+    status_code: statusCode,
+    response_time_ms: responseTime,
+  };
+
+  if (error || statusCode >= 500) {
+    logger.error(`${method} ${path} → ${statusCode} (${responseTime}ms)`, {
+      category: LogCategory.API,
+      user: userPayload,
+      http: httpPayload,
+      network: networkPayload,
+      error: error ? {
+        error_message: (error as Error)?.message || String(error),
+        error_type: (error as Error)?.name || 'UnknownError',
+        stack_trace: (error as Error)?.stack,
+      } : undefined,
+      tags: ['request-end', '5xx'],
+    });
+  } else if (statusCode >= 400) {
+    logger.warn(`${method} ${path} → ${statusCode} (${responseTime}ms)`, {
+      category: LogCategory.API,
+      user: userPayload,
+      http: httpPayload,
+      network: networkPayload,
+      tags: ['request-end', '4xx'],
+    });
+  } else if (shouldLogMetrics(url, method)) {
+    logger.info(`${method} ${path} → ${statusCode} (${responseTime}ms)`, {
+      category: LogCategory.API,
+      user: userPayload,
+      http: httpPayload,
+      network: networkPayload,
+      tags: ['request-end'],
+    });
+  }
+
+  if (responseTime > VERY_SLOW_REQUEST_THRESHOLD) {
+    logger.warn(`VERY SLOW: ${method} ${path} (${responseTime}ms)`, {
+      category: LogCategory.PERFORMANCE,
+      user: userPayload,
+      http: { method: method as any, url, path },
+      performance: { response_time_ms: responseTime, threshold_ms: VERY_SLOW_REQUEST_THRESHOLD, is_very_slow: true },
+      tags: ['performance', 'slow-request', 'critical'],
+    });
+  } else if (responseTime > SLOW_REQUEST_THRESHOLD) {
+    logger.warn(`SLOW: ${method} ${path} (${responseTime}ms)`, {
+      category: LogCategory.PERFORMANCE,
+      user: userPayload,
+      http: { method: method as any, url, path },
+      performance: { response_time_ms: responseTime, threshold_ms: SLOW_REQUEST_THRESHOLD, is_very_slow: false },
+      tags: ['performance', 'slow-request'],
+    });
+  }
+}
+
+// ================================================
+// MIDDLEWARE DE PERFORMANCE E MONITORIZAÇÃO
+// ================================================
 
 export async function withPerformanceMonitoring<T>(
   handler: (req: NextRequest, ...args: any[]) => Promise<NextResponse<T>>,
@@ -39,95 +99,25 @@ export async function withPerformanceMonitoring<T>(
   ...args: any[]
 ): Promise<NextResponse<T>> {
   const startTime = Date.now();
-  const url = req.url;
+  const path = req.nextUrl?.pathname || new URL(req.url).pathname;
   const method = req.method;
   const userAgent = req.headers.get('user-agent') || '';
-  const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
-  
-  let response: NextResponse<T>;
-  let statusCode = 200;
-  let session: LoggingSession | null = null;
+  const ip =
+    req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+    req.headers.get('x-real-ip') ||
+    'unknown';
 
   try {
-    // Executar o handler
-    response = await handler(req, ...args);
-    statusCode = response.status;
-    
-    // Tentar obter sessão Clerk para contexto adicional
-    try {
-      const authenticatedUser = await getAuthenticatedUser();
-
-      if (authenticatedUser) {
-        session = {
-          user: {
-            id: authenticatedUser.supabaseUserId,
-            clerkUserId: authenticatedUser.clerkUserId,
-            role: authenticatedUser.role,
-            email: authenticatedUser.email,
-            name: authenticatedUser.name || undefined,
-          }
-        };
-      }
-    } catch (sessionError) {
-      // Ignorar erros de sessão
-    }
-
+    const response = await handler(req, ...args);
+    const responseTime = Date.now() - startTime;
+    // Fire-and-forget: does not add latency to the response
+    logRequestToLoki(method, path, req.url, response.status, responseTime, userAgent, ip).catch(() => {});
+    return response;
   } catch (error) {
-    statusCode = 500;
-    
-    // Log de erro crítico
-    console.error(`❌ [API ERROR] ${method} ${url}:`, error);
-
+    const responseTime = Date.now() - startTime;
+    logRequestToLoki(method, path, req.url, 500, responseTime, userAgent, ip, error).catch(() => {});
     throw error;
-  } finally {
-    const endTime = Date.now();
-    const responseTime = endTime - startTime;
-
-    // Preparar métricas
-    const metrics: PerformanceMetrics = {
-      url,
-      method,
-      responseTime,
-      statusCode,
-      userAgent,
-      ip,
-      userId: session?.user?.id ? String(session.user.id) : undefined,
-      userEmail: session?.user?.email
-    };
-
-    // Log de performance para requisições lentas
-    if (responseTime > SLOW_REQUEST_THRESHOLD) {
-      const severity = responseTime > VERY_SLOW_REQUEST_THRESHOLD ? 'CRITICAL' : 'WARNING';
-      console.warn(`⚠️  [PERFORMANCE] Slow API request (${severity}): ${method} ${url} - ${responseTime}ms`);
-
-      // Log performance degradation for very slow requests
-      if (responseTime > VERY_SLOW_REQUEST_THRESHOLD) {
-        logger.warn('Very slow API request detected', {
-          category: LogCategory.PERFORMANCE,
-          tags: ['performance', 'slow-request', 'critical'],
-          http: { method: method as any, url, response_time_ms: responseTime },
-          network: { ip_address: ip, user_agent: userAgent?.substring(0, 200) },
-          performance: { 
-            response_time_ms: responseTime,
-            is_very_slow: true,
-            threshold_ms: VERY_SLOW_REQUEST_THRESHOLD
-          },
-          details: {
-            severity,
-            threshold: VERY_SLOW_REQUEST_THRESHOLD
-          }
-        });
-      }
-    }
-
-    // Log de erros HTTP
-    if (statusCode >= 400) {
-      const level = statusCode >= 500 ? 'ERROR' : 'WARN';
-      console.error(`❌ [API ${level}] HTTP ${statusCode}: ${method} ${url}`);
-    }
   }
-
-  return response!;
 }
 
 // Determinar se devemos fazer log das métricas (evitar spam)
