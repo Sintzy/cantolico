@@ -62,3 +62,4 @@ next-env.d.ts
 .vercel
 .devcontainer/devcontainer.json
 
+package-lock.json
