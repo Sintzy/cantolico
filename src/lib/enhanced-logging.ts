@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/clerk-auth';
 import { logger } from '@/lib/logger';
 import { logUnauthorizedAccess as logUnauthorizedHelper, logForbiddenAccess, logApiRequestError, toErrorContext } from '@/lib/logging-helpers';
@@ -111,13 +111,12 @@ export async function withPerformanceMonitoring<T>(
   try {
     const response = await handler(req, ...args);
     const responseTime = Date.now() - startTime;
-    // Fire-and-forget: does not add latency to the response
-    logRequestToLoki(method, path, req.url, response.status, responseTime, userAgent, ip).catch(() => {});
+    after(() => logRequestToLoki(method, path, req.url, response.status, responseTime, userAgent, ip).catch(() => {}));
     recordRequest(method, path, response.status, responseTime);
     return response;
   } catch (error) {
     const responseTime = Date.now() - startTime;
-    logRequestToLoki(method, path, req.url, 500, responseTime, userAgent, ip, error).catch(() => {});
+    after(() => logRequestToLoki(method, path, req.url, 500, responseTime, userAgent, ip, error).catch(() => {}));
     recordRequest(method, path, 500, responseTime);
     throw error;
   }
