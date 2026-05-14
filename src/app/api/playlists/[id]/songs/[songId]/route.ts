@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminSupabase as supabase } from '@/lib/supabase-admin'
+import { logUserAction } from '@/lib/logging-helpers'
+import { withPlaylistLogging } from '@/lib/api-route-wrapper'
 import { getClerkSession } from '@/lib/api-middleware';
 interface Params {
   id: string
@@ -7,7 +9,7 @@ interface Params {
 }
 
 // DELETE - Remover música da playlist
-export async function DELETE(request: NextRequest, { params }: { params: Promise<Params> }) {
+async function DELETEHandler(request: NextRequest, { params }: { params: Promise<Params> }) {
   try {
     const session = await getClerkSession()
     
@@ -97,6 +99,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       }
     }
 
+    await logUserAction('playlist.song.deleted', { playlist_id: id, song_id: songId })
     return NextResponse.json({ message: 'Música removida da playlist com sucesso' })
   } catch (error) {
     console.error('Erro ao remover música da playlist:', error)
@@ -106,3 +109,5 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     )
   }
 }
+
+export const DELETE = withPlaylistLogging(DELETEHandler as any);

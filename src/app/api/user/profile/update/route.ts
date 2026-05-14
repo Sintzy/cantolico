@@ -1,8 +1,10 @@
 import { adminSupabase as supabase } from "@/lib/supabase-admin";
 import { NextRequest, NextResponse } from "next/server";
+import { logUserAction } from "@/lib/logging-helpers";
+import { withLogging } from "@/lib/api-route-wrapper";
 
 import { getClerkSession } from '@/lib/api-middleware';
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
   try {
     const session = await getClerkSession();
     
@@ -45,9 +47,12 @@ export async function POST(req: NextRequest) {
 
     console.log(`✅ [PROFILE UPDATE] Profile updated successfully for: ${session.user.email}`);
 
+    await logUserAction('user.profile.updated', { user_id: session.user.id });
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("Erro ao atualizar perfil:", err);
     return NextResponse.json({ error: "Erro ao atualizar perfil" }, { status: 500 });
   }
 }
+
+export const POST = withLogging(POSTHandler, { tags: ['user'] });

@@ -6,6 +6,7 @@
  */
 
 import { logger } from './logger';
+import { getAuthenticatedUser } from '@/lib/clerk-auth';
 import {
   LogCategory,
   LogLevel,
@@ -821,5 +822,38 @@ export function logSlowExternalCall(data: {
       duration_ms: data.duration_ms,
       ...data.details,
     },
+  });
+}
+
+/**
+ * ==========================================
+ * USER ACTION LOGGING
+ * ==========================================
+ */
+
+/**
+ * Log de ação explícita do utilizador (mutações de negócio).
+ * Vai buscar automaticamente o utilizador autenticado via Clerk.
+ *
+ * @param action  - Nome da ação (ex: 'song.favorited', 'playlist.created')
+ * @param details - Detalhes opcionais (IDs, títulos, etc.)
+ */
+export async function logUserAction(
+  action: string,
+  details?: Record<string, unknown>
+): Promise<void> {
+  let userPayload: { user_id?: number; user_email?: string; user_role?: 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN' | 'SUPER_ADMIN' } | undefined;
+  try {
+    const u = await getAuthenticatedUser();
+    if (u) {
+      userPayload = { user_id: u.supabaseUserId, user_email: u.email, user_role: u.role as 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN' | 'SUPER_ADMIN' };
+    }
+  } catch { /* rota não autenticada */ }
+
+  logger.info(`User action: ${action}`, {
+    category: LogCategory.USER,
+    user: userPayload,
+    details: { action, ...details },
+    tags: ['user-action', action.toLowerCase().replace(/[\s./]/g, '-')],
   });
 }

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminSupabase as supabase } from "@/lib/supabase-admin";
-import { logSongViewed, logApiRequestError, toErrorContext } from "@/lib/logging-helpers";
+import { logSongViewed, logApiRequestError, toErrorContext, logUserAction } from "@/lib/logging-helpers";
 import { protectApiRoute, applySecurityHeaders } from "@/lib/api-protection";
 import { formatTagsForPostgreSQL, parseTagsFromPostgreSQL, parseMomentsFromPostgreSQL } from "@/lib/utils";
+import { withSongLogging } from "@/lib/api-route-wrapper";
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function GETHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   // Verifica se a requisição vem de uma origem autorizada
   const unauthorizedResponse = protectApiRoute(req);
   if (unauthorizedResponse) {
@@ -116,7 +117,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function PUTHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const unauthorizedResponse = protectApiRoute(req);
   if (unauthorizedResponse) {
     return unauthorizedResponse;
@@ -163,6 +164,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       song_id: id,
       details: { action: 'music_updated', title: body.title }
     });
+    await logUserAction('song.updated', { song_id: id, title: body.title });
     return NextResponse.json({ success: true });
   } catch (error) {
     logApiRequestError({
@@ -176,3 +178,6 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: 'Erro ao atualizar música' }, { status: 500 });
   }
 }
+
+export const GET = withSongLogging(GETHandler as any);
+export const PUT = withSongLogging(PUTHandler as any);

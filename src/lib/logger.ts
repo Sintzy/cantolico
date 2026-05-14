@@ -6,6 +6,7 @@
  */
 
 import winston from 'winston';
+import { after } from 'next/server';
 import {
   LogEvent,
   LogLevel,
@@ -352,13 +353,13 @@ class CentralizedLogger implements ILogger {
       ...formattedEvent,
     });
 
-    // Enviar para Loki de forma assíncrona (fire-and-forget)
-    sendToLoki(enrichedEvent, labels).catch((err) => {
-      // Ignorar erros de envio para não bloquear a aplicação
-      if (ENVIRONMENT === 'development') {
-        console.error('Failed to send log to Loki:', err);
-      }
-    });
+    // Enviar para Loki após a resposta ser enviada (garante entrega no Vercel serverless)
+    try {
+      after(() => sendToLoki(enrichedEvent, labels).catch(() => {}));
+    } catch {
+      // Fora de contexto de request (ex: inicialização, processo)
+      sendToLoki(enrichedEvent, labels).catch(() => {});
+    }
   }
 
   /**

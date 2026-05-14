@@ -1,0 +1,183 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_LOKI",
+      "label": "Loki",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "loki",
+      "pluginName": "Loki"
+    }
+  ],
+  "__requires": [
+    { "type": "datasource", "id": "loki", "name": "Loki", "version": "1.0.0" },
+    { "type": "grafana", "id": "grafana", "name": "Grafana", "version": "10.0.0" }
+  ],
+  "title": "Cantólico — User Actions",
+  "uid": "cantolico-user-actions",
+  "description": "Ações explícitas dos utilizadores: favoritos, playlists, missas, submissões, admin",
+  "tags": ["cantolico", "users", "actions"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "refresh": "1m",
+  "time": { "from": "now-24h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Ações por Minuto",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate({app=\"cantolico\",level=\"info\"} |= \"user-action\" [1m])) by ()",
+          "legendFormat": "Actions/min"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Ações por Tipo (última hora)",
+      "type": "piechart",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (action) (count_over_time({app=\"cantolico\"} | json | tags=~\".*user-action.*\" | json action=\"details.action\" [1h]))",
+          "legendFormat": "{{action}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Utilizadores Ativos (últimas 24h)",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 8, "w": 6, "h": 4 },
+      "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "count(count by (user_email) (rate({app=\"cantolico\"} |= \"user-action\" | json [24h])))",
+          "legendFormat": "Utilizadores únicos"
+        }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "value": 0, "color": "blue" }] } } }
+    },
+    {
+      "id": 4,
+      "title": "Total Ações (últimas 24h)",
+      "type": "stat",
+      "gridPos": { "x": 6, "y": 8, "w": 6, "h": 4 },
+      "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(count_over_time({app=\"cantolico\"} |= \"user-action\" [24h]))",
+          "legendFormat": "Total"
+        }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "value": 0, "color": "green" }] } } }
+    },
+    {
+      "id": 5,
+      "title": "Submissões Aprovadas/Rejeitadas",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 4 },
+      "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate({app=\"cantolico\"} |= \"submission.approved\" [5m]))",
+          "legendFormat": "Aprovadas"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate({app=\"cantolico\"} |= \"submission.rejected\" [5m]))",
+          "legendFormat": "Rejeitadas"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Log de Ações Recentes",
+      "type": "logs",
+      "gridPos": { "x": 0, "y": 12, "w": 24, "h": 10 },
+      "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{app=\"cantolico\"} |= \"user-action\" | json | line_format \"[{{.details_action}}] user={{.user_email}} {{.message}}\"",
+          "legendFormat": ""
+        }
+      ],
+      "options": { "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true }
+    },
+    {
+      "id": 7,
+      "title": "Ações por Utilizador (Top 10, última hora)",
+      "type": "table",
+      "gridPos": { "x": 0, "y": 22, "w": 12, "h": 8 },
+      "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(10, sum by (user_email) (count_over_time({app=\"cantolico\", user_email!=\"\"} |= \"user-action\" [1h])))",
+          "legendFormat": "{{user_email}}"
+        }
+      ],
+      "options": { "sortBy": [{ "displayName": "Value", "desc": true }] }
+    },
+    {
+      "id": 8,
+      "title": "Ações Admin",
+      "type": "logs",
+      "gridPos": { "x": 12, "y": 22, "w": 12, "h": 8 },
+      "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{app=\"cantolico\"} |= \"user-action\" |= \"admin\" | json | line_format \"[{{.details_action}}] admin={{.user_email}}\"",
+          "legendFormat": ""
+        }
+      ],
+      "options": { "showTime": true, "sortOrder": "Descending" }
+    },
+    {
+      "id": 9,
+      "title": "Playlists & Missas — Atividade",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 30, "w": 24, "h": 7 },
+      "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate({app=\"cantolico\"} |= \"playlist.\" [5m]))",
+          "legendFormat": "Playlists"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate({app=\"cantolico\"} |= \"mass.\" [5m]))",
+          "legendFormat": "Missas"
+        },
+        {
+          "refId": "C",
+          "expr": "sum(rate({app=\"cantolico\"} |= \"submission.\" [5m]))",
+          "legendFormat": "Submissões"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "custom": { "lineWidth": 2, "fillOpacity": 8 } }
+      }
+    }
+  ]
+}

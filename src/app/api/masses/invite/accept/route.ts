@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { getClerkSession } from '@/lib/api-middleware';
+import { logUserAction } from '@/lib/logging-helpers';
+import { withLogging } from '@/lib/api-route-wrapper';
 
-export async function POST(request: NextRequest) {
+async function POSTHandler(request: NextRequest) {
   const session = await getClerkSession();
   if (!session) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
@@ -56,5 +58,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Erro ao aceitar convite' }, { status: 500 });
   }
 
+  await logUserAction('mass.invite.accepted', { mass_id: member.massId, member_id: member.id });
   return NextResponse.json({ success: true, massId: member.massId });
 }
+
+export const POST = withLogging(POSTHandler, { tags: ['masses'] });
