@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { getClerkSession } from '@/lib/api-middleware';
 import { logUserAction } from '@/lib/logging-helpers';
+import { withPlaylistLogging } from '@/lib/api-route-wrapper';
 interface Params {
   id: string;
   itemId: string;
 }
 
 // PUT - Atualizar nota de um item da playlist
-export async function PUT(
+async function PUTHandler(
   request: NextRequest,
   { params }: { params: Promise<Params> }
 ) {
@@ -102,7 +103,7 @@ export async function PUT(
 }
 
 // DELETE - Remover item da playlist
-export async function DELETE(
+async function DELETEHandler(
   request: NextRequest,
   { params }: { params: Promise<Params> }
 ) {
@@ -196,3 +197,6 @@ export async function DELETE(
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
+
+export const PUT = withPlaylistLogging(PUTHandler as any);
+export const DELETE = withPlaylistLogging(DELETEHandler as any);
