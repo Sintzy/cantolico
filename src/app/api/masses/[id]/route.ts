@@ -50,7 +50,11 @@ export const GET = withPublicMonitoring<any>(async (request: NextRequest, contex
             slug,
             tags,
             author,
-            capo
+            capo,
+            SongVersion!SongVersion_songId_fkey (
+              sourceText,
+              keyOriginal
+            )
           )
         ),
         MassMember (
@@ -107,7 +111,10 @@ export const GET = withPublicMonitoring<any>(async (request: NextRequest, contex
         })
         .map((item: any) => ({
           ...item,
-          song: item.Song || null
+          song: item.Song ? {
+            ...item.Song,
+            currentVersion: item.Song.SongVersion?.[0] || null
+          } : null
         })),
       members: mass.MassMember || [],
       _count: {

@@ -85,7 +85,11 @@ export const PUT = withUserProtection<any>(async (request: NextRequest, session:
           slug,
           tags,
           author,
-          capo
+          capo,
+          SongVersion!SongVersion_songId_fkey (
+            sourceText,
+            keyOriginal
+          )
         )
       `)
       .single();
@@ -97,7 +101,10 @@ export const PUT = withUserProtection<any>(async (request: NextRequest, session:
 
     return NextResponse.json({
       ...updatedItem,
-      song: updatedItem.Song || null
+      song: updatedItem.Song ? {
+        ...updatedItem.Song,
+        currentVersion: (updatedItem.Song as any).SongVersion?.[0] || null
+      } : null
     });
 
   } catch (error) {

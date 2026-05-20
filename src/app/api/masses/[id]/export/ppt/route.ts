@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
+import { transposeText } from '@/lib/chord-processor';
 import pptxgen from 'pptxgenjs';
 
 const MOMENT_ORDER: Record<string, number> = {
@@ -239,7 +240,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         const rawText = format === 'chords'
           ? (version?.sourceText || version?.lyricsPlain || '')
           : (version?.lyricsPlain || version?.sourceText || '');
-        if (!rawText) continue;
+        const displayText = format === 'chords' && item.transpose
+          ? transposeText(rawText, item.transpose)
+          : rawText;
+        if (!displayText) continue;
 
         // Song title slide
         const titleSlide = pptx.addSlide();
@@ -276,7 +280,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
         // Lyric slides
         if (oneVersePerSlide) {
-          const verses = splitVerses(format === 'chords' ? rawText : stripChords(rawText));
+          const verses = splitVerses(format === 'chords' ? displayText : stripChords(displayText));
           for (const verse of verses) {
             const lyricSlide = pptx.addSlide();
             addBackground(lyricSlide);
@@ -354,7 +358,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             color: isDark ? '5a5580' : 'c4bfbb',
             fontFace: 'Helvetica', align: 'left',
           });
-          const lines = extractLyricLines(rawText);
+          const lines = extractLyricLines(displayText);
           const fontSize = lines.length > 20 ? 12 : lines.length > 12 ? 15 : 18;
           lyricSlide.addText(lines.join('\n'), {
             x: 0.7, y: 0.9, w: W - 1.4, h: H - 1.5,

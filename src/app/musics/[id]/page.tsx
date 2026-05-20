@@ -1,7 +1,7 @@
 "use client";
 import "../../../../public/styles/chords.css";
 import ChordDiagrams from '@/components/ChordDiagrams';
-import { extractChords } from '@/lib/chord-processor';
+import { detectKey, formatKeyLabel, transposeKey } from '@/lib/chord-processor';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Guitar, ChevronDown, ChevronRight, FileText, Music, Youtube, Download, ArrowLeft, Church, X } from 'lucide-react';
 import YouTube from 'react-youtube';
@@ -258,6 +258,7 @@ export default function SongPage() {
                   ) {
                     found = true;
                     setCurrentMomentLabel(getLiturgicalMomentLabel(item.moment));
+                    setTransposition(item.transpose || 0);
                   }
                 }
               }
@@ -276,6 +277,14 @@ export default function SongPage() {
     }, [id, massId]);
 
   const strippedMarkdown = (md: string) => md.replace(/\[[^\]]*\]/g, '');
+  const originalKey = React.useMemo(
+    () => detectKey(song?.currentVersion?.sourceText || ''),
+    [song?.currentVersion?.sourceText]
+  );
+  const currentKey = React.useMemo(
+    () => transposeKey(originalKey, transposition),
+    [originalKey, transposition]
+  );
 
   // Detecta o tipo de formatação dos acordes baseado na tag #mic#
   const detectChordFormat = (text: string): 'inline' | 'separate' => {
@@ -659,6 +668,10 @@ export default function SongPage() {
                 </span>
                 <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => changeTransposition(1, 'mobile_sidebar')}>+</Button>
               </div>
+              <div className="flex items-center justify-between rounded-lg bg-stone-50 px-3 py-2 text-sm">
+                <span className="font-medium text-stone-500">TOM</span>
+                <span className="font-semibold text-stone-900">{formatKeyLabel(currentKey)}</span>
+              </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="gap-2 mt-2 w-full">
@@ -788,6 +801,10 @@ export default function SongPage() {
                   {transposition >= 0 ? `+${transposition}` : transposition}
                 </span>
                 <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => changeTransposition(1, 'desktop_sidebar')}>+</Button>
+              </div>
+              <div className="flex items-center justify-between rounded-lg bg-stone-50 px-3 py-2 text-sm">
+                <span className="font-medium text-stone-500">TOM</span>
+                <span className="font-semibold text-stone-900">{formatKeyLabel(currentKey)}</span>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

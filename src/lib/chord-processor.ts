@@ -10,6 +10,39 @@ const CHORD_MAP: { [key: string]: number } = {
 
 const REVERSE_CHORD_MAP = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'];
 
+export const NOTE_LABELS_PT: Record<string, string> = {
+  C: 'Do',
+  'C#': 'Do#',
+  Db: 'Reb',
+  D: 'Re',
+  'D#': 'Re#',
+  Eb: 'Mib',
+  E: 'Mi',
+  F: 'Fa',
+  'F#': 'Fa#',
+  Gb: 'Solb',
+  G: 'Sol',
+  'G#': 'Sol#',
+  Ab: 'Lab',
+  A: 'La',
+  'A#': 'La#',
+  Bb: 'Sib',
+  B: 'Si',
+};
+
+export function formatKeyLabel(note: string | null): string {
+  if (!note) return 'Sem tom';
+  const portuguese = NOTE_LABELS_PT[note];
+  return portuguese ? `${note} (${portuguese})` : note;
+}
+
+export function transposeKey(note: string | null, semitones: number): string | null {
+  if (!note) return null;
+  const currentSemitone = CHORD_MAP[note];
+  if (currentSemitone === undefined) return note;
+  return REVERSE_CHORD_MAP[(currentSemitone + semitones + 1200) % 12];
+}
+
 export type ChordFormat = 'inline' | 'above' | 'intro';
 
 /**

@@ -8,6 +8,7 @@ import {
   formatMassTime,
   LiturgicalMoment 
 } from '@/types/mass';
+import { extractChords, transposeText } from '@/lib/chord-processor';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -136,25 +137,18 @@ export const GET = async (request: NextRequest, context: RouteParams) => {
         const version = song.SongVersion?.[0];
         const sourceText = version?.sourceText || '';
         const lyricsPlain = version?.lyricsPlain || '';
-
-        // Extract chords from source text
-        const chordRegex = /\[([A-Ga-g][#b]?(?:m|maj|min|dim|aug|sus|add|7|9|11|13)*[^\]]*)\]/g;
-        const chords: string[] = [];
-        let match;
-        while ((match = chordRegex.exec(sourceText)) !== null) {
-          if (!chords.includes(match[1])) {
-            chords.push(match[1]);
-          }
-        }
+        const transpose = item.transpose || 0;
+        const lyricsWithChords = transpose !== 0 ? transposeText(sourceText, transpose) : sourceText;
+        const chords = extractChords(lyricsWithChords);
 
         momentData.songs.push({
           title: song.title,
           author: song.author,
           lyrics: lyricsPlain,
-          lyricsWithChords: sourceText,
+          lyricsWithChords,
           chords,
           capo: song.capo,
-          transpose: item.transpose || 0,
+          transpose,
           note: item.note
         });
       }
