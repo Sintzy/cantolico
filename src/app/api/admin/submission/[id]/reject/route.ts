@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminSupabase as supabase } from "@/lib/supabase-admin";
-import { logApiRequestError, logUnauthorizedAccess, logForbiddenAccess, toErrorContext } from '@/lib/logging-helpers';
+import { logApiRequestError, logUnauthorizedAccess, logForbiddenAccess, toErrorContext, logUserAction } from '@/lib/logging-helpers';
+import { withAdminLogging } from '@/lib/api-route-wrapper';
 import { sendEmail, createRejectionEmailTemplate } from '@/lib/email';
 
 import { getClerkSession } from '@/lib/api-middleware';
-export async function POST(
+async function POSTHandler(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -117,6 +118,7 @@ export async function POST(
       }
     }
 
+    await logUserAction('submission.rejected', { submission_id: id, title: submission.title, reason: rejectionReason });
     return NextResponse.json({ success: true });
 
   } catch (error) {
@@ -124,3 +126,5 @@ export async function POST(
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
+
+export const POST = withAdminLogging(POSTHandler as any);

@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
-import { logApiRequestError, logUnauthorizedAccess, logForbiddenAccess, toErrorContext, logPlaylistUpdated } from '@/lib/logging-helpers';
+import { logApiRequestError, logUnauthorizedAccess, logForbiddenAccess, toErrorContext, logPlaylistUpdated, logUserAction } from '@/lib/logging-helpers';
+import { withPlaylistLogging } from '@/lib/api-route-wrapper';
 
 import { getClerkSession } from '@/lib/api-middleware';
-export async function GET(
+async function GETHandler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -220,13 +221,13 @@ export async function GET(
   }
 }
 
-export async function PUT(
+async function PUTHandler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getClerkSession();
-    
+
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'Authentication required' },
@@ -390,6 +391,7 @@ export async function PUT(
       }
     };
 
+    await logUserAction('playlist.updated', { playlist_id: playlistId, name: updatedPlaylist.name });
     return NextResponse.json(formattedPlaylist);
 
   } catch (error) {
@@ -401,7 +403,7 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
+async function DELETEHandler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -500,6 +502,7 @@ export async function DELETE(
       details: { playlistId, playlistName: playlist.name, action: 'playlist_deleted' }
     });
 
+    await logUserAction('playlist.deleted', { playlist_id: playlistId, name: playlist.name });
     return NextResponse.json({ success: true });
 
   } catch (error) {
@@ -511,7 +514,7 @@ export async function DELETE(
   }
 }
 
-export async function PATCH(
+async function PATCHHandler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -631,6 +634,7 @@ export async function PATCH(
       }
     });
 
+    await logUserAction('playlist.updated', { playlist_id: playlistId, name: updatedPlaylist.name });
     return NextResponse.json(updatedPlaylist);
 
   } catch (error) {
@@ -649,3 +653,8 @@ export async function PATCH(
     );
   }
 }
+
+export const GET = withPlaylistLogging(GETHandler as any);
+export const PUT = withPlaylistLogging(PUTHandler as any);
+export const DELETE = withPlaylistLogging(DELETEHandler as any);
+export const PATCH = withPlaylistLogging(PATCHHandler as any);

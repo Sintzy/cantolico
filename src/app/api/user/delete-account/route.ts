@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminSupabase as supabase } from "@/lib/supabase-admin";
-import { logApiRequestError, logUnauthorizedAccess, logForbiddenAccess, toErrorContext } from "@/lib/logging-helpers";
+import { logApiRequestError, logUnauthorizedAccess, logForbiddenAccess, toErrorContext, logUserAction } from "@/lib/logging-helpers";
+import { withLogging } from "@/lib/api-route-wrapper";
 
 import { getClerkSession } from '@/lib/api-middleware';
-export async function DELETE(req: NextRequest) {
+async function DELETEHandler(req: NextRequest) {
   try {
     // Verificar autenticação
     const session = await getClerkSession();
@@ -286,6 +287,7 @@ export async function DELETE(req: NextRequest) {
       }
     });
 
+    await logUserAction('user.account.deleted', { deleted_user_id: userIdToDelete, is_admin_action: isAdminAction });
     console.log(`✅ Conta eliminada com sucesso: ${userToDelete.email}`, {
       deletedMusics: deletedMusics?.length || 0,
       preservedMusics: updatedMusics?.length || 0,
@@ -334,3 +336,5 @@ export async function DELETE(req: NextRequest) {
     );
   }
 }
+
+export const DELETE = withLogging(DELETEHandler, { tags: ['user'] });

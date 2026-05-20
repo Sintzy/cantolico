@@ -6,6 +6,7 @@
  */
 
 import winston from 'winston';
+import { after } from 'next/server';
 import {
   LogEvent,
   LogLevel,
@@ -17,7 +18,9 @@ import {
 /**
  * Configuração do logger a partir de variáveis de ambiente
  */
-const LOKI_URL = process.env.LOKI_URL || process.env.NEXT_PUBLIC_LOKI_URL || 'http://localhost:3100';
+const LOKI_URL = process.env.LOKI_URL || 'http://localhost:3100';
+const LOKI_USERNAME = process.env.LOKI_USERNAME;
+const LOKI_PASSWORD = process.env.LOKI_PASSWORD;
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'cantolico';
 const SERVICE_NAME = 'nextjs';
 const ENVIRONMENT = (process.env.NODE_ENV || 'development') as 'development' | 'production' | 'staging' | 'test';
@@ -252,12 +255,18 @@ async function sendToLoki(event: LogEvent, labels: Record<string, string>): Prom
     };
 
     const url = `${LOKI_URL}/loki/api/v1/push`;
-    
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (LOKI_USERNAME && LOKI_PASSWORD) {
+      const credentials = Buffer.from(`${LOKI_USERNAME}:${LOKI_PASSWORD}`).toString('base64');
+      headers['Authorization'] = `Basic ${credentials}`;
+    }
+
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(payload),
     });
 
@@ -344,13 +353,13 @@ class CentralizedLogger implements ILogger {
       ...formattedEvent,
     });
 
-    // Enviar para Loki de forma assíncrona (fire-and-forget)
-    sendToLoki(enrichedEvent, labels).catch((err) => {
-      // Ignorar erros de envio para não bloquear a aplicação
-      if (ENVIRONMENT === 'development') {
-        console.error('Failed to send log to Loki:', err);
-      }
-    });
+    // Enviar para Loki após a resposta ser enviada (garante entrega no Vercel serverless)
+    try {
+      after(() => sendToLoki(enrichedEvent, labels).catch(() => {}));
+    } catch {
+      // Fora de contexto de request (ex: inicialização, processo)
+      sendToLoki(enrichedEvent, labels).catch(() => {});
+    }
   }
 
   /**

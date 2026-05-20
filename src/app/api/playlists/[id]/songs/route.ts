@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { randomUUID } from "crypto";
 import { extractUserContext, logUserCreate } from '@/lib/user-action-logger';
+import { logUserAction } from '@/lib/logging-helpers';
+import { withPlaylistLogging } from '@/lib/api-route-wrapper';
 
 import { getClerkSession } from '@/lib/api-middleware';
-export async function POST(
+async function POSTHandler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -232,6 +234,7 @@ export async function POST(
       addedBy: userDetails || null
     };
 
+    await logUserAction('playlist.song.created', { playlist_id: playlistId, song_id: actualSongId });
     return NextResponse.json(formattedItem, { status: 201 });
 
   } catch (error) {
@@ -243,7 +246,7 @@ export async function POST(
   }
 }
 
-export async function DELETE(
+async function DELETEHandler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -335,6 +338,7 @@ export async function DELETE(
       throw new Error(`Supabase error: ${deleteError.message}`);
     }
 
+    await logUserAction('playlist.song.deleted', { playlist_id: playlistId, song_id: songId });
     return NextResponse.json({ success: true });
 
   } catch (error) {
@@ -345,3 +349,6 @@ export async function DELETE(
     );
   }
 }
+
+export const POST = withPlaylistLogging(POSTHandler as any);
+export const DELETE = withPlaylistLogging(DELETEHandler as any);

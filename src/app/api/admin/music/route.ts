@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
+import { logUserAction } from '@/lib/logging-helpers';
+import { withAdminLogging } from '@/lib/api-route-wrapper';
 import { getClerkSession } from '@/lib/api-middleware';
-export async function GET(req: NextRequest) {
+async function GETHandler(req: NextRequest) {
   try {
     const session = await getClerkSession();
     if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'REVIEWER')) {
@@ -108,7 +110,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function DELETE(req: NextRequest) {
+async function DELETEHandler(req: NextRequest) {
   try {
     const session = await getClerkSession();
     if (!session || session.user.role !== 'ADMIN') {
@@ -180,6 +182,7 @@ export async function DELETE(req: NextRequest) {
       throw new Error(`Erro ao apagar música: ${songError.message}`);
     }
 
+    await logUserAction('song.deleted', { song_id: songId });
     return NextResponse.json({
       success: true,
       details: {
@@ -190,9 +193,12 @@ export async function DELETE(req: NextRequest) {
   } catch (error) {
     console.error('Erro ao eliminar música:', error);
     const errorMessage = error instanceof Error ? error.message : 'Erro interno ao eliminar música';
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: errorMessage,
       details: error instanceof Error ? error.stack : 'Erro desconhecido'
     }, { status: 500 });
   }
 }
+
+export const GET = withAdminLogging(GETHandler as any);
+export const DELETE = withAdminLogging(DELETEHandler as any);

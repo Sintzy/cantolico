@@ -4,6 +4,14 @@ grafana.json
 rls-policies.sql
 /docs/
 /scripts/scrapper
+
+# Private / local files
+CLAUDE.md
+TECHNICAL_DOCUMENTATION.md
+grafana.json
+rls-policies.sql
+/.claude/
+/docs/
 # dependencies
 /node_modules
 /.pnp
@@ -54,3 +62,4 @@ next-env.d.ts
 .vercel
 .devcontainer/devcontainer.json
 
+package-lock.json

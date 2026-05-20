@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { formatTagsForPostgreSQL } from '@/lib/utils';
+import { logUserAction } from '@/lib/logging-helpers';
+import { withAdminLogging } from '@/lib/api-route-wrapper';
 
 import { getClerkSession } from '@/lib/api-middleware';
-export async function GET(
+async function GETHandler(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -66,7 +68,7 @@ export async function GET(
   }
 }
 
-export async function PUT(
+async function PUTHandler(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -179,6 +181,7 @@ export async function PUT(
       }
     }
 
+    await logUserAction('song.updated', { song_id: songId, title, slug });
     return NextResponse.json({
       success: true,
       message: 'Música atualizada com sucesso',
@@ -191,3 +194,6 @@ export async function PUT(
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
+
+export const GET = withAdminLogging(GETHandler as any);
+export const PUT = withAdminLogging(PUTHandler as any);

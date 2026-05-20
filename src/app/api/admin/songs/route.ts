@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin-auth';
 import { adminSupabase } from '@/lib/supabase-admin';
 import { z } from 'zod';
+import { logUserAction } from '@/lib/logging-helpers';
+import { withAdminLogging } from '@/lib/api-route-wrapper';
 
 const UpdateSongSchema = z.object({
   songId: z.string(),
@@ -9,7 +11,7 @@ const UpdateSongSchema = z.object({
   reason: z.string().optional(),
 });
 
-export async function GET(request: NextRequest) {
+async function GETHandler(request: NextRequest) {
   try {
     const { error: authError } = await requireAdmin();
     if (authError) return authError;
@@ -80,7 +82,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function DELETE(request: NextRequest) {
+async function DELETEHandler(request: NextRequest) {
   try {
     const { error: authError } = await requireAdmin();
     if (authError) return authError;
@@ -103,6 +105,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Erro ao eliminar música' }, { status: 500 });
     }
 
+    await logUserAction('song.deleted', { song_id: songId });
     return NextResponse.json({ success: true });
 
   } catch (error) {
@@ -110,3 +113,6 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
+
+export const GET = withAdminLogging(GETHandler as any);
+export const DELETE = withAdminLogging(DELETEHandler as any);

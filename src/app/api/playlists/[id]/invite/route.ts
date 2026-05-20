@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { sendEmail, createPlaylistInviteEmailTemplate } from '@/lib/email'
 import crypto from 'crypto'
+import { logUserAction } from '@/lib/logging-helpers'
+import { withPlaylistLogging } from '@/lib/api-route-wrapper'
 
 import { getClerkSession } from '@/lib/api-middleware';
-export async function POST(
+async function POSTHandler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -167,6 +169,7 @@ export async function POST(
 
       console.log('Playlist invitation sent successfully:', { playlistId, inviteEmail });
 
+      await logUserAction('playlist.invited', { playlist_id: playlistId, invited_email: inviteEmail });
       return NextResponse.json({
         success: true,
         message: 'Convite enviado com sucesso'
@@ -195,3 +198,5 @@ export async function POST(
     );
   }
 }
+
+export const POST = withPlaylistLogging(POSTHandler as any);

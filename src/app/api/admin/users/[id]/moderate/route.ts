@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { z } from 'zod';
-import { logUnauthorizedAccess, logApiRequestError, toErrorContext } from '@/lib/logging-helpers';
+import { logUnauthorizedAccess, logApiRequestError, toErrorContext, logUserAction } from '@/lib/logging-helpers';
+import { withAdminLogging } from '@/lib/api-route-wrapper';
 import { sendEmail, createWarningEmailTemplate, createBanEmailTemplate, createSuspensionEmailTemplate } from '@/lib/email';
 
 import { getClerkSession } from '@/lib/api-middleware';
@@ -12,7 +13,7 @@ const ModerateUserSchema = z.object({
   duration: z.number().optional(), // Duration in days for suspensions
 });
 
-export async function POST(
+async function POSTHandler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -191,7 +192,8 @@ export async function POST(
       }
     }
 
-    return NextResponse.json({ 
+    await logUserAction('user.moderated', { target_user_id: userId, action, reason });
+    return NextResponse.json({
       success: true,
       message: `Moderação ${action} aplicada com sucesso`
     });
@@ -202,7 +204,7 @@ export async function POST(
   }
 }
 
-export async function DELETE(
+async function DELETEHandler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -246,7 +248,8 @@ export async function DELETE(
       // Don't fail the request if history fails, just log the error
     }
 
-    return NextResponse.json({ 
+    await logUserAction('user.moderation.removed', { target_user_id: userId });
+    return NextResponse.json({
       success: true,
       message: 'Moderação removida com sucesso'
     });
@@ -256,3 +259,6 @@ export async function DELETE(
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
+
+export const POST = withAdminLogging(POSTHandler as any);
+export const DELETE = withAdminLogging(DELETEHandler as any);

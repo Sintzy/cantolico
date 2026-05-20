@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { adminSupabase } from '@/lib/supabase-admin';
-import { logApiRequestError, logPlaylistSongAdded, logPlaylistSongRemoved, toErrorContext } from '@/lib/logging-helpers';
+import { logApiRequestError, logPlaylistSongAdded, logPlaylistSongRemoved, toErrorContext, logUserAction } from '@/lib/logging-helpers';
+import { withPlaylistLogging } from '@/lib/api-route-wrapper';
 import { sendEmail, createPlaylistInviteEmailTemplate } from '@/lib/email';
 import { getClerkSession } from '@/lib/api-middleware';
 // GET: List playlist members
-export async function GET(
+async function GETHandler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -122,7 +123,7 @@ export async function GET(
 }
 
 // POST: Invite user to playlist
-export async function POST(
+async function POSTHandler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -261,6 +262,7 @@ export async function POST(
       // Non-fatal: invitation record was created, email failure is logged
     }
 
+    await logUserAction('playlist.invited', { playlist_id: playlistId, invited_email: userEmail, role });
     return NextResponse.json({
       success: true,
       invitation,
@@ -281,7 +283,7 @@ export async function POST(
 }
 
 // DELETE: Remove member or cancel invitation
-export async function DELETE(
+async function DELETEHandler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -343,6 +345,7 @@ export async function DELETE(
       }
     });
 
+    await logUserAction('playlist.member.deleted', { playlist_id: playlistId, member_id: memberId });
     return NextResponse.json({
       success: true,
       message: 'Member removed successfully'
@@ -360,3 +363,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const GET = withPlaylistLogging(GETHandler as any);
+export const POST = withPlaylistLogging(POSTHandler as any);
+export const DELETE = withPlaylistLogging(DELETEHandler as any);

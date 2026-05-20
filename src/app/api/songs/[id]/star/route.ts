@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase } from '@/lib/supabase-admin';
 import { withAuthApiProtection, withApiProtection, getClerkSession } from '@/lib/api-middleware';
-import { logSongStarred } from '@/lib/logging-helpers';
+import { logSongStarred, logUserAction } from '@/lib/logging-helpers';
 
 export const POST = withAuthApiProtection(async (
   request: NextRequest,
@@ -78,6 +78,7 @@ export const POST = withAuthApiProtection(async (
         user_id: userId
       }
     });
+    await logUserAction('song.starred', { song_id: song.id, song_title: song.title, song_slug: song.slug });
 
     // Retornar contagem atualizada
     const { count: starCount } = await adminSupabase
@@ -146,6 +147,8 @@ export const DELETE = withAuthApiProtection(async (
       console.error('Error removing star:', deleteError);
       throw deleteError;
     }
+
+    await logUserAction('song.unstarred', { song_id: song.id, song_title: song.title, song_slug: song.slug });
 
     // Retornar contagem atualizada
     const { count: starCount } = await adminSupabase

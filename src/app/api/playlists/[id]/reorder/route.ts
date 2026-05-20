@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
+import { logUserAction } from '@/lib/logging-helpers';
+import { withPlaylistLogging } from '@/lib/api-route-wrapper';
 import { getClerkSession } from '@/lib/api-middleware';
 interface Params {
   id: string;
@@ -13,7 +15,7 @@ interface ReorderRequest {
 }
 
 // PUT - Reordenar músicas na playlist
-export async function PUT(
+async function PUTHandler(
   request: NextRequest,
   { params }: { params: Promise<Params> }
 ) {
@@ -94,6 +96,7 @@ export async function PUT(
     }
 
     // Retornar os items reordenados
+    await logUserAction('playlist.reordered', { playlist_id: playlistId });
     return NextResponse.json({
       success: true,
       message: 'Ordem atualizada com sucesso'
@@ -107,3 +110,5 @@ export async function PUT(
     );
   }
 }
+
+export const PUT = withPlaylistLogging(PUTHandler as any);

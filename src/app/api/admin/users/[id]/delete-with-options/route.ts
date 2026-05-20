@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase as supabaseAdmin } from '@/lib/supabase-admin';
+import { logUserAction } from '@/lib/logging-helpers';
+import { withAdminLogging } from '@/lib/api-route-wrapper';
 
 import { getClerkSession } from '@/lib/api-middleware';
 type DeleteOptions = {
@@ -9,7 +11,7 @@ type DeleteOptions = {
   deleteEverything?: boolean;
 };
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getClerkSession();
     if (!session || session.user.role !== 'ADMIN') {
@@ -57,9 +59,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // Sucesso - remoção de log redundante
     console.log(`✅ Admin ${session.user.email} deleted user ${userId}. Results:`, results);
 
+    await logUserAction('user.account.deleted', { deleted_user_id: userId, is_admin_action: true, ...results });
     return NextResponse.json({ success: true, results });
   } catch (error) {
     console.error('Admin delete with options error', error);
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
   }
 }
+
+export const POST = withAdminLogging(POSTHandler as any);

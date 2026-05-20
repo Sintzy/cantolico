@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase } from '@/lib/supabase-admin';
-import { logApiRequestError, logPlaylistSongRemoved, toErrorContext } from '@/lib/logging-helpers';
+import { logApiRequestError, logPlaylistSongRemoved, toErrorContext, logUserAction } from '@/lib/logging-helpers';
+import { withPlaylistLogging } from '@/lib/api-route-wrapper';
 
 import { getClerkSession } from '@/lib/api-middleware';
-export async function DELETE(
+async function DELETEHandler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; memberId: string }> }
 ) {
@@ -74,6 +75,7 @@ export async function DELETE(
       }
     });
 
+    await logUserAction('playlist.member.deleted', { playlist_id: playlistId, member_id: memberId });
     return NextResponse.json({
       success: true,
       message: 'Member removed successfully'
@@ -91,3 +93,5 @@ export async function DELETE(
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const DELETE = withPlaylistLogging(DELETEHandler as any);

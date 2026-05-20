@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { getClerkSession } from '@/lib/api-middleware';
+import { logUserAction } from '@/lib/logging-helpers';
+import { withLogging } from '@/lib/api-route-wrapper';
 
 interface RouteParams {
   params: Promise<{ id: string; memberId: string }>;
 }
 
 // DELETE - Remove member / cancel invite
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+async function DELETEHandler(request: NextRequest, { params }: RouteParams) {
   const session = await getClerkSession();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -51,5 +53,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'Erro ao remover membro' }, { status: 500 });
   }
 
+  await logUserAction('mass.member.deleted', { mass_id: massId, member_id: memberId });
   return NextResponse.json({ success: true });
 }
+
+export const DELETE = withLogging(DELETEHandler as any, { tags: ['masses'] });

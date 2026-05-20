@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminSupabase as supabase } from "@/lib/supabase-admin";
 import { randomUUID } from 'crypto';
-import { logApiRequestError, logUnauthorizedAccess, logForbiddenAccess, toErrorContext } from '@/lib/logging-helpers';
+import { logApiRequestError, logUnauthorizedAccess, logForbiddenAccess, toErrorContext, logUserAction } from '@/lib/logging-helpers';
+import { withAdminLogging } from '@/lib/api-route-wrapper';
 import { sendEmail, createApprovalEmailTemplate } from '@/lib/email';
 import { formatTagsForPostgreSQL, formatMomentsForPostgreSQL } from '@/lib/utils';
 
 import { getClerkSession } from '@/lib/api-middleware';
-export async function POST(
+async function POSTHandler(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -386,11 +387,12 @@ export async function POST(
       }
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    await logUserAction('submission.approved', { submission_id: id, song_id: newSong.id, title });
+    return NextResponse.json({
+      success: true,
       songId: newSong.id,
       slug: newSong.slug,
-      message: 'Submissão aprovada e música criada com sucesso' 
+      message: 'Submissão aprovada e música criada com sucesso'
     });
 
   } catch (error) {
@@ -398,3 +400,5 @@ export async function POST(
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
+
+export const POST = withAdminLogging(POSTHandler as any);

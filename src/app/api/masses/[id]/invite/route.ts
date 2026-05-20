@@ -3,13 +3,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { getClerkSession } from '@/lib/api-middleware';
 import { sendEmail, createMassInviteEmailTemplate } from '@/lib/email';
+import { logUserAction } from '@/lib/logging-helpers';
+import { withLogging } from '@/lib/api-route-wrapper';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
 // POST - Invite user to mass by email
-export async function POST(request: NextRequest, { params }: RouteParams) {
+async function POSTHandler(request: NextRequest, { params }: RouteParams) {
   const session = await getClerkSession();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -127,5 +129,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Non-fatal: record was created, email failure is logged
   }
 
+  await logUserAction('mass.invited', { mass_id: massId, invited_email: email });
   return NextResponse.json({ success: true, member: invite });
 }
+
+export const POST = withLogging(POSTHandler as any, { tags: ['masses'] });
