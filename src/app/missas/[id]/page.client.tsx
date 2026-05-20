@@ -71,8 +71,6 @@ interface MassPageClientProps {
   initialMass: Mass & { isOwner: boolean; canEdit?: boolean };
 }
 
-const TRANSPOSE_OPTIONS = Array.from({ length: 25 }, (_, index) => index - 12);
-
 export default function MassPageClient({ initialMass }: MassPageClientProps) {
   const { data: session } = useSession();
   const router = useRouter();
@@ -544,12 +542,12 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
                               <p className="text-xs text-stone-400 mt-0.5 italic">{item.note}</p>
                             )}
                           </div>
-                          {currentKey && (
-                            <Badge variant="outline" className="text-xs shrink-0 bg-stone-50 text-stone-500 border-stone-200">
-                              TOM {formatKeyLabel(currentKey)}
-                            </Badge>
-                          )}
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                            {currentKey && (
+                              <Badge variant="outline" className="text-xs shrink-0 bg-stone-50 text-stone-500 border-stone-200">
+                                TOM {formatKeyLabel(currentKey)}
+                              </Badge>
+                            )}
                             <Button variant="ghost" size="sm" asChild className="h-7 w-7 p-0 text-stone-400 hover:text-stone-700">
                               <Link href={`/musics/${item.song?.slug || item.songId}?massId=${mass.id}`}>
                                 <ExternalLink className="w-3.5 h-3.5" />
@@ -705,22 +703,16 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
                   </Button>
                 </div>
 
-                <div className="mt-3 grid grid-cols-4 gap-2">
-                  {TRANSPOSE_OPTIONS.map(option => (
-                    <button
-                      key={option}
-                      type="button"
-                      onClick={() => setToneTranspose(option)}
-                      className={`rounded-md border px-2 py-1.5 text-xs transition-colors ${
-                        toneTranspose === option
-                          ? 'border-stone-900 bg-stone-900 text-white'
-                          : 'border-stone-200 text-stone-600 hover:border-stone-300'
-                      }`}
-                    >
-                      {option >= 0 ? `+${option}` : option}
-                    </button>
-                  ))}
-                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2 w-full text-stone-500"
+                  onClick={() => setToneTranspose(0)}
+                  disabled={toneTranspose === 0}
+                >
+                  Repor tom original
+                </Button>
               </div>
             </div>
           )}
