@@ -65,6 +65,7 @@ import EditMassModal from '@/components/EditMassModal';
 import ExportMassModal from '@/components/ExportMassModal';
 import ExportOptionsModal from '@/components/ExportOptionsModal';
 import { trackEvent } from '@/lib/umami';
+import { detectKey, formatKeyLabel, transposeKey } from '@/lib/chord-processor';
 
 interface MassPageClientProps {
   initialMass: Mass & { isOwner: boolean; canEdit?: boolean };
@@ -95,6 +96,9 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
   const [addingItemId, setAddingItemId] = useState<string | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [editingToneItem, setEditingToneItem] = useState<MassItem | null>(null);
+  const [toneTranspose, setToneTranspose] = useState(0);
+  const [isSavingTone, setIsSavingTone] = useState(false);
 
   const isOwner = session?.user?.id === mass.userId;
   const isAdmin = session?.user?.role === 'ADMIN';
@@ -251,6 +255,53 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
       console.error('Error removing item:', error);
       trackEvent('mass_song_remove_failed', { source: 'mass_page', reason: 'network_error' });
       toast.error('Erro ao remover música');
+    }
+  };
+
+  const openToneDialog = (item: MassItem) => {
+    setEditingToneItem(item);
+    setToneTranspose(item.transpose || 0);
+  };
+
+  const closeToneDialog = () => {
+    if (isSavingTone) return;
+    setEditingToneItem(null);
+  };
+
+  const getItemOriginalKey = (item: MassItem | null) => {
+    if (!item?.song?.currentVersion?.sourceText) return null;
+    return detectKey(item.song.currentVersion.sourceText);
+  };
+
+  const handleSaveTone = async () => {
+    if (!editingToneItem) return;
+
+    setIsSavingTone(true);
+    try {
+      const response = await fetch(`/api/masses/${mass.id}/items/${editingToneItem.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transpose: toneTranspose })
+      });
+
+      if (response.ok) {
+        const updatedItem = await response.json();
+        trackEvent('mass_song_tone_updated', { source: 'mass_page', value: toneTranspose });
+        setMass(prev => ({
+          ...prev,
+          items: (prev.items || []).map(item => item.id === updatedItem.id ? updatedItem : item)
+        }));
+        toast.success('Tom atualizado');
+        setEditingToneItem(null);
+      } else {
+        const error = await response.json().catch(() => null);
+        toast.error(error?.error || 'Erro ao atualizar tom');
+      }
+    } catch (error) {
+      console.error('Error updating item tone:', error);
+      toast.error('Erro ao atualizar tom');
+    } finally {
+      setIsSavingTone(false);
     }
   };
 
@@ -472,6 +523,8 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
                 {isExpanded && hasItems && (
                   <div className="border-t border-stone-100 divide-y divide-stone-100">
                     {items.map((item, index) => {
+                      const originalKey = getItemOriginalKey(item);
+                      const currentKey = transposeKey(originalKey, item.transpose || 0);
                       return (
                         <div key={item.id} className="group flex items-center gap-3 px-4 py-3 hover:bg-stone-50 transition-colors">
                           <span className="text-xs text-stone-400 w-5 text-center font-mono shrink-0">{index + 1}</span>
@@ -489,26 +542,37 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
                               <p className="text-xs text-stone-400 mt-0.5 italic">{item.note}</p>
                             )}
                           </div>
-                          {item.transpose !== 0 && (
-                            <Badge variant="outline" className="text-xs shrink-0 bg-stone-50 text-stone-500 border-stone-200">
-                              {item.transpose > 0 ? '+' : ''}{item.transpose}
-                            </Badge>
-                          )}
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                            {currentKey && (
+                              <Badge variant="outline" className="text-xs shrink-0 bg-stone-50 text-stone-500 border-stone-200">
+                                TOM {formatKeyLabel(currentKey)}
+                              </Badge>
+                            )}
                             <Button variant="ghost" size="sm" asChild className="h-7 w-7 p-0 text-stone-400 hover:text-stone-700">
                               <Link href={`/musics/${item.song?.slug || item.songId}?massId=${mass.id}`}>
                                 <ExternalLink className="w-3.5 h-3.5" />
                               </Link>
                             </Button>
                             {canEdit && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleRemoveItem(item.id)}
-                                className="h-7 w-7 p-0 text-stone-400 hover:text-red-500 transition-colors"
-                              >
-                                <X className="w-3.5 h-3.5" />
-                              </Button>
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openToneDialog(item)}
+                                  className="h-7 w-7 p-0 text-stone-400 hover:text-rose-700 transition-colors"
+                                  title="Mudar tom"
+                                >
+                                  <Music className="w-3.5 h-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleRemoveItem(item.id)}
+                                  className="h-7 w-7 p-0 text-stone-400 hover:text-red-500 transition-colors"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </Button>
+                              </>
                             )}
                           </div>
                         </div>
@@ -578,6 +642,87 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddSongModal(false)} className="border-stone-200 text-stone-700">
               Cancelar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Song Tone Modal */}
+      <Dialog open={!!editingToneItem} onOpenChange={(open) => !open && closeToneDialog()}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Mudar tom da musica</DialogTitle>
+            <DialogDescription>
+              Define a transposicao desta musica apenas nesta missa.
+            </DialogDescription>
+          </DialogHeader>
+
+          {editingToneItem && (
+            <div className="space-y-4">
+              <div className="rounded-lg border border-stone-200 bg-stone-50 p-3">
+                <p className="text-sm font-medium text-stone-900">
+                  {editingToneItem.song?.title || 'Musica desconhecida'}
+                </p>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-stone-500">
+                  <div>
+                    <span className="block uppercase tracking-widest text-stone-400">Original</span>
+                    <span className="font-semibold text-stone-800">{formatKeyLabel(getItemOriginalKey(editingToneItem))}</span>
+                  </div>
+                  <div>
+                    <span className="block uppercase tracking-widest text-stone-400">Nesta missa</span>
+                    <span className="font-semibold text-rose-700">
+                      {formatKeyLabel(transposeKey(getItemOriginalKey(editingToneItem), toneTranspose))}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-stone-400">Transposicao</p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9"
+                    onClick={() => setToneTranspose(value => value - 1)}
+                  >
+                    -
+                  </Button>
+                  <span className="flex-1 select-none text-center text-lg font-bold text-stone-900">
+                    {toneTranspose >= 0 ? `+${toneTranspose}` : toneTranspose}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9"
+                    onClick={() => setToneTranspose(value => value + 1)}
+                  >
+                    +
+                  </Button>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2 w-full text-stone-500"
+                  onClick={() => setToneTranspose(0)}
+                  disabled={toneTranspose === 0}
+                >
+                  Repor tom original
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeToneDialog} className="border-stone-200 text-stone-700">
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveTone} disabled={isSavingTone}>
+              {isSavingTone ? 'A guardar...' : 'Guardar tom'}
             </Button>
           </DialogFooter>
         </DialogContent>

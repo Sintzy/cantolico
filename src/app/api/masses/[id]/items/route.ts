@@ -123,7 +123,11 @@ export const POST = withUserProtection<any>(async (request: NextRequest, session
           slug,
           tags,
           author,
-          capo
+          capo,
+          SongVersion!SongVersion_songId_fkey (
+            sourceText,
+            keyOriginal
+          )
         )
       `)
       .single();
@@ -142,7 +146,10 @@ export const POST = withUserProtection<any>(async (request: NextRequest, session
 
     return NextResponse.json({
       ...newItem,
-      song: newItem.Song || null
+      song: newItem.Song ? {
+        ...newItem.Song,
+        currentVersion: (newItem.Song as any).SongVersion?.[0] || null
+      } : null
     }, { status: 201 });
 
   } catch (error) {
@@ -212,7 +219,11 @@ export const GET = async (request: NextRequest, context: RouteParams) => {
           slug,
           tags,
           author,
-          capo
+          capo,
+          SongVersion!SongVersion_songId_fkey (
+            sourceText,
+            keyOriginal
+          )
         )
       `)
       .eq('massId', massId)
@@ -225,7 +236,10 @@ export const GET = async (request: NextRequest, context: RouteParams) => {
 
     const formattedItems = (items || []).map(item => ({
       ...item,
-      song: item.Song || null
+      song: item.Song ? {
+        ...item.Song,
+        currentVersion: (item.Song as any).SongVersion?.[0] || null
+      } : null
     }));
 
     return NextResponse.json(formattedItems);

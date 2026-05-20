@@ -98,6 +98,10 @@ export interface MassItem {
     tags?: string[];
     author?: string | null;
     capo?: number | null;
+    currentVersion?: {
+      sourceText?: string | null;
+      keyOriginal?: string | null;
+    } | null;
   } | null;
 }
 

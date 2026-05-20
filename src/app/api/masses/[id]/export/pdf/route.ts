@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PDFDocument, PDFPage, StandardFonts, rgb } from 'pdf-lib';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
+import { transposeText } from '@/lib/chord-processor';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -614,7 +615,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         const song = item.Song;
         if (!song) continue;
         const version = song.SongVersion?.[0];
-        const text = format === 'chords' ? version?.sourceText || '' : version?.lyricsPlain || '';
+        const originalText = format === 'chords' ? version?.sourceText || '' : version?.lyricsPlain || '';
+        const text = format === 'chords' && item.transpose
+          ? transposeText(originalText, item.transpose)
+          : originalText;
         if (!text) continue;
 
         ensureSpace(lineHeight * 4);
