@@ -26,7 +26,7 @@ export function ThemeToggle() {
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
       aria-label={isDark ? 'Mudar para modo claro' : 'Mudar para modo escuro'}
       className="text-muted-foreground hover:text-foreground"
-    >q
+    >
       {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
     </Button>
   );
