@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { useState, useRef, useEffect } from 'react';
 import { useSession } from '@/hooks/useClerkSession';
 import { Pencil } from 'lucide-react';
-import { Spinner, type SpinnerProps } from '@/components/ui/shadcn-io/spinner';
+import { Spinner } from '@/components/ui/shadcn-io/spinner';
 import StarButton from '@/components/StarButton';
 import AddToPlaylistButton from '@/components/AddToPlaylistButton';
 import SongExportModal from '@/components/SongExportModal';
@@ -500,8 +500,24 @@ export default function SongPage() {
   
 
   if (loading) return (
-    <div className="flex items-center justify-center h-[300px]">
-      <Spinner variant="circle" size={48} className="text-black" />
+    <div className="min-h-screen bg-white">
+      <div className="border-b border-stone-100 bg-white pt-20 pb-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+          <div className="h-5 w-20 rounded-full bg-stone-100" />
+          <div className="mt-8 h-10 w-64 max-w-full rounded-lg bg-stone-100" />
+          <div className="mt-3 h-4 w-40 rounded-full bg-stone-100" />
+        </div>
+      </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-16">
+        <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-stone-100 bg-white py-16 shadow-sm">
+          <div className="relative h-14 w-14">
+            <div className="absolute inset-0 rounded-full border border-stone-200" />
+            <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-rose-700 border-r-rose-200 animate-spin" />
+            <div className="absolute inset-4 rounded-full bg-rose-50" />
+          </div>
+          <span className="text-sm font-medium text-stone-500">A carregar musica...</span>
+        </div>
+      </div>
       <span className="sr-only">A carregar música...</span>
       {/* Visible text removed — only spinner shown */}
     </div>
