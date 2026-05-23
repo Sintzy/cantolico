@@ -542,7 +542,7 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
                               <p className="text-xs text-stone-400 mt-0.5 italic">{item.note}</p>
                             )}
                           </div>
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                          <div className="flex items-center gap-1 opacity-100 transition-opacity shrink-0 lg:opacity-0 lg:group-hover:opacity-100">
                             {currentKey && (
                               <Badge variant="outline" className="text-xs shrink-0 bg-stone-50 text-stone-500 border-stone-200">
                                 TOM {formatKeyLabel(currentKey)}
