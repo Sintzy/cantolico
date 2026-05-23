@@ -129,11 +129,13 @@ body {
 :where(.dark) .bg-stone-50,
 :where(.dark) .bg-stone-50\/50,
 :where(.dark) .bg-stone-50\/60,
-:where(.dark) .bg-stone-100 {
+:where(.dark) .bg-stone-100,
+:where(.dark) .bg-stone-200 {
   background-color: hsl(var(--muted));
 }
 
 :where(.dark) .bg-rose-50,
+:where(.dark) .bg-rose-50\/90,
 :where(.dark) .bg-red-50,
 :where(.dark) .bg-amber-50,
 :where(.dark) .bg-blue-50 {
@@ -182,8 +184,10 @@ body {
 }
 
 :where(.dark) .shadow-stone-200\/50,
+:where(.dark) .shadow-stone-200\/40,
 :where(.dark) .shadow-lg,
-:where(.dark) .shadow-sm {
+:where(.dark) .shadow-sm,
+:where(.dark) .shadow-xl {
   --tw-shadow-color: hsl(0 0% 0% / 0.3);
 }
 
@@ -207,13 +211,54 @@ body {
   color-scheme: dark;
 }
 
+:where(.dark) .chord-diagrams svg text {
+  fill: hsl(var(--muted-foreground)) !important;
+}
+
+:where(.dark) .chord-diagrams svg line,
+:where(.dark) .chord-diagrams svg path {
+  stroke: hsl(var(--muted-foreground) / 0.7) !important;
+}
+
+:where(.dark) .chord-diagrams svg circle {
+  fill: hsl(var(--foreground) / 0.82) !important;
+  stroke: hsl(var(--background)) !important;
+}
+
+:where(.dark) .chord-diagrams svg rect {
+  fill: hsl(var(--foreground) / 0.82) !important;
+  stroke: transparent !important;
+}
+
+:where(.dark) .chord-diagrams svg g:has(> rect) > circle {
+  fill: hsl(var(--foreground) / 0.82) !important;
+  stroke: transparent !important;
+}
+
+:where(.dark) .chord-diagrams svg g:has(> circle) > text {
+  fill: hsl(var(--background)) !important;
+}
+
+:where(.dark) .chord-diagrams small {
+  color: hsl(var(--card-foreground) / 0.82);
+}
+
 /* Sonner */
 .toaster .sonner-toast,
-.toaster .sonner-toast[data-type] {
+.toaster .sonner-toast[data-type],
+.toaster [data-sonner-toast],
+.toaster [data-sonner-toast][data-type] {
   background: hsl(var(--card)) !important;
   color: hsl(var(--card-foreground)) !important;
   border: 1px solid hsl(var(--border)) !important;
   box-shadow: 0 12px 30px -18px rgba(15, 23, 42, 0.45) !important;
+}
+
+.dark .toaster .sonner-toast,
+.dark .toaster .sonner-toast[data-type],
+.dark .toaster [data-sonner-toast],
+.dark .toaster [data-sonner-toast][data-type] {
+  box-shadow: 0 18px 45px -24px rgb(0 0 0 / 0.9) !important;
 }
 
 /* Utility */

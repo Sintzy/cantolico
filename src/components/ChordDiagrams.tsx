@@ -470,7 +470,7 @@ export default function ChordDiagrams({ text, size = 110, instrument = 'guitar' 
   const smallMode = size && size <= 100;
 
   return (
-    <div className={gridClass}>
+    <div className={`${gridClass} chord-diagrams`}>
       {chords.map((c, i) => (
         <div key={i} className={`flex flex-col items-center text-center w-full ${smallMode ? 'text-xs' : ''}`}>
           <div style={{ width: '100%', transform: smallMode ? 'scale(0.85)' : 'scale(1)', transformOrigin: 'top center' }}>

@@ -500,31 +500,30 @@ export default function SongPage() {
   
 
   if (loading) return (
-    <div className="min-h-screen bg-white">
-      <div className="border-b border-stone-100 bg-white pt-20 pb-8">
+    <div className="min-h-screen bg-white dark:bg-background">
+      <div className="border-b border-stone-100 bg-white pt-20 pb-8 dark:border-border dark:bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-          <div className="h-5 w-20 rounded-full bg-stone-100" />
-          <div className="mt-8 h-10 w-64 max-w-full rounded-lg bg-stone-100" />
-          <div className="mt-3 h-4 w-40 rounded-full bg-stone-100" />
+          <div className="h-5 w-20 rounded-full bg-stone-100 dark:bg-muted" />
+          <div className="mt-8 h-10 w-64 max-w-full rounded-lg bg-stone-100 dark:bg-muted" />
+          <div className="mt-3 h-4 w-40 rounded-full bg-stone-100 dark:bg-muted" />
         </div>
       </div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-16">
-        <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-stone-100 bg-white py-16 shadow-sm">
+        <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-stone-100 bg-white py-16 shadow-sm dark:border-border dark:bg-card">
           <div className="relative h-14 w-14">
-            <div className="absolute inset-0 rounded-full border border-stone-200" />
-            <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-rose-700 border-r-rose-200 animate-spin" />
-            <div className="absolute inset-4 rounded-full bg-rose-50" />
+            <div className="absolute inset-0 rounded-full border border-stone-200 dark:border-border" />
+            <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-rose-700 border-r-rose-200 animate-spin dark:border-t-rose-400 dark:border-r-rose-400/30" />
+            <div className="absolute inset-4 rounded-full bg-rose-50 dark:bg-rose-400/15" />
           </div>
-          <span className="text-sm font-medium text-stone-500">A carregar musica...</span>
+          <span className="text-sm font-medium text-stone-500 dark:text-muted-foreground">A carregar música...</span>
         </div>
       </div>
       <span className="sr-only">A carregar música...</span>
-      {/* Visible text removed — only spinner shown */}
     </div>
   );
 
   if (!song) {
-  return <div className="p-6 text-muted-foreground text-center"><Spinner variant="circle" size={32} className="text-black" /><span className="sr-only">A carregar música...</span></div>;
+  return <div className="p-6 text-muted-foreground text-center"><Spinner variant="circle" size={32} className="text-foreground" /><span className="sr-only">A carregar música...</span></div>;
   }
 
   const { title, mainInstrument, tags, moments, currentVersion, author } = song;
@@ -599,7 +598,7 @@ export default function SongPage() {
 
       {/* Mass Mode Banner */}
       {massId && massName && (
-        <div className="sticky top-16 z-40 border-b border-rose-100 bg-rose-50/90 backdrop-blur-sm">
+        <div className="sticky top-16 z-40 border-b border-rose-100 bg-rose-50/90 backdrop-blur-sm dark:border-rose-400/15 dark:bg-rose-400/10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-2 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">
               <Church className="h-3.5 w-3.5 shrink-0 text-rose-500" />
@@ -616,7 +615,7 @@ export default function SongPage() {
                 <Link
                   href={nextMusicUrl}
                   onClick={() => trackEvent('mass_next_song_clicked')}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-rose-700 bg-white border border-rose-200 hover:bg-rose-50 rounded-md px-2.5 py-1 transition-colors"
+                  className="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-white px-2.5 py-1 text-xs font-medium text-rose-700 transition-colors hover:bg-rose-50 dark:border-rose-400/20 dark:bg-card dark:text-rose-200 dark:hover:bg-rose-400/10"
                 >
                   <span className="hidden sm:inline">{nextMusicTitle || 'Próxima'}</span>
                   <span className="sm:hidden">Próxima</span>
