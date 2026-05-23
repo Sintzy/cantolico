@@ -7,6 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import * as Icons from "@/lib/site-images";
 import UserAvatar from "./ui/user-avatar";
+import { ThemeToggle } from "./ThemeToggle";
 import Fuse from "fuse.js";
 import {
   ChevronDown,
@@ -244,16 +245,20 @@ export default function Navbar() {
               </Link>
             </div>
           )}
+          <ThemeToggle />
         </div>
 
         {/* Mobile toggle */}
-        <button
-          onClick={() => setMobileOpen(v => !v)}
-          aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"}
-          className="ml-auto lg:hidden inline-flex items-center justify-center rounded-lg border border-stone-200 p-2 text-stone-600 hover:bg-stone-50 transition-colors"
-        >
-          {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-        </button>
+        <div className="ml-auto flex items-center gap-2 lg:hidden">
+          <ThemeToggle />
+          <button
+            onClick={() => setMobileOpen(v => !v)}
+            aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"}
+            className="inline-flex items-center justify-center rounded-lg border border-stone-200 p-2 text-stone-600 hover:bg-stone-50 transition-colors"
+          >
+            {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile menu */}

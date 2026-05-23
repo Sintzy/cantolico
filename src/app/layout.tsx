@@ -11,6 +11,7 @@ import Navbar from "@/components/Navbar";
 import { Toaster } from "@/components/ui/sonner";
 import Footer from "@/components/Footer";
 import { CacheProvider } from "@/components/providers/CacheProvider";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import EmailVerificationBanner from "@/components/EmailVerificationBanner";
 import AnnouncementPopup from "@/components/AnnouncementPopup";
 import { buildMetadata } from "@/lib/seo";
@@ -33,7 +34,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt" className={`${instrumentSerif.variable} ${dmSans.variable}`}>
+    <html lang="pt" suppressHydrationWarning className={`${instrumentSerif.variable} ${dmSans.variable}`}>
       <head />
       <body className={`${dmSans.className} flex flex-col min-h-screen antialiased`}>
         <Script
@@ -42,20 +43,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           data-website-id="91110ae1-32f4-4053-906d-7d063d24d07e"
           strategy="afterInteractive"
         />
-        <CacheProvider>
-          <AuthSessionProvider>
-            <Navbar />
-            <div className="h-16" />
-            <EmailVerificationBanner />
-            <main className="flex-1">
-              {children}
-              <Analytics />
-            </main>
-            <AnnouncementPopup />
-            <Toaster />
-            <Footer />
-          </AuthSessionProvider>
-        </CacheProvider>
+        <ThemeProvider>
+          <CacheProvider>
+            <AuthSessionProvider>
+              <Navbar />
+              <div className="h-16" />
+              <EmailVerificationBanner />
+              <main className="flex-1">
+                {children}
+                <Analytics />
+              </main>
+              <AnnouncementPopup />
+              <Toaster />
+              <Footer />
+            </AuthSessionProvider>
+          </CacheProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

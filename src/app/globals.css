@@ -33,6 +33,34 @@
   --radius: 0.5rem;
 }
 
+.dark {
+  color-scheme: dark;
+  --background: 24 11% 8%;
+  --foreground: 30 20% 94%;
+  --card: 24 10% 11%;
+  --card-foreground: 30 20% 94%;
+  --popover: 24 10% 10%;
+  --popover-foreground: 30 20% 94%;
+  --primary: 351 78% 60%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 24 9% 15%;
+  --secondary-foreground: 30 18% 90%;
+  --muted: 24 8% 16%;
+  --muted-foreground: 28 9% 64%;
+  --accent: 350 33% 18%;
+  --accent-foreground: 352 75% 82%;
+  --destructive: 0 70% 55%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 24 8% 21%;
+  --input: 24 8% 19%;
+  --ring: 351 78% 60%;
+  --chart-1: 351 78% 60%;
+  --chart-2: 28 86% 62%;
+  --chart-3: 199 70% 58%;
+  --chart-4: 158 54% 48%;
+  --chart-5: 262 62% 68%;
+}
+
 @theme inline {
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
@@ -73,15 +101,110 @@ html {
 }
 
 body {
-  background: hsl(var(--background));
+  background:
+    radial-gradient(circle at top left, hsl(var(--accent) / 0.3), transparent 28rem),
+    hsl(var(--background));
   color: hsl(var(--foreground));
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
 
+.dark body {
+  background:
+    radial-gradient(circle at top left, hsl(351 78% 30% / 0.16), transparent 28rem),
+    radial-gradient(circle at bottom right, hsl(38 34% 20% / 0.18), transparent 32rem),
+    hsl(var(--background));
+}
+
 :focus-visible {
   outline: 2px solid hsl(var(--ring));
   outline-offset: 2px;
+}
+
+:where(.dark) .bg-white,
+:where(.dark) .bg-white\/95 {
+  background-color: hsl(var(--card));
+}
+
+:where(.dark) .bg-stone-50,
+:where(.dark) .bg-stone-50\/50,
+:where(.dark) .bg-stone-50\/60,
+:where(.dark) .bg-stone-100 {
+  background-color: hsl(var(--muted));
+}
+
+:where(.dark) .bg-rose-50,
+:where(.dark) .bg-red-50,
+:where(.dark) .bg-amber-50,
+:where(.dark) .bg-blue-50 {
+  background-color: hsl(var(--accent));
+}
+
+:where(.dark) .text-stone-950,
+:where(.dark) .text-stone-900,
+:where(.dark) .text-stone-800,
+:where(.dark) .text-gray-900,
+:where(.dark) .text-gray-800 {
+  color: hsl(var(--foreground));
+}
+
+:where(.dark) .text-stone-700,
+:where(.dark) .text-stone-600,
+:where(.dark) .text-gray-700,
+:where(.dark) .text-gray-600 {
+  color: hsl(var(--card-foreground) / 0.78);
+}
+
+:where(.dark) .text-stone-500,
+:where(.dark) .text-stone-400,
+:where(.dark) .text-gray-500,
+:where(.dark) .text-gray-400 {
+  color: hsl(var(--muted-foreground));
+}
+
+:where(.dark) .text-rose-700,
+:where(.dark) .text-rose-600 {
+  color: hsl(352 78% 72%);
+}
+
+:where(.dark) .border-stone-100,
+:where(.dark) .border-stone-200,
+:where(.dark) .border-stone-300,
+:where(.dark) .border-gray-100,
+:where(.dark) .border-gray-200,
+:where(.dark) .border-gray-300 {
+  border-color: hsl(var(--border));
+}
+
+:where(.dark) .divide-stone-100 > :not(:last-child),
+:where(.dark) .divide-stone-200 > :not(:last-child) {
+  border-color: hsl(var(--border));
+}
+
+:where(.dark) .shadow-stone-200\/50,
+:where(.dark) .shadow-lg,
+:where(.dark) .shadow-sm {
+  --tw-shadow-color: hsl(0 0% 0% / 0.3);
+}
+
+:where(.dark) .hover\:bg-stone-50:hover,
+:where(.dark) .hover\:bg-stone-100:hover,
+:where(.dark) .hover\:bg-stone-100\/50:hover,
+:where(.dark) .hover\:bg-gray-50:hover,
+:where(.dark) .hover\:bg-red-50:hover {
+  background-color: hsl(var(--muted));
+}
+
+:where(.dark) .hover\:text-stone-900:hover,
+:where(.dark) .hover\:text-stone-800:hover,
+:where(.dark) .hover\:text-stone-700:hover {
+  color: hsl(var(--foreground));
+}
+
+:where(.dark) input,
+:where(.dark) textarea,
+:where(.dark) select {
+  color-scheme: dark;
 }
 
 /* Sonner */
