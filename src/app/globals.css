@@ -243,6 +243,80 @@ body {
   color: hsl(var(--card-foreground) / 0.82);
 }
 
+/* EasyMDE */
+:where(.dark) .EasyMDEContainer .editor-toolbar {
+  background: hsl(var(--card));
+  border-color: hsl(var(--border));
+}
+
+:where(.dark) .EasyMDEContainer .editor-toolbar button {
+  color: hsl(var(--card-foreground));
+}
+
+:where(.dark) .EasyMDEContainer .editor-toolbar button.active,
+:where(.dark) .EasyMDEContainer .editor-toolbar button:hover {
+  background: hsl(var(--muted));
+  border-color: hsl(var(--border));
+}
+
+:where(.dark) .EasyMDEContainer .editor-toolbar i.separator {
+  border-left-color: hsl(var(--border));
+  border-right-color: transparent;
+}
+
+:where(.dark) .EasyMDEContainer .CodeMirror {
+  background: hsl(var(--card));
+  border-color: hsl(var(--border));
+  color: hsl(var(--card-foreground));
+}
+
+:where(.dark) .EasyMDEContainer .CodeMirror-gutters {
+  background: hsl(var(--muted));
+  border-right-color: hsl(var(--border));
+}
+
+:where(.dark) .EasyMDEContainer .CodeMirror-linenumber,
+:where(.dark) .EasyMDEContainer .CodeMirror-placeholder,
+:where(.dark) .EasyMDEContainer .editor-statusbar {
+  color: hsl(var(--muted-foreground));
+}
+
+:where(.dark) .EasyMDEContainer .CodeMirror-cursor {
+  border-left-color: hsl(var(--foreground));
+}
+
+:where(.dark) .EasyMDEContainer .CodeMirror-selected,
+:where(.dark) .EasyMDEContainer .CodeMirror-focused .CodeMirror-selected {
+  background: hsl(var(--rose) / 0.22);
+}
+
+:where(.dark) .EasyMDEContainer .editor-preview,
+:where(.dark) .EasyMDEContainer .editor-preview-side,
+:where(.dark) .EasyMDEContainer .editor-preview-full {
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  border-color: hsl(var(--border));
+}
+
+:where(.dark) .EasyMDEContainer .editor-preview pre {
+  background: hsl(var(--muted));
+}
+
+:where(.dark) .EasyMDEContainer .cm-s-easymde .cm-comment {
+  background: hsl(var(--muted));
+}
+
+:where(.dark) .EasyMDEContainer .cm-s-easymde .cm-link,
+:where(.dark) .EasyMDEContainer .cm-s-easymde .cm-url {
+  color: hsl(207 92% 72%);
+}
+
+:where(.dark) .EasyMDEContainer .cm-s-easymde .cm-tag,
+:where(.dark) .EasyMDEContainer .cm-s-easymde .cm-attribute,
+:where(.dark) .EasyMDEContainer .cm-s-easymde .cm-string {
+  color: hsl(var(--rose));
+}
+
 /* Sonner */
 .toaster .sonner-toast,
 .toaster .sonner-toast[data-type],

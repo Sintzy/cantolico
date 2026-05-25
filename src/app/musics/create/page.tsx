@@ -499,8 +499,8 @@ export default function CreateNewMusicPage() {
                 </div>
 
                 {form.type === SongType.ACORDES ? (
-                  <div className="rounded-xl border border-stone-200 bg-white overflow-hidden">
-                    <div className="border-b border-stone-100 bg-stone-50/50 px-5 py-4">
+                  <div className="rounded-xl border border-stone-200 bg-white overflow-hidden dark:border-border dark:bg-card">
+                    <div className="border-b border-stone-100 bg-stone-50/50 px-5 py-4 dark:border-border dark:bg-muted/40">
                       <h3 className="text-sm font-semibold text-stone-900">Conteúdo Musical</h3>
                       <p className="text-xs text-stone-500 mt-0.5">Usa o editor Markdown para escrever a letra com acordes</p>
                     </div>
@@ -511,21 +511,21 @@ export default function CreateNewMusicPage() {
                             <Label htmlFor="markdown" className="text-sm font-medium text-stone-700">Editor Markdown *</Label>
                             <ChordGuideButton />
                           </div>
-                          <div className="rounded-lg border border-stone-200 bg-stone-50 p-3 text-xs text-stone-600 space-y-2">
+                          <div className="rounded-lg border border-stone-200 bg-stone-50 p-3 text-xs text-stone-600 space-y-2 dark:border-border dark:bg-muted/40 dark:text-muted-foreground">
                             <p className="font-medium text-stone-700">Formatos suportados:</p>
                             <ul className="space-y-1.5">
                               <li className="flex items-start gap-2">
                                 <span className="font-semibold text-rose-700 shrink-0">Acordes:</span>
-                                <span><code className="bg-white px-1.5 py-0.5 rounded border border-stone-200">[C][Am][F][G]</code> numa linha e a letra na seguinte</span>
+                                <span><code className="bg-white px-1.5 py-0.5 rounded border border-stone-200 dark:border-border dark:bg-background dark:text-foreground">[C][Am][F][G]</code> numa linha e a letra na seguinte</span>
                               </li>
                               <li className="flex items-start gap-2">
                                 <span className="font-semibold text-rose-700 shrink-0">Intro/Bridge:</span>
-                                <span><code className="bg-white px-1.5 py-0.5 rounded border border-stone-200">Intro:</code> seguido de <code className="bg-white px-1.5 py-0.5 rounded border border-stone-200">[A][Em][G][C]</code></span>
+                                <span><code className="bg-white px-1.5 py-0.5 rounded border border-stone-200 dark:border-border dark:bg-background dark:text-foreground">Intro:</code> seguido de <code className="bg-white px-1.5 py-0.5 rounded border border-stone-200 dark:border-border dark:bg-background dark:text-foreground">[A][Em][G][C]</code></span>
                               </li>
                             </ul>
                             <p className="text-stone-500">Usa o preview em tempo real para ver como fica o resultado.</p>
                           </div>
-                          <div className="border border-stone-200 rounded-lg overflow-hidden">
+                          <div className="border border-stone-200 rounded-lg overflow-hidden dark:border-border">
                             <MarkdownEditor
                               id="markdown"
                               value={form.markdown}
@@ -540,7 +540,7 @@ export default function CreateNewMusicPage() {
                             <Eye className="w-4 h-4 text-stone-400" />
                             Preview em Tempo Real
                           </Label>
-                          <div className="rounded-xl border border-stone-200 bg-white overflow-auto max-h-[500px] p-4">
+                          <div className="rounded-xl border border-stone-200 bg-white overflow-auto max-h-[500px] p-4 dark:border-border dark:bg-card">
                             {form.markdown.trim() ? (
                               <div className="font-mono text-sm" style={{ lineHeight: '1.8' }} dangerouslySetInnerHTML={{ __html: preview }} />
                             ) : (
