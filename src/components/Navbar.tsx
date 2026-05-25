@@ -2,11 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "@/hooks/useClerkSession";
-import { useClerk } from "@clerk/nextjs";
+import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import Image from "next/image";
 import * as Icons from "@/lib/site-images";
-import UserAvatar from "./ui/user-avatar";
 import { ThemeToggle } from "./ThemeToggle";
 import Fuse from "fuse.js";
 import {
@@ -17,7 +16,6 @@ import {
   Globe,
   Heart,
   ListMusic,
-  LogOut,
   Menu,
   Music,
   Plus,
@@ -30,22 +28,18 @@ type MusicResult = { id: string; title: string };
 
 export default function Navbar() {
   const { data: session } = useSession();
-  const { signOut } = useClerk();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [playlistsOpen, setPlaylistsOpen] = useState(false);
-  const [userOpen, setUserOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<MusicResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  const userRef = useRef<HTMLDivElement>(null);
   const playlistsRef = useRef<HTMLDivElement>(null);
   const mobileRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onClickOutside = (e: MouseEvent) => {
-      if (userRef.current && !userRef.current.contains(e.target as Node)) setUserOpen(false);
       if (playlistsRef.current && !playlistsRef.current.contains(e.target as Node)) setPlaylistsOpen(false);
       if (mobileRef.current && !mobileRef.current.contains(e.target as Node)) setMobileOpen(false);
     };
@@ -91,7 +85,7 @@ export default function Navbar() {
   const role = session?.user?.role;
   const showAdmin = role === "ADMIN";
   const showReview = role === "ADMIN" || role === "REVIEWER";
-  const close = () => { setMobileOpen(false); setPlaylistsOpen(false); setUserOpen(false); setSearchQuery(""); };
+  const close = () => { setMobileOpen(false); setPlaylistsOpen(false); setSearchQuery(""); };
 
   const linkCls = "flex items-center gap-2 px-3 py-2 text-sm font-medium text-stone-600 hover:text-stone-900 hover:bg-stone-100 rounded-lg transition-colors";
 
@@ -202,39 +196,7 @@ export default function Navbar() {
           </div>
 
           {session?.user ? (
-            <div className="relative" ref={userRef}>
-              <button
-                onClick={() => setUserOpen(v => !v)}
-                aria-expanded={userOpen}
-                className="flex items-center gap-2 rounded-lg border border-stone-200 px-2 py-1.5 hover:bg-stone-50 transition-colors"
-              >
-                <UserAvatar user={{ name: session.user.name || "Utilizador", image: session.user.image }} size={24} />
-                <ChevronDown className={`h-3 w-3 text-stone-500 transition-transform duration-200 ${userOpen ? "rotate-180" : ""}`} />
-              </button>
-              {userOpen && (
-                <div className="absolute right-0 top-full mt-1.5 w-52 rounded-xl border border-stone-200 bg-white shadow-lg shadow-stone-200/50 overflow-hidden" role="menu">
-                  <div className="border-b border-stone-100 px-4 py-3">
-                    <p className="text-sm font-semibold text-stone-900 truncate">{session.user.name || "Utilizador"}</p>
-                    <p className="text-xs text-stone-500 truncate">{session.user.email}</p>
-                  </div>
-                  <Link href="/account" onClick={close} className="flex items-center gap-2.5 px-4 py-3 text-sm text-stone-700 hover:bg-stone-50">
-                    <Settings className="h-3.5 w-3.5 text-stone-400" />
-                    Minha Conta
-                  </Link>
-                  <Link href="/starred-songs" onClick={close} className="flex items-center gap-2.5 px-4 py-3 text-sm text-stone-700 hover:bg-stone-50">
-                    <Heart className="h-3.5 w-3.5 text-stone-400" />
-                    Favoritos
-                  </Link>
-                  <button
-                    onClick={() => { close(); signOut({ redirectUrl: "/" }); }}
-                    className="flex w-full items-center gap-2.5 px-4 py-3 text-sm text-red-600 hover:bg-red-50 border-t border-stone-100"
-                  >
-                    <LogOut className="h-3.5 w-3.5" />
-                    Terminar sessão
-                  </button>
-                </div>
-              )}
-            </div>
+            <AppUserButton />
           ) : (
             <div className="flex items-center gap-2">
               <Link href="/sign-in" prefetch={false} className="px-4 py-2 text-sm font-medium text-stone-600 hover:text-stone-900 transition-colors">
@@ -250,6 +212,7 @@ export default function Navbar() {
 
         {/* Mobile toggle */}
         <div className="ml-auto flex items-center gap-2 lg:hidden">
+          {session?.user && <AppUserButton />}
           <ThemeToggle />
           <button
             onClick={() => setMobileOpen(v => !v)}
@@ -299,22 +262,37 @@ export default function Navbar() {
                 {item.label}
               </Link>
             ))}
-            {!session?.user ? (
+            {!session?.user && (
               <div className="border-t border-stone-100 pt-3 mt-2 flex gap-2">
                 <Link href="/sign-in" prefetch={false} onClick={close} className="flex-1 text-center py-2.5 text-sm font-medium text-stone-700 border border-stone-200 rounded-lg hover:bg-stone-50">Entrar</Link>
                 <Link href="/sign-up" prefetch={false} onClick={close} className="flex-1 text-center py-2.5 text-sm font-medium text-white bg-stone-900 rounded-lg hover:bg-rose-700 transition-colors">Criar conta</Link>
-              </div>
-            ) : (
-              <div className="border-t border-stone-100 pt-3 mt-2">
-                <button onClick={() => { close(); signOut({ redirectUrl: "/" }); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50">
-                  <LogOut className="h-4 w-4" />
-                  Terminar sessão
-                </button>
               </div>
             )}
           </div>
         </div>
       )}
     </header>
+  );
+}
+
+function AppUserButton() {
+  return (
+    <UserButton
+      afterSwitchSessionUrl="/"
+      appearance={{
+        elements: {
+          avatarBox: "h-8 w-8",
+          userButtonPopoverCard: "border border-stone-200 bg-white shadow-lg shadow-stone-200/50 dark:border-border dark:bg-card dark:shadow-black/40",
+          userButtonPopoverActionButton: "text-stone-700 hover:bg-stone-50 dark:text-card-foreground dark:hover:bg-muted",
+          userButtonPopoverActionButtonText: "text-sm",
+          userButtonPopoverFooter: "hidden",
+        },
+      }}
+    >
+      <UserButton.MenuItems>
+        <UserButton.Link href="/account" label="Conta Cantólico" labelIcon={<Settings className="h-4 w-4" />} />
+        <UserButton.Link href="/starred-songs" label="Favoritos" labelIcon={<Heart className="h-4 w-4" />} />
+      </UserButton.MenuItems>
+    </UserButton>
   );
 }
