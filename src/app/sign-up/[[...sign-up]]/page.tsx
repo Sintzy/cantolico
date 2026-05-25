@@ -17,7 +17,7 @@ export default function SignUpPage() {
       {/* Left panel — decorative, hidden on mobile */}
       <div className="hidden lg:flex lg:w-[420px] shrink-0 flex-col justify-between border-r border-stone-100 bg-stone-50 px-12 py-16">
         <Link href="/" className="flex items-center gap-2.5">
-          <Image src={Icons.SITE_IMAGES.logo} alt="Cantólico" width={28} height={28} />
+          <Image src={Icons.SITE_IMAGES.logo} alt="Cantólico" width={28} height={28} className="dark:invert" />
           <span className="text-base font-semibold text-stone-900 tracking-tight">
             Can<span className="text-rose-700">♱</span>ólico!
           </span>
@@ -57,7 +57,7 @@ export default function SignUpPage() {
       <div className="flex flex-1 flex-col items-center justify-center px-6 py-16">
         {/* Mobile logo */}
         <Link href="/" className="lg:hidden mb-10 flex items-center gap-2.5">
-          <Image src={Icons.SITE_IMAGES.logo} alt="Cantólico" width={24} height={24} />
+          <Image src={Icons.SITE_IMAGES.logo} alt="Cantólico" width={24} height={24} className="dark:invert" />
           <span className="text-base font-semibold text-stone-900 tracking-tight">
             Can<span className="text-rose-700">♱</span>ólico!
           </span>

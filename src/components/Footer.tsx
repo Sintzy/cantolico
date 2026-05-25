@@ -51,7 +51,7 @@ export default function Footer() {
           {/* Brand */}
           <div className="space-y-4">
             <Link href="/" className="inline-flex items-center gap-2.5">
-              <Image src={Icons.SITE_IMAGES.logo} alt="Cantólico" width={26} height={26} />
+              <Image src={Icons.SITE_IMAGES.logo} alt="Cantólico" width={26} height={26} className="dark:invert" />
               <span className="text-base font-semibold text-stone-900 tracking-tight">
                 Can<span className="text-rose-700">♱</span>ólico!
               </span>
