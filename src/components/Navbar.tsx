@@ -153,6 +153,11 @@ export default function Navbar() {
             Nova
           </Link>
 
+          <Link href="/pricing" prefetch={false} onClick={close} className={linkCls}>
+            <Crown className="h-3.5 w-3.5 text-stone-400" />
+            Planos
+          </Link>
+
           {showAdmin && (
             <Link href="/admin/dashboard" prefetch={false} onClick={close} className={linkCls}>
               <Crown className="h-3.5 w-3.5" />
@@ -252,6 +257,7 @@ export default function Navbar() {
               ...(session?.user ? [{ href: "/playlists", icon: Heart, label: "Minhas playlists" }] : [{ href: "/sign-in", icon: Heart, label: "Iniciar sessão" }]),
               ...(session?.user ? [{ href: "/missas", icon: Church, label: "Missas" }] : []),
               { href: "/musics/create", icon: Plus, label: "Nova música" },
+              { href: "/pricing", icon: Crown, label: "Planos" },
               ...(session?.user ? [{ href: "/account", icon: Settings, label: "Minha Conta" }] : []),
               ...(session?.user ? [{ href: "/starred-songs", icon: Heart, label: "Favoritos" }] : []),
               ...(showAdmin ? [{ href: "/admin/dashboard", icon: Crown, label: "Admin" }] : []),

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { transposeText } from '@/lib/chord-processor';
+import { getClerkSession } from '@/lib/api-middleware';
+import { premiumRequiredResponse, userCanUseFeature } from '@/lib/premium';
 import pptxgen from 'pptxgenjs';
 
 const MOMENT_ORDER: Record<string, number> = {
@@ -36,6 +38,19 @@ function extractLyricLines(text: string): string[] {
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const session = await getClerkSession();
+    if (!session) {
+      return NextResponse.json({ error: 'Login necessário' }, { status: 401 });
+    }
+
+    const canExportPpt = await userCanUseFeature(session.user.id, 'export_ppt');
+    if (!canExportPpt) {
+      return premiumRequiredResponse(
+        'export_ppt',
+        'A exportação PowerPoint faz parte do Cantólico Premium.'
+      );
+    }
+
     const { id } = await params;
     const { searchParams } = new URL(request.url);
     const format = searchParams.get('format') || 'lyrics';

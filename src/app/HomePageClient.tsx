@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
+  Check,
   Church,
   Globe,
   Heart,
@@ -180,6 +181,51 @@ export default function HomePageClient() {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* PLANS */}
+      <section className="border-b border-stone-100 bg-stone-50/60 px-5 py-16 md:py-20">
+        <div className="mx-auto grid max-w-screen-xl gap-10 lg:grid-cols-[1fr_0.9fr] lg:items-center">
+          <div>
+            <div className="mb-5 flex items-center gap-3">
+              <span className="h-px w-6 bg-stone-300" />
+              <span className="text-xs font-medium uppercase tracking-[0.2em] text-stone-500">Planos</span>
+            </div>
+            <h2 className="font-display text-[clamp(1.9rem,3.6vw,3.4rem)] leading-tight text-stone-900">
+              Prepara repertórios sem limites.
+            </h2>
+            <p className="mt-5 max-w-xl text-base leading-relaxed text-stone-500">
+              Para quem organiza missas e ensaios com frequência: playlists ilimitadas,
+              missas ilimitadas, PDFs sem marca e PowerPoint pronto para projeção.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <Link
+                href="/pricing"
+                prefetch={false}
+                className="inline-flex items-center gap-2 rounded-full bg-stone-900 px-7 py-3.5 text-sm font-medium tracking-wide text-white transition-colors duration-200 hover:bg-rose-700"
+              >
+                Ver planos
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+              <span className="text-sm text-stone-500">Free continua disponível para pesquisar e cantar.</span>
+            </div>
+          </div>
+
+          <div className="grid gap-2 rounded-lg border border-stone-200 bg-white p-5">
+            {[
+              'Playlists ilimitadas',
+              'Missas/repertórios ilimitados',
+              'PDFs sem marca Cantólico',
+              'Exportação PowerPoint',
+              'Duplicar missas',
+            ].map(feature => (
+              <div key={feature} className="flex items-center gap-3 rounded-md px-2 py-2 text-sm text-stone-700">
+                <Check className="h-4 w-4 text-rose-700" />
+                <span>{feature}</span>
+              </div>
+            ))}
           </div>
         </div>
       </section>

@@ -11,7 +11,25 @@ export default function AuthSessionProvider({
   children: ReactNode;
 }) {
   return (
-    <ClerkProvider localization={ptPT} afterMultiSessionSingleSignOutUrl="/">
+    <ClerkProvider
+      localization={ptPT}
+      afterMultiSessionSingleSignOutUrl="/"
+      appearance={{
+        variables: {
+          colorPrimary: "var(--clerk-color-primary)",
+          colorBackground: "var(--clerk-color-background)",
+          colorText: "var(--clerk-color-foreground)",
+          colorTextOnPrimaryBackground: "var(--clerk-color-primary-foreground)",
+          colorInputBackground: "var(--clerk-color-input)",
+          colorInputText: "var(--clerk-color-input-foreground)",
+          colorDanger: "var(--clerk-color-danger)",
+          colorSuccess: "var(--clerk-color-success)",
+          colorWarning: "var(--clerk-color-warning)",
+          borderRadius: "var(--clerk-border-radius)",
+          spacingUnit: "var(--clerk-spacing)",
+        },
+      }}
+    >
       <MultisessionSupport>{children}</MultisessionSupport>
     </ClerkProvider>
   );

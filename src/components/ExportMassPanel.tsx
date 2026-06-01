@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Layers, Download, Loader2 } from 'lucide-react';
+import { Crown, FileText, Layers, Download, Loader2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 
@@ -73,6 +73,7 @@ export default function ExportMassPanel({ massId, initialFormat = 'lyrics' }: Ex
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>(initialFormat);
+  const [isPremium, setIsPremium] = useState(false);
   const [options, setOptions] = useState({
     includeHeader: true,
     includeNotes: true,
@@ -92,23 +93,37 @@ export default function ExportMassPanel({ massId, initialFormat = 'lyrics' }: Ex
       .finally(() => setIsLoading(false));
   }, [massId]);
 
+  useEffect(() => {
+    fetch('/api/user/plan')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => setIsPremium(Boolean(data?.isPremium)))
+      .catch(() => setIsPremium(false));
+  }, []);
+
   const handleExport = () => {
+    if (selectedFormat === 'ppt' && !isPremium) {
+      window.location.href = '/pricing';
+      return;
+    }
+
     setIsExporting(true);
     const params = new URLSearchParams();
-    params.set('format', selectedFormat);
     params.set('includeHeader', options.includeHeader ? '1' : '0');
     params.set('includeNotes', options.includeNotes ? '1' : '0');
     params.set('includeMomentTitles', options.includeMomentTitles ? '1' : '0');
     params.set('pageBreakPerMoment', options.pageBreakPerMoment ? '1' : '0');
     params.set('fontSize', options.fontSize);
+    if (isPremium) params.set('branding', '0');
 
     if (selectedFormat === 'ppt') {
-      params.set('format', 'presentation');
       params.set('theme', options.pptTheme);
       params.set('oneVersePerSlide', options.pptOneVersePerSlide ? '1' : '0');
+      window.open(`/api/masses/${massId}/export/ppt?${params.toString()}`, '_blank');
+    } else {
+      params.set('format', selectedFormat);
+      window.open(`/api/masses/${massId}/export/pdf?${params.toString()}`, '_blank');
     }
 
-    window.open(`/api/masses/${massId}/export/pdf?${params.toString()}`, '_blank');
     setTimeout(() => setIsExporting(false), 1200);
   };
 
@@ -151,7 +166,9 @@ export default function ExportMassPanel({ massId, initialFormat = 'lyrics' }: Ex
         <div>
           <p className="text-xs font-semibold tracking-widest text-stone-400 uppercase mb-3">Formato</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            {FORMAT_OPTIONS.map(opt => (
+            {FORMAT_OPTIONS.map(opt => {
+              const isPremiumOnly = opt.id === 'ppt';
+              return (
               <button
                 key={opt.id}
                 onClick={() => setSelectedFormat(opt.id)}
@@ -164,17 +181,23 @@ export default function ExportMassPanel({ massId, initialFormat = 'lyrics' }: Ex
                 <span className={`mt-0.5 shrink-0 ${selectedFormat === opt.id ? 'text-stone-300' : 'text-stone-400'}`}>
                   {opt.icon}
                 </span>
-                <span>
-                  <span className={`block text-sm font-medium ${selectedFormat === opt.id ? 'text-white' : 'text-stone-900'}`}>
-                    {opt.label}
+                <span className="min-w-0">
+                  <span className={`flex items-center gap-1.5 text-sm font-medium ${selectedFormat === opt.id ? 'text-white' : 'text-stone-900'}`}>
+                    <span>{opt.label}</span>
+                    {isPremiumOnly && (
+                      <Crown className={`h-3.5 w-3.5 ${selectedFormat === opt.id ? 'text-amber-300' : 'text-amber-500'}`} />
+                    )}
                   </span>
                   <span className={`block text-xs mt-0.5 ${selectedFormat === opt.id ? 'text-stone-400' : 'text-stone-500'}`}>
-                    {opt.sub}
+                    {isPremiumOnly && !isPremium ? 'Premium - ' : ''}{opt.sub}
                   </span>
                 </span>
               </button>
-            ))}
+            )})}
           </div>
+          {isPremium && (
+            <p className="mt-2 text-xs text-emerald-700">Premium ativo: PDFs exportados sem marca Cantólico.</p>
+          )}
         </div>
 
         {/* PDF options */}
@@ -286,7 +309,7 @@ export default function ExportMassPanel({ massId, initialFormat = 'lyrics' }: Ex
           ) : (
             <Download className="h-4 w-4 mr-2" />
           )}
-          {isExporting ? 'A exportar...' : 'Exportar PDF'}
+          {isExporting ? 'A exportar...' : selectedFormat === 'ppt' ? 'Exportar PowerPoint' : 'Exportar PDF'}
         </Button>
       </div>
     </div>

@@ -4,6 +4,91 @@ import { WebhookEvent } from '@clerk/nextjs/server';
 import { createAdminSupabaseClient } from '@/lib/supabase-admin';
 import { sendWelcomeEmail } from '@/lib/email';
 
+const PREMIUM_PLAN_SLUG = process.env.CLERK_PREMIUM_PLAN_SLUG || 'premium';
+
+type ClerkBillingPlanStatus = 'inactive' | 'active' | 'past_due' | 'canceled';
+
+function getBillingPlanSlug(item: any): string | null {
+  return item?.plan?.slug || item?.planSlug || item?.plan_slug || null;
+}
+
+function getBillingPayerId(payload: any): string | null {
+  return payload?.payerId || payload?.payer_id || payload?.userId || payload?.user_id || null;
+}
+
+function getPeriodEndIso(item: any): string | null {
+  const periodEnd = item?.periodEnd || item?.period_end;
+  if (!periodEnd) return null;
+  return new Date(periodEnd).toISOString();
+}
+
+function mapClerkBillingStatus(status: string | undefined): ClerkBillingPlanStatus {
+  switch (status) {
+    case 'active':
+      return 'active';
+    case 'past_due':
+      return 'past_due';
+    case 'canceled':
+      return 'canceled';
+    case 'ended':
+    case 'expired':
+    case 'incomplete':
+    case 'abandoned':
+    default:
+      return 'inactive';
+  }
+}
+
+async function syncPremiumFromSubscriptionItem(
+  supabase: ReturnType<typeof createAdminSupabaseClient>,
+  item: any
+) {
+  const payerId = getBillingPayerId(item);
+  if (!payerId) {
+    console.warn('⚠️ [CLERK BILLING] Evento sem payerId:', item?.id);
+    return;
+  }
+
+  const planSlug = getBillingPlanSlug(item);
+  if (planSlug !== PREMIUM_PLAN_SLUG) {
+    return;
+  }
+
+  const planStatus = mapClerkBillingStatus(item?.status);
+  const stillHasAccess = planStatus === 'active' || planStatus === 'past_due' || planStatus === 'canceled';
+
+  const { error } = await supabase
+    .from('User')
+    .update({
+      plan: stillHasAccess ? 'premium' : 'free',
+      planStatus,
+      premiumUntil: getPeriodEndIso(item),
+      clerkBillingSubscriptionId: item?.subscriptionId || item?.subscription_id || null,
+      clerkBillingSubscriptionItemId: item?.id || null,
+      clerkBillingPlanSlug: planSlug,
+      updatedAt: new Date().toISOString(),
+    })
+    .eq('clerkUserId', payerId);
+
+  if (error) {
+    console.error('❌ [CLERK BILLING] Erro ao atualizar plano:', error);
+  } else {
+    console.log(`✅ [CLERK BILLING] Plano sincronizado para ${payerId}: ${planStatus}`);
+  }
+}
+
+async function syncPremiumFromSubscription(
+  supabase: ReturnType<typeof createAdminSupabaseClient>,
+  subscription: any
+) {
+  const items = subscription?.subscriptionItems || subscription?.subscription_items || [];
+  const premiumItem = items.find((item: any) => getBillingPlanSlug(item) === PREMIUM_PLAN_SLUG);
+
+  if (premiumItem) {
+    await syncPremiumFromSubscriptionItem(supabase, premiumItem);
+  }
+}
+
 // Função auxiliar para atualizar metadata no Clerk
 async function updateClerkPublicMetadata(
   clerkUserId: string,
@@ -231,6 +316,24 @@ export async function POST(req: Request) {
 
       // Registar login (opcional - para estatísticas)
       // Pode ser expandido para enviar alertas de login como antes
+      break;
+    }
+
+    case 'subscriptionItem.active':
+    case 'subscriptionItem.updated':
+    case 'subscriptionItem.canceled':
+    case 'subscriptionItem.ended':
+    case 'subscriptionItem.pastDue':
+    case 'subscriptionItem.incomplete':
+    case 'subscriptionItem.abandoned': {
+      await syncPremiumFromSubscriptionItem(supabase, evt.data);
+      break;
+    }
+
+    case 'subscription.active':
+    case 'subscription.updated':
+    case 'subscription.pastDue': {
+      await syncPremiumFromSubscription(supabase, evt.data);
       break;
     }
 

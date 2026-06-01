@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PDFDocument, PDFPage, StandardFonts, rgb } from 'pdf-lib';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { transposeText } from '@/lib/chord-processor';
+import { getClerkSession } from '@/lib/api-middleware';
+import { premiumRequiredResponse, userCanUseFeature } from '@/lib/premium';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -63,6 +65,20 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const pageBreakPerMoment = searchParams.get('pageBreakPerMoment') === '1';
     const fontSize = searchParams.get('fontSize') || 'medium';
     const oneVersePerSlide = searchParams.get('oneVersePerSlide') !== '0';
+    const withoutBranding = searchParams.get('branding') === '0' || searchParams.get('logo') === '0';
+    const session = await getClerkSession();
+    const canRemoveBranding = session
+      ? await userCanUseFeature(session.user.id, 'export_pdf_without_logo')
+      : false;
+
+    if (withoutBranding && !canRemoveBranding) {
+      return premiumRequiredResponse(
+        'export_pdf_without_logo',
+        'Exportar PDFs sem marca Cantólico faz parte do Premium.'
+      );
+    }
+
+    const showBranding = !withoutBranding;
 
     const { data: massData, error } = await supabase
       .from('Mass')
@@ -189,7 +205,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       if (includeHeader) {
         const cover = addSlide();
         accentBars(cover);
-        logoBadge(cover, 'top-right');
+        if (showBranding) logoBadge(cover, 'top-right');
 
         // Mass title — centred, auto-sized
         let nameSize = 40;
@@ -284,7 +300,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           ms.drawRectangle({ x: 0, y: 0, width: W, height: 2, color: SUBTLE });
 
           // Logo badge bottom-right
-          logoBadge(ms, 'bottom-right');
+          if (showBranding) logoBadge(ms, 'bottom-right');
 
           // Cross above title
           drawCross(ms, W / 2, H / 2 + 60, 22);
@@ -443,7 +459,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     );
 
     const drawFooter = (pg: PDFPage) => {
-      pg.drawText('cantolico.pt', { x: pageWidth / 2 - 38, y: 28, size: 9, font, color: rgb(0.6, 0.6, 0.6) });
+      if (showBranding) {
+        pg.drawText('cantolico.pt', { x: pageWidth / 2 - 38, y: 28, size: 9, font, color: rgb(0.6, 0.6, 0.6) });
+      }
     };
 
     let page = pdfDoc.addPage([pageWidth, pageHeight]);

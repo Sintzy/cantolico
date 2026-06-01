@@ -23,6 +23,12 @@ export interface Database {
           createdAt: string
           updatedAt: string
           clerkUserId: string | null
+          plan: 'free' | 'premium'
+          planStatus: 'inactive' | 'active' | 'past_due' | 'canceled'
+          premiumUntil: string | null
+          clerkBillingSubscriptionId: string | null
+          clerkBillingSubscriptionItemId: string | null
+          clerkBillingPlanSlug: string | null
         }
         Insert: {
           id?: number
@@ -37,6 +43,12 @@ export interface Database {
           createdAt?: string
           updatedAt?: string
           clerkUserId?: string | null
+          plan?: 'free' | 'premium'
+          planStatus?: 'inactive' | 'active' | 'past_due' | 'canceled'
+          premiumUntil?: string | null
+          clerkBillingSubscriptionId?: string | null
+          clerkBillingSubscriptionItemId?: string | null
+          clerkBillingPlanSlug?: string | null
         }
         Update: {
           id?: number
@@ -51,6 +63,12 @@ export interface Database {
           createdAt?: string
           updatedAt?: string
           clerkUserId?: string | null
+          plan?: 'free' | 'premium'
+          planStatus?: 'inactive' | 'active' | 'past_due' | 'canceled'
+          premiumUntil?: string | null
+          clerkBillingSubscriptionId?: string | null
+          clerkBillingSubscriptionItemId?: string | null
+          clerkBillingPlanSlug?: string | null
         }
       }
       Account: {
