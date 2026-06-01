@@ -9,7 +9,9 @@ type CheckoutInterval = 'monthly' | 'yearly';
 
 interface PlanState {
   isPremium: boolean;
-  planStatus: string;
+  canManageBilling: boolean;
+  premiumSource: 'stripe' | 'internal' | 'manual' | 'free';
+  status: string;
 }
 
 export function PricingCheckout() {
@@ -28,7 +30,9 @@ export function PricingCheckout() {
         if (mounted && data) {
           setPlanState({
             isPremium: Boolean(data.isPremium),
-            planStatus: data.planStatus || 'inactive',
+            canManageBilling: Boolean(data.canManageBilling),
+            premiumSource: data.premiumSource || 'free',
+            status: data.status || 'inactive',
           });
         }
       })
@@ -81,7 +85,20 @@ export function PricingCheckout() {
     }
   }
 
-  if (planState?.isPremium) {
+  const checkoutButtons = (
+    <>
+      <Button className="w-full" onClick={() => startCheckout('yearly')} disabled={Boolean(loading)}>
+        {loading === 'yearly' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="mr-2 h-4 w-4" />}
+        Aderir anual - 24,99 €/ano
+      </Button>
+      <Button className="w-full" variant="outline" onClick={() => startCheckout('monthly')} disabled={Boolean(loading)}>
+        {loading === 'monthly' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+        Aderir mensal - 2,99 €/mês
+      </Button>
+    </>
+  );
+
+  if (planState?.canManageBilling) {
     return (
       <div className="space-y-3">
         <Button className="w-full" onClick={openPortal} disabled={loading === 'portal'}>
@@ -108,14 +125,12 @@ export function PricingCheckout() {
           Checkout cancelado. Podes voltar a tentar quando quiseres.
         </div>
       )}
-      <Button className="w-full" onClick={() => startCheckout('yearly')} disabled={Boolean(loading)}>
-        {loading === 'yearly' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="mr-2 h-4 w-4" />}
-        Aderir anual - 24,99 €/ano
-      </Button>
-      <Button className="w-full" variant="outline" onClick={() => startCheckout('monthly')} disabled={Boolean(loading)}>
-        {loading === 'monthly' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-        Aderir mensal - 2,99 €/mês
-      </Button>
+      {planState?.isPremium && (
+        <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+          Esta conta já tem acesso Premium, mas ainda não tem uma subscrição Stripe associada.
+        </div>
+      )}
+      {checkoutButtons}
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );
