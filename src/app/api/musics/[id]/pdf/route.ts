@@ -12,9 +12,27 @@ import * as path from 'path';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const fontkit = require('fontkit');
 
+export const dynamic = 'force-dynamic';
+
+const MOMENT_LABEL_OVERRIDES: Record<string, string> = {
+  ACAO_GRACAS: 'Ação de Graças',
+  ACAO_DE_GRACAS: 'Ação de Graças',
+};
+
 const getMomentDisplayName = (momentKey: string): string => {
-  const label = getLiturgicalMomentLabel(momentKey);
-  return label === momentKey ? momentKey.replaceAll('_', ' ') : label;
+  const normalizedMomentKey = momentKey.trim();
+  const label = MOMENT_LABEL_OVERRIDES[normalizedMomentKey] || getLiturgicalMomentLabel(normalizedMomentKey);
+
+  if (label !== normalizedMomentKey) {
+    return label;
+  }
+
+  return normalizedMomentKey
+    .toLowerCase()
+    .split('_')
+    .filter(Boolean)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
 };
 
 // Chord-only line: optional parens, one or more [Chord] tokens
@@ -37,6 +55,7 @@ export async function GET(
     const showChords = searchParams.get('showChords') !== 'false';
     const fontSizeParam = searchParams.get('fontSize') || 'medium';
     const baseFontSize = fontSizeParam === 'small' ? 10 : fontSizeParam === 'large' ? 13 : 11;
+    const forceBranding = searchParams.get('branding') === '1' || searchParams.get('logo') === '1';
     const withoutBranding = searchParams.get('branding') === '0' || searchParams.get('logo') === '0';
     const session = await getClerkSession();
     const canRemoveBranding = session
@@ -50,7 +69,7 @@ export async function GET(
       );
     }
 
-    const showBranding = !withoutBranding;
+    const showBranding = canRemoveBranding ? forceBranding : true;
 
     const { data: songData, error: songError } = await supabase
       .from('Song')
