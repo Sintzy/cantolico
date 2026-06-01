@@ -30,3 +30,11 @@ end $$;
 create index if not exists "User_plan_idx" on public."User" ("plan", "planStatus");
 create index if not exists "User_stripeCustomerId_idx" on public."User" ("stripeCustomerId");
 create index if not exists "User_stripeSubscriptionId_idx" on public."User" ("stripeSubscriptionId");
+
+drop index if exists "User_clerkBillingSubscriptionId_idx";
+drop index if exists "User_clerkBillingPlanSlug_idx";
+
+alter table public."User"
+  drop column if exists "clerkBillingSubscriptionId",
+  drop column if exists "clerkBillingSubscriptionItemId",
+  drop column if exists "clerkBillingPlanSlug";
