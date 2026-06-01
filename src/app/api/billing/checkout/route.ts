@@ -38,24 +38,34 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Nao foi possivel iniciar o pagamento' }, { status: 500 });
   }
 
-  const appUrl = getAppUrl();
-  const session = await stripeRequest<StripeCheckoutSession>('/checkout/sessions', {
-    form: {
-      mode: 'subscription',
-      success_url: `${appUrl}/pricing?checkout=success`,
-      cancel_url: `${appUrl}/pricing?checkout=cancelled`,
-      'line_items[0][price]': getStripePriceId(interval),
-      'line_items[0][quantity]': 1,
-      customer: dbUser?.stripeCustomerId || undefined,
-      customer_email: dbUser?.stripeCustomerId ? undefined : user.email,
-      client_reference_id: String(user.supabaseUserId),
-      allow_promotion_codes: true,
-      'metadata[userId]': String(user.supabaseUserId),
-      'metadata[clerkUserId]': user.clerkUserId,
-      'subscription_data[metadata][userId]': String(user.supabaseUserId),
-      'subscription_data[metadata][clerkUserId]': user.clerkUserId,
-    },
-  });
+  let session: StripeCheckoutSession;
+
+  try {
+    const appUrl = getAppUrl();
+    session = await stripeRequest<StripeCheckoutSession>('/checkout/sessions', {
+      form: {
+        mode: 'subscription',
+        success_url: `${appUrl}/pricing?checkout=success`,
+        cancel_url: `${appUrl}/pricing?checkout=cancelled`,
+        'line_items[0][price]': getStripePriceId(interval),
+        'line_items[0][quantity]': 1,
+        customer: dbUser?.stripeCustomerId || undefined,
+        customer_email: dbUser?.stripeCustomerId ? undefined : user.email,
+        client_reference_id: String(user.supabaseUserId),
+        allow_promotion_codes: true,
+        'metadata[userId]': String(user.supabaseUserId),
+        'metadata[clerkUserId]': user.clerkUserId,
+        'subscription_data[metadata][userId]': String(user.supabaseUserId),
+        'subscription_data[metadata][clerkUserId]': user.clerkUserId,
+      },
+    });
+  } catch (checkoutError) {
+    console.error('[STRIPE CHECKOUT] Erro ao criar checkout:', checkoutError);
+    return NextResponse.json(
+      { error: checkoutError instanceof Error ? checkoutError.message : 'Nao foi possivel iniciar o pagamento' },
+      { status: 500 }
+    );
+  }
 
   if (!session.url) {
     return NextResponse.json({ error: 'Stripe nao devolveu URL de checkout' }, { status: 500 });

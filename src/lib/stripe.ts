@@ -31,6 +31,10 @@ export function getStripePriceId(interval: BillingInterval): string {
     throw new Error(`${envName} is not configured`);
   }
 
+  if (!priceId.startsWith('price_')) {
+    throw new Error(`${envName} must be a Stripe Price ID starting with price_, not a numeric amount`);
+  }
+
   return priceId;
 }
 
