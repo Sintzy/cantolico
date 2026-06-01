@@ -3,7 +3,7 @@ import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { transposeText, detectKey } from '@/lib/chord-processor';
 import { parseMomentsFromPostgreSQL } from '@/lib/utils';
-import { LiturgicalMoment } from '@/lib/constants';
+import { getLiturgicalMomentLabel } from '@/lib/constants';
 import { getClerkSession } from '@/lib/api-middleware';
 import { premiumRequiredResponse, userCanUseFeature } from '@/lib/premium';
 import * as fs from 'fs';
@@ -12,8 +12,10 @@ import * as path from 'path';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const fontkit = require('fontkit');
 
-const getMomentDisplayName = (momentKey: string): string =>
-  LiturgicalMoment[momentKey as keyof typeof LiturgicalMoment] || momentKey.replaceAll('_', ' ');
+const getMomentDisplayName = (momentKey: string): string => {
+  const label = getLiturgicalMomentLabel(momentKey);
+  return label === momentKey ? momentKey.replaceAll('_', ' ') : label;
+};
 
 // Chord-only line: optional parens, one or more [Chord] tokens
 const CHORD_ONLY_RE = /^(\s*\(?\s*\[[A-G][#b]?[^\]]*\]\s*\)?\s*)+\s*$/;
