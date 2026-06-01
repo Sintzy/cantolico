@@ -10,7 +10,7 @@ type CheckoutInterval = 'monthly' | 'yearly';
 interface PlanState {
   isPremium: boolean;
   canManageBilling: boolean;
-  premiumSource: 'stripe' | 'internal' | 'manual' | 'free';
+  premiumSource: 'stripe' | 'manual' | 'free';
   status: string;
 }
 

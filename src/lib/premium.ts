@@ -22,7 +22,7 @@ export interface PremiumState {
   premiumUntil: string | null;
   isPremium: boolean;
   canManageBilling: boolean;
-  premiumSource: 'stripe' | 'internal' | 'manual' | 'free';
+  premiumSource: 'stripe' | 'manual' | 'free';
 }
 
 function premiumDateIsValid(premiumUntil: string | null): boolean {
@@ -34,9 +34,7 @@ export function isPremiumState(input: {
   plan?: string | null;
   status?: string | null;
   premiumUntil?: string | null;
-  role?: string | null;
 }): boolean {
-  if (input.role === 'ADMIN' || input.role === 'SUPER_ADMIN') return true;
   if (input.plan !== 'premium') return false;
 
   if (input.status === 'active') {
@@ -53,7 +51,7 @@ export function isPremiumState(input: {
 export async function getUserPremiumState(userId: number): Promise<PremiumState> {
   const { data, error } = await supabase
     .from('User')
-    .select('plan, planStatus, premiumUntil, role, stripeCustomerId')
+    .select('plan, planStatus, premiumUntil, stripeCustomerId')
     .eq('id', userId)
     .single();
 
@@ -72,15 +70,13 @@ export async function getUserPremiumState(userId: number): Promise<PremiumState>
   const status = (data.planStatus || 'inactive') as UserPlanStatus;
   const premiumUntil = data.premiumUntil || null;
 
-  const isPremium = isPremiumState({ plan, status, premiumUntil, role: data.role });
+  const isPremium = isPremiumState({ plan, status, premiumUntil });
   const canManageBilling = Boolean(data.stripeCustomerId);
   const premiumSource = canManageBilling
     ? 'stripe'
-    : data.role === 'ADMIN' || data.role === 'SUPER_ADMIN'
-      ? 'internal'
-      : isPremium
-        ? 'manual'
-        : 'free';
+    : isPremium
+      ? 'manual'
+      : 'free';
 
   return {
     plan,
