@@ -2,9 +2,8 @@ alter table public."User"
   add column if not exists "plan" text not null default 'free',
   add column if not exists "planStatus" text not null default 'inactive',
   add column if not exists "premiumUntil" timestamptz,
-  add column if not exists "clerkBillingSubscriptionId" text,
-  add column if not exists "clerkBillingSubscriptionItemId" text,
-  add column if not exists "clerkBillingPlanSlug" text;
+  add column if not exists "stripeCustomerId" text,
+  add column if not exists "stripeSubscriptionId" text;
 
 do $$
 begin
@@ -29,5 +28,5 @@ begin
 end $$;
 
 create index if not exists "User_plan_idx" on public."User" ("plan", "planStatus");
-create index if not exists "User_clerkBillingSubscriptionId_idx" on public."User" ("clerkBillingSubscriptionId");
-create index if not exists "User_clerkBillingPlanSlug_idx" on public."User" ("clerkBillingPlanSlug");
+create index if not exists "User_stripeCustomerId_idx" on public."User" ("stripeCustomerId");
+create index if not exists "User_stripeSubscriptionId_idx" on public."User" ("stripeSubscriptionId");

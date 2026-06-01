@@ -1,8 +1,9 @@
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Check } from 'lucide-react';
-import { PricingTable } from '@clerk/nextjs';
 import { auth } from '@clerk/nextjs/server';
 import { Button } from '@/components/ui/button';
+import { PricingCheckout } from '@/components/PricingCheckout';
 import { buildMetadata } from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
@@ -14,13 +15,34 @@ export const metadata = buildMetadata({
   type: 'website',
 });
 
-const premiumHighlights = [
+const freeFeatures = [
+  'Pesquisar e ver músicas',
+  'Favoritos',
+  'Até 3 playlists',
+  'Até 3 missas/repertórios',
+  'PDFs com marca Cantólico',
+];
+
+const premiumFeatures = [
   'Playlists ilimitadas',
   'Missas e repertórios ilimitados',
   'PDFs sem marca Cantólico',
   'Exportação PowerPoint',
   'Duplicar missas',
 ];
+
+function FeatureList({ features }: { features: string[] }) {
+  return (
+    <ul className="space-y-3 text-sm text-muted-foreground">
+      {features.map(feature => (
+        <li key={feature} className="flex items-start gap-3">
+          <Check className="mt-0.5 h-4 w-4 shrink-0 text-rose-700 dark:text-rose-300" />
+          <span>{feature}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export default async function PricingPage() {
   const { userId } = await auth();
@@ -33,64 +55,84 @@ export default async function PricingPage() {
             Voltar ao início
           </Link>
 
-          <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
-            <div>
-              <div className="mb-5 flex items-center gap-3">
-                <span className="h-px w-6 bg-border" />
-                <span className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                  Planos
-                </span>
-              </div>
-              <h1 className="font-display text-[clamp(2.5rem,6vw,4.8rem)] leading-none">
-                Mais organização para quem prepara cânticos.
-              </h1>
-              <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
-                O acesso às músicas continua gratuito. O Premium desbloqueia organização ilimitada,
-                PDFs limpos e PowerPoint para quem prepara missas e ensaios com frequência.
-              </p>
+          <div className="max-w-3xl">
+            <div className="mb-5 flex items-center gap-3">
+              <span className="h-px w-6 bg-border" />
+              <span className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                Planos
+              </span>
             </div>
-
-            <div className="grid gap-2 rounded-lg border border-border bg-card p-4">
-              {premiumHighlights.map(feature => (
-                <div key={feature} className="flex items-center gap-3 rounded-md px-2 py-2 text-sm text-card-foreground">
-                  <Check className="h-4 w-4 text-rose-700 dark:text-rose-300" />
-                  <span>{feature}</span>
-                </div>
-              ))}
-            </div>
+            <h1 className="font-display text-[clamp(2.5rem,6vw,4.8rem)] leading-none">
+              Mais organização para quem prepara cânticos.
+            </h1>
+            <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
+              O acesso às músicas continua gratuito. O Premium desbloqueia organização ilimitada,
+              PDFs limpos e PowerPoint para quem prepara missas e ensaios com frequência.
+            </p>
           </div>
         </div>
       </section>
 
-      <section id="clerk-pricing-table" className="px-5 py-10 md:py-14">
-        <div className="mx-auto max-w-screen-lg">
-          {userId ? (
-            <div className="rounded-lg border border-border bg-card p-3 md:p-5">
-              <PricingTable
-                for="user"
-                newSubscriptionRedirectUrl="/pricing?checkout=success"
-              />
-            </div>
-          ) : (
-            <div className="rounded-lg border border-border bg-card px-6 py-10 text-center">
-              <h2 className="text-xl font-semibold">Entra para escolher o plano</h2>
-              <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">
-                O plano fica associado à tua conta Cantólico para desbloquear limites e exportações automaticamente.
-              </p>
-              <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-                <Button asChild>
-                  <Link href="/sign-up?redirect_url=/pricing">Criar conta</Link>
-                </Button>
-                <Button asChild variant="outline">
-                  <Link href="/sign-in?redirect_url=/pricing">Entrar</Link>
-                </Button>
+      <section className="px-5 py-10 md:py-14">
+        <div className="mx-auto grid max-w-screen-lg gap-5 lg:grid-cols-2">
+          <article className="flex min-h-[420px] flex-col rounded-lg border border-border bg-card p-6 md:p-7">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Free</p>
+              <div className="mt-4 flex items-end gap-2">
+                <span className="text-4xl font-semibold tracking-tight">0 €</span>
               </div>
+              <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+                Para pesquisar, guardar favoritos e preparar repertórios simples.
+              </p>
             </div>
-          )}
 
-          <p className="mt-5 text-center text-xs text-muted-foreground">
-            O plano gratuito continua disponível para pesquisar, cantar, guardar favoritos e preparar repertórios simples.
-          </p>
+            <div className="mt-7">
+              <FeatureList features={freeFeatures} />
+            </div>
+
+            <div className="mt-auto pt-8">
+              <Button asChild variant="outline" className="w-full">
+                <Link href="/musics">Continuar grátis</Link>
+              </Button>
+            </div>
+          </article>
+
+          <article className="flex min-h-[420px] flex-col rounded-lg border border-rose-700/30 bg-card p-6 shadow-sm dark:border-rose-300/25 md:p-7">
+            <div>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-medium text-muted-foreground">Premium</p>
+                <span className="rounded-full border border-rose-700/20 bg-rose-700/10 px-3 py-1 text-xs font-medium text-rose-700 dark:border-rose-300/25 dark:bg-rose-300/10 dark:text-rose-200">
+                  Recomendado
+                </span>
+              </div>
+              <div className="mt-4 flex flex-wrap items-end gap-x-2 gap-y-1">
+                <span className="text-4xl font-semibold tracking-tight">24,99 €</span>
+                <span className="pb-1 text-sm text-muted-foreground">/ano</span>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">Também disponível por 2,99 €/mês.</p>
+            </div>
+
+            <div className="mt-7">
+              <FeatureList features={premiumFeatures} />
+            </div>
+
+            <div className="mt-auto pt-8">
+              {userId ? (
+                <Suspense fallback={<Button className="w-full" disabled>A carregar</Button>}>
+                  <PricingCheckout />
+                </Suspense>
+              ) : (
+                <div className="space-y-3">
+                  <Button asChild className="w-full">
+                    <Link href="/sign-up?redirect_url=/pricing">Criar conta e aderir</Link>
+                  </Button>
+                  <Button asChild variant="outline" className="w-full">
+                    <Link href="/sign-in?redirect_url=/pricing">Entrar</Link>
+                  </Button>
+                </div>
+              )}
+            </div>
+          </article>
         </div>
       </section>
 

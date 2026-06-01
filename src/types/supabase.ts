@@ -26,9 +26,8 @@ export interface Database {
           plan: 'free' | 'premium'
           planStatus: 'inactive' | 'active' | 'past_due' | 'canceled'
           premiumUntil: string | null
-          clerkBillingSubscriptionId: string | null
-          clerkBillingSubscriptionItemId: string | null
-          clerkBillingPlanSlug: string | null
+          stripeCustomerId: string | null
+          stripeSubscriptionId: string | null
         }
         Insert: {
           id?: number
@@ -46,9 +45,8 @@ export interface Database {
           plan?: 'free' | 'premium'
           planStatus?: 'inactive' | 'active' | 'past_due' | 'canceled'
           premiumUntil?: string | null
-          clerkBillingSubscriptionId?: string | null
-          clerkBillingSubscriptionItemId?: string | null
-          clerkBillingPlanSlug?: string | null
+          stripeCustomerId?: string | null
+          stripeSubscriptionId?: string | null
         }
         Update: {
           id?: number
@@ -66,9 +64,8 @@ export interface Database {
           plan?: 'free' | 'premium'
           planStatus?: 'inactive' | 'active' | 'past_due' | 'canceled'
           premiumUntil?: string | null
-          clerkBillingSubscriptionId?: string | null
-          clerkBillingSubscriptionItemId?: string | null
-          clerkBillingPlanSlug?: string | null
+          stripeCustomerId?: string | null
+          stripeSubscriptionId?: string | null
         }
       }
       Account: {
