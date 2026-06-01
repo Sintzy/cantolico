@@ -11,6 +11,11 @@ export interface StripeSubscription {
   metadata?: Record<string, string | undefined>;
 }
 
+export interface StripeCustomer {
+  id: string;
+  email: string | null;
+}
+
 export function getStripeSecretKey(): string {
   const key = process.env.STRIPE_SECRET_KEY;
 
@@ -94,4 +99,8 @@ export async function stripeRequest<T>(
 
 export async function retrieveSubscription(subscriptionId: string): Promise<StripeSubscription> {
   return stripeRequest<StripeSubscription>(`/subscriptions/${subscriptionId}`);
+}
+
+export async function retrieveCustomer(customerId: string): Promise<StripeCustomer> {
+  return stripeRequest<StripeCustomer>(`/customers/${customerId}`);
 }

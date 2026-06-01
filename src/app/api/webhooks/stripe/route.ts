@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { createAdminSupabaseClient } from '@/lib/supabase-admin';
 import {
   mapStripeSubscriptionStatus,
+  retrieveCustomer,
   retrieveSubscription,
   StripeSubscription,
 } from '@/lib/stripe';
@@ -76,10 +77,57 @@ function periodEndToIso(subscription: StripeSubscription): string | null {
     : null;
 }
 
+async function findUserIdForSubscription(
+  supabase: ReturnType<typeof createAdminSupabaseClient>,
+  subscription: StripeSubscription
+): Promise<number | null> {
+  const metadataUserId = subscription.metadata?.userId ? Number(subscription.metadata.userId) : null;
+
+  if (metadataUserId && Number.isFinite(metadataUserId)) {
+    return metadataUserId;
+  }
+
+  const { data: userByCustomer } = await supabase
+    .from('User')
+    .select('id')
+    .eq('stripeCustomerId', subscription.customer)
+    .maybeSingle();
+
+  if (userByCustomer?.id) {
+    return userByCustomer.id;
+  }
+
+  const customer = await retrieveCustomer(subscription.customer).catch(error => {
+    console.warn('[STRIPE WEBHOOK] Nao foi possivel obter customer:', error);
+    return null;
+  });
+
+  if (!customer?.email) {
+    return null;
+  }
+
+  const { data: userByEmail } = await supabase
+    .from('User')
+    .select('id')
+    .eq('email', customer.email)
+    .maybeSingle();
+
+  return userByEmail?.id || null;
+}
+
 async function syncSubscription(subscription: StripeSubscription) {
   const supabase = createAdminSupabaseClient();
   const { plan, planStatus } = mapStripeSubscriptionStatus(subscription.status);
-  const userId = subscription.metadata?.userId ? Number(subscription.metadata.userId) : null;
+  const userId = await findUserIdForSubscription(supabase, subscription);
+
+  if (!userId) {
+    console.warn('[STRIPE WEBHOOK] Subscricao sem utilizador correspondente:', {
+      subscriptionId: subscription.id,
+      customerId: subscription.customer,
+    });
+    return;
+  }
+
   const update = {
     plan,
     planStatus,
@@ -89,10 +137,10 @@ async function syncSubscription(subscription: StripeSubscription) {
     updatedAt: new Date().toISOString(),
   };
 
-  const query = supabase.from('User').update(update);
-  const { error } = userId
-    ? await query.eq('id', userId)
-    : await query.eq('stripeCustomerId', subscription.customer);
+  const { error } = await supabase
+    .from('User')
+    .update(update)
+    .eq('id', userId);
 
   if (error) {
     console.error('[STRIPE WEBHOOK] Erro ao sincronizar subscricao:', error);
