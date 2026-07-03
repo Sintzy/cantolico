@@ -36,6 +36,7 @@ export default function robots(): MetadataRoute.Robots {
           '/banned/',
           '/logs/',
           '/melhor-alternativa/',
+          '/*.pdf$',
         ],
       },
       {
@@ -49,7 +50,7 @@ export default function robots(): MetadataRoute.Robots {
           '/playlists/',
           '/playlists/explore/',
         ],
-        disallow: ['/admin/', '/api/', '/auth/'],
+        disallow: ['/admin/', '/api/', '/auth/', '/*.pdf$'],
       }
     ],
     sitemap: 'https://cantolico.pt/sitemap.xml',

@@ -69,6 +69,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       }
     }
 
+    const isPublicPlaylist = playlist.isPublic === true || playlist.visibility === 'PUBLIC';
+
     // Get song count separately
     const { count: songCount } = await supabase
       .from('PlaylistItem')
@@ -80,6 +82,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       description: playlist.description || `Playlist ${playlist.name} com ${songCount || "várias"} músicas selecionadas.`,
       path: `/playlists/${id}`,
       type: "article",
+      index: isPublicPlaylist,
     });
   } catch (error) {
     // If an error occurs while fetching metadata (permissions, RLS, network),

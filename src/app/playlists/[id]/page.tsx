@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation';
-import { Metadata } from 'next';
 import { adminSupabase } from '@/lib/supabase-admin';
 import PlaylistPageClient from './page.client';
 
@@ -7,49 +6,6 @@ interface PlaylistPageProps {
   params: Promise<{
     id: string;
   }>;
-}
-
-export async function generateMetadata({ params }: PlaylistPageProps): Promise<Metadata> {
-  const { id } = await params;
-
-  try {
-    const { data: playlist, error } = await adminSupabase
-      .from('Playlist')
-      .select(`
-        name,
-        description,
-        isPublic,
-        visibility,
-        User!Playlist_userId_fkey (
-          name
-        )
-      `)
-      .eq('id', id)
-      .single();
-
-    if (error || !playlist) {
-      return {
-        title: 'Playlist não encontrada - Canções Católicas',
-        description: 'A playlist que você procura não existe ou foi removida.',
-      };
-    }
-
-    return {
-      title: `${playlist.name} - Canções Católicas`,
-      description: playlist.description || `Playlist: ${playlist.name}`,
-      openGraph: {
-        title: playlist.name,
-        description: playlist.description || 'Uma playlist de canções católicas',
-        type: 'website',
-      },
-    };
-  } catch (error) {
-    console.error('Error generating playlist metadata:', error);
-    return {
-      title: 'Playlist - Canções Católicas',
-      description: 'Playlist de canções católicas',
-    };
-  }
 }
 
 export default async function PlaylistPage({ params }: PlaylistPageProps) {
@@ -77,7 +33,7 @@ export default async function PlaylistPage({ params }: PlaylistPageProps) {
     }
 
     // Fetch items with optimized queries
-    const { data: playlistItems, error: itemsError } = await adminSupabase
+    const { data: playlistItems } = await adminSupabase
       .from('PlaylistItem')
       .select(`
         id,
@@ -93,7 +49,7 @@ export default async function PlaylistPage({ params }: PlaylistPageProps) {
     let songsData: any[] = [];
     if (playlistItems && playlistItems.length > 0) {
       const songIds = playlistItems.map(item => item.songId);
-      
+
       const { data: songs } = await adminSupabase
         .from('Song')
         .select(`
@@ -121,8 +77,8 @@ export default async function PlaylistPage({ params }: PlaylistPageProps) {
           id: song.id,
           title: song.title,
           slug: song.slug,
-          tags: Array.isArray(song.tags) ? song.tags : []
-        } : null
+          tags: Array.isArray(song.tags) ? song.tags : [],
+        } : null,
       };
     });
 
@@ -136,7 +92,7 @@ export default async function PlaylistPage({ params }: PlaylistPageProps) {
     const playlistData = {
       ...playlist,
       user: user || null,
-      items: items
+      items,
     };
 
     return <PlaylistPageClient initialPlaylist={playlistData} />;

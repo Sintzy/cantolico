@@ -1,15 +1,17 @@
 import { Metadata } from 'next';
 import { Calendar, Book, Heart, Clock, ChevronRight } from 'lucide-react';
 import BannerDisplay from '@/components/BannerDisplay';
+import { buildMetadata } from '@/lib/seo';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMetadata({
   title: 'Liturgia Diária | Cantolico',
   description: 'Acompanhe a liturgia do dia e dos próximos dias',
-};
+  path: '/liturgia',
+});
 
 interface Oracao {
   coleta?: string;
