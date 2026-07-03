@@ -3,15 +3,37 @@ import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { transposeText, detectKey } from '@/lib/chord-processor';
 import { parseMomentsFromPostgreSQL } from '@/lib/utils';
-import { LiturgicalMoment } from '@/lib/constants';
+import { getLiturgicalMomentLabel } from '@/lib/constants';
+import { getClerkSession } from '@/lib/api-middleware';
+import { premiumRequiredResponse, userCanUseFeature } from '@/lib/premium';
 import * as fs from 'fs';
 import * as path from 'path';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const fontkit = require('fontkit');
 
-const getMomentDisplayName = (momentKey: string): string =>
-  LiturgicalMoment[momentKey as keyof typeof LiturgicalMoment] || momentKey.replaceAll('_', ' ');
+export const dynamic = 'force-dynamic';
+
+const MOMENT_LABEL_OVERRIDES: Record<string, string> = {
+  ACAO_GRACAS: 'Ação de Graças',
+  ACAO_DE_GRACAS: 'Ação de Graças',
+};
+
+const getMomentDisplayName = (momentKey: string): string => {
+  const normalizedMomentKey = momentKey.trim();
+  const label = MOMENT_LABEL_OVERRIDES[normalizedMomentKey] || getLiturgicalMomentLabel(normalizedMomentKey);
+
+  if (label !== normalizedMomentKey) {
+    return label;
+  }
+
+  return normalizedMomentKey
+    .toLowerCase()
+    .split('_')
+    .filter(Boolean)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
 
 // Chord-only line: optional parens, one or more [Chord] tokens
 const CHORD_ONLY_RE = /^(\s*\(?\s*\[[A-G][#b]?[^\]]*\]\s*\)?\s*)+\s*$/;
@@ -33,6 +55,21 @@ export async function GET(
     const showChords = searchParams.get('showChords') !== 'false';
     const fontSizeParam = searchParams.get('fontSize') || 'medium';
     const baseFontSize = fontSizeParam === 'small' ? 10 : fontSizeParam === 'large' ? 13 : 11;
+    const forceBranding = searchParams.get('branding') === '1' || searchParams.get('logo') === '1';
+    const withoutBranding = searchParams.get('branding') === '0' || searchParams.get('logo') === '0';
+    const session = await getClerkSession();
+    const canRemoveBranding = session
+      ? await userCanUseFeature(session.user.id, 'export_pdf_without_logo')
+      : false;
+
+    if (withoutBranding && !canRemoveBranding) {
+      return premiumRequiredResponse(
+        'export_pdf_without_logo',
+        'Exportar PDFs sem marca Cantólico faz parte do Premium.'
+      );
+    }
+
+    const showBranding = canRemoveBranding ? forceBranding : true;
 
     const { data: songData, error: songError } = await supabase
       .from('Song')
@@ -84,11 +121,11 @@ export async function GET(
     let y = page.getSize().height - 40;
 
     // Logo
-    if (logoImage) {
+    if (showBranding && logoImage) {
       const logoSize = 30;
       page.drawImage(logoImage, { x: width / 2 - logoSize / 2, y: y - logoSize, width: logoSize, height: logoSize });
       y -= logoSize + 15;
-    } else {
+    } else if (showBranding) {
       page.drawText('Cantolico', { x: width / 2 - 30, y, size: 12, font: boldFont, color: rgb(0.2, 0.4, 0.8) });
       y -= 25;
     }
@@ -372,7 +409,9 @@ export async function GET(
     renderContent(sourceText, y);
 
     // Footer
-    page.drawText('cantolico.pt', { x: width / 2 - 38, y: 30, size: 9, font, color: rgb(0.6, 0.6, 0.6) });
+    if (showBranding) {
+      page.drawText('cantolico.pt', { x: width / 2 - 38, y: 30, size: 9, font, color: rgb(0.6, 0.6, 0.6) });
+    }
 
     const pdfBytes = await pdfDoc.save();
     return new NextResponse(Buffer.from(pdfBytes), {

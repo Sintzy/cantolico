@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { FileText } from 'lucide-react';
+import { Crown, FileText } from 'lucide-react';
 
 interface SongExportModalProps {
   open: boolean;
@@ -34,9 +34,24 @@ export default function SongExportModal({
 }: SongExportModalProps) {
   const [withChords, setWithChords] = useState(showChordsDefault);
   const [fontSize, setFontSize] = useState<FontSize>('medium');
+  const [isPremium, setIsPremium] = useState(false);
+
+  React.useEffect(() => {
+    if (!open) return;
+    fetch('/api/user/plan')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => setIsPremium(Boolean(data?.isPremium)))
+      .catch(() => setIsPremium(false));
+  }, [open]);
 
   const handleGenerate = () => {
-    const url = `/api/musics/${songId}/pdf?transposition=${transposition}&showChords=${withChords}&fontSize=${fontSize}`;
+    const params = new URLSearchParams();
+    params.set('transposition', String(transposition));
+    params.set('showChords', String(withChords));
+    params.set('fontSize', fontSize);
+    if (isPremium) params.set('branding', '0');
+
+    const url = `/api/musics/${songId}/pdf?${params.toString()}`;
     window.open(url, '_blank');
     onClose();
   };
@@ -94,6 +109,13 @@ export default function SongExportModal({
               ))}
             </div>
           </div>
+
+          {isPremium && (
+            <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              <Crown className="h-3.5 w-3.5" />
+              Premium ativo: este PDF será exportado sem marca Cantólico.
+            </div>
+          )}
         </div>
 
         {/* Footer */}

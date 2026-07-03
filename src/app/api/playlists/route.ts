@@ -6,6 +6,7 @@ import { randomUUID } from 'crypto';
 import { requireEmailVerification } from '@/lib/email';
 import { getVisibilityFlags, getVisibilityFromPlaylist } from '@/types/playlist';
 import { extractUserContext, logUserCreate, logUserRead } from '@/lib/user-action-logger';
+import { canCreatePlaylist, premiumRequiredResponse } from '@/lib/premium';
 
 export const GET = withPublicMonitoring<any>(async (request: NextRequest) => {
   try {
@@ -137,6 +138,14 @@ export const POST = withUserProtection<any>(async (request: NextRequest, session
       return NextResponse.json(
         { error: 'Nome da playlist é obrigatório' },
         { status: 400 }
+      );
+    }
+
+    const createGate = await canCreatePlaylist(session.user.id);
+    if (!createGate.allowed) {
+      return premiumRequiredResponse(
+        'unlimited_playlists',
+        `O plano gratuito permite criar até ${createGate.limit} playlists.`
       );
     }
 

@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   
   const { data: mass } = await supabase
     .from('Mass')
-    .select('name, description, celebration')
+    .select('name, description, celebration, visibility')
     .eq('id', id)
     .single();
 
@@ -36,6 +36,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     description,
     path: `/missas/${id}`,
     type: 'article',
+    index: mass.visibility === 'PUBLIC',
   });
 }
 

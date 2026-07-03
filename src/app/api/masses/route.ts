@@ -5,6 +5,7 @@ import { withUserProtection, withPublicMonitoring } from '@/lib/enhanced-api-pro
 import { randomUUID } from 'crypto';
 import { requireEmailVerification } from '@/lib/email';
 import { Mass, MassVisibility, LiturgicalColor } from '@/types/mass';
+import { canCreateMass, premiumRequiredResponse } from '@/lib/premium';
 
 // GET - List masses
 export const GET = withPublicMonitoring<any>(async (request: NextRequest) => {
@@ -121,6 +122,14 @@ export const POST = withUserProtection<any>(async (request: NextRequest, session
       return NextResponse.json(
         { error: 'Nome da missa é obrigatório' },
         { status: 400 }
+      );
+    }
+
+    const createGate = await canCreateMass(session.user.id);
+    if (!createGate.allowed) {
+      return premiumRequiredResponse(
+        'unlimited_masses',
+        `O plano gratuito permite criar até ${createGate.limit} missas/repertórios.`
       );
     }
 

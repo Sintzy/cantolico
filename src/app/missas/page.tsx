@@ -3,11 +3,14 @@ import { getAuthenticatedUser } from '@/lib/clerk-auth';
 import { redirect } from 'next/navigation';
 import MassesPageClient from './page.client';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
+import { buildMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMetadata({
   title: 'Missas | Cantólico',
   description: 'Organiza as tuas missas com cânticos para cada momento litúrgico',
-};
+  path: '/missas',
+  index: false,
+});
 
 const MASS_SELECT = `
   id,

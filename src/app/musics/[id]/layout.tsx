@@ -1,7 +1,6 @@
 import { Metadata } from "next";
 import { cache } from "react";
-import { supabase } from "@/lib/supabase-client";
-import { findSongBySlug } from "@/lib/slugs";
+import { adminSupabase } from "@/lib/supabase-admin";
 import { buildMetadata, absoluteUrl } from "@/lib/seo";
 import { getLiturgicalMomentLabel } from "@/lib/constants";
 
@@ -11,19 +10,47 @@ interface MusicLayoutProps {
 }
 
 const getSongForLayout = cache(async (id: string) => {
-  let { data: song } = await supabase
+  const { data: songs } = await adminSupabase
     .from('Song')
-    .select('id, title, slug, tags, moments, author, createdAt')
-    .eq('id', id)
-    .single();
+    .select(`
+      id,
+      title,
+      slug,
+      tags,
+      moments,
+      author,
+      createdAt,
+      SongVersion!Song_currentVersionId_fkey (
+        sourceText
+      )
+    `)
+    .or(`id.eq.${id},slug.eq.${id}`)
+    .limit(1);
 
-  if (!song) {
-    const bySlug = await findSongBySlug(id);
-    if (bySlug) song = bySlug as typeof song;
-  }
-
-  return song;
+  return songs?.[0] || null;
 });
+
+function stripChordsForSeo(text?: string | null) {
+  if (!text) return "";
+
+  return text
+    .replace(/^#mic#\s*/i, "")
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(line => line && !/^(?:\s*\[?[A-G][#b]?[^\]\s]*\]?\s*)+$/.test(line))
+    .join(" ")
+    .replace(/\[[^\]]+\]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function truncateDescription(text: string, maxLength = 155) {
+  if (text.length <= maxLength) return text;
+
+  const trimmed = text.slice(0, maxLength - 1);
+  const lastSpace = trimmed.lastIndexOf(" ");
+  return `${trimmed.slice(0, lastSpace > 80 ? lastSpace : trimmed.length).trim()}...`;
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
@@ -42,11 +69,18 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
     const moments = Array.isArray(song.moments) ? song.moments : [];
     const momentLabels = moments.map(m => getLiturgicalMomentLabel(m)).filter(Boolean);
+    const songVersion = song.SongVersion as { sourceText?: string | null } | { sourceText?: string | null }[] | null;
+    const sourceText = Array.isArray(songVersion)
+      ? songVersion[0]?.sourceText
+      : songVersion?.sourceText;
+    const lyricExcerpt = truncateDescription(stripChordsForSeo(sourceText), 120);
 
     const descParts = [`${song.title} com letra e acordes`];
     if (song.author) descParts.push(`por ${song.author}`);
     if (momentLabels.length) descParts.push(`para ${momentLabels.join(', ')}`);
     descParts.push('em português');
+
+    if (lyricExcerpt) descParts.push(`Letra: ${lyricExcerpt}`);
 
     return buildMetadata({
       title: `${song.title} | Letra e Acordes`,

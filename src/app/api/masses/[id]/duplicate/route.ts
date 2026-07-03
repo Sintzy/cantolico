@@ -3,6 +3,7 @@ import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { withUserProtection } from '@/lib/enhanced-api-protection';
 import { randomUUID } from 'crypto';
 import { requireEmailVerification } from '@/lib/email';
+import { canCreateMass, premiumRequiredResponse, userCanUseFeature } from '@/lib/premium';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -21,6 +22,22 @@ export const POST = withUserProtection<any>(async (request: NextRequest, session
       return NextResponse.json(
         { error: emailVerificationResult.error },
         { status: 403 }
+      );
+    }
+
+    const canDuplicateMass = await userCanUseFeature(session.user.id, 'duplicate_mass');
+    if (!canDuplicateMass) {
+      return premiumRequiredResponse(
+        'duplicate_mass',
+        'Duplicar missas faz parte do Cantólico Premium.'
+      );
+    }
+
+    const createGate = await canCreateMass(session.user.id);
+    if (!createGate.allowed) {
+      return premiumRequiredResponse(
+        'unlimited_masses',
+        `O plano gratuito permite criar até ${createGate.limit} missas/repertórios.`
       );
     }
 

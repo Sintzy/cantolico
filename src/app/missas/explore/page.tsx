@@ -1,11 +1,13 @@
 import { Metadata } from 'next';
 import ExploreMassesClient from './page.client';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
+import { buildMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMetadata({
   title: 'Explorar Missas | Cantólico',
   description: 'Descobre missas públicas organizadas pela comunidade',
-};
+  path: '/missas/explore',
+});
 
 async function getPublicMasses() {
   const { data: masses, error } = await supabase

@@ -23,6 +23,11 @@ export interface Database {
           createdAt: string
           updatedAt: string
           clerkUserId: string | null
+          plan: 'free' | 'premium'
+          planStatus: 'inactive' | 'active' | 'past_due' | 'canceled'
+          premiumUntil: string | null
+          stripeCustomerId: string | null
+          stripeSubscriptionId: string | null
         }
         Insert: {
           id?: number
@@ -37,6 +42,11 @@ export interface Database {
           createdAt?: string
           updatedAt?: string
           clerkUserId?: string | null
+          plan?: 'free' | 'premium'
+          planStatus?: 'inactive' | 'active' | 'past_due' | 'canceled'
+          premiumUntil?: string | null
+          stripeCustomerId?: string | null
+          stripeSubscriptionId?: string | null
         }
         Update: {
           id?: number
@@ -51,6 +61,11 @@ export interface Database {
           createdAt?: string
           updatedAt?: string
           clerkUserId?: string | null
+          plan?: 'free' | 'premium'
+          planStatus?: 'inactive' | 'active' | 'past_due' | 'canceled'
+          premiumUntil?: string | null
+          stripeCustomerId?: string | null
+          stripeSubscriptionId?: string | null
         }
       }
       Account: {
