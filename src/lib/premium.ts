@@ -37,15 +37,11 @@ export function isPremiumState(input: {
 }): boolean {
   if (input.plan !== 'premium') return false;
 
-  if (input.status === 'active') {
-    return premiumDateIsValid(input.premiumUntil || null);
+  if (input.status === 'canceled') {
+    return Boolean(input.premiumUntil) && premiumDateIsValid(input.premiumUntil || null);
   }
 
-  return (
-    input.status === 'canceled' &&
-    Boolean(input.premiumUntil) &&
-    premiumDateIsValid(input.premiumUntil || null)
-  );
+  return premiumDateIsValid(input.premiumUntil || null);
 }
 
 export async function getUserPremiumState(userId: number): Promise<PremiumState> {
