@@ -1,5 +1,11 @@
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { NextResponse } from 'next/server';
+import {
+  mapStripeSubscriptionStatus,
+  retrieveLatestCustomerSubscription,
+  retrieveSubscription,
+  StripeSubscription,
+} from '@/lib/stripe';
 
 export type UserPlan = 'free' | 'premium';
 export type UserPlanStatus = 'inactive' | 'active' | 'past_due' | 'canceled';
@@ -44,10 +50,70 @@ export function isPremiumState(input: {
   return premiumDateIsValid(input.premiumUntil || null);
 }
 
+function periodEndToIso(subscription: StripeSubscription): string | null {
+  return subscription.current_period_end
+    ? new Date(subscription.current_period_end * 1000).toISOString()
+    : null;
+}
+
+async function syncPremiumStateFromStripe(data: {
+  id: number;
+  stripeCustomerId: string | null;
+  stripeSubscriptionId: string | null;
+}) {
+  let subscription = data.stripeSubscriptionId
+    ? await retrieveSubscription(data.stripeSubscriptionId)
+    : data.stripeCustomerId
+      ? await retrieveLatestCustomerSubscription(data.stripeCustomerId)
+      : null;
+
+  if (
+    subscription &&
+    !['active', 'trialing', 'past_due'].includes(subscription.status) &&
+    data.stripeCustomerId
+  ) {
+    subscription = await retrieveLatestCustomerSubscription(data.stripeCustomerId);
+  }
+
+  if (!subscription) return null;
+
+  const { plan, planStatus } = mapStripeSubscriptionStatus(subscription.status);
+  const premiumUntil = periodEndToIso(subscription);
+  const stripeCustomerId = typeof subscription.customer === 'string'
+    ? subscription.customer
+    : data.stripeCustomerId;
+
+  const update = {
+    plan,
+    planStatus,
+    premiumUntil,
+    stripeCustomerId,
+    stripeSubscriptionId: subscription.id,
+    updatedAt: new Date().toISOString(),
+  };
+
+  const { error } = await supabase
+    .from('User')
+    .update(update)
+    .eq('id', data.id);
+
+  if (error) {
+    console.error('[PREMIUM] Failed to sync Stripe state:', error);
+  }
+
+  return {
+    plan,
+    status: planStatus,
+    premiumUntil,
+    stripeCustomerId,
+    stripeSubscriptionId: subscription.id,
+  };
+}
+
 export async function getUserPremiumState(userId: number): Promise<PremiumState> {
   const { data, error } = await supabase
     .from('User')
-    .select('plan, planStatus, premiumUntil, stripeCustomerId')
+    .select('id, plan, planStatus, premiumUntil, stripeCustomerId, stripeSubscriptionId')
     .eq('id', userId)
     .single();
 
@@ -62,12 +128,33 @@ export async function getUserPremiumState(userId: number): Promise<PremiumState>
     };
   }
 
-  const plan = (data.plan || 'free') as UserPlan;
-  const status = (data.planStatus || 'inactive') as UserPlanStatus;
-  const premiumUntil = data.premiumUntil || null;
+  let plan = (data.plan || 'free') as UserPlan;
+  let status = (data.planStatus || 'inactive') as UserPlanStatus;
+  let premiumUntil = data.premiumUntil || null;
 
-  const isPremium = isPremiumState({ plan, status, premiumUntil });
-  const canManageBilling = Boolean(data.stripeCustomerId);
+  let isPremium = isPremiumState({ plan, status, premiumUntil });
+  let stripeCustomerId = data.stripeCustomerId || null;
+
+  if (!isPremium && (data.stripeSubscriptionId || data.stripeCustomerId)) {
+    const synced = await syncPremiumStateFromStripe({
+      id: data.id,
+      stripeCustomerId: data.stripeCustomerId || null,
+      stripeSubscriptionId: data.stripeSubscriptionId || null,
+    }).catch(error => {
+      console.error('[PREMIUM] Stripe fallback sync failed:', error);
+      return null;
+    });
+
+    if (synced) {
+      plan = synced.plan;
+      status = synced.status;
+      premiumUntil = synced.premiumUntil;
+      stripeCustomerId = synced.stripeCustomerId || stripeCustomerId;
+      isPremium = isPremiumState({ plan, status, premiumUntil });
+    }
+  }
+
+  const canManageBilling = Boolean(stripeCustomerId);
   const premiumSource = canManageBilling
     ? 'stripe'
     : isPremium
