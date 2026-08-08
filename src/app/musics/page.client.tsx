@@ -61,16 +61,63 @@ const allMoments = [
   'OUTROS',
 ];
 
+const normalizeSortOrder = (value: unknown): SortOrder => {
+  if (value === 'asc') return 'title-asc';
+  if (value === 'desc') return 'title-desc';
+  if (
+    value === 'title-asc' ||
+    value === 'title-desc' ||
+    value === 'created-desc' ||
+    value === 'created-asc' ||
+    value === 'stars-desc'
+  ) {
+    return value;
+  }
+
+  return 'title-asc';
+};
+
+const getSongTimestamp = (song: Song) => {
+  if (!song.createdAt) return 0;
+
+  const timestamp = new Date(song.createdAt).getTime();
+  return Number.isFinite(timestamp) ? timestamp : 0;
+};
+
+const sortSongs = (songs: Song[], sortOrder: SortOrder) => {
+  return [...songs].sort((a, b) => {
+    switch (sortOrder) {
+      case 'title-desc':
+        return b.title.localeCompare(a.title, 'pt', { sensitivity: 'base' });
+      case 'created-desc':
+        return getSongTimestamp(b) - getSongTimestamp(a) ||
+          a.title.localeCompare(b.title, 'pt', { sensitivity: 'base' });
+      case 'created-asc':
+        return getSongTimestamp(a) - getSongTimestamp(b) ||
+          a.title.localeCompare(b.title, 'pt', { sensitivity: 'base' });
+      case 'stars-desc':
+        return (b.starCount || 0) - (a.starCount || 0) ||
+          a.title.localeCompare(b.title, 'pt', { sensitivity: 'base' });
+      case 'title-asc':
+      default:
+        return a.title.localeCompare(b.title, 'pt', { sensitivity: 'base' });
+    }
+  });
+};
+
 type Song = {
   id: string;
   title: string;
   slug: string;
+  createdAt?: string;
   moments: string[];
   tags: string[];
   mainInstrument: string;
   starCount?: number;
   isStarred?: boolean;
 };
+
+type SortOrder = 'title-asc' | 'title-desc' | 'created-desc' | 'created-asc' | 'stars-desc';
 
 interface MusicsPageClientProps {
   initialSongs: Song[];
@@ -97,7 +144,7 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMoment, setSelectedMoment] = useState<string | null>(null);
   const [tagFilter, setTagFilter] = useState('');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('title-asc');
   const [currentPage, setCurrentPage] = useState(1);
   const [jumpPageInput, setJumpPageInput] = useState('');
 
@@ -161,7 +208,7 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
       setSearchTerm(state.searchTerm || '');
       setSelectedMoment(state.selectedMoment || null);
       setTagFilter(state.tagFilter || '');
-      setSortOrder(state.sortOrder || 'asc');
+      setSortOrder(normalizeSortOrder(state.sortOrder));
       setCurrentPage(state.currentPage || 1);
     }
   }, [isInitialized, state]);
@@ -236,14 +283,7 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
       filtered = preFiltered;
     }
 
-    // Sort (unless search is active — Fuse already ranks by relevance)
-    if (!searchTerm.trim()) {
-      filtered = [...filtered].sort((a: Song, b: Song) =>
-        sortOrder === 'asc'
-          ? a.title.localeCompare(b.title)
-          : b.title.localeCompare(a.title)
-      );
-    }
+    filtered = sortSongs(filtered, sortOrder);
 
     setFilteredSongs(filtered);
     // Only reset to page 1 on initial loads. If we're restoring state (isInitialized === true)
@@ -296,7 +336,7 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
         tagFilter: '',
         currentPage: 1,
         scrollPosition: 0,
-        sortOrder: 'asc'
+        sortOrder: 'title-asc'
       });
     }
   };
@@ -366,13 +406,15 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
         <Label className="text-sm font-medium text-stone-700">Ordenação</Label>
         <Select
           onValueChange={(v) => {
-            const newValue = v as 'asc' | 'desc';
+            const newValue = normalizeSortOrder(v);
             trackEvent('musics_sort_changed', { value: newValue });
             setSortOrder(newValue);
+            setCurrentPage(1);
             if (saveState) {
               saveState({
                 ...state,
                 sortOrder: newValue,
+                currentPage: 1,
                 scrollPosition: 0
               });
             }
@@ -383,8 +425,11 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="asc">A-Z</SelectItem>
-            <SelectItem value="desc">Z-A</SelectItem>
+            <SelectItem value="title-asc">Nome (A-Z)</SelectItem>
+            <SelectItem value="title-desc">Nome (Z-A)</SelectItem>
+            <SelectItem value="created-desc">Data de envio (mais recentes)</SelectItem>
+            <SelectItem value="created-asc">Data de envio (mais antigos)</SelectItem>
+            <SelectItem value="stars-desc">Mais estrelas</SelectItem>
           </SelectContent>
         </Select>
       </div>

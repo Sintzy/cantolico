@@ -118,7 +118,7 @@ export default function Navbar() {
 
         {/* Logo */}
         <Link href="/" onClick={close} className="flex items-center gap-2 shrink-0 mr-2">
-          <Image src={Icons.SITE_IMAGES.logo} alt="Cantólico" width={26} height={26} className="dark:invert" />
+          <Image src={Icons.SITE_IMAGES.logo} alt="Cantólico" width={26} height={26} className="invert dark:invert-0" />
           <span className="hidden sm:inline text-base font-semibold text-stone-900 tracking-tight">
             Can<span className="text-rose-700">♱</span>ólico!
           </span>

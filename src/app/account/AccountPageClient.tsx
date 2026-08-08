@@ -129,21 +129,21 @@ export default function AccountPageClient({ initialStats, initialPlan }: Account
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           {initialPlan.isPremium && (
-            <Card className="border-amber-300/60 bg-amber-50/60 shadow-none lg:col-span-2 dark:border-amber-300/25 dark:bg-amber-300/10">
+            <Card className="border-amber-400/70 bg-amber-100/80 shadow-none lg:col-span-2 dark:border-amber-300/25 dark:bg-amber-300/10">
               <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-amber-300/70 bg-white/70 text-amber-600 dark:bg-background/40">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-amber-500/60 bg-white text-amber-700 dark:border-amber-300/70 dark:bg-background/40 dark:text-amber-300">
                     <Crown className="h-4 w-4" />
                   </div>
                   <div>
-                    <h2 className="text-sm font-semibold text-amber-900 dark:text-amber-100">Conta Premium ativa</h2>
-                    <p className="mt-1 text-sm text-amber-800/80 dark:text-amber-100/75">
+                    <h2 className="text-sm font-semibold text-amber-950 dark:text-amber-100">Conta Premium ativa</h2>
+                    <p className="mt-1 text-sm text-amber-950/85 dark:text-amber-100/75">
                       Tens acesso a playlists e missas ilimitadas.
                     </p>
                   </div>
                 </div>
                 {premiumUntil && (
-                  <p className="text-xs font-medium text-amber-800/80 dark:text-amber-100/75">
+                  <p className="text-xs font-medium text-amber-950/80 dark:text-amber-100/75">
                     Valido ate {premiumUntil}
                   </p>
                 )}
