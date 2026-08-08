@@ -6,6 +6,7 @@ import { ArrowRight, Loader2, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 type CheckoutInterval = 'monthly' | 'yearly';
+type LoadingState = CheckoutInterval | 'portal';
 
 interface PlanState {
   isPremium: boolean;
@@ -17,7 +18,7 @@ interface PlanState {
 export function PricingCheckout() {
   const searchParams = useSearchParams();
   const [planState, setPlanState] = useState<PlanState | null>(null);
-  const [loading, setLoading] = useState<CheckoutInterval | 'portal' | null>(null);
+  const [loading, setLoading] = useState<LoadingState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const checkoutStatus = searchParams.get('checkout');
 
@@ -106,7 +107,9 @@ export function PricingCheckout() {
           Gerir subscrição
         </Button>
         <p className="text-xs text-muted-foreground">
-          O teu Premium está ativo. Alterações e faturas ficam no portal seguro do Stripe.
+          {planState.isPremium
+            ? 'O teu Premium está ativo. Alterações e faturas ficam no portal seguro do Stripe.'
+            : 'Tens uma subscrição Stripe associada. Podes confirmar o estado, faturas e pagamentos no portal seguro do Stripe.'}
         </p>
         {error && <p className="text-xs text-destructive">{error}</p>}
       </div>

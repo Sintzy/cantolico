@@ -43,6 +43,9 @@ export async function POST(request: NextRequest) {
   try {
     const appUrl = getAppUrl();
     session = await stripeRequest<StripeCheckoutSession>('/checkout/sessions', {
+      headers: {
+        'Stripe-Version': process.env.STRIPE_API_VERSION || '2025-10-29.clover',
+      },
       form: {
         mode: 'subscription',
         success_url: `${appUrl}/pricing?checkout=success`,
