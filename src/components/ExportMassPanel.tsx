@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Crown, FileText, Layers, Download, Loader2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 
 export type ExportFormat = 'lyrics' | 'chords' | 'ppt';
 
@@ -80,6 +81,7 @@ export default function ExportMassPanel({ massId, initialFormat = 'lyrics' }: Ex
     includeMomentTitles: true,
     pageBreakPerMoment: false,
     fontSize: 'medium' as 'small' | 'medium' | 'large',
+    showWatermark: true,
     pptTheme: 'dark' as 'dark' | 'light',
     pptOneVersePerSlide: true,
   });
@@ -96,8 +98,15 @@ export default function ExportMassPanel({ massId, initialFormat = 'lyrics' }: Ex
   useEffect(() => {
     fetch('/api/user/plan')
       .then(res => res.ok ? res.json() : null)
-      .then(data => setIsPremium(Boolean(data?.isPremium)))
-      .catch(() => setIsPremium(false));
+      .then(data => {
+        const premium = Boolean(data?.isPremium);
+        setIsPremium(premium);
+        setOptions(p => ({ ...p, showWatermark: !premium }));
+      })
+      .catch(() => {
+        setIsPremium(false);
+        setOptions(p => ({ ...p, showWatermark: true }));
+      });
   }, []);
 
   const handleExport = () => {
@@ -113,13 +122,13 @@ export default function ExportMassPanel({ massId, initialFormat = 'lyrics' }: Ex
     params.set('includeMomentTitles', options.includeMomentTitles ? '1' : '0');
     params.set('pageBreakPerMoment', options.pageBreakPerMoment ? '1' : '0');
     params.set('fontSize', options.fontSize);
-    if (isPremium) params.set('branding', '0');
 
     if (selectedFormat === 'ppt') {
       params.set('theme', options.pptTheme);
       params.set('oneVersePerSlide', options.pptOneVersePerSlide ? '1' : '0');
       window.open(`/api/masses/${massId}/export/ppt?${params.toString()}`, '_blank');
     } else {
+      params.set('branding', options.showWatermark ? '1' : '0');
       params.set('format', selectedFormat);
       window.open(`/api/masses/${massId}/export/pdf?${params.toString()}`, '_blank');
     }
@@ -196,7 +205,7 @@ export default function ExportMassPanel({ massId, initialFormat = 'lyrics' }: Ex
             )})}
           </div>
           {isPremium && (
-            <p className="mt-2 text-xs text-emerald-700">Premium ativo: PDFs exportados sem marca Cantólico.</p>
+            <p className="mt-2 text-xs text-emerald-700">Premium ativo: podes escolher se os PDFs incluem a marca Cantolico.</p>
           )}
         </div>
 
@@ -221,6 +230,20 @@ export default function ExportMassPanel({ massId, initialFormat = 'lyrics' }: Ex
                   <span className="text-sm text-stone-700">{opt.label}</span>
                 </label>
               ))}
+              <label className="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer hover:bg-stone-100/50 transition-colors">
+                <span>
+                  <span className="block text-sm text-stone-700">Mostrar marca de agua</span>
+                  <span className="block text-xs text-stone-400 mt-0.5">
+                    {isPremium ? 'Controla se o PDF inclui a marca Cantolico' : 'Remover a marca faz parte do Premium'}
+                  </span>
+                </span>
+                <Switch
+                  id="massPdfWatermark"
+                  checked={options.showWatermark}
+                  onCheckedChange={(v) => setOptions(p => ({ ...p, showWatermark: v }))}
+                  disabled={!isPremium}
+                />
+              </label>
             </div>
 
             <div className="mt-3">

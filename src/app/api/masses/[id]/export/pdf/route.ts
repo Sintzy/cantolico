@@ -65,6 +65,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const pageBreakPerMoment = searchParams.get('pageBreakPerMoment') === '1';
     const fontSize = searchParams.get('fontSize') || 'medium';
     const oneVersePerSlide = searchParams.get('oneVersePerSlide') !== '0';
+    const forceBranding = searchParams.get('branding') === '1' || searchParams.get('logo') === '1';
     const withoutBranding = searchParams.get('branding') === '0' || searchParams.get('logo') === '0';
     const session = await getClerkSession();
     const canRemoveBranding = session
@@ -74,11 +75,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (withoutBranding && !canRemoveBranding) {
       return premiumRequiredResponse(
         'export_pdf_without_logo',
-        'Exportar PDFs sem marca Cantólico faz parte do Premium.'
+        'Exportar PDFs sem marca Cantolico faz parte do Premium.'
       );
     }
 
-    const showBranding = !withoutBranding;
+    const showBranding = canRemoveBranding ? forceBranding : true;
 
     const { data: massData, error } = await supabase
       .from('Mass')
