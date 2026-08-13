@@ -149,6 +149,10 @@ async function syncSubscription(subscription: StripeSubscription) {
 }
 
 async function handleCheckoutCompleted(session: any) {
+  if (session.metadata?.type === 'donation') {
+    return;
+  }
+
   const subscriptionId = typeof session.subscription === 'string' ? session.subscription : null;
   const customerId = typeof session.customer === 'string' ? session.customer : null;
   const userId = session.metadata?.userId || session.client_reference_id;

@@ -19,13 +19,15 @@ interface Song {
   moments: string[];
   tags: string[];
   mainInstrument: string;
+  createdAt: string;
+  starCount?: number;
 }
 
 export default async function MusicsPage() {
   // Fetch songs directly from database (Server Component)
   const { data: songs = [], error } = await adminSupabase
     .from('Song')
-    .select('id, title, slug, moments, tags, mainInstrument')
+    .select('id, title, slug, moments, tags, mainInstrument, createdAt, Star(userId)')
     .order('title', { ascending: true });
 
   if (error) {
@@ -34,7 +36,12 @@ export default async function MusicsPage() {
 
   // Ensure songs is always an array and normalize data
   const initialSongs = (Array.isArray(songs) ? songs : []).map(song => ({
-    ...song,
+    id: song.id,
+    title: song.title,
+    slug: song.slug,
+    mainInstrument: song.mainInstrument,
+    createdAt: song.createdAt,
+    starCount: Array.isArray(song.Star) ? song.Star.length : 0,
     moments: Array.isArray(song.moments) ? song.moments : [],
     tags: Array.isArray(song.tags) ? song.tags : [],
   }));

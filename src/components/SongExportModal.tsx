@@ -35,13 +35,21 @@ export default function SongExportModal({
   const [withChords, setWithChords] = useState(showChordsDefault);
   const [fontSize, setFontSize] = useState<FontSize>('medium');
   const [isPremium, setIsPremium] = useState(false);
+  const [showWatermark, setShowWatermark] = useState(true);
 
   React.useEffect(() => {
     if (!open) return;
     fetch('/api/user/plan')
       .then(res => res.ok ? res.json() : null)
-      .then(data => setIsPremium(Boolean(data?.isPremium)))
-      .catch(() => setIsPremium(false));
+      .then(data => {
+        const premium = Boolean(data?.isPremium);
+        setIsPremium(premium);
+        setShowWatermark(!premium);
+      })
+      .catch(() => {
+        setIsPremium(false);
+        setShowWatermark(true);
+      });
   }, [open]);
 
   const handleGenerate = () => {
@@ -49,7 +57,7 @@ export default function SongExportModal({
     params.set('transposition', String(transposition));
     params.set('showChords', String(withChords));
     params.set('fontSize', fontSize);
-    if (isPremium) params.set('branding', '0');
+    params.set('branding', showWatermark ? '1' : '0');
 
     const url = `/api/musics/${songId}/pdf?${params.toString()}`;
     window.open(url, '_blank');
@@ -110,10 +118,27 @@ export default function SongExportModal({
             </div>
           </div>
 
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <Label htmlFor="pdf-watermark" className="text-sm font-medium text-stone-700">
+                Mostrar marca de agua
+              </Label>
+              <p className="text-xs text-stone-400">
+                {isPremium ? 'Controla se o PDF inclui a marca Cantolico' : 'Remover a marca faz parte do Premium'}
+              </p>
+            </div>
+            <Switch
+              id="pdf-watermark"
+              checked={showWatermark}
+              onCheckedChange={setShowWatermark}
+              disabled={!isPremium}
+            />
+          </div>
+
           {isPremium && (
             <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
               <Crown className="h-3.5 w-3.5" />
-              Premium ativo: este PDF será exportado sem marca Cantólico.
+              Premium ativo: podes escolher se este PDF inclui a marca Cantolico.
             </div>
           )}
         </div>

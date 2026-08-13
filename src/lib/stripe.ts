@@ -11,6 +11,10 @@ export interface StripeSubscription {
   metadata?: Record<string, string | undefined>;
 }
 
+export interface StripeSubscriptionList {
+  data: StripeSubscription[];
+}
+
 export interface StripeCustomer {
   id: string;
   email: string | null;
@@ -99,6 +103,16 @@ export async function stripeRequest<T>(
 
 export async function retrieveSubscription(subscriptionId: string): Promise<StripeSubscription> {
   return stripeRequest<StripeSubscription>(`/subscriptions/${subscriptionId}`);
+}
+
+export async function retrieveLatestCustomerSubscription(customerId: string): Promise<StripeSubscription | null> {
+  const response = await stripeRequest<StripeSubscriptionList>(
+    `/subscriptions?customer=${encodeURIComponent(customerId)}&status=all&limit=10`
+  );
+
+  return response.data.find(subscription =>
+    ['active', 'trialing', 'past_due'].includes(subscription.status)
+  ) || response.data[0] || null;
 }
 
 export async function retrieveCustomer(customerId: string): Promise<StripeCustomer> {

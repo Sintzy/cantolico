@@ -34,6 +34,7 @@ export default function Navbar() {
   const [searchResults, setSearchResults] = useState<MusicResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
 
   const playlistsRef = useRef<HTMLDivElement>(null);
   const mobileRef = useRef<HTMLDivElement>(null);
@@ -82,6 +83,28 @@ export default function Navbar() {
     return () => clearTimeout(t);
   }, [searchQuery]);
 
+  useEffect(() => {
+    if (!session?.user) {
+      setIsPremium(false);
+      return;
+    }
+
+    let mounted = true;
+
+    fetch('/api/user/plan')
+      .then(response => response.ok ? response.json() : null)
+      .then(data => {
+        if (mounted) setIsPremium(Boolean(data?.isPremium));
+      })
+      .catch(() => {
+        if (mounted) setIsPremium(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [session?.user?.id]);
+
   const role = session?.user?.role;
   const showAdmin = role === "ADMIN";
   const showReview = role === "ADMIN" || role === "REVIEWER";
@@ -95,7 +118,7 @@ export default function Navbar() {
 
         {/* Logo */}
         <Link href="/" onClick={close} className="flex items-center gap-2 shrink-0 mr-2">
-          <Image src={Icons.SITE_IMAGES.logo} alt="Cantólico" width={26} height={26} className="dark:invert" />
+          <Image src={Icons.SITE_IMAGES.logo} alt="Cantólico" width={26} height={26} className="invert dark:invert-0" />
           <span className="hidden sm:inline text-base font-semibold text-stone-900 tracking-tight">
             Can<span className="text-rose-700">♱</span>ólico!
           </span>
@@ -201,7 +224,7 @@ export default function Navbar() {
           </div>
 
           {session?.user ? (
-            <AppUserButton />
+            <AppUserButton isPremium={isPremium} />
           ) : (
             <div className="flex items-center gap-2">
               <Link href="/sign-in" prefetch={false} className="px-4 py-2 text-sm font-medium text-stone-600 hover:text-stone-900 transition-colors">
@@ -217,7 +240,7 @@ export default function Navbar() {
 
         {/* Mobile toggle */}
         <div className="ml-auto flex items-center gap-2 lg:hidden">
-          {session?.user && <AppUserButton />}
+          {session?.user && <AppUserButton isPremium={isPremium} />}
           <ThemeToggle />
           <button
             onClick={() => setMobileOpen(v => !v)}
@@ -281,13 +304,14 @@ export default function Navbar() {
   );
 }
 
-function AppUserButton() {
+function AppUserButton({ isPremium }: { isPremium?: boolean }) {
   return (
+    <span title={isPremium ? 'Conta Premium' : undefined} className="inline-flex rounded-full">
     <UserButton
       afterSwitchSessionUrl="/"
       appearance={{
         elements: {
-          avatarBox: "h-8 w-8",
+          avatarBox: `h-8 w-8 ${isPremium ? "ring-2 ring-amber-400 ring-offset-2 ring-offset-white" : ""}`,
           userButtonPopoverCard: "border border-stone-200 bg-white shadow-lg shadow-stone-200/50 dark:border-border dark:bg-card dark:shadow-black/40",
           userButtonPopoverActionButton: "text-stone-700 hover:bg-stone-50 dark:text-card-foreground dark:hover:bg-muted",
           userButtonPopoverActionButtonText: "text-sm",
@@ -300,5 +324,6 @@ function AppUserButton() {
         <UserButton.Link href="/starred-songs" label="Favoritos" labelIcon={<Heart className="h-4 w-4" />} />
       </UserButton.MenuItems>
     </UserButton>
+    </span>
   );
 }

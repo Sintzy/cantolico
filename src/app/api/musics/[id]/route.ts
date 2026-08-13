@@ -4,6 +4,7 @@ import { logSongViewed, logApiRequestError, toErrorContext, logUserAction } from
 import { protectApiRoute, applySecurityHeaders } from "@/lib/api-protection";
 import { formatTagsForPostgreSQL, parseTagsFromPostgreSQL, parseMomentsFromPostgreSQL } from "@/lib/utils";
 import { withSongLogging } from "@/lib/api-route-wrapper";
+import { isPremiumState } from "@/lib/premium";
 
 async function GETHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   // Verifica se a requisição vem de uma origem autorizada
@@ -56,7 +57,10 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ id: 
           mediaUrl,
           youtubeLink,
           createdBy:User!SongVersion_createdById_fkey (
-            name
+            name,
+            plan,
+            planStatus,
+            premiumUntil
           )
         )
       `)
@@ -84,15 +88,37 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     const song = songs[0];
+    const currentVersion = Array.isArray(song.SongVersion)
+      ? song.SongVersion[0]
+      : song.SongVersion as any;
+    const createdBy = Array.isArray(currentVersion?.createdBy)
+      ? currentVersion.createdBy[0]
+      : currentVersion?.createdBy;
+    const songFields = { ...(song as any) };
+    delete songFields.SongVersion;
 
     // Reformatar dados para manter compatibilidade
     const formattedSong = {
-      ...song,
+      ...songFields,
       // Processar tags usando a função utilitária
       tags: parseTagsFromPostgreSQL(song.tags),
       // Processar moments usando a função utilitária
       moments: parseMomentsFromPostgreSQL(song.moments),
-      currentVersion: song.SongVersion || null
+      currentVersion: currentVersion
+        ? {
+            ...currentVersion,
+            createdBy: createdBy
+              ? {
+                  name: createdBy.name,
+                  isPremium: isPremiumState({
+                    plan: createdBy.plan,
+                    status: createdBy.planStatus,
+                    premiumUntil: createdBy.premiumUntil,
+                  }),
+                }
+              : null,
+          }
+        : null
     };
 
     logSongViewed({

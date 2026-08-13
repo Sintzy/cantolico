@@ -19,6 +19,7 @@ import { Spinner, type SpinnerProps } from '@/components/ui/shadcn-io/spinner';
 import StarButton from '@/components/StarButton';
 import AddToPlaylistButton from '@/components/AddToPlaylistButton';
 import SongExportModal from '@/components/SongExportModal';
+import { PremiumUserMark } from '@/components/PremiumUserMark';
 import { LiturgicalMoment, getInstrumentLabel, getLiturgicalMomentLabel } from '@/lib/constants';
 import { FileType } from '@/types/song-files';
 import { trackEvent } from '@/lib/umami';
@@ -72,7 +73,7 @@ type SongData = {
     mediaUrl?: string | null;
     youtubeLink?: string | null;
     spotifyLink?: string | null;
-    createdBy: { name: string | null } | null;
+    createdBy: { name: string | null; isPremium?: boolean } | null;
   };
 };
 
@@ -729,7 +730,11 @@ export default function SongPageClient({ initialSong, songId }: SongPageClientPr
             <SidebarTitle>Informações</SidebarTitle>
             <div className="flex items-center gap-2 text-sm text-stone-500">
               <FileText className="h-4 w-4 mr-1" />
-              <span className="font-medium">Enviado por:</span> {currentVersion?.createdBy?.name || 'Desconhecido'}
+              <span className="font-medium">Enviado por:</span>
+              <PremiumUserMark
+                name={currentVersion?.createdBy?.name || 'Desconhecido'}
+                isPremium={currentVersion?.createdBy?.isPremium}
+              />
             </div>
             <div className="flex items-center gap-2 text-sm text-stone-500">
               <Music className="h-4 w-4 mr-1" />
@@ -863,7 +868,11 @@ export default function SongPageClient({ initialSong, songId }: SongPageClientPr
             <SidebarTitle>Informações</SidebarTitle>
             <div className="flex items-center gap-2 text-sm text-stone-500">
               <FileText className="h-4 w-4 mr-1" />
-              <span className="font-medium">Enviado por:</span> {currentVersion?.createdBy?.name || 'Desconhecido'}
+              <span className="font-medium">Enviado por:</span>
+              <PremiumUserMark
+                name={currentVersion?.createdBy?.name || 'Desconhecido'}
+                isPremium={currentVersion?.createdBy?.isPremium}
+              />
             </div>
             <div className="flex items-center gap-2 text-sm text-stone-500">
               <Music className="h-4 w-4 mr-1" />
@@ -1125,7 +1134,11 @@ export default function SongPageClient({ initialSong, songId }: SongPageClientPr
                 <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-stone-500">
                   <div className="flex items-center gap-1">
                     <FileText className="h-4 w-4" />
-                    <span className="font-medium">Por:</span> {currentVersion?.createdBy?.name || 'Desconhecido'}
+                    <span className="font-medium">Por:</span>
+                    <PremiumUserMark
+                      name={currentVersion?.createdBy?.name || 'Desconhecido'}
+                      isPremium={currentVersion?.createdBy?.isPremium}
+                    />
                   </div>
                   <div className="flex items-center gap-1">
                     <Music className="h-4 w-4" />
@@ -1193,7 +1206,11 @@ export default function SongPageClient({ initialSong, songId }: SongPageClientPr
                     <SidebarTitle>Informações</SidebarTitle>
                     <div className="flex items-center gap-2 text-sm text-stone-500">
                       <FileText className="h-4 w-4 mr-1" />
-                      <span className="font-medium">Enviado por:</span> {currentVersion?.createdBy?.name || 'Desconhecido'}
+                      <span className="font-medium">Enviado por:</span>
+                      <PremiumUserMark
+                        name={currentVersion?.createdBy?.name || 'Desconhecido'}
+                        isPremium={currentVersion?.createdBy?.isPremium}
+                      />
                     </div>
                     <div className="flex items-center gap-2 text-sm text-stone-500">
                       <Music className="h-4 w-4 mr-1" />

@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Check } from 'lucide-react';
+import { ArrowRight, Check, Heart } from 'lucide-react';
 import { auth } from '@clerk/nextjs/server';
 import { Button } from '@/components/ui/button';
 import { PricingCheckout } from '@/components/PricingCheckout';
@@ -133,6 +133,29 @@ export default async function PricingPage() {
               )}
             </div>
           </article>
+        </div>
+      </section>
+
+      <section className="px-5 pb-10 md:pb-14">
+        <div className="mx-auto max-w-screen-lg rounded-lg border border-border bg-card p-6 md:flex md:items-center md:justify-between md:gap-6 md:p-7">
+          <div className="flex items-start gap-4">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-700/10 text-rose-700 dark:bg-rose-300/10 dark:text-rose-200">
+              <Heart className="h-5 w-5" />
+            </span>
+            <div>
+              <h2 className="text-base font-semibold">Queres apenas ajudar?</h2>
+              <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                Se não precisas do Premium mas queres apoiar o Cantólico, podes fazer um donativo
+                para ajudar a manter o projeto gratuito para todos.
+              </p>
+            </div>
+          </div>
+          <Button asChild variant="outline" className="mt-5 w-full md:mt-0 md:w-auto">
+            <Link href="/doacoes">
+              Apoiar o projeto
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
         </div>
       </section>
 

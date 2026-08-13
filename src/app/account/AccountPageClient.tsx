@@ -3,7 +3,7 @@
 import { useUser } from '@clerk/nextjs';
 import Image from 'next/image';
 import Link from 'next/link';
-import { FileText, Heart, ListMusic, Loader2, Music, User } from 'lucide-react';
+import { Crown, FileText, Heart, ListMusic, Loader2, Music, User } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -16,6 +16,11 @@ interface UserStats {
 
 interface AccountPageClientProps {
   initialStats: UserStats;
+  initialPlan: {
+    isPremium: boolean;
+    status: string;
+    premiumUntil: string | null;
+  };
 }
 
 const statsConfig = [
@@ -25,7 +30,7 @@ const statsConfig = [
   { key: 'submissions', label: 'Submissoes', icon: FileText, color: 'text-stone-500 dark:text-stone-400' },
 ] as const;
 
-export default function AccountPageClient({ initialStats }: AccountPageClientProps) {
+export default function AccountPageClient({ initialStats, initialPlan }: AccountPageClientProps) {
   const { user, isLoaded } = useUser();
 
   if (!isLoaded) {
@@ -42,6 +47,13 @@ export default function AccountPageClient({ initialStats }: AccountPageClientPro
   const role = typeof user.publicMetadata?.role === 'string' ? user.publicMetadata.role : 'USER';
   const joinedAt = user.createdAt
     ? new Date(user.createdAt).toLocaleDateString('pt-PT', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+      })
+    : null;
+  const premiumUntil = initialPlan.premiumUntil
+    ? new Date(initialPlan.premiumUntil).toLocaleDateString('pt-PT', {
         day: '2-digit',
         month: 'long',
         year: 'numeric',
@@ -74,7 +86,7 @@ export default function AccountPageClient({ initialStats }: AccountPageClientPro
             </div>
 
             <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
-              <div className="h-12 w-12 overflow-hidden rounded-full border border-border bg-muted">
+              <div className={`h-12 w-12 overflow-hidden rounded-full border bg-muted ${initialPlan.isPremium ? 'border-amber-300 ring-2 ring-amber-400 ring-offset-2 ring-offset-background' : 'border-border'}`}>
                 {user.imageUrl ? (
                   <Image src={user.imageUrl} alt={user.fullName || 'Utilizador'} width={48} height={48} className="h-full w-full object-cover" />
                 ) : (
@@ -84,7 +96,15 @@ export default function AccountPageClient({ initialStats }: AccountPageClientPro
                 )}
               </div>
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-card-foreground">{user.fullName || 'Utilizador'}</p>
+                <div className="flex items-center gap-2">
+                  <p className="truncate text-sm font-semibold text-card-foreground">{user.fullName || 'Utilizador'}</p>
+                  {initialPlan.isPremium && (
+                    <Badge className="border-amber-300/70 bg-amber-50 text-amber-700 shadow-none">
+                      <Crown className="h-3 w-3" />
+                      Premium
+                    </Badge>
+                  )}
+                </div>
                 <p className="truncate text-xs text-muted-foreground">{primaryEmail}</p>
               </div>
             </div>
@@ -108,6 +128,29 @@ export default function AccountPageClient({ initialStats }: AccountPageClientPro
         </div>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+          {initialPlan.isPremium && (
+            <Card className="border-amber-400/70 bg-amber-100/80 shadow-none lg:col-span-2 dark:border-amber-300/25 dark:bg-amber-300/10">
+              <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-amber-500/60 bg-white text-amber-700 dark:border-amber-300/70 dark:bg-background/40 dark:text-amber-300">
+                    <Crown className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-semibold text-amber-950 dark:text-amber-100">Conta Premium ativa</h2>
+                    <p className="mt-1 text-sm text-amber-950/85 dark:text-amber-100/75">
+                      Tens acesso a playlists e missas ilimitadas.
+                    </p>
+                  </div>
+                </div>
+                {premiumUntil && (
+                  <p className="text-xs font-medium text-amber-950/80 dark:text-amber-100/75">
+                    Valido ate {premiumUntil}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           <Card className="border-border bg-card shadow-none">
             <CardContent className="p-6">
               <div className="mb-6 flex items-center justify-between gap-4 border-b border-border pb-4">

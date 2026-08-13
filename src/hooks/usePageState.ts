@@ -6,7 +6,7 @@ interface PageState {
   searchTerm: string;
   selectedMoment: string | null;
   tagFilter: string;
-  sortOrder: 'asc' | 'desc';
+  sortOrder: 'title-asc' | 'title-desc' | 'created-desc' | 'created-asc' | 'stars-desc';
 }
 
 const DEFAULT_STATE: PageState = {
@@ -15,7 +15,7 @@ const DEFAULT_STATE: PageState = {
   searchTerm: '',
   selectedMoment: null,
   tagFilter: '',
-  sortOrder: 'asc'
+  sortOrder: 'title-asc'
 };
 
 export function usePageState(pageKey: string) {

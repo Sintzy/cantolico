@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getAuthenticatedUser } from '@/lib/clerk-auth';
+import { getUserPremiumState } from '@/lib/premium';
 import { createAdminSupabaseClient } from '@/lib/supabase-admin';
 import AccountPageClient from './AccountPageClient';
 
@@ -18,11 +19,13 @@ export default async function AccountPage() {
   const supabase = createAdminSupabaseClient();
 
   const [
+    premium,
     { count: songsCount },
     { count: playlistsCount },
     { count: starsCount },
     { count: submissionsCount },
   ] = await Promise.all([
+    getUserPremiumState(user.supabaseUserId),
     supabase.from('SongSubmission').select('*', { count: 'exact', head: true }).eq('submitterId', user.supabaseUserId).eq('status', 'APPROVED'),
     supabase.from('Playlist').select('*', { count: 'exact', head: true }).eq('userId', user.supabaseUserId),
     supabase.from('Star').select('*', { count: 'exact', head: true }).eq('userId', user.supabaseUserId),
@@ -36,5 +39,5 @@ export default async function AccountPage() {
     submissions: submissionsCount || 0,
   };
 
-  return <AccountPageClient initialStats={stats} />;
+  return <AccountPageClient initialStats={stats} initialPlan={premium} />;
 }

@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     // Fetch minimal data using admin client with Stars included directly
     const { data: songs, error } = await adminSupabase
       .from('Song')
-      .select('id,title,slug,moments,type,mainInstrument,tags, Star(userId)')
+      .select('id,title,slug,moments,type,mainInstrument,tags,createdAt, Star(userId)')
       .order('title', { ascending: true });
 
     if (error) {
@@ -55,6 +55,7 @@ export async function GET(request: NextRequest) {
         id: song.id,
         title: song.title,
         slug: song.slug,
+        createdAt: song.createdAt,
         type: song.type,
         mainInstrument: song.mainInstrument,
         tags: parseTagsFromPostgreSQL(song.tags),
