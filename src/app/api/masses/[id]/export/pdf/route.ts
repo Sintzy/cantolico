@@ -7,7 +7,7 @@ import { premiumRequiredResponse, userCanUseFeature } from '@/lib/premium';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const fontkit = require('fontkit');
+import * as fontkit from 'fontkit';
 
 const MOMENT_ORDER: Record<string, number> = {
   ENTRADA: 1, ATO_PENITENCIAL: 2, GLORIA: 3, SALMO_RESPONSORIAL: 4,
@@ -101,7 +101,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const pdfDoc = await PDFDocument.create();
-    pdfDoc.registerFontkit(fontkit);
+    pdfDoc.registerFontkit(
+      fontkit as unknown as Parameters<typeof pdfDoc.registerFontkit>[0],
+    );
     let font: any, boldFont: any;
     try {
       const fontPath = path.join(process.cwd(), 'public', 'fonts', 'Montserrat-Regular.ttf');

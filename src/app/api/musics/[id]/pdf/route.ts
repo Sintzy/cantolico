@@ -10,7 +10,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const fontkit = require('fontkit');
+import * as fontkit from 'fontkit';
 
 export const dynamic = 'force-dynamic';
 
@@ -96,7 +96,11 @@ export async function GET(
     const version = versionData[0];
 
     const pdfDoc = await PDFDocument.create();
-    try { pdfDoc.registerFontkit(fontkit); } catch {}
+    try {
+      pdfDoc.registerFontkit(
+        fontkit as unknown as Parameters<typeof pdfDoc.registerFontkit>[0],
+      );
+    } catch {}
 
     const page = pdfDoc.addPage([595.28, 841.89]);
 
