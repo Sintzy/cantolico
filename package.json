@@ -2,6 +2,7 @@
   "name": "cancioneiro",
   "version": "2.0.1",
   "private": true,
+  "packageManager": "pnpm@10.28.1",
   "scripts": {
     "dev": "node scripts/git-info.js && vinext dev",
     "build": "node scripts/git-info.js && vinext build",
