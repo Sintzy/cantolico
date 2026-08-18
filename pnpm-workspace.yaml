@@ -1,2 +1,8 @@
 patchedDependencies:
   next@16.2.4: patches/next@16.2.4.patch
+
+onlyBuiltDependencies:
+  - '@clerk/shared'
+  - esbuild
+  - protobufjs
+  - sharp

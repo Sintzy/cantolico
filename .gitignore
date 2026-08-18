@@ -63,3 +63,6 @@ next-env.d.ts
 .devcontainer/devcontainer.json
 
 package-lock.json
+/dist/
+.vinext/
+.pnpm-store/

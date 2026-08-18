@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 
-const { execSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
+import { execSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 function getGitInfo() {
   try {
@@ -49,8 +53,8 @@ function updateEnvLocal() {
 }
 
 // Only run if called directly (not imported)
-if (require.main === module) {
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   updateEnvLocal();
 }
 
-module.exports = { getGitInfo, updateEnvLocal };
+export { getGitInfo, updateEnvLocal };
