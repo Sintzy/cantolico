@@ -3,6 +3,7 @@ import { cache } from "react";
 import { adminSupabase } from "@/lib/supabase-admin";
 import { buildMetadata, absoluteUrl } from "@/lib/seo";
 import { getLiturgicalMomentLabel } from "@/lib/constants";
+import { isLikelySongId, normalizeSongIdentifier } from "@/lib/song-identifier";
 
 interface MusicLayoutProps {
   children: React.ReactNode;
@@ -10,21 +11,34 @@ interface MusicLayoutProps {
 }
 
 const getSongForLayout = cache(async (id: string) => {
+  const songSelect = `
+    id,
+    title,
+    slug,
+    tags,
+    moments,
+    author,
+    createdAt,
+    SongVersion!Song_currentVersionId_fkey (
+      sourceText
+    )
+  `;
+  const songIdOrSlug = normalizeSongIdentifier(id);
+
+  if (isLikelySongId(songIdOrSlug)) {
+    const { data: songs } = await adminSupabase
+      .from('Song')
+      .select(songSelect)
+      .eq('id', songIdOrSlug)
+      .limit(1);
+
+    if (songs?.[0]) return songs[0];
+  }
+
   const { data: songs } = await adminSupabase
     .from('Song')
-    .select(`
-      id,
-      title,
-      slug,
-      tags,
-      moments,
-      author,
-      createdAt,
-      SongVersion!Song_currentVersionId_fkey (
-        sourceText
-      )
-    `)
-    .or(`id.eq.${id},slug.eq.${id}`)
+    .select(songSelect)
+    .eq('slug', songIdOrSlug)
     .limit(1);
 
   return songs?.[0] || null;

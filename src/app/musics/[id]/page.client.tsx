@@ -523,6 +523,7 @@ export default function SongPageClient({ initialSong, songId }: SongPageClientPr
   const { title, mainInstrument, tags, moments, currentVersion, author } = song;
   const isAdmin = session?.user?.role === 'ADMIN';
   const adminEditUrl = song?.id ? `/admin/dashboard/musics/${song.id}/edit` : null;
+  const canonicalSongId = song.id;
   const validPdfFiles = files.filter(f => f.fileType === FileType.PDF && f.signedUrl);
   const validAudioFiles = files.filter(f => f.fileType === FileType.AUDIO && f.signedUrl);
   const pdfFilesForDisplay = validPdfFiles.length > 0
@@ -565,8 +566,8 @@ export default function SongPageClient({ initialSong, songId }: SongPageClientPr
               Músicas
             </button>
             <div className="hidden sm:flex items-center gap-2">
-              <StarButton songId={id as string} />
-              <AddToPlaylistButton songId={id as string} />
+              <StarButton songId={canonicalSongId} />
+              <AddToPlaylistButton songId={canonicalSongId} />
               {song?.type !== 'PARTITURA' && (
                 <Button variant="outline" size="sm" className="gap-1.5" onClick={() => openGeneratedPdf('hero_desktop')}>
                   <FileText className="h-3.5 w-3.5" /> PDF
@@ -645,8 +646,8 @@ export default function SongPageClient({ initialSong, songId }: SongPageClientPr
       {/* Floating Action Bar (mobile/tablet) - mais espaçoso e tocável */}
       <div className="fixed bottom-0 left-0 right-0 z-30 sm:hidden bg-white/95 backdrop-blur-md border-t border-stone-200 shadow-lg safe-area-pb">
         <div className="flex justify-around items-center py-2 px-2">
-          <StarButton songId={id as string} className="text-stone-700 p-3 touch-manipulation" />
-          <AddToPlaylistButton songId={id as string} className="text-stone-700 p-3 touch-manipulation" />
+          <StarButton songId={canonicalSongId} className="text-stone-700 p-3 touch-manipulation" />
+          <AddToPlaylistButton songId={canonicalSongId} className="text-stone-700 p-3 touch-manipulation" />
           {song?.type !== 'PARTITURA' && (
             <Button
               variant="ghost"
@@ -1354,7 +1355,7 @@ export default function SongPageClient({ initialSong, songId }: SongPageClientPr
       open={exportModalOpen}
       onClose={() => setExportModalOpen(false)}
       songTitle={title}
-      songId={id as string}
+      songId={canonicalSongId}
       transposition={transposition}
       showChordsDefault={showChords}
     />
