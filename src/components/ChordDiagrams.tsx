@@ -1,6 +1,5 @@
 "use client";
 import React, { useMemo } from "react";
-import Chord from "@tombatossals/react-chords/lib/Chord";
 
 // Try to import chord DBs that live in src/lib/chords. They may be empty or absent.
 let GUITAR_DB: any = null;
@@ -160,7 +159,7 @@ export default function ChordDiagrams({ text, size = 110, instrument = 'guitar' 
   const rootKey = parsed.root;
   const suffixKey = parsed.quality;
 
-      // Helper to map DB position -> chord object expected by react-chords
+      // Helper to map DB position -> the chord object expected by the local renderer
       const mapPositionToChordObj = (pos: any, instrumentStrings: number) => {
         // pos.frets may be strings like ["x",3,2,0,1,0] or actual note names in piano DB
         const frets: number[] = [];
@@ -475,20 +474,129 @@ export default function ChordDiagrams({ text, size = 110, instrument = 'guitar' 
         <div key={i} className={`flex flex-col items-center text-center w-full ${smallMode ? 'text-xs' : ''}`}>
           <div style={{ width: '100%', transform: smallMode ? 'scale(0.85)' : 'scale(1)', transformOrigin: 'top center' }}>
             {instrument === 'ukulele' ? (
-              <Chord chord={c.chordObj} instrument={{ strings: 4, fretsOnChord: 4, name: 'Ukulele', keys: NOTES, tunings: { standard: ['G','C','E','A'] } }} />
+              <StringChordDiagram chord={c.chordObj} strings={4} size={size} />
             ) : instrument === 'piano' ? (
               // For piano we render a small keyboard visualization below
               <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
                 <PianoKeyboard notes={c.chordObj.midi || (Array.isArray(c.chordObj.frets) ? c.chordObj.frets : [])} size={Math.floor(size * 0.55)} />
               </div>
             ) : (
-              <Chord chord={c.chordObj} instrument={{ strings: 6, fretsOnChord: 4, name: 'Guitar', keys: NOTES, tunings: { standard: ['E','A','D','G','B','E'] } }} />
+              <StringChordDiagram chord={c.chordObj} strings={6} size={size} />
             )}
           </div>
           <small className="mt-1 text-xs text-muted-foreground">{c.token}</small>
         </div>
       ))}
     </div>
+  );
+}
+
+function StringChordDiagram({
+  chord,
+  strings,
+  size = 120,
+}: {
+  chord: { frets?: Array<number | string>; fingers?: number[]; barres?: number[]; baseFret?: number };
+  strings: number;
+  size?: number;
+}) {
+  const frets = Array.from({ length: strings }, (_, index) => {
+    const value = chord.frets?.[index] ?? -1;
+    if (typeof value === 'number') return value;
+    if (value === 'x' || value === 'X' || value === '-') return -1;
+    const parsed = parseInt(String(value).replace(/[^0-9]/g, ''), 10);
+    return Number.isNaN(parsed) ? -1 : parsed;
+  });
+  const fingers = chord.fingers ?? [];
+  const baseFret = chord.baseFret || 1;
+  const fretCount = 4;
+  const width = size;
+  const height = Math.round(size * 1.08);
+  const left = 18;
+  const right = width - 18;
+  const top = 22;
+  const bottom = height - 28;
+  const stringGap = strings > 1 ? (right - left) / (strings - 1) : 0;
+  const fretGap = (bottom - top) / fretCount;
+  const dotRadius = Math.max(5, Math.round(size * 0.055));
+  const xForString = (index: number) => left + index * stringGap;
+  const yForFret = (fret: number) => top + (Math.min(Math.max(fret, 1), fretCount) - 0.5) * fretGap;
+
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      width="100%"
+      height={height}
+      role="img"
+      aria-label="Diagrama de acorde"
+      className="mx-auto text-stone-800"
+    >
+      {baseFret > 1 && (
+        <text x={2} y={top + fretGap * 0.65} fontSize="10" fill="currentColor">
+          {baseFret}fr
+        </text>
+      )}
+      {Array.from({ length: fretCount + 1 }, (_, index) => (
+        <line
+          key={`fret-${index}`}
+          x1={left}
+          x2={right}
+          y1={top + index * fretGap}
+          y2={top + index * fretGap}
+          stroke="currentColor"
+          strokeWidth={index === 0 && baseFret === 1 ? 3 : 1}
+          strokeLinecap="round"
+        />
+      ))}
+      {Array.from({ length: strings }, (_, index) => (
+        <line
+          key={`string-${index}`}
+          x1={xForString(index)}
+          x2={xForString(index)}
+          y1={top}
+          y2={bottom}
+          stroke="currentColor"
+          strokeWidth={1}
+          strokeLinecap="round"
+        />
+      ))}
+      {frets.map((fret, index) => {
+        const x = xForString(index);
+        if (fret === 0) {
+          return <circle key={`open-${index}`} cx={x} cy={12} r={4} fill="none" stroke="currentColor" strokeWidth={1.5} />;
+        }
+        if (fret < 0) {
+          return (
+            <text key={`muted-${index}`} x={x} y={15} textAnchor="middle" fontSize="13" fill="currentColor">
+              x
+            </text>
+          );
+        }
+        return (
+          <g key={`note-${index}`}>
+            <circle cx={x} cy={yForFret(fret)} r={dotRadius} fill="currentColor" />
+            {fingers[index] ? (
+              <text x={x} y={yForFret(fret) + 3} textAnchor="middle" fontSize="8" fill="white">
+                {fingers[index]}
+              </text>
+            ) : null}
+          </g>
+        );
+      })}
+      {(chord.barres ?? []).map((barre, index) => {
+        const coveredStrings = frets
+          .map((fret, stringIndex) => ({ fret, stringIndex }))
+          .filter((item) => item.fret === barre)
+          .map((item) => item.stringIndex);
+        if (coveredStrings.length < 2) return null;
+        const first = Math.min(...coveredStrings);
+        const last = Math.max(...coveredStrings);
+        const x = xForString(first) - dotRadius;
+        const y = yForFret(barre) - dotRadius;
+        const rectWidth = xForString(last) - xForString(first) + dotRadius * 2;
+        return <rect key={`barre-${index}`} x={x} y={y} width={rectWidth} height={dotRadius * 2} rx={dotRadius} fill="currentColor" />;
+      })}
+    </svg>
   );
 }
 

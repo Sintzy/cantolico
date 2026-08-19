@@ -1,10 +1,10 @@
 "use client";
 import "../../../../public/styles/chords.css";
-import ChordDiagrams from '@/components/ChordDiagrams';
 import { detectKey, formatKeyLabel, transposeKey } from '@/lib/chord-processor';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Guitar, ChevronDown, ChevronRight, FileText, Music, Youtube, Download, ArrowLeft, Church, X } from 'lucide-react';
 import * as React from "react";
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Head from 'next/head';
@@ -22,6 +22,8 @@ import { PremiumUserMark } from '@/components/PremiumUserMark';
 import { LiturgicalMoment, getInstrumentLabel, getLiturgicalMomentLabel } from '@/lib/constants';
 import { FileType } from '@/types/song-files';
 import { trackEvent } from '@/lib/umami';
+
+const ChordDiagrams = dynamic(() => import('@/components/ChordDiagrams'), { ssr: false });
 
 // Small badge with hover/click notice for BETA warning
 function BetaBadgeWithNotice() {
@@ -1370,7 +1372,6 @@ export default function SongPageClient({ initialSong, songId }: SongPageClientPr
 
 // ----------------- Pequenos componentes para títulos com “linha azul” -----------------
 // Importação dinâmica para evitar SSR issues
-import dynamic from "next/dynamic";
 const ScrollToTopButton = dynamic(() => import("@/components/ScrollToTopButton"), { ssr: false });
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
