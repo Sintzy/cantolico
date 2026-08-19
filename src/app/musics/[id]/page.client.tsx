@@ -4,7 +4,6 @@ import ChordDiagrams from '@/components/ChordDiagrams';
 import { detectKey, formatKeyLabel, transposeKey } from '@/lib/chord-processor';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Guitar, ChevronDown, ChevronRight, FileText, Music, Youtube, Download, ArrowLeft, Church, X } from 'lucide-react';
-import YouTube from 'react-youtube';
 import * as React from "react";
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -985,7 +984,13 @@ export default function SongPageClient({ initialSong, songId }: SongPageClientPr
             <section className="bg-white rounded-2xl p-6 md:p-10 border border-stone-200">
               <SectionTitle>YouTube</SectionTitle>
               <div className="aspect-video max-w-2xl mx-auto rounded-lg overflow-hidden shadow">
-                <YouTube videoId={getYoutubeId(currentVersion.youtubeLink)} className="w-full h-full" />
+                <iframe
+                  src={`https://www.youtube-nocookie.com/embed/${getYoutubeId(currentVersion.youtubeLink)}`}
+                  title={`${title} no YouTube`}
+                  className="h-full w-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
               </div>
               <a href={currentVersion.youtubeLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-rose-700 mt-2 text-sm hover:underline"><Youtube className="h-4 w-4" /> Abrir no YouTube</a>
             </section>
