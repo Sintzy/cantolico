@@ -6,6 +6,7 @@ import { parseMomentsFromPostgreSQL } from '@/lib/utils';
 import { getLiturgicalMomentLabel } from '@/lib/constants';
 import { getClerkSession } from '@/lib/api-middleware';
 import { premiumRequiredResponse, userCanUseFeature } from '@/lib/premium';
+import { isLikelySongId, normalizeSongIdentifier } from '@/lib/song-identifier';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -44,6 +45,42 @@ const SECTION_WITH_CHORDS_RE = /^(Intro|Ponte|Solo|Bridge|Instrumental|Interlude
 
 const stripChords = (line: string) => line.replace(/\[[A-G][#b]?[^\]]*\]/g, '');
 
+async function findSongByIdOrSlug(id: string) {
+  const songIdOrSlug = normalizeSongIdentifier(id);
+  const looksLikeId = isLikelySongId(songIdOrSlug);
+  let idLookupError: any = null;
+
+  if (looksLikeId) {
+    const { data, error } = await supabase
+      .from('Song')
+      .select('id, title, author, tags, moments, mainInstrument, currentVersionId')
+      .eq('id', songIdOrSlug)
+      .limit(1);
+
+    if (error) {
+      idLookupError = error;
+    } else if (data?.[0]) {
+      return { song: data[0], error: null };
+    }
+  }
+
+  const { data, error } = await supabase
+    .from('Song')
+    .select('id, title, author, tags, moments, mainInstrument, currentVersionId')
+    .eq('slug', songIdOrSlug)
+    .limit(1);
+
+  if (error) {
+    return { song: null, error };
+  }
+
+  if (!data?.[0] && idLookupError) {
+    return { song: null, error: idLookupError };
+  }
+
+  return { song: data?.[0] ?? null, error: null };
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -71,17 +108,16 @@ export async function GET(
 
     const showBranding = canRemoveBranding ? forceBranding : true;
 
-    const { data: songData, error: songError } = await supabase
-      .from('Song')
-      .select('id, title, author, tags, moments, mainInstrument, currentVersionId')
-      .or(`id.eq.${id},slug.eq.${id}`)
-      .limit(1);
+    const { song, error: songError } = await findSongByIdOrSlug(id);
 
-    if (songError || !songData || songData.length === 0) {
-      return NextResponse.json({ error: 'Música não encontrada' }, { status: 404 });
+    if (songError) {
+      console.error('Error loading song for PDF:', songError);
+      return NextResponse.json({ error: 'Erro ao carregar música' }, { status: 500 });
     }
 
-    const song = songData[0];
+    if (!song) {
+      return NextResponse.json({ error: 'Música não encontrada' }, { status: 404 });
+    }
 
     const { data: versionData, error: versionError } = await supabase
       .from('SongVersion')

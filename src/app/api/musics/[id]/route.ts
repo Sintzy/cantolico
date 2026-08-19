@@ -5,6 +5,68 @@ import { protectApiRoute, applySecurityHeaders } from "@/lib/api-protection";
 import { formatTagsForPostgreSQL, parseTagsFromPostgreSQL, parseMomentsFromPostgreSQL } from "@/lib/utils";
 import { withSongLogging } from "@/lib/api-route-wrapper";
 import { isPremiumState } from "@/lib/premium";
+import { isLikelySongId, normalizeSongIdentifier } from "@/lib/song-identifier";
+
+const songSelect = `
+  id,
+  title,
+  slug,
+  moments,
+  type,
+  mainInstrument,
+  capo,
+  tags,
+  author,
+  currentVersionId,
+  SongVersion!Song_currentVersionId_fkey (
+    sourcePdfKey,
+    sourceText,
+    mediaUrl,
+    youtubeLink,
+    createdBy:User!SongVersion_createdById_fkey (
+      name,
+      plan,
+      planStatus,
+      premiumUntil
+    )
+  )
+`;
+
+async function findSongByIdOrSlug(id: string) {
+  const songIdOrSlug = normalizeSongIdentifier(id);
+  const looksLikeId = isLikelySongId(songIdOrSlug);
+  let idLookupError: any = null;
+
+  if (looksLikeId) {
+    const { data, error } = await supabase
+      .from('Song')
+      .select(songSelect)
+      .eq('id', songIdOrSlug)
+      .limit(1);
+
+    if (error) {
+      idLookupError = error;
+    } else if (data?.[0]) {
+      return { song: data[0], error: null };
+    }
+  }
+
+  const { data, error } = await supabase
+    .from('Song')
+    .select(songSelect)
+    .eq('slug', songIdOrSlug)
+    .limit(1);
+
+  if (error) {
+    return { song: null, error };
+  }
+
+  if (!data?.[0] && idLookupError) {
+    return { song: null, error: idLookupError };
+  }
+
+  return { song: data?.[0] ?? null, error: null };
+}
 
 async function GETHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   // Verifica se a requisição vem de uma origem autorizada
@@ -36,42 +98,13 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ id: 
       }
     });
 
-    // Tentar encontrar por ID primeiro, depois por slug
-    // OTIMIZADO: Retornar apenas campos necessários para o frontend
-    const { data: songs, error } = await supabase
-      .from('Song')
-      .select(`
-        id,
-        title,
-        slug,
-        moments,
-        type,
-        mainInstrument,
-        capo,
-        tags,
-        author,
-        currentVersionId,
-        SongVersion!Song_currentVersionId_fkey (
-          sourcePdfKey,
-          sourceText,
-          mediaUrl,
-          youtubeLink,
-          createdBy:User!SongVersion_createdById_fkey (
-            name,
-            plan,
-            planStatus,
-            premiumUntil
-          )
-        )
-      `)
-      .or(`id.eq.${id},slug.eq.${id}`)
-      .limit(1);
+    const { song, error } = await findSongByIdOrSlug(id);
 
     if (error) {
       throw new Error(`Supabase error: ${error.message}`);
     }
 
-    if (!songs || songs.length === 0) {
+    if (!song) {
       logApiRequestError({
         method: req.method,
         url: req.url,
@@ -87,7 +120,6 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ id: 
       return applySecurityHeaders(response, req);
     }
 
-    const song = songs[0];
     const currentVersion = Array.isArray(song.SongVersion)
       ? song.SongVersion[0]
       : song.SongVersion as any;

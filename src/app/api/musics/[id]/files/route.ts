@@ -1,9 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
+import { isLikelySongId, normalizeSongIdentifier } from '@/lib/song-identifier';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+async function findSongVersionByIdOrSlug(id: string) {
+  const songIdOrSlug = normalizeSongIdentifier(id);
+  const looksLikeId = isLikelySongId(songIdOrSlug);
+  let idLookupError: any = null;
+
+  if (looksLikeId) {
+    const { data, error } = await supabase
+      .from('Song')
+      .select('id, slug, currentVersionId')
+      .eq('id', songIdOrSlug)
+      .limit(1);
+
+    if (error) {
+      idLookupError = error;
+    } else if (data?.[0]) {
+      return { song: data[0], error: null };
+    }
+  }
+
+  const { data, error } = await supabase
+    .from('Song')
+    .select('id, slug, currentVersionId')
+    .eq('slug', songIdOrSlug)
+    .limit(1);
+
+  if (error) {
+    return { song: null, error };
+  }
+
+  if (!data?.[0] && idLookupError) {
+    return { song: null, error: idLookupError };
+  }
+
+  return { song: data?.[0] ?? null, error: null };
+}
 
 /**
  * Public endpoint to fetch a song's files (PDFs/MP3s).
@@ -16,13 +53,16 @@ export async function GET(
   const { id } = await ctx.params;
 
   try {
-    const { data: songWithVersion, error: songWithVersionError } = await supabase
-      .from('Song')
-      .select('id, slug, currentVersionId')
-      .or(`slug.eq.${id},id.eq.${id}`)
-      .single();
+    const { song: songWithVersion, error: songWithVersionError } = await findSongVersionByIdOrSlug(id);
 
-    if (songWithVersionError || !songWithVersion?.currentVersionId) {
+    if (songWithVersionError) {
+      return NextResponse.json(
+        { success: false, error: songWithVersionError.message },
+        { status: 500 }
+      );
+    }
+
+    if (!songWithVersion?.currentVersionId) {
       return NextResponse.json(
         { success: false, error: 'Song or version not found' },
         { status: 404 }

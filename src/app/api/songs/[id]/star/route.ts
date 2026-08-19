@@ -2,6 +2,49 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase } from '@/lib/supabase-admin';
 import { withAuthApiProtection, withApiProtection, getClerkSession } from '@/lib/api-middleware';
 import { logSongStarred, logUserAction } from '@/lib/logging-helpers';
+import { isLikelySongId, normalizeSongIdentifier } from '@/lib/song-identifier';
+
+type SongLookup = {
+  id: string;
+  title?: string | null;
+  slug?: string | null;
+};
+
+async function findSongByIdOrSlug(identifier: string, select: string) {
+  const songIdOrSlug = normalizeSongIdentifier(identifier);
+  const looksLikeId = isLikelySongId(songIdOrSlug);
+  let idLookupError: unknown = null;
+
+  if (looksLikeId) {
+    const { data, error } = await adminSupabase
+      .from('Song')
+      .select(select)
+      .eq('id', songIdOrSlug)
+      .limit(1);
+
+    if (error) {
+      idLookupError = error;
+    } else if (data?.[0]) {
+      return { song: data[0] as unknown as SongLookup, error: null };
+    }
+  }
+
+  const { data, error } = await adminSupabase
+    .from('Song')
+    .select(select)
+    .eq('slug', songIdOrSlug)
+    .limit(1);
+
+  if (error) {
+    return { song: null, error };
+  }
+
+  if (!data?.[0] && idLookupError) {
+    return { song: null, error: idLookupError };
+  }
+
+  return { song: (data?.[0] as unknown as SongLookup | undefined) ?? null, error: null };
+}
 
 export const POST = withAuthApiProtection(async (
   request: NextRequest,
@@ -18,24 +61,21 @@ export const POST = withAuthApiProtection(async (
     }
 
     const { id } = await params;
-    const songIdOrSlug = id;
     const userId = session.user.id;
 
-    // Buscar música por ID ou slug
-    const { data: songs, error: songError } = await adminSupabase
-      .from('Song')
-      .select('id, title, slug')
-      .or(`id.eq.${songIdOrSlug},slug.eq.${songIdOrSlug}`)
-      .limit(1);
+    const { song, error: songError } = await findSongByIdOrSlug(id, 'id, title, slug');
 
-    if (songError || !songs || songs.length === 0) {
+    if (songError) {
+      throw songError;
+    }
+
+    if (!song) {
       return NextResponse.json(
         { error: 'Song not found' },
         { status: 404 }
       );
     }
 
-    const song = songs[0];
     const songId = song.id;
 
     // Verificar se já tem star
@@ -116,24 +156,21 @@ export const DELETE = withAuthApiProtection(async (
     }
 
     const { id } = await params;
-    const songIdOrSlug = id;
     const userId = session.user.id;
 
-    // Buscar música por ID ou slug
-    const { data: songs, error: songError } = await adminSupabase
-      .from('Song')
-      .select('id, title, slug')
-      .or(`id.eq.${songIdOrSlug},slug.eq.${songIdOrSlug}`)
-      .limit(1);
+    const { song, error: songError } = await findSongByIdOrSlug(id, 'id, title, slug');
 
-    if (songError || !songs || songs.length === 0) {
+    if (songError) {
+      throw songError;
+    }
+
+    if (!song) {
       return NextResponse.json(
         { error: 'Song not found' },
         { status: 404 }
       );
     }
 
-    const song = songs[0];
     const songId = song.id;
 
     // Remover star
@@ -178,23 +215,21 @@ export const GET = withApiProtection(async (
   try {
     const session = await getClerkSession();
     const { id } = await params;
-    const songIdOrSlug = id;
 
-    // Buscar música por ID ou slug
-    const { data: songs, error: songError } = await adminSupabase
-      .from('Song')
-      .select('id')
-      .or(`id.eq.${songIdOrSlug},slug.eq.${songIdOrSlug}`)
-      .limit(1);
+    const { song, error: songError } = await findSongByIdOrSlug(id, 'id');
 
-    if (songError || !songs || songs.length === 0) {
+    if (songError) {
+      throw songError;
+    }
+
+    if (!song) {
       return NextResponse.json(
         { error: 'Song not found' },
         { status: 404 }
       );
     }
 
-    const songId = songs[0].id;
+    const songId = song.id;
 
     // Contagem total de stars
     const { count: starCount } = await adminSupabase

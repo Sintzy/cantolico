@@ -20,6 +20,8 @@ import AddToPlaylistButton from '@/components/AddToPlaylistButton';
 import { MusicListSkeleton } from '@/components/MusicListSkeleton';
 import { toast } from 'sonner';
 import { usePageState } from '@/hooks/usePageState';
+import { useBatchStars } from '@/hooks/useBatchStars';
+import { useSession } from '@/hooks/useClerkSession';
 import { trackEvent } from '@/lib/umami';
 import {
   Pagination,
@@ -137,6 +139,7 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
   const [filteredSongs, setFilteredSongs] = useState<Song[]>([]);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(normalizedInitialSongs.length > 0); // Já temos dados do servidor
+  const { status: sessionStatus } = useSession();
 
   // Use page state hook para manter estado entre navegações
   const { state, saveState, restoreScrollPosition, saveScrollPosition, isInitialized } = usePageState('musics');
@@ -462,6 +465,8 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+  const paginatedSongIds = paginatedSongs.map((song) => song.id);
+  const { starsData } = useBatchStars(sessionStatus === 'authenticated' ? paginatedSongIds : []);
 
   return (
     <main className="flex-1 bg-white">
@@ -638,8 +643,8 @@ export default function MusicsPageClient({ initialSongs }: MusicsPageClientProps
                               <StarButton
                                 songId={song.id}
                                 size="sm"
-                                initialStarCount={song.starCount}
-                                initialIsStarred={song.isStarred}
+                                initialStarCount={starsData.get(song.id)?.starCount ?? song.starCount ?? 0}
+                                initialIsStarred={sessionStatus === 'authenticated' ? starsData.get(song.id)?.isStarred ?? false : false}
                               />
                               <AddToPlaylistButton songId={song.id} size="sm" />
                             </div>

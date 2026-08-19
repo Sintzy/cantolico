@@ -28,7 +28,7 @@ export default function StarButton({
   initialStarCount,
   initialIsStarred
 }: StarButtonProps) {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [isLoading, setIsLoading] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   
@@ -45,11 +45,19 @@ export default function StarButton({
   // OTIMIZAÇÃO: Carregar status inicial - usar dados pré-carregados se disponíveis
   useEffect(() => {
     const fetchStarStatus = async () => {
-      // Se já tem dados iniciais, usar eles (dados vêm da API de listagem)
+      // Se ja tem dados iniciais completos, usar eles (dados vem da API de listagem)
       if (initialStarCount !== undefined && initialIsStarred !== undefined) {
         updateStarCache(initialStarCount, initialIsStarred);
         return;
       }
+
+      // Visitantes anonimos nao podem ter uma estrela propria; a contagem inicial basta.
+      if (initialStarCount !== undefined && status === 'unauthenticated') {
+        updateStarCache(initialStarCount, false);
+        return;
+      }
+
+      if (status === 'loading') return;
 
       // Verificar cache primeiro
       const cached = getStarCache();
@@ -70,7 +78,7 @@ export default function StarButton({
     };
 
     fetchStarStatus();
-  }, [songId, getStarCache, updateStarCache, initialStarCount, initialIsStarred]);
+  }, [songId, getStarCache, updateStarCache, initialStarCount, initialIsStarred, status]);
 
   const handleStar = async () => {
     if (!session) {
