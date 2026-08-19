@@ -7,7 +7,6 @@ import * as React from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import Head from 'next/head';
 import { supabase } from '@/lib/supabase';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
