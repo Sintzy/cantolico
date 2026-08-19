@@ -80,6 +80,7 @@ type SongData = {
 interface SongPageClientProps {
   initialSong: SongData | null;
   songId: string;
+  onReady?: () => void;
 }
 
 // Helper function para converter chaves do enum para valores bonitos
@@ -120,7 +121,7 @@ function transposeMarkdownChords(text: string, interval: number): string {
   return text.replace(/\[([^\]]+)\]/g, (_, chord) => `[${transposeChord(chord, interval)}]`);
 }
 
-export default function SongPageClient({ initialSong, songId }: SongPageClientProps) {
+export default function SongPageClient({ initialSong, songId, onReady }: SongPageClientProps) {
   const router = useRouter();
   const handleBackToList = () => {
     router.push('/musics');
@@ -151,6 +152,10 @@ export default function SongPageClient({ initialSong, songId }: SongPageClientPr
     description?: string;
     signedUrl?: string;
   }>>([]);
+
+  React.useEffect(() => {
+    onReady?.();
+  }, [onReady]);
 
   const exitMassMode = () => {
     router.replace(`/musics/${id}`, { scroll: false });
