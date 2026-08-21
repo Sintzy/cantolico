@@ -40,8 +40,8 @@ type CandidateSong = {
   title: string;
   slug: string;
   author: string | null;
-  moments: string[];
-  tags: string[];
+  moments: unknown;
+  tags: unknown;
   mainInstrument: string;
   type: string;
 };
@@ -88,15 +88,35 @@ async function getAIQuota(userId: number) {
 }
 
 function formatCandidate(song: CandidateSong) {
+  const moments = normalizeStringList(song.moments);
+  const tags = normalizeStringList(song.tags);
   const meta = [
     song.author ? `autor: ${song.author}` : null,
     song.mainInstrument ? `instrumento: ${song.mainInstrument}` : null,
     song.type ? `tipo: ${song.type}` : null,
-    song.moments?.length ? `momentos: ${song.moments.join(", ")}` : null,
-    song.tags?.length ? `tags: ${song.tags.slice(0, 8).join(", ")}` : null,
+    moments.length ? `momentos: ${moments.join(", ")}` : null,
+    tags.length ? `tags: ${tags.slice(0, 8).join(", ")}` : null,
   ].filter(Boolean);
 
   return `- ${song.id} | ${song.title}${meta.length ? ` (${meta.join("; ")})` : ""}`;
+}
+
+function normalizeStringList(value: unknown) {
+  if (Array.isArray(value)) {
+    return value
+      .map(item => String(item).trim())
+      .filter(Boolean);
+  }
+
+  if (typeof value === "string") {
+    return value
+      .replace(/^\{|\}$/g, "")
+      .split(",")
+      .map(item => item.trim().replace(/^"|"$/g, ""))
+      .filter(Boolean);
+  }
+
+  return [];
 }
 
 async function getCandidateSongs() {

@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Check, Heart } from 'lucide-react';
+import { ArrowRight, CalendarDays, Check, Heart, Sparkles, Wand2 } from 'lucide-react';
 import { auth } from '@clerk/nextjs/server';
 import { Button } from '@/components/ui/button';
 import { PricingCheckout } from '@/components/PricingCheckout';
@@ -20,12 +20,14 @@ const freeFeatures = [
   'Favoritos',
   'Até 3 playlists',
   'Até 3 missas/repertórios',
+  '1 missa com IA por semana',
   'PDFs com marca Cantólico',
 ];
 
 const premiumFeatures = [
   'Playlists ilimitadas',
   'Missas e repertórios ilimitados',
+  '1 missa com IA por dia',
   'PDFs sem marca Cantólico',
   'Exportação PowerPoint',
   'Duplicar missas',
@@ -73,7 +75,62 @@ export default async function PricingPage() {
         </div>
       </section>
 
-      <section className="px-5 py-10 md:py-14">
+      <section className="px-5 py-8 md:py-12">
+        <div className="mx-auto max-w-screen-lg overflow-hidden rounded-2xl border border-rose-900/20 bg-stone-950 text-white shadow-xl shadow-stone-200/50 dark:shadow-none">
+          <div className="grid gap-0 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="p-6 md:p-8 lg:p-10">
+              <div className="mb-6 flex h-11 w-11 items-center justify-center rounded-xl bg-rose-500/15 text-rose-200">
+                <Wand2 className="h-5 w-5" />
+              </div>
+              <h2 className="font-display text-[clamp(2rem,4vw,3.5rem)] leading-tight">
+                Cria uma missa inteira a partir de uma frase.
+              </h2>
+              <p className="mt-5 max-w-xl text-base leading-relaxed text-stone-300 md:text-lg">
+                Escreve “missa para catequese”, “missa jovem de Advento” ou “celebração simples com guitarra”.
+                O Cantólico sugere cânticos reais da biblioteca, organizados por momento litúrgico, prontos para ajustares.
+              </p>
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                <Button asChild className="bg-white text-stone-950 hover:bg-white/90">
+                  <Link href="/missas/create">
+                    Experimentar IA
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" className="border-white/20 bg-transparent text-white hover:bg-white/10 hover:text-white">
+                  <Link href="#planos">Ver limites dos planos</Link>
+                </Button>
+              </div>
+            </div>
+
+            <div className="border-t border-white/10 bg-white/[0.04] p-6 md:p-8 lg:border-l lg:border-t-0 lg:p-10">
+              <div className="space-y-4">
+                <div className="rounded-xl border border-white/10 bg-white/[0.06] p-4">
+                  <p className="text-xs font-medium uppercase tracking-[0.16em] text-rose-200">Pedido</p>
+                  <p className="mt-3 text-lg font-medium text-white">Missa para catequese, alegre e fácil de cantar</p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                  {[
+                    { icon: Sparkles, title: 'Free', text: '1 criação com IA por semana' },
+                    { icon: CalendarDays, title: 'Premium', text: '1 criação com IA por dia' },
+                  ].map(item => (
+                    <div key={item.title} className="flex items-center gap-3 rounded-xl border border-white/10 bg-stone-900/80 p-4">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-rose-500/15 text-rose-200">
+                        <item.icon className="h-5 w-5" />
+                      </span>
+                      <div>
+                        <p className="text-sm font-semibold text-white">{item.title}</p>
+                        <p className="text-sm text-stone-300">{item.text}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="planos" className="px-5 py-10 md:py-14">
         <div className="mx-auto grid max-w-screen-lg gap-5 lg:grid-cols-2">
           <article className="flex min-h-[420px] flex-col rounded-lg border border-border bg-card p-6 md:p-7">
             <div>
