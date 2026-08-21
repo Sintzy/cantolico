@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft, Calendar, Church, Loader2, User } from 'lucide-react';
+import { ArrowLeft, Calendar, Church, Loader2, Sparkles, User, Wand2 } from 'lucide-react';
 import {
   MassVisibility,
   LITURGICAL_COLORS,
@@ -23,9 +23,21 @@ import {
   LiturgicalColor
 } from '@/types/mass';
 
+interface AIQuota {
+  isPremium: boolean;
+  limit: number;
+  used: number;
+  remaining: number;
+  windowDays: number;
+  label: string;
+}
+
 export default function CreateMassPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [isAiCreating, setIsAiCreating] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiQuota, setAiQuota] = useState<AIQuota | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -37,6 +49,59 @@ export default function CreateMassPage() {
     liturgicalColor: '' as LiturgicalColor | '',
     visibility: 'PRIVATE' as MassVisibility,
   });
+
+  useEffect(() => {
+    fetch('/api/masses/ai-create')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => setAiQuota(data?.quota || null))
+      .catch(() => setAiQuota(null));
+  }, []);
+
+  const buildDateTime = () => {
+    if (!formData.date) return null;
+    return formData.time
+      ? `${formData.date}T${formData.time}:00`
+      : `${formData.date}T10:00:00`;
+  };
+
+  const handleAICreate = async () => {
+    if (aiPrompt.trim().length < 8) {
+      toast.error('Descreve a missa com um pouco mais de detalhe');
+      return;
+    }
+
+    setIsAiCreating(true);
+
+    try {
+      const response = await fetch('/api/masses/ai-create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: aiPrompt.trim(),
+          date: formData.date || null,
+          time: formData.time || null,
+          parish: formData.parish.trim() || null,
+          celebrant: formData.celebrant.trim() || null,
+          visibility: formData.visibility,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao criar missa com IA');
+      }
+
+      if (data.quota) setAiQuota(data.quota);
+      toast.success(`Missa criada com IA com ${data.itemCount || 0} cânticos`);
+      router.push(`/missas/${data.massId}`);
+    } catch (error: any) {
+      console.error('Error creating AI mass:', error);
+      toast.error(error.message || 'Erro ao criar missa com IA');
+    } finally {
+      setIsAiCreating(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,12 +115,7 @@ export default function CreateMassPage() {
 
     try {
       // Combine date and time
-      let dateTime = null;
-      if (formData.date) {
-        dateTime = formData.time
-          ? `${formData.date}T${formData.time}:00`
-          : `${formData.date}T10:00:00`;
-      }
+      const dateTime = buildDateTime();
 
       const response = await fetch('/api/masses', {
         method: 'POST',
@@ -107,6 +167,56 @@ export default function CreateMassPage() {
 
       {/* Form */}
       <div className="max-w-2xl mx-auto px-4 sm:px-6 md:px-8 py-8 md:py-12">
+        <div className="mb-6 overflow-hidden rounded-xl border border-rose-100 bg-rose-50/40">
+          <div className="border-b border-rose-100 bg-white/70 px-6 py-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="mb-2 flex items-center gap-2 text-rose-700">
+                  <Sparkles className="h-4 w-4" />
+                  <span className="text-xs font-semibold uppercase tracking-[0.16em]">Criar com IA</span>
+                </div>
+                <h2 className="text-base font-semibold text-stone-900">Descreve a missa e recebe um repertório inicial</h2>
+                <p className="mt-1 text-sm leading-relaxed text-stone-500">
+                  Ex: missa para catequese, missa jovem de Advento, celebração simples com guitarra.
+                </p>
+              </div>
+              {aiQuota && (
+                <div className="shrink-0 rounded-lg border border-rose-100 bg-white px-3 py-2 text-right">
+                  <p className="text-xs font-medium text-stone-900">{aiQuota.remaining}/{aiQuota.limit}</p>
+                  <p className="text-[11px] text-stone-500">{aiQuota.isPremium ? 'hoje' : 'esta semana'}</p>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="space-y-4 px-6 py-5">
+            <div className="space-y-2">
+              <Label htmlFor="aiPrompt" className="text-stone-700 text-sm font-medium">Pedido para a IA</Label>
+              <Textarea
+                id="aiPrompt"
+                placeholder="Ex: Missa para catequese com cânticos fáceis, alegres e conhecidos"
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                rows={3}
+                className="border-rose-100 bg-white rounded-lg text-stone-900 focus:border-rose-300 focus-visible:ring-0 placeholder:text-stone-400"
+              />
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs leading-relaxed text-stone-500">
+                {aiQuota ? aiQuota.label : 'A quota é verificada no servidor antes de criar.'}
+              </p>
+              <Button
+                type="button"
+                onClick={handleAICreate}
+                disabled={isAiCreating || !!aiQuota && aiQuota.remaining <= 0}
+                className="bg-rose-700 text-white transition-colors hover:bg-stone-900"
+              >
+                {isAiCreating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Wand2 className="w-4 h-4 mr-2" />}
+                Criar Missa com IA
+              </Button>
+            </div>
+          </div>
+        </div>
+
         <form onSubmit={handleSubmit}>
           <div className="rounded-xl border border-stone-200 bg-white overflow-hidden">
             <div className="px-6 py-5 border-b border-stone-100 bg-stone-50/50">
