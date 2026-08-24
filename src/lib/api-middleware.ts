@@ -3,6 +3,15 @@ import { protectApiRoute, applySecurityHeaders } from '@/lib/api-protection';
 import { auth } from '@clerk/nextjs/server';
 import { createAdminSupabaseClient } from '@/lib/supabase-admin';
 
+type ClerkRole = 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN' | 'SUPER_ADMIN';
+type ClerkSessionClaims = {
+  metadata?: { role?: string };
+  publicMetadata?: { role?: string };
+  role?: string;
+  email?: unknown;
+  name?: unknown;
+};
+
 /**
  * Sessão compatível com o formato antigo para manter compatibilidade
  */
@@ -10,7 +19,7 @@ export interface ClerkSession {
   user: {
     id: number;
     clerkUserId: string;
-    role: 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN' | 'SUPER_ADMIN';
+    role: ClerkRole;
     email?: string;
     name?: string;
   };
@@ -101,15 +110,19 @@ export async function getClerkSession(): Promise<ClerkSession | null> {
     return null;
   }
 
-  const metadataRole = (sessionClaims?.metadata as { role?: string } | undefined)?.role;
+  const claims = sessionClaims as ClerkSessionClaims | undefined;
+  const metadataRole =
+    claims?.publicMetadata?.role ||
+    claims?.metadata?.role ||
+    claims?.role;
 
   return {
     user: {
       id: user.id,
       clerkUserId: userId,
-      role: (metadataRole || user.role || 'USER') as 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN' | 'SUPER_ADMIN',
-      email: sessionClaims?.email as string | undefined,
-      name: sessionClaims?.name as string | undefined,
+      role: (metadataRole || user.role || 'USER') as ClerkRole,
+      email: claims?.email as string | undefined,
+      name: claims?.name as string | undefined,
     }
   };
 }

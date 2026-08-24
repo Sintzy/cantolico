@@ -1,7 +1,7 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { createAdminSupabaseClient } from './supabase-admin';
 
-export type UserRole = 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN';
+export type UserRole = 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN' | 'SUPER_ADMIN';
 
 export interface ClerkUserMetadata {
   role?: UserRole;
@@ -9,6 +9,12 @@ export interface ClerkUserMetadata {
   suspendedUntil?: string;
   supabaseUserId?: number;
 }
+
+type ClerkClaimsWithMetadata = {
+  metadata?: ClerkUserMetadata;
+  publicMetadata?: ClerkUserMetadata;
+  role?: UserRole;
+};
 
 export interface AuthenticatedUser {
   clerkUserId: string;
@@ -32,7 +38,8 @@ export async function getAuthenticatedUser(): Promise<AuthenticatedUser | null> 
     return null;
   }
 
-  const metadata = sessionClaims?.metadata as ClerkUserMetadata | undefined;
+  const claims = sessionClaims as ClerkClaimsWithMetadata | undefined;
+  const metadata = claims?.publicMetadata || claims?.metadata;
   const supabase = createAdminSupabaseClient();
 
   // Buscar utilizador no Supabase pelo clerkUserId
@@ -53,7 +60,7 @@ export async function getAuthenticatedUser(): Promise<AuthenticatedUser | null> 
     email: user.email,
     name: user.name,
     image: user.image,
-    role: (metadata?.role || user.role || 'USER') as UserRole,
+    role: (metadata?.role || claims?.role || user.role || 'USER') as UserRole,
     isBanned: metadata?.isBanned || false,
     suspendedUntil: metadata?.suspendedUntil || null,
   };
@@ -80,14 +87,14 @@ export async function requireRole(...allowedRoles: UserRole[]): Promise<Authenti
  * Verifica se o utilizador é admin
  */
 export async function requireAdmin(): Promise<AuthenticatedUser> {
-  return requireRole('ADMIN');
+  return requireRole('ADMIN', 'SUPER_ADMIN');
 }
 
 /**
  * Verifica se o utilizador é admin ou reviewer
  */
 export async function requireAdminOrReviewer(): Promise<AuthenticatedUser> {
-  return requireRole('ADMIN', 'REVIEWER');
+  return requireRole('ADMIN', 'SUPER_ADMIN', 'REVIEWER');
 }
 
 /**
