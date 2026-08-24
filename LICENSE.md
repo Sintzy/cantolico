@@ -1,6 +1,6 @@
 # Creative Commons Attribution–NonCommercial 4.0 International
 
-**Copyright © 2025 Cantólico**
+**Copyright © 2026 Cantólico**
 
 Permission is granted, free of charge, to any person obtaining a copy of this work and associated files (the “Work”), to use, copy, share, and adapt the Work for **non-commercial** purposes, subject to the following conditions:
 
