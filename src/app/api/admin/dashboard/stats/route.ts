@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getClerkSession } from '@/lib/api-middleware';
+import { requireAdmin } from '@/lib/admin-auth';
 import { adminSupabase } from '@/lib/supabase-admin';
 
 // Cache stats for 15 minutes to reduce database load
@@ -9,11 +9,8 @@ const CACHE_TTL = 15 * 60 * 1000; // 15 minutes
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getClerkSession();
-    
-    if (!session || session.user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
-    }
+    const { error: authError } = await requireAdmin();
+    if (authError) return authError;
 
     // Return cached data if still valid
     const now = Date.now();

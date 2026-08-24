@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getClerkSession, ClerkSession } from '@/lib/api-middleware';
 
+function isAdminRole(role: ClerkSession['user']['role']) {
+  return role === 'ADMIN' || role === 'SUPER_ADMIN';
+}
+
 /**
  * Fast admin authentication check for API routes
  * Returns user session if admin, or error response if not
@@ -15,7 +19,7 @@ export async function requireAdmin(): Promise<{ error: NextResponse | null; sess
     };
   }
 
-  if (session.user.role !== 'ADMIN') {
+  if (!isAdminRole(session.user.role)) {
     return {
       error: NextResponse.json({ error: 'Acesso negado' }, { status: 403 }),
       session: null
@@ -38,7 +42,7 @@ export async function requireReviewer(): Promise<{ error: NextResponse | null; s
     };
   }
 
-  if (session.user.role !== 'ADMIN' && session.user.role !== 'REVIEWER') {
+  if (!isAdminRole(session.user.role) && session.user.role !== 'REVIEWER') {
     return {
       error: NextResponse.json({ error: 'Acesso negado' }, { status: 403 }),
       session: null
