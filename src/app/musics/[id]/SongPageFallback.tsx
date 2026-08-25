@@ -7,6 +7,10 @@ type SongFallbackData = {
   title: string;
   type?: string | null;
   moments?: string[] | null;
+  currentVersion?: {
+    spotifyLink?: string | null;
+    youtubeLink?: string | null;
+  } | null;
 };
 
 function ActionSkeleton({ children }: { children: React.ReactNode }) {
@@ -152,6 +156,8 @@ function SheetSkeleton() {
 export default function SongPageFallback({ song }: { song: SongFallbackData }) {
   const isSheet = song.type === 'PARTITURA';
   const momentsCount = Array.isArray(song.moments) ? Math.min(song.moments.length, 3) : 2;
+  const hasSpotify = Boolean(song.currentVersion?.spotifyLink);
+  const hasYoutube = Boolean(song.currentVersion?.youtubeLink);
 
   return (
     <div className="relative min-h-screen w-full bg-white text-stone-900">
@@ -218,10 +224,18 @@ export default function SongPageFallback({ song }: { song: SongFallbackData }) {
 
               <main className="min-w-0 flex-1 space-y-10">
                 <LyricsSkeleton />
-                <section className="rounded-2xl border border-stone-200 bg-white p-6 md:p-10">
-                  <Skeleton className="mb-6 h-5 w-20 bg-stone-300" />
-                  <Skeleton className="mx-auto aspect-video w-full max-w-2xl rounded-lg bg-stone-100" />
-                </section>
+                {hasSpotify ? (
+                  <section className="rounded-2xl border border-stone-200 bg-white p-6 md:p-10">
+                    <Skeleton className="mb-6 h-5 w-20 bg-stone-300" />
+                    <Skeleton className="mx-auto h-[152px] w-full max-w-2xl rounded-lg bg-stone-100" />
+                  </section>
+                ) : null}
+                {hasYoutube ? (
+                  <section className="rounded-2xl border border-stone-200 bg-white p-6 md:p-10">
+                    <Skeleton className="mb-6 h-5 w-20 bg-stone-300" />
+                    <Skeleton className="mx-auto aspect-video w-full max-w-2xl rounded-lg bg-stone-100" />
+                  </section>
+                ) : null}
               </main>
             </div>
           </>

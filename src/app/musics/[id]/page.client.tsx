@@ -77,6 +77,33 @@ type SongData = {
   };
 };
 
+const SPOTIFY_EMBED_TYPES = new Set([
+  'album',
+  'artist',
+  'episode',
+  'playlist',
+  'show',
+  'track',
+]);
+
+function getSpotifyEmbedUrl(url: string): string | null {
+  const fromParts = (type: string | undefined, id: string | undefined) => {
+    if (!type || !id || !SPOTIFY_EMBED_TYPES.has(type)) return null;
+    return `https://open.spotify.com/embed/${type}/${id}`;
+  };
+
+  try {
+    const parsed = new URL(url);
+    const parts = parsed.pathname.split('/').filter(Boolean);
+    const typeIndex = parts.findIndex((part) => SPOTIFY_EMBED_TYPES.has(part));
+
+    return typeIndex === -1 ? null : fromParts(parts[typeIndex], parts[typeIndex + 1]);
+  } catch {
+    const match = url.match(/^spotify:(album|artist|episode|playlist|show|track):([^?/#]+)$/i);
+    return match ? fromParts(match[1].toLowerCase(), match[2]) : null;
+  }
+}
+
 interface SongPageClientProps {
   initialSong: SongData | null;
   songId: string;
@@ -429,90 +456,6 @@ export default function SongPageClient({ initialSong, songId, onReady }: SongPag
     }
   }, [song?.currentVersion?.sourceText, showChords, transposition]);
   
-  // Função para dividir o conteúdo em duas colunas baseado em mudanças de estrofe
-  const splitContentIntoColumns = (htmlContent: string): { leftColumn: string; rightColumn: string } => {
-    if (!htmlContent) return { leftColumn: '', rightColumn: '' };
-    
-    // Remove o wrapper div temporariamente
-    const unwrapped = htmlContent.replace(/^<div class="[^"]*">/, '').replace(/<\/div>$/, '');
-    
-    // Tenta diferentes estratégias de divisão baseadas no formato
-    let sections: string[] = [];
-    
-    // Estratégia 1: Divide por duplas quebras de linha (<br><br>)
-    if (unwrapped.includes('<br><br>')) {
-      sections = unwrapped.split(/(<br>\s*<br>)/);
-      // Remove elementos vazios e reagrupa corretamente
-      sections = sections.filter(s => s.trim() && !s.match(/^<br>\s*<br>$/));
-    }
-    
-    // Estratégia 2: Divide por seções intro/ponte se não houver duplas quebras
-    if (sections.length <= 2 && unwrapped.includes('intro-section')) {
-      sections = unwrapped.split(/(<div class="intro-section[^"]*">.*?<\/div>)/);
-      sections = sections.filter(s => s.trim());
-    }
-    
-    // Estratégia 3: Divide por chord-section se for formato above
-    if (sections.length <= 2 && unwrapped.includes('chord-section')) {
-      const chordSections = unwrapped.match(/<div class="chord-section">.*?<\/div>/g) || [];
-      const otherContent = unwrapped.replace(/<div class="chord-section">.*?<\/div>/g, '|||SPLIT|||');
-      const otherParts = otherContent.split('|||SPLIT|||').filter(s => s.trim());
-      
-      // Intercala seções de acordes com outro conteúdo
-      sections = [];
-      let chordIndex = 0;
-      let otherIndex = 0;
-      
-      const totalElements = chordSections.length + otherParts.length;
-      for (let i = 0; i < totalElements; i++) {
-        if (unwrapped.indexOf(chordSections[chordIndex] || '') < unwrapped.indexOf(otherParts[otherIndex] || '')) {
-          if (chordIndex < chordSections.length) sections.push(chordSections[chordIndex++]);
-        } else {
-          if (otherIndex < otherParts.length) sections.push(otherParts[otherIndex++]);
-        }
-      }
-    }
-    
-    // Estratégia 4: Se ainda não há divisões suficientes, divide por parágrafos
-    if (sections.length <= 2) {
-      sections = unwrapped.split(/(<p>.*?<\/p>|<br>)/);
-      sections = sections.filter(s => s.trim() && s !== '<br>');
-    }
-    
-    // Se há poucas seções, não divide
-    if (sections.length <= 3) {
-      return { leftColumn: htmlContent, rightColumn: '' };
-    }
-    
-    // Divide aproximadamente ao meio, mas tenta manter seções relacionadas juntas
-    const midPoint = Math.ceil(sections.length / 2);
-    let leftSections = sections.slice(0, midPoint);
-    let rightSections = sections.slice(midPoint);
-    
-
-    const lastLeftSection = leftSections[leftSections.length - 1];
-    const firstRightSection = rightSections[0];
-    
-    if (lastLeftSection?.includes('Refrão') && firstRightSection && !firstRightSection.includes('intro-section')) {
-      // Move a última seção da esquerda para a direita
-      rightSections.unshift(leftSections.pop()!);
-    }
-    
-    // Reconstrói o HTML com os wrappers apropriados
-    const wrapperMatch = htmlContent.match(/^<div class="([^"]*)">/);
-    const wrapperClass = wrapperMatch ? wrapperMatch[1] : 'chord-container-above';
-    
-    const leftColumn = `<div class="${wrapperClass}">${leftSections.join('')}</div>`;
-    const rightColumn = rightSections.length > 0 ? `<div class="${wrapperClass}">${rightSections.join('')}</div>` : '';
-    
-    return { leftColumn, rightColumn };
-  };
-
-  const { leftColumn, rightColumn } = React.useMemo(() => {
-    return splitContentIntoColumns(renderedHtml);
-  }, [renderedHtml]);
-  
-
   if (loading) return (
     <div className="flex items-center justify-center h-[300px]">
       <Spinner variant="circle" size={48} className="text-black" />
@@ -554,6 +497,10 @@ export default function SongPageClient({ initialSong, songId, onReady }: SongPag
       return url.split('v=')[1] || '';
     }
   };
+
+  const spotifyEmbedUrl = currentVersion?.spotifyLink
+    ? getSpotifyEmbedUrl(currentVersion.spotifyLink)
+    : null;
 
 
   return (
@@ -973,15 +920,27 @@ export default function SongPageClient({ initialSong, songId, onReady }: SongPag
                   ))}
                 </div>
               </div>
-              {/* Two columns for large screens, one for small */}
-              {rightColumn ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div><div dangerouslySetInnerHTML={{ __html: leftColumn }} /></div>
-                  <div><div dangerouslySetInnerHTML={{ __html: rightColumn }} /></div>
-                </div>
-              ) : (
-                <div><div dangerouslySetInnerHTML={{ __html: leftColumn || renderedHtml }} /></div>
-              )}
+              <div className="columns-1 gap-8 md:columns-2 md:[column-fill:balance] [&_.chord-section]:break-inside-avoid-column [&_.intro-line]:break-inside-avoid-column [&_.intro-section]:break-inside-avoid-column [&_p]:break-inside-avoid-column">
+                <div dangerouslySetInnerHTML={{ __html: renderedHtml }} />
+              </div>
+            </section>
+          )}
+
+          {/* Spotify Section */}
+          {spotifyEmbedUrl && currentVersion?.spotifyLink && (
+            <section className="bg-white rounded-2xl p-6 md:p-10 border border-stone-200">
+              <SectionTitle>Spotify</SectionTitle>
+              <div className="h-[152px] max-w-2xl mx-auto overflow-hidden rounded-lg shadow">
+                <iframe
+                  src={spotifyEmbedUrl}
+                  title={`${title} no Spotify`}
+                  className="h-full w-full"
+                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                  loading="lazy"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                />
+              </div>
+              <a href={currentVersion.spotifyLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-emerald-700 mt-2 text-sm hover:underline dark:text-emerald-400"><Music className="h-4 w-4" /> Abrir no Spotify</a>
             </section>
           )}
 
