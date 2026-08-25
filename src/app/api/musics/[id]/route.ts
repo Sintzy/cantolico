@@ -22,6 +22,7 @@ const songSelect = `
     sourcePdfKey,
     sourceText,
     mediaUrl,
+    spotifyLink,
     youtubeLink,
     createdBy:User!SongVersion_createdById_fkey (
       name,
