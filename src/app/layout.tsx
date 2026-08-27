@@ -39,7 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${dmSans.className} flex flex-col min-h-screen antialiased`}>
         <Script
           defer
-          src="https://truenas-scale.fold-pence.ts.net:8443/script.js"
+          src="https://analytics.cantolico.pt/script.js"
           data-website-id="91110ae1-32f4-4053-906d-7d063d24d07e"
           strategy="afterInteractive"
         />

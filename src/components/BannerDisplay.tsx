@@ -78,66 +78,66 @@ const getBannerStyles = (type: Banner['type']) => {
   switch (type) {
     case 'ANNOUNCEMENT':
       return {
-        bg: 'bg-blue-50 border-blue-200',
-        text: 'text-blue-800',
+        bg: 'bg-card border-blue-200 dark:border-blue-300/25',
+        text: 'text-card-foreground',
         icon: Bell,
-        iconColor: 'text-blue-600'
+        iconColor: 'text-blue-600 dark:text-blue-300'
       };
     case 'ALERT':
       return {
-        bg: 'bg-red-50 border-red-200',
-        text: 'text-red-800',
+        bg: 'bg-card border-red-200 dark:border-red-300/25',
+        text: 'text-card-foreground',
         icon: AlertCircle,
-        iconColor: 'text-red-600'
+        iconColor: 'text-red-600 dark:text-red-300'
       };
     case 'CHANGELOG':
       return {
-        bg: 'bg-purple-50 border-purple-200',
-        text: 'text-purple-800',
+        bg: 'bg-card border-purple-200 dark:border-purple-300/25',
+        text: 'text-card-foreground',
         icon: FileText,
-        iconColor: 'text-purple-600'
+        iconColor: 'text-purple-600 dark:text-purple-300'
       };
     case 'WARNING':
       return {
-        bg: 'bg-yellow-50 border-yellow-200',
-        text: 'text-yellow-800',
+        bg: 'bg-card border-yellow-200 dark:border-yellow-300/25',
+        text: 'text-card-foreground',
         icon: AlertTriangle,
-        iconColor: 'text-yellow-600'
+        iconColor: 'text-yellow-600 dark:text-yellow-300'
       };
     case 'REQUEST':
       return {
-        bg: 'bg-orange-50 border-orange-200',
-        text: 'text-orange-800',
+        bg: 'bg-card border-orange-200 dark:border-orange-300/25',
+        text: 'text-card-foreground',
         icon: HelpCircle,
-        iconColor: 'text-orange-600'
+        iconColor: 'text-orange-600 dark:text-orange-300'
       };
     case 'INFO':
       return {
-        bg: 'bg-gray-50 border-gray-200',
-        text: 'text-gray-800',
+        bg: 'bg-card border-gray-200 dark:border-white/15',
+        text: 'text-card-foreground',
         icon: Info,
-        iconColor: 'text-gray-600'
+        iconColor: 'text-gray-600 dark:text-stone-300'
       };
     case 'SUCCESS':
       return {
-        bg: 'bg-green-50 border-green-200',
-        text: 'text-green-800',
+        bg: 'bg-card border-green-200 dark:border-green-300/25',
+        text: 'text-card-foreground',
         icon: CheckCircle,
-        iconColor: 'text-green-600'
+        iconColor: 'text-green-600 dark:text-green-300'
       };
     case 'ERROR':
       return {
-        bg: 'bg-red-50 border-red-200',
-        text: 'text-red-800',
+        bg: 'bg-card border-red-200 dark:border-red-300/25',
+        text: 'text-card-foreground',
         icon: AlertCircle,
-        iconColor: 'text-red-600'
+        iconColor: 'text-red-600 dark:text-red-300'
       };
     default:
       return {
-        bg: 'bg-gray-50 border-gray-200',
-        text: 'text-gray-800',
+        bg: 'bg-card border-gray-200 dark:border-white/15',
+        text: 'text-card-foreground',
         icon: Info,
-        iconColor: 'text-gray-600'
+        iconColor: 'text-gray-600 dark:text-stone-300'
       };
   }
 };
@@ -220,7 +220,7 @@ export default function BannerDisplay({ page }: BannerDisplayProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className={`h-8 w-8 p-0 ${styles.text} hover:bg-black/10 shrink-0`}
+                className={`h-8 w-8 p-0 ${styles.text} hover:bg-black/10 dark:hover:bg-white/10 shrink-0`}
                 onClick={() => dismissBanner(banner)}
               >
                 <X className="h-4 w-4" />
