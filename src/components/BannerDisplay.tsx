@@ -78,63 +78,63 @@ const getBannerStyles = (type: Banner['type']) => {
   switch (type) {
     case 'ANNOUNCEMENT':
       return {
-        bg: 'bg-blue-50 border-blue-200 dark:bg-blue-400/10 dark:border-blue-300/25',
+        bg: 'bg-blue-50 border-blue-200 dark:bg-transparent dark:border-blue-300/25',
         text: 'text-blue-800 dark:text-blue-200',
         icon: Bell,
         iconColor: 'text-blue-600 dark:text-blue-300'
       };
     case 'ALERT':
       return {
-        bg: 'bg-red-50 border-red-200 dark:bg-red-400/10 dark:border-red-300/25',
+        bg: 'bg-red-50 border-red-200 dark:bg-transparent dark:border-red-300/25',
         text: 'text-red-800 dark:text-red-200',
         icon: AlertCircle,
         iconColor: 'text-red-600 dark:text-red-300'
       };
     case 'CHANGELOG':
       return {
-        bg: 'bg-purple-50 border-purple-200 dark:bg-purple-400/10 dark:border-purple-300/25',
+        bg: 'bg-purple-50 border-purple-200 dark:bg-transparent dark:border-purple-300/25',
         text: 'text-purple-800 dark:text-purple-200',
         icon: FileText,
         iconColor: 'text-purple-600 dark:text-purple-300'
       };
     case 'WARNING':
       return {
-        bg: 'bg-yellow-50 border-yellow-200 dark:bg-yellow-300/10 dark:border-yellow-300/25',
+        bg: 'bg-yellow-50 border-yellow-200 dark:bg-transparent dark:border-yellow-300/25',
         text: 'text-yellow-800 dark:text-yellow-100',
         icon: AlertTriangle,
         iconColor: 'text-yellow-600 dark:text-yellow-300'
       };
     case 'REQUEST':
       return {
-        bg: 'bg-orange-50 border-orange-200 dark:bg-orange-300/10 dark:border-orange-300/25',
+        bg: 'bg-orange-50 border-orange-200 dark:bg-transparent dark:border-orange-300/25',
         text: 'text-orange-800 dark:text-orange-100',
         icon: HelpCircle,
         iconColor: 'text-orange-600 dark:text-orange-300'
       };
     case 'INFO':
       return {
-        bg: 'bg-gray-50 border-gray-200 dark:bg-white/5 dark:border-white/15',
+        bg: 'bg-gray-50 border-gray-200 dark:bg-transparent dark:border-white/15',
         text: 'text-gray-800 dark:text-stone-100',
         icon: Info,
         iconColor: 'text-gray-600 dark:text-stone-300'
       };
     case 'SUCCESS':
       return {
-        bg: 'bg-green-50 border-green-200 dark:bg-green-400/10 dark:border-green-300/25',
+        bg: 'bg-green-50 border-green-200 dark:bg-transparent dark:border-green-300/25',
         text: 'text-green-800 dark:text-green-200',
         icon: CheckCircle,
         iconColor: 'text-green-600 dark:text-green-300'
       };
     case 'ERROR':
       return {
-        bg: 'bg-red-50 border-red-200 dark:bg-red-400/10 dark:border-red-300/25',
+        bg: 'bg-red-50 border-red-200 dark:bg-transparent dark:border-red-300/25',
         text: 'text-red-800 dark:text-red-200',
         icon: AlertCircle,
         iconColor: 'text-red-600 dark:text-red-300'
       };
     default:
       return {
-        bg: 'bg-gray-50 border-gray-200 dark:bg-white/5 dark:border-white/15',
+        bg: 'bg-gray-50 border-gray-200 dark:bg-transparent dark:border-white/15',
         text: 'text-gray-800 dark:text-stone-100',
         icon: Info,
         iconColor: 'text-gray-600 dark:text-stone-300'
