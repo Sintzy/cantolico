@@ -11,6 +11,23 @@ function wait(delayMs: number) {
   return new Promise((resolve) => setTimeout(resolve, delayMs));
 }
 
+function getFetchErrorDetails(error: unknown) {
+  if (!(error instanceof Error)) {
+    return { message: String(error) };
+  }
+
+  const cause = error.cause;
+  const causeDetails = cause && typeof cause === 'object'
+    ? cause as { code?: unknown; message?: unknown }
+    : undefined;
+
+  return {
+    message: error.message,
+    causeCode: typeof causeDetails?.code === 'string' ? causeDetails.code : undefined,
+    causeMessage: typeof causeDetails?.message === 'string' ? causeDetails.message : undefined,
+  };
+}
+
 async function fetchWithReadRetry(input: RequestInfo | URL, init?: RequestInit) {
   const isReadRequest = ['GET', 'HEAD'].includes(getRequestMethod(input, init));
   const attempts = isReadRequest ? READ_RETRY_DELAYS_MS.length + 1 : 1;
@@ -28,8 +45,18 @@ async function fetchWithReadRetry(input: RequestInfo | URL, init?: RequestInit) 
       }
     } catch (error) {
       if (!isReadRequest || attempt === attempts - 1) {
+        console.error('[Supabase] Read request failed', {
+          attempts: attempt + 1,
+          ...getFetchErrorDetails(error),
+        });
         throw error;
       }
+
+      console.warn('[Supabase] Transient read failure, retrying', {
+        attempt: attempt + 1,
+        maxAttempts: attempts,
+        ...getFetchErrorDetails(error),
+      });
     }
 
     await wait(READ_RETRY_DELAYS_MS[attempt]);
