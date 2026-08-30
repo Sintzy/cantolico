@@ -19,6 +19,7 @@ import {
 } from '@/types/song-files';
 import { Upload, X, FileText, Music, Check, AlertCircle, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { uploadAdminSongFile } from '@/lib/admin-song-file-upload';
 
 interface MultiFileUploaderProps {
   songId?: string;
@@ -122,27 +123,17 @@ export function MultiFileUploader({
     ));
 
     try {
-      const formData = new FormData();
-      formData.append('file', fileData.file);
-      formData.append('fileType', fileData.fileType);
-      formData.append('description', fileData.description);
-
-      const response = await fetch(`/api/admin/songs/${songId}/files`, {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Erro ao fazer upload');
-      }
-
-      const result = await response.json();
+      const result = await uploadAdminSongFile(
+        songId,
+        fileData.file,
+        fileData.fileType,
+        fileData.description
+      );
 
       // Atualizar estado para uploaded
       setFiles(prev => prev.map(f => 
         f.id === fileData.id 
-          ? { ...f, uploading: false, uploaded: true, progress: 100, fileId: result.file.id } 
+          ? { ...f, uploading: false, uploaded: true, progress: 100, fileId: result.id }
           : f
       ));
 
