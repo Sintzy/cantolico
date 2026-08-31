@@ -99,11 +99,19 @@ export async function getClerkSession(): Promise<ClerkSession | null> {
   }
 
   const supabase = createAdminSupabaseClient();
-  const { data: user } = await supabase
+  const { data: user, error } = await supabase
     .from('User')
     .select('id, role')
     .eq('clerkUserId', userId)
     .single();
+
+  if (error) {
+    console.error('❌ [API] Não foi possível obter o utilizador Clerk no Supabase:', {
+      code: error.code,
+      message: error.message,
+    });
+    return null;
+  }
 
   if (!user) {
     console.error('❌ [API] Utilizador Clerk não encontrado no Supabase:', userId);

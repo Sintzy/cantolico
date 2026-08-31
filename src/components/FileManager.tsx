@@ -13,6 +13,7 @@ import {
   formatFileSize,
 } from '@/types/song-files';
 import { trackEvent } from '@/lib/umami';
+import { uploadAdminSongFile } from '@/lib/admin-song-file-upload';
 import { 
   Upload, 
   X, 
@@ -270,28 +271,21 @@ export function FileManager({
             newFile.isUploading = true;
             setFiles(prev => [...prev, newFile]);
 
-            const formData = new FormData();
-            formData.append('file', newFile.file);
-            formData.append('fileType', type);
-            formData.append('description', `Ficheiro ${newFile.fileName}`);
-
-            const response = await fetch(`/api/admin/songs/${songId}/files`, {
-              method: 'POST',
-              body: formData
-            });
-
-            if (!response.ok) throw new Error('Upload failed');
-            
-            const result = await response.json();
+            const result = await uploadAdminSongFile(
+              songId,
+              newFile.file,
+              type,
+              `Ficheiro ${newFile.fileName}`
+            );
             
             // Atualizar com dados do servidor
             setFiles(prev => prev.map(f => 
               f === newFile ? {
                 ...f,
-                id: result.file.id,
+                id: result.id,
                 isUploading: false,
                 uploaded: true,
-                uploadedAt: result.file.uploadedAt
+                uploadedAt: result.uploadedAt
               } : f
             ));
             

@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-display: var(--font-cormorant, "Cormorant", Georgia, serif);
   --font-sans: var(--font-dm-sans, "DM Sans", system-ui, sans-serif);
