@@ -2,9 +2,7 @@
 
 import "easymde/dist/easymde.min.css";
 import "../../../../public/styles/chords.css";
-import { v4 as randomUUID } from "uuid";
 import { useState, useEffect, useRef, useMemo } from "react";
-import dynamic from "next/dynamic";
 import { useSession } from "@/hooks/useClerkSession";
 import { useRouter } from "next/navigation";
 import { TurnstileCaptcha } from "@/components/TurnstileCaptcha";
@@ -12,8 +10,6 @@ import { MediaUploader } from "@/components/media";
 import MarkdownEditor from "@/components/MarkdownEditor";
 import { FileUploadData } from "@/types/song-files";
 
-import MarkdownIt from "markdown-it";
-import chords from "markdown-it-chords";
 import { ChordGuideButton } from "@/components/ChordGuidePopup";
 import BannerDisplay from "@/components/BannerDisplay";
 
@@ -27,8 +23,6 @@ import { Plus, Music, FileText, Upload, Youtube, ChevronRight, ChevronLeft, Info
 import { FaSpotify } from "react-icons/fa";
 import Link from "next/link";
 import { trackEvent } from "@/lib/umami";
-
-const mdParser = new MarkdownIt({ breaks: true }).use(chords);
 
 export default function CreateNewMusicPage() {
   const { data: session, status } = useSession();
@@ -68,7 +62,6 @@ export default function CreateNewMusicPage() {
   }), []);
 
   const [form, setForm] = useState({
-    id: randomUUID(),
     title: "",
     author: "",
     moments: [] as LiturgicalMoment[],
@@ -168,7 +161,7 @@ export default function CreateNewMusicPage() {
     setIsSubmitting(true);
     try {
       const formData = new FormData();
-      formData.append("id", form.id);
+      formData.append("id", crypto.randomUUID());
       formData.append("title", form.title);
       formData.append("author", form.author);
       formData.append("instrument", form.instrument);
