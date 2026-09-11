@@ -148,6 +148,14 @@ function transposeMarkdownChords(text: string, interval: number): string {
   return text.replace(/\[([^\]]+)\]/g, (_, chord) => `[${transposeChord(chord, interval)}]`);
 }
 
+// An octave produces the same chord names, so there are only 11 useful
+// semitone changes in either direction from the original key.
+const MAX_TRANSPOSE_SEMITONES = 11;
+
+function clampTransposition(value: number): number {
+  return Math.max(-MAX_TRANSPOSE_SEMITONES, Math.min(MAX_TRANSPOSE_SEMITONES, value));
+}
+
 export default function SongPageClient({ initialSong, songId, onReady }: SongPageClientProps) {
   const router = useRouter();
   const handleBackToList = () => {
@@ -200,7 +208,8 @@ export default function SongPageClient({ initialSong, songId, onReady }: SongPag
   };
 
   const changeTransposition = (delta: number, source: string) => {
-    const nextValue = transposition + delta;
+    const nextValue = clampTransposition(transposition + delta);
+    if (nextValue === transposition) return;
     trackEvent('song_transposition_changed', { source, value: nextValue });
     setTransposition(nextValue);
   };
@@ -299,7 +308,7 @@ export default function SongPageClient({ initialSong, songId, onReady }: SongPag
                   ) {
                     found = true;
                     setCurrentMomentLabel(getLiturgicalMomentLabel(item.moment));
-                    setTransposition(item.transpose || 0);
+                    setTransposition(clampTransposition(item.transpose || 0));
                   }
                 }
               }
@@ -638,11 +647,11 @@ export default function SongPageClient({ initialSong, songId, onReady }: SongPag
             <div className="bg-white rounded-xl border border-stone-200 p-5 flex flex-col gap-3">
               <SidebarTitle>Transpor Tom</SidebarTitle>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => changeTransposition(-1, 'mobile_sidebar')}>-</Button>
+                <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => changeTransposition(-1, 'mobile_sidebar')} disabled={transposition <= -MAX_TRANSPOSE_SEMITONES}>-</Button>
                 <span className="text-lg font-bold flex-1 text-center select-none">
                   {transposition >= 0 ? `+${transposition}` : transposition}
                 </span>
-                <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => changeTransposition(1, 'mobile_sidebar')}>+</Button>
+                <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => changeTransposition(1, 'mobile_sidebar')} disabled={transposition >= MAX_TRANSPOSE_SEMITONES}>+</Button>
               </div>
               <div className="flex items-center justify-between rounded-lg bg-stone-50 px-3 py-2 text-sm">
                 <span className="font-medium text-stone-500">TOM</span>
@@ -776,11 +785,11 @@ export default function SongPageClient({ initialSong, songId, onReady }: SongPag
             <div className="bg-white rounded-xl border border-stone-200 p-5 flex flex-col gap-3">
               <SidebarTitle>Transpor Tom</SidebarTitle>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => changeTransposition(-1, 'desktop_sidebar')}>-</Button>
+                <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => changeTransposition(-1, 'desktop_sidebar')} disabled={transposition <= -MAX_TRANSPOSE_SEMITONES}>-</Button>
                 <span className="text-lg font-bold flex-1 text-center select-none">
                   {transposition >= 0 ? `+${transposition}` : transposition}
                 </span>
-                <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => changeTransposition(1, 'desktop_sidebar')}>+</Button>
+                <Button variant="outline" size="icon" className="w-9 h-9" onClick={() => changeTransposition(1, 'desktop_sidebar')} disabled={transposition >= MAX_TRANSPOSE_SEMITONES}>+</Button>
               </div>
               <div className="flex items-center justify-between rounded-lg bg-stone-50 px-3 py-2 text-sm">
                 <span className="font-medium text-stone-500">TOM</span>

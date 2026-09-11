@@ -60,6 +60,13 @@ export const POST = withUserProtection<any>(async (request: NextRequest, session
       );
     }
 
+    if (!Number.isInteger(transpose) || transpose < -11 || transpose > 11) {
+      return NextResponse.json(
+        { error: 'A transposição deve estar entre -11 e +11 semitons' },
+        { status: 400 }
+      );
+    }
+
     // Check permissions
     const canEdit = await canEditMass(massId, session.user.id, session.user.email, session.user.role);
     if (!canEdit) {
