@@ -63,7 +63,15 @@ export const PUT = withUserProtection<any>(async (request: NextRequest, session:
     if (moment !== undefined) updateData.moment = moment;
     if (order !== undefined) updateData.order = order;
     if (note !== undefined) updateData.note = note?.trim() || null;
-    if (transpose !== undefined) updateData.transpose = transpose;
+    if (transpose !== undefined) {
+      if (!Number.isInteger(transpose) || transpose < -11 || transpose > 11) {
+        return NextResponse.json(
+          { error: 'A transposição deve estar entre -11 e +11 semitons' },
+          { status: 400 }
+        );
+      }
+      updateData.transpose = transpose;
+    }
 
     const { data: updatedItem, error } = await supabase
       .from('MassItem')

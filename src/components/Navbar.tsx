@@ -5,6 +5,7 @@ import { useSession } from "@/hooks/useClerkSession";
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import Image from "next/image";
+import { useTheme } from "next-themes";
 import * as Icons from "@/lib/site-images";
 import { ThemeToggle } from "./ThemeToggle";
 import Fuse from "fuse.js";
@@ -28,6 +29,7 @@ type MusicResult = { id: string; title: string };
 
 export default function Navbar() {
   const { data: session } = useSession();
+  const { resolvedTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [playlistsOpen, setPlaylistsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -118,7 +120,7 @@ export default function Navbar() {
 
         {/* Logo */}
         <Link href="/" onClick={close} className="flex items-center gap-2 shrink-0 mr-2">
-          <Image src={Icons.SITE_IMAGES.logo} alt="Cantólico" width={26} height={26} className="invert dark:invert-0" />
+          <Image src={Icons.SITE_IMAGES.logo} alt="Cantólico" width={26} height={26} className={resolvedTheme === "dark" ? "invert" : ""} />
           <span className="hidden sm:inline text-base font-semibold text-stone-900 tracking-tight">
             Can<span className="text-rose-700">♱</span>ólico!
           </span>
