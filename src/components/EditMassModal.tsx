@@ -46,6 +46,7 @@ import {
   LITURGICAL_COLOR_LABELS,
   getColorHex,
 } from '@/types/mass';
+import { normalizeEmail } from '@/lib/mass-collaboration';
 
 interface MassMember {
   id: string;
@@ -102,11 +103,17 @@ export default function EditMassModal({ mass, isOpen, onClose, onUpdate, onDelet
         setTime('');
       }
       
-      fetchMembers();
+      if (mass.isOwner || session?.user?.role === 'ADMIN') {
+        fetchMembers();
+      } else {
+        setMembers([]);
+      }
     }
-  }, [mass?.id, isOpen]);
+  }, [mass?.id, isOpen, session?.user?.role]);
 
-  const isOwner = mass?.isOwner;
+  const isOwner = mass?.isOwner || session?.user?.id === mass?.userId;
+  const isAdmin = session?.user?.role === 'ADMIN';
+  const canManageMembers = isOwner || isAdmin;
   const canEditSettings = true; // Allow editing if modal is open (access already validated)
 
   if (!mass) {
@@ -203,12 +210,18 @@ export default function EditMassModal({ mass, isOpen, onClose, onUpdate, onDelet
   const handleInvite = async () => {
     if (!inviteEmail.trim() || !mass?.id) return;
 
+    const email = normalizeEmail(inviteEmail);
+    if (!email) {
+      toast.error('Introduz um email válido');
+      return;
+    }
+
     setInviting(true);
     try {
       const response = await fetch(`/api/masses/${mass.id}/invite`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: inviteEmail.trim() }),
+        body: JSON.stringify({ email }),
       });
 
       if (response.ok) {
@@ -440,7 +453,7 @@ export default function EditMassModal({ mass, isOpen, onClose, onUpdate, onDelet
               <Select
                 value={visibility}
                 onValueChange={(value) => setVisibility(value as MassVisibility)}
-                disabled={!canEditSettings}
+                disabled={!canEditSettings || !isOwner}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -469,7 +482,7 @@ export default function EditMassModal({ mass, isOpen, onClose, onUpdate, onDelet
             </div>
 
             {/* Members Section - Only for owners */}
-            {canEditSettings && (
+            {canManageMembers && (
               <div className="space-y-4 pt-4 border-t">
                 <div className="flex items-center justify-between">
                   <Label className="text-base font-medium flex items-center gap-2">

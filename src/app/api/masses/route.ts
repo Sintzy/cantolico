@@ -6,6 +6,7 @@ import { randomUUID } from 'crypto';
 import { requireEmailVerification } from '@/lib/email';
 import { Mass, MassVisibility, LiturgicalColor } from '@/types/mass';
 import { canCreateMass, premiumRequiredResponse } from '@/lib/premium';
+import { escapeLikePattern, findMembershipByEmail } from '@/lib/mass-collaboration';
 
 // GET - List masses
 export const GET = withPublicMonitoring<any>(async (request: NextRequest) => {
@@ -41,14 +42,23 @@ export const GET = withPublicMonitoring<any>(async (request: NextRequest) => {
       `)
       .order('date', { ascending: true, nullsFirst: false });
 
-    // Apply filters
+    // Apply filters. A signed-in user's list includes both owned and accepted
+    // collaborative masses; public profile listings intentionally do not.
+    let includeCollaboratedMasses = false;
     if (userId) {
-      query = query.eq('userId', parseInt(userId));
-      if (!session || session.user.id !== parseInt(userId)) {
+      const requestedUserId = parseInt(userId, 10);
+      if (!Number.isInteger(requestedUserId)) {
+        return NextResponse.json({ error: 'userId inválido' }, { status: 400 });
+      }
+      query = query.eq('userId', requestedUserId);
+      if (!session || session.user.id !== requestedUserId) {
         query = query.in('visibility', ['PUBLIC', 'NOT_LISTED']);
+      } else {
+        includeCollaboratedMasses = true;
       }
     } else if (session?.user?.id) {
       query = query.eq('userId', session.user.id);
+      includeCollaboratedMasses = true;
     } else if (includePublic) {
       query = query.eq('visibility', 'PUBLIC');
     } else {
@@ -59,10 +69,45 @@ export const GET = withPublicMonitoring<any>(async (request: NextRequest) => {
       query = query.gte('date', new Date().toISOString());
     }
 
-    const { data: masses, error } = await query;
+    const { data: ownedMasses, error } = await query;
 
     if (error) {
       throw new Error(`Supabase error: ${error.message}`);
+    }
+
+    let masses = ownedMasses || [];
+    if (includeCollaboratedMasses && session?.user?.email) {
+      const { data: memberships, error: membershipError } = await supabase
+        .from('MassMember')
+        .select('massId, userEmail, status')
+        .ilike('userEmail', escapeLikePattern(session.user.email));
+
+      if (membershipError) {
+        throw new Error(`Supabase error: ${membershipError.message}`);
+      }
+
+      const collaboratedIds = (memberships || [])
+        .filter(membership => findMembershipByEmail([membership], session.user.email)?.status === 'ACCEPTED')
+        .map(membership => membership.massId)
+        .filter(massId => !masses.some(mass => mass.id === massId));
+
+      if (collaboratedIds.length > 0) {
+        const { data: collaboratedMasses, error: collaboratedError } = await supabase
+          .from('Mass')
+          .select(`
+            id, name, description, date, parish, celebrant, celebration,
+            liturgicalColor, visibility, userId, createdAt, updatedAt,
+            User!Mass_userId_fkey (id, name, email, image),
+            MassItem (id)
+          `)
+          .in('id', collaboratedIds)
+          .order('date', { ascending: true, nullsFirst: false });
+
+        if (collaboratedError) {
+          throw new Error(`Supabase error: ${collaboratedError.message}`);
+        }
+        masses = [...masses, ...(collaboratedMasses || [])];
+      }
     }
 
     const formattedMasses = (masses || []).map(mass => ({

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { withUserProtection, withPublicMonitoring } from '@/lib/enhanced-api-protection';
 import { MassVisibility, LiturgicalColor } from '@/types/mass';
+import { canEditMass, findMembershipByEmail } from '@/lib/mass-collaboration';
 
 import { getClerkSession } from '@/lib/api-middleware';
 interface RouteParams {
@@ -80,9 +81,8 @@ export const GET = withPublicMonitoring<any>(async (request: NextRequest, contex
     // Check access permissions
     const isOwner = session?.user?.id === mass.userId;
     const isAdmin = session?.user?.role === 'ADMIN';
-    const isMember = mass.MassMember?.some(
-      (m: any) => m.userEmail === session?.user?.email && m.status === 'ACCEPTED'
-    );
+    const membership = findMembershipByEmail(mass.MassMember, session?.user?.email);
+    const isMember = membership?.status === 'ACCEPTED';
 
     if (mass.visibility === 'PRIVATE' && !isOwner && !isAdmin && !isMember) {
       return NextResponse.json(
@@ -121,7 +121,7 @@ export const GET = withPublicMonitoring<any>(async (request: NextRequest, contex
         items: (mass.MassItem || []).length,
         members: (mass.MassMember || []).length
       },
-      canEdit: isOwner || isAdmin || isMember,
+      canEdit: canEditMass(mass.userId, session?.user?.id, session?.user?.role, membership),
       isOwner
     };
 
@@ -156,18 +156,22 @@ export const PUT = withUserProtection<any>(async (request: NextRequest, session:
       );
     }
 
-    const isOwner = session.user.id === existingMass.userId;
-    const isAdmin = session.user.role === 'ADMIN';
-
-    // Check if user is a member with edit permissions
-    const { data: membership } = await supabase
+    // Scope the lookup to this mass, then compare canonical email in memory so
+    // legacy casing/whitespace cannot deny an accepted collaborator.
+    const { data: membershipRows, error: membershipError } = await supabase
       .from('MassMember')
-      .select('role, status')
-      .eq('massId', id)
-      .eq('userEmail', session.user.email)
-      .single();
+      .select('userEmail, role, status')
+      .eq('massId', id);
 
-    const canEdit = isOwner || isAdmin || (membership?.status === 'ACCEPTED' && membership?.role === 'EDITOR');
+    if (membershipError) {
+      console.error('[MASS UPDATE] membership lookup failed', membershipError);
+      return NextResponse.json({ error: 'Erro ao verificar permissões' }, { status: 500 });
+    }
+
+    const membership = findMembershipByEmail(membershipRows, session.user.email);
+    const isOwner = session.user.id === existingMass.userId;
+
+    const canEdit = canEditMass(existingMass.userId, session.user.id, session.user.role, membership);
 
     if (!canEdit) {
       return NextResponse.json(

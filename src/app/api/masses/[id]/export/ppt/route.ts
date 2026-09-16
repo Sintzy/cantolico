@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { transposeText } from '@/lib/chord-processor';
+import pptxgen from 'pptxgenjs';
 import { getClerkSession } from '@/lib/api-middleware';
 import { premiumRequiredResponse, userCanUseFeature } from '@/lib/premium';
-import pptxgen from 'pptxgenjs';
+import { findMembershipByEmail } from '@/lib/mass-collaboration';
 
 const MOMENT_ORDER: Record<string, number> = {
   ENTRADA: 1, ATO_PENITENCIAL: 2, GLORIA: 3, SALMO_RESPONSORIAL: 4,
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const { data: massData, error } = await supabase
       .from('Mass')
       .select(`
-        id, name, description, date, parish, celebrant, celebration, liturgicalColor,
+        id, name, description, date, parish, celebrant, celebration, liturgicalColor, visibility, userId,
         MassItem (
           id, moment, order, note, transpose,
           Song!MassItem_songId_fkey (
@@ -89,6 +90,18 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Missa não encontrada' }, { status: 404 });
     }
 
+    const isOwner = session.user.id === massData.userId;
+    const isAdmin = session.user.role === 'ADMIN';
+    if (massData.visibility === 'PRIVATE' && !isOwner && !isAdmin) {
+      const { data: memberships, error: membershipError } = await supabase
+        .from('MassMember')
+        .select('userEmail, status')
+        .eq('massId', id);
+      const membership = membershipError ? null : findMembershipByEmail(memberships, session.user.email);
+      if (membership?.status !== 'ACCEPTED') {
+        return NextResponse.json({ error: 'Não tens permissão para exportar esta missa' }, { status: 403 });
+      }
+    }
     const pptx = new pptxgen();
     pptx.author = 'Cantólico';
     pptx.company = 'Cantólico';

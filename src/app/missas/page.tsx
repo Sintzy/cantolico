@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import MassesPageClient from './page.client';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { buildMetadata } from '@/lib/seo';
+import { escapeLikePattern, findMembershipByEmail } from '@/lib/mass-collaboration';
 
 export const metadata: Metadata = buildMetadata({
   title: 'Missas | Cantólico',
@@ -52,11 +53,11 @@ async function getMasses(userId: number, userEmail: string) {
   // Masses where the user is an accepted collaborator
   const { data: memberships } = await supabase
     .from('MassMember')
-    .select('massId')
-    .eq('userEmail', userEmail)
-    .eq('status', 'ACCEPTED');
+    .select('massId, userEmail, status')
+    .ilike('userEmail', escapeLikePattern(userEmail));
 
   const collaboratedIds = (memberships || [])
+    .filter(membership => findMembershipByEmail([membership], userEmail)?.status === 'ACCEPTED')
     .map(m => m.massId)
     .filter(id => !(ownedMasses || []).some(m => m.id === id));
 

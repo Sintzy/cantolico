@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { protectApiRoute, applySecurityHeaders } from '@/lib/api-protection';
 import { auth } from '@clerk/nextjs/server';
 import { createAdminSupabaseClient } from '@/lib/supabase-admin';
+import { normalizeEmail } from '@/lib/mass-collaboration';
 
 type ClerkRole = 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN' | 'SUPER_ADMIN';
 type ClerkSessionClaims = {
@@ -101,7 +102,7 @@ export async function getClerkSession(): Promise<ClerkSession | null> {
   const supabase = createAdminSupabaseClient();
   const { data: user, error } = await supabase
     .from('User')
-    .select('id, role')
+    .select('id, role, email, name')
     .eq('clerkUserId', userId)
     .single();
 
@@ -129,8 +130,10 @@ export async function getClerkSession(): Promise<ClerkSession | null> {
       id: user.id,
       clerkUserId: userId,
       role: (metadataRole || user.role || 'USER') as ClerkRole,
-      email: claims?.email as string | undefined,
-      name: claims?.name as string | undefined,
+      // The database account is the source of truth for collaboration. Clerk
+      // session claims are optional and may contain a differently-cased email.
+      email: normalizeEmail(user.email) || undefined,
+      name: user.name || (typeof claims?.name === 'string' ? claims.name : undefined),
     }
   };
 }

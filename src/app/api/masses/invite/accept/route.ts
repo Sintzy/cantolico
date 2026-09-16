@@ -3,6 +3,7 @@ import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { getClerkSession } from '@/lib/api-middleware';
 import { logUserAction } from '@/lib/logging-helpers';
 import { withLogging } from '@/lib/api-route-wrapper';
+import { emailsMatch } from '@/lib/mass-collaboration';
 
 async function POSTHandler(request: NextRequest) {
   const session = await getClerkSession();
@@ -44,7 +45,7 @@ async function POSTHandler(request: NextRequest) {
     );
   }
 
-  if (!session.user.email || session.user.email.toLowerCase() !== member.userEmail.toLowerCase()) {
+  if (!emailsMatch(session.user.email, member.userEmail)) {
     return NextResponse.json({ error: 'Email não corresponde ao convite' }, { status: 403 });
   }
 

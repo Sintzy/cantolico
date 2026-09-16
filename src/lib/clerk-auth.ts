@@ -1,5 +1,6 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { createAdminSupabaseClient } from './supabase-admin';
+import { normalizeEmail } from './mass-collaboration';
 
 export type UserRole = 'USER' | 'TRUSTED' | 'REVIEWER' | 'ADMIN' | 'SUPER_ADMIN';
 
@@ -57,7 +58,7 @@ export async function getAuthenticatedUser(): Promise<AuthenticatedUser | null> 
   return {
     clerkUserId: userId,
     supabaseUserId: user.id,
-    email: user.email,
+    email: normalizeEmail(user.email) || user.email,
     name: user.name,
     image: user.image,
     role: (metadata?.role || claims?.role || user.role || 'USER') as UserRole,
