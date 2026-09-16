@@ -3,6 +3,7 @@ import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { getClerkSession } from '@/lib/api-middleware';
 import { logUserAction } from '@/lib/logging-helpers';
 import { withLogging } from '@/lib/api-route-wrapper';
+import { canManageMassMembers } from '@/lib/mass-collaboration';
 
 interface RouteParams {
   params: Promise<{ id: string; memberId: string }>;
@@ -27,8 +28,7 @@ async function DELETEHandler(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'Missa não encontrada' }, { status: 404 });
   }
 
-  const isOwnerOrAdmin = session.user.id === mass.userId || session.user.role === 'ADMIN';
-  if (!isOwnerOrAdmin) {
+  if (!canManageMassMembers(mass.userId, session.user.id, session.user.role)) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
   }
 

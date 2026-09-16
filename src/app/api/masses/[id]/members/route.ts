@@ -1,31 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { getClerkSession } from '@/lib/api-middleware';
+import {
+  canManageMassMembers,
+  escapeLikePattern,
+  emailsMatch,
+  findMembershipByEmail,
+  normalizeEmail,
+} from '@/lib/mass-collaboration';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
-}
-
-async function canManageMass(massId: string, userId: number, userRole: string): Promise<{ allowed: boolean; mass: any }> {
-  const { data: mass } = await supabase
-    .from('Mass')
-    .select('id, userId, name')
-    .eq('id', massId)
-    .single();
-
-  if (!mass) return { allowed: false, mass: null };
-
-  const isOwner = userId === mass.userId;
-  const isAdmin = userRole === 'ADMIN';
-
-  const { data: membership } = await supabase
-    .from('MassMember')
-    .select('role, status')
-    .eq('massId', massId)
-    .eq('invitedBy', userId)
-    .single();
-
-  return { allowed: isOwner || isAdmin, mass };
 }
 
 // GET - List mass members
@@ -47,40 +32,69 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'Missa não encontrada' }, { status: 404 });
   }
 
-  const isOwnerOrAdmin = session.user.id === mass.userId || session.user.role === 'ADMIN';
+  const isOwnerOrAdmin = canManageMassMembers(mass.userId, session.user.id, session.user.role);
 
   // Also allow members to see the list
-  const { data: selfMembership } = await supabase
+  const { data: selfMembershipRows, error: selfMembershipError } = await supabase
     .from('MassMember')
-    .select('status')
-    .eq('massId', massId)
-    .eq('userEmail', session.user.email || '')
-    .single();
+    .select('userEmail, status')
+    .eq('massId', massId);
+
+  if (selfMembershipError) {
+    console.error('[MASS MEMBERS] membership lookup failed', selfMembershipError);
+    return NextResponse.json({ error: 'Erro ao verificar permissões' }, { status: 500 });
+  }
+
+  const selfMembership = findMembershipByEmail(selfMembershipRows, session.user.email);
 
   if (!isOwnerOrAdmin && selfMembership?.status !== 'ACCEPTED') {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
   }
 
-  const { data: memberRows } = await supabase
+  const { data: memberRows, error: membersError } = await supabase
     .from('MassMember')
     .select('id, userEmail, role, status, invitedAt, acceptedAt')
     .eq('massId', massId)
     .order('invitedAt', { ascending: true });
 
-  // Fetch user data for all member emails + owner
-  const emails = (memberRows || []).map((m: any) => m.userEmail).filter(Boolean);
-  const { data: users } = await supabase
-    .from('User')
-    .select('id, name, email, image')
-    .or(`id.eq.${mass.userId}${emails.length ? `,email.in.(${emails.join(',')})` : ''}`);
-
-  const userMap: Record<string, any> = {};
-  for (const u of users || []) {
-    userMap[u.email] = u;
-    if (u.id === mass.userId) userMap['__owner__'] = u;
+  if (membersError) {
+    console.error('[MASS MEMBERS] list failed', membersError);
+    return NextResponse.json({ error: 'Erro ao obter colaboradores' }, { status: 500 });
   }
 
-  const owner = userMap['__owner__'];
+  // Fetch user data for all member emails + owner
+  const { data: owner, error: ownerError } = await supabase
+    .from('User')
+    .select('id, name, email, image')
+    .eq('id', mass.userId)
+    .single();
+
+  if (ownerError) {
+    console.error('[MASS MEMBERS] owner lookup failed', ownerError);
+    return NextResponse.json({ error: 'Erro ao obter colaboradores' }, { status: 500 });
+  }
+
+  const memberEmails = [...new Set((memberRows || [])
+    .map((member: any) => normalizeEmail(member.userEmail))
+    .filter((email): email is string => email !== null))];
+  const userResults = await Promise.all(memberEmails.map(async (email) => {
+    const { data, error } = await supabase
+      .from('User')
+      .select('id, name, email, image')
+      .ilike('email', escapeLikePattern(email));
+    if (error) {
+      console.error('[MASS MEMBERS] collaborator lookup failed', error);
+      return null;
+    }
+    return (data || []).find((user: any) => emailsMatch(user.email, email)) || null;
+  }));
+
+  const userMap: Record<string, any> = {};
+  for (const user of userResults) {
+    const email = normalizeEmail(user?.email);
+    if (user && email) userMap[email] = user;
+  }
+
   const ownerEntry = {
     id: `owner-${mass.userId}`,
     massId,
@@ -96,7 +110,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   const members = [
     ownerEntry,
     ...(memberRows || []).map((m: any) => {
-      const u = userMap[m.userEmail];
+      const u = userMap[normalizeEmail(m.userEmail) || ''];
       return {
         id: m.id,
         massId,

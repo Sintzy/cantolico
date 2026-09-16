@@ -100,7 +100,7 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
   const [toneTranspose, setToneTranspose] = useState(0);
   const [isSavingTone, setIsSavingTone] = useState(false);
 
-  const isOwner = session?.user?.id === mass.userId;
+  const isOwner = mass.isOwner || session?.user?.id === mass.userId;
   const isAdmin = session?.user?.role === 'ADMIN';
   const canEdit = isOwner || isAdmin || mass.canEdit;
 
@@ -384,7 +384,7 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
                   <Copy className="w-4 h-4 mr-2" />
                   Duplicar
                 </DropdownMenuItem>
-                {canEdit && (
+                {(isOwner || isAdmin) && (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem

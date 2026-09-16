@@ -3,6 +3,7 @@ import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { withUserProtection } from '@/lib/enhanced-api-protection';
 import { randomUUID } from 'crypto';
 import { LiturgicalMoment } from '@/types/mass';
+import { canEditMass as canEditMassForMembership, findMembershipByEmail } from '@/lib/mass-collaboration';
 
 import { getClerkSession } from '@/lib/api-middleware';
 interface RouteParams {
@@ -10,7 +11,7 @@ interface RouteParams {
 }
 
 // Helper to check if user can edit mass
-async function canEditMass(massId: string, userId: number, userEmail: string, userRole: string): Promise<boolean> {
+async function canEditMass(massId: string, userId: number, userEmail: string | undefined, userRole: string): Promise<boolean> {
   const { data: mass } = await supabase
     .from('Mass')
     .select('userId')
@@ -19,20 +20,13 @@ async function canEditMass(massId: string, userId: number, userEmail: string, us
 
   if (!mass) return false;
 
-  const isOwner = userId === mass.userId;
-  const isAdmin = userRole === 'ADMIN';
-
-  if (isOwner || isAdmin) return true;
-
-  // Check membership
-  const { data: membership } = await supabase
+  const { data: memberships, error } = await supabase
     .from('MassMember')
-    .select('role, status')
-    .eq('massId', massId)
-    .eq('userEmail', userEmail)
-    .single();
+    .select('userEmail, role, status')
+    .eq('massId', massId);
 
-  return membership?.status === 'ACCEPTED' && membership?.role === 'EDITOR';
+  if (error) return false;
+  return canEditMassForMembership(mass.userId, userId, userRole, findMembershipByEmail(memberships, userEmail));
 }
 
 // POST - Add a song to the mass
@@ -193,13 +187,12 @@ export const GET = async (request: NextRequest, context: RouteParams) => {
     const isAdmin = session?.user?.role === 'ADMIN';
 
     if (mass.visibility === 'PRIVATE' && !isOwner && !isAdmin) {
-      const { data: membership } = await supabase
+      const { data: memberships, error: membershipError } = await supabase
         .from('MassMember')
-        .select('status')
-        .eq('massId', massId)
-        .eq('userEmail', session?.user?.email || '')
-        .single();
+        .select('userEmail, status')
+        .eq('massId', massId);
 
+      const membership = membershipError ? null : findMembershipByEmail(memberships, session?.user?.email);
       if (membership?.status !== 'ACCEPTED') {
         return NextResponse.json(
           { error: 'Não tens permissão para ver esta missa' },

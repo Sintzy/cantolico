@@ -4,6 +4,7 @@ import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { getAuthenticatedUser } from '@/lib/clerk-auth';
 import { buildMetadata } from '@/lib/seo';
 import MassPageClient from './page.client';
+import { canEditMass, findMembershipByEmail } from '@/lib/mass-collaboration';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -40,7 +41,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   });
 }
 
-async function getMass(id: string, userId?: number, userEmail?: string) {
+async function getMass(id: string, userId?: number, userEmail?: string, userRole?: string) {
   const { data: mass, error } = await supabase
     .from('Mass')
     .select(`
@@ -103,11 +104,10 @@ async function getMass(id: string, userId?: number, userEmail?: string) {
 
   // Check access
   const isOwner = userId === mass.userId;
+  const isAdmin = userRole === 'ADMIN';
   
-  if (mass.visibility === 'PRIVATE' && !isOwner) {
-    const isMember = userEmail && mass.MassMember?.some(
-      (m: any) => m.status === 'ACCEPTED' && m.userEmail.toLowerCase() === userEmail.toLowerCase()
-    );
+  if (mass.visibility === 'PRIVATE' && !isOwner && !isAdmin) {
+    const isMember = findMembershipByEmail(mass.MassMember, userEmail)?.status === 'ACCEPTED';
     if (!isMember) {
       return null;
     }
@@ -136,6 +136,8 @@ async function getMass(id: string, userId?: number, userEmail?: string) {
       } : null
     }));
 
+  const membership = findMembershipByEmail(mass.MassMember, userEmail);
+
   return {
     ...mass,
     user: (Array.isArray(mass.User) ? mass.User[0] : mass.User) || null,
@@ -145,7 +147,8 @@ async function getMass(id: string, userId?: number, userEmail?: string) {
       items: sortedItems.length,
       members: (mass.MassMember || []).length
     },
-    isOwner
+    isOwner,
+    canEdit: canEditMass(mass.userId, userId, userRole, membership),
   };
 }
 
@@ -153,7 +156,7 @@ export default async function MassPage({ params }: PageProps) {
   const { id } = await params;
   const user = await getAuthenticatedUser();
 
-  const mass = await getMass(id, user?.supabaseUserId, user?.email);
+  const mass = await getMass(id, user?.supabaseUserId, user?.email, user?.role);
 
   if (!mass) {
     notFound();

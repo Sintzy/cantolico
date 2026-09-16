@@ -5,6 +5,14 @@ import { getClerkSession } from '@/lib/api-middleware';
 import { sendEmail, createMassInviteEmailTemplate } from '@/lib/email';
 import { logUserAction } from '@/lib/logging-helpers';
 import { withLogging } from '@/lib/api-route-wrapper';
+import {
+  canManageMassMembers,
+  escapeLikePattern,
+  findMembershipByEmail,
+  findUsersByEmail,
+  getInviteAction,
+  normalizeEmail,
+} from '@/lib/mass-collaboration';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -18,9 +26,16 @@ async function POSTHandler(request: NextRequest, { params }: RouteParams) {
   }
 
   const { id: massId } = await params;
-  const { email } = await request.json();
+  let body: { email?: unknown };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Pedido inválido' }, { status: 400 });
+  }
 
-  if (!email || !email.includes('@')) {
+  const email = normalizeEmail(body.email);
+
+  if (!email) {
     return NextResponse.json({ error: 'Email inválido' }, { status: 400 });
   }
 
@@ -34,17 +49,29 @@ async function POSTHandler(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'Missa não encontrada' }, { status: 404 });
   }
 
-  const isOwnerOrAdmin = session.user.id === mass.userId || session.user.role === 'ADMIN';
-  if (!isOwnerOrAdmin) {
+  if (!canManageMassMembers(mass.userId, session.user.id, session.user.role)) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
   }
 
-  // Check target user exists in the system
-  const { data: invitedUser } = await supabase
+  // `ilike` allows accounts created with mixed-case addresses. The pattern is
+  // escaped and verified after querying so a valid email containing _ or %
+  // cannot match a different account.
+  const { data: users, error: userLookupError } = await supabase
     .from('User')
     .select('id, name, email')
-    .eq('email', email.toLowerCase())
-    .single();
+    .ilike('email', escapeLikePattern(email));
+
+  if (userLookupError) {
+    console.error('[MASS INVITE USER LOOKUP]', userLookupError);
+    return NextResponse.json({ error: 'Erro ao procurar utilizador' }, { status: 500 });
+  }
+
+  const matchedUsers = findUsersByEmail(users, email);
+  if (matchedUsers.length > 1) {
+    console.error('[MASS INVITE] Multiple accounts share the same canonical email', { email });
+    return NextResponse.json({ error: 'Não foi possível identificar unicamente este utilizador' }, { status: 409 });
+  }
+  const invitedUser = matchedUsers[0];
 
   if (!invitedUser) {
     return NextResponse.json(
@@ -59,29 +86,43 @@ async function POSTHandler(request: NextRequest, { params }: RouteParams) {
   }
 
   // Check if already invited/member
-  const { data: existing } = await supabase
+  const { data: memberRows, error: memberLookupError } = await supabase
     .from('MassMember')
-    .select('id, status')
-    .eq('massId', massId)
-    .eq('userEmail', email.toLowerCase())
-    .single();
+    .select('id, userEmail, status')
+    .eq('massId', massId);
 
-  if (existing) {
-    if (existing.status === 'PENDING') {
-      return NextResponse.json({ error: 'Convite já enviado para este utilizador' }, { status: 409 });
+  if (memberLookupError) {
+    console.error('[MASS INVITE MEMBER LOOKUP]', memberLookupError);
+    return NextResponse.json({ error: 'Erro ao verificar colaboradores' }, { status: 500 });
+  }
+
+  const canonicalInvitedEmail = normalizeEmail(invitedUser.email)!;
+  const existing = findMembershipByEmail(memberRows, canonicalInvitedEmail);
+
+  const inviteAction = getInviteAction(existing);
+  if (inviteAction === 'ALREADY_PENDING') {
+    return NextResponse.json({ error: 'Convite já enviado para este utilizador' }, { status: 409 });
+  }
+  if (inviteAction === 'ALREADY_ACCEPTED') {
+    return NextResponse.json({ error: 'Utilizador já é membro desta missa' }, { status: 409 });
+  }
+  if (inviteAction === 'REINVITE' && existing) {
+    // A declined invitation may be renewed.
+    const { error: deleteInviteError } = await supabase
+      .from('MassMember')
+      .delete()
+      .eq('id', existing.id);
+    if (deleteInviteError) {
+      console.error('[MASS INVITE] failed to replace declined invitation', deleteInviteError);
+      return NextResponse.json({ error: 'Erro ao renovar o convite' }, { status: 500 });
     }
-    if (existing.status === 'ACCEPTED') {
-      return NextResponse.json({ error: 'Utilizador já é membro desta missa' }, { status: 409 });
-    }
-    // DECLINED — allow re-invite
-    await supabase.from('MassMember').delete().eq('id', existing.id);
   }
 
   const { data: invite, error: insertError } = await supabase
     .from('MassMember')
     .insert({
       massId,
-      userEmail: email.toLowerCase(),
+      userEmail: canonicalInvitedEmail,
       role: 'EDITOR',
       status: 'PENDING',
       invitedBy: session.user.id,
@@ -92,6 +133,12 @@ async function POSTHandler(request: NextRequest, { params }: RouteParams) {
 
   if (insertError) {
     console.error('[MASS INVITE]', insertError);
+    if (insertError.code === '23505') {
+      return NextResponse.json(
+        { error: 'Já existe um convite ou colaboração para este utilizador' },
+        { status: 409 },
+      );
+    }
     return NextResponse.json({ error: 'Erro ao criar convite' }, { status: 500 });
   }
 
@@ -111,7 +158,7 @@ async function POSTHandler(request: NextRequest, { params }: RouteParams) {
 
     const inviteToken = `${invite.id}-${crypto.randomBytes(16).toString('hex')}`;
     const emailTemplate = createMassInviteEmailTemplate(
-      invitedUser.name || email,
+      invitedUser.name || canonicalInvitedEmail,
       mass.name,
       massDateFormatted,
       inviter?.name || session.user.email || 'Um utilizador',
@@ -120,7 +167,7 @@ async function POSTHandler(request: NextRequest, { params }: RouteParams) {
     );
 
     await sendEmail({
-      to: email,
+      to: canonicalInvitedEmail,
       subject: `⛪ Convite para colaborar na missa "${mass.name}"`,
       html: emailTemplate,
     });
@@ -129,7 +176,7 @@ async function POSTHandler(request: NextRequest, { params }: RouteParams) {
     // Non-fatal: record was created, email failure is logged
   }
 
-  await logUserAction('mass.invited', { mass_id: massId, invited_email: email });
+  await logUserAction('mass.invited', { mass_id: massId, invited_email: canonicalInvitedEmail });
   return NextResponse.json({ success: true, member: invite });
 }
 

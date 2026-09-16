@@ -9,6 +9,7 @@ import {
   LiturgicalMoment 
 } from '@/types/mass';
 import { extractChords, transposeText } from '@/lib/chord-processor';
+import { findMembershipByEmail } from '@/lib/mass-collaboration';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -88,13 +89,12 @@ export const GET = async (request: NextRequest, context: RouteParams) => {
     const isAdmin = session?.user?.role === 'ADMIN';
 
     if (mass.visibility === 'PRIVATE' && !isOwner && !isAdmin) {
-      const { data: membership } = await supabase
+      const { data: memberships, error: membershipError } = await supabase
         .from('MassMember')
-        .select('status')
-        .eq('massId', massId)
-        .eq('userEmail', session?.user?.email || '')
-        .single();
+        .select('userEmail, status')
+        .eq('massId', massId);
 
+      const membership = membershipError ? null : findMembershipByEmail(memberships, session?.user?.email);
       if (membership?.status !== 'ACCEPTED') {
         return NextResponse.json(
           { error: 'Não tens permissão para exportar esta missa' },

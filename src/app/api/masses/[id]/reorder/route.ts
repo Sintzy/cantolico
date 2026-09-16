@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { withUserProtection } from '@/lib/enhanced-api-protection';
+import { canEditMass as canEditMassForMembership, findMembershipByEmail } from '@/lib/mass-collaboration';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
 // Helper to check if user can edit mass
-async function canEditMass(massId: string, userId: number, userEmail: string, userRole: string): Promise<boolean> {
+async function canEditMass(massId: string, userId: number, userEmail: string | undefined, userRole: string): Promise<boolean> {
   const { data: mass } = await supabase
     .from('Mass')
     .select('userId')
@@ -16,19 +17,13 @@ async function canEditMass(massId: string, userId: number, userEmail: string, us
 
   if (!mass) return false;
 
-  const isOwner = userId === mass.userId;
-  const isAdmin = userRole === 'ADMIN';
-
-  if (isOwner || isAdmin) return true;
-
-  const { data: membership } = await supabase
+  const { data: memberships, error } = await supabase
     .from('MassMember')
-    .select('role, status')
-    .eq('massId', massId)
-    .eq('userEmail', userEmail)
-    .single();
+    .select('userEmail, role, status')
+    .eq('massId', massId);
 
-  return membership?.status === 'ACCEPTED' && membership?.role === 'EDITOR';
+  if (error) return false;
+  return canEditMassForMembership(mass.userId, userId, userRole, findMembershipByEmail(memberships, userEmail));
 }
 
 // PUT - Reorder items in a mass
@@ -69,7 +64,12 @@ export const PUT = withUserProtection<any>(async (request: NextRequest, session:
         .eq('massId', massId);
     });
 
-    await Promise.all(updates);
+    const results = await Promise.all(updates);
+    const failedUpdate = results.find(result => result.error);
+    if (failedUpdate?.error) {
+      console.error('Error reordering mass items:', failedUpdate.error);
+      return NextResponse.json({ error: 'Erro ao reordenar os cânticos' }, { status: 500 });
+    }
 
     return NextResponse.json({ success: true });
 
