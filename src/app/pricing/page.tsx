@@ -106,10 +106,10 @@ export default async function PricingPage() {
                 </span>
               </div>
               <div className="mt-4 flex flex-wrap items-end gap-x-2 gap-y-1">
-                <span className="text-4xl font-semibold tracking-tight">24,99 €</span>
-                <span className="pb-1 text-sm text-muted-foreground">/ano</span>
+                <span className="text-4xl font-semibold tracking-tight">2,99 €</span>
+                <span className="pb-1 text-sm text-muted-foreground">/mês</span>
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">Também disponível por 2,99 €/mês.</p>
+              <p className="mt-2 text-xs text-muted-foreground">Ou 24,99 €/ano, pago anualmente.</p>
             </div>
 
             <div className="mt-7">

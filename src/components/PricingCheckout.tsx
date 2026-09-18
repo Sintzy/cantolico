@@ -88,13 +88,13 @@ export function PricingCheckout() {
 
   const checkoutButtons = (
     <>
-      <Button className="w-full" onClick={() => startCheckout('yearly')} disabled={Boolean(loading)}>
-        {loading === 'yearly' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="mr-2 h-4 w-4" />}
-        Aderir anual - 24,99 €/ano
-      </Button>
-      <Button className="w-full" variant="outline" onClick={() => startCheckout('monthly')} disabled={Boolean(loading)}>
+      <Button className="w-full" onClick={() => startCheckout('monthly')} disabled={Boolean(loading)}>
         {loading === 'monthly' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
         Aderir mensal - 2,99 €/mês
+      </Button>
+      <Button className="w-full" variant="outline" onClick={() => startCheckout('yearly')} disabled={Boolean(loading)}>
+        {loading === 'yearly' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="mr-2 h-4 w-4" />}
+        Ou aderir anual - 24,99 €/ano
       </Button>
     </>
   );
