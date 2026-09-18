@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Crown, FileText, Layers, Download, Loader2 } from 'lucide-react';
+import { Crown, FileText, Presentation, Download, Loader2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -63,9 +63,9 @@ const FORMAT_OPTIONS: { id: ExportFormat; label: string; sub: string; icon: Reac
   },
   {
     id: 'ppt',
-    label: 'PDF — Apresentação',
-    sub: 'Slides para projeção',
-    icon: <Layers className="h-5 w-5" />,
+    label: 'PowerPoint',
+    sub: 'Slides 16:9 para projeção',
+    icon: <Presentation className="h-5 w-5" />,
   },
 ];
 
@@ -83,7 +83,7 @@ export default function ExportMassPanel({ massId, initialFormat = 'lyrics' }: Ex
     fontSize: 'medium' as 'small' | 'medium' | 'large',
     showWatermark: true,
     pptTheme: 'dark' as 'dark' | 'light',
-    pptOneVersePerSlide: true,
+    pptContent: 'lyrics' as 'lyrics' | 'chords',
   });
 
   useEffect(() => {
@@ -125,7 +125,7 @@ export default function ExportMassPanel({ massId, initialFormat = 'lyrics' }: Ex
 
     if (selectedFormat === 'ppt') {
       params.set('theme', options.pptTheme);
-      params.set('oneVersePerSlide', options.pptOneVersePerSlide ? '1' : '0');
+      params.set('format', options.pptContent);
       window.open(`/api/masses/${massId}/export/ppt?${params.toString()}`, '_blank');
     } else {
       params.set('branding', options.showWatermark ? '1' : '0');
@@ -272,18 +272,50 @@ export default function ExportMassPanel({ massId, initialFormat = 'lyrics' }: Ex
           <div>
             <p className="text-xs font-semibold tracking-widest text-stone-400 uppercase mb-3">Opções da Apresentação</p>
             <div className="bg-stone-50 rounded-xl border border-stone-100 divide-y divide-stone-100">
-              <label className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-stone-100/50 transition-colors">
-                <Checkbox
-                  id="pptOneVersePerSlide"
-                  checked={options.pptOneVersePerSlide}
-                  onCheckedChange={(v) => setOptions(p => ({ ...p, pptOneVersePerSlide: v as boolean }))}
-                  className="border-stone-300"
-                />
-                <span>
-                  <span className="block text-sm text-stone-700">Um verso por slide</span>
-                  <span className="block text-xs text-stone-400 mt-0.5">Ideal para projeção em missa</span>
-                </span>
-              </label>
+              <div className="px-4 py-3">
+                <span className="block text-sm text-stone-700">Conteúdo</span>
+                <span className="block text-xs text-stone-400 mt-0.5">Cada música ocupa um único slide; quando necessário, a letra é organizada em colunas.</span>
+                <div className="flex gap-2 mt-3">
+                  {([
+                    { id: 'lyrics', label: 'Letras limpas' },
+                    { id: 'chords', label: 'Com acordes' },
+                  ] as const).map(content => (
+                    <button
+                      key={content.id}
+                      onClick={() => setOptions(p => ({ ...p, pptContent: content.id }))}
+                      className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+                        options.pptContent === content.id
+                          ? 'border-stone-900 bg-stone-900 text-white'
+                          : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
+                      }`}
+                    >
+                      {content.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="px-4 py-3">
+                <span className="block text-sm text-stone-700">Tema</span>
+                <span className="block text-xs text-stone-400 mt-0.5">Noite é a escolha recomendada para projetores e igrejas com pouca luz.</span>
+                <div className="flex gap-2 mt-3">
+                  {([
+                    { id: 'dark', label: 'Noite' },
+                    { id: 'light', label: 'Claro' },
+                  ] as const).map(theme => (
+                    <button
+                      key={theme.id}
+                      onClick={() => setOptions(p => ({ ...p, pptTheme: theme.id }))}
+                      className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+                        options.pptTheme === theme.id
+                          ? 'border-stone-900 bg-stone-900 text-white'
+                          : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
+                      }`}
+                    >
+                      {theme.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <label className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-stone-100/50 transition-colors">
                 <Checkbox
                   id="pptIncludeHeader"
@@ -302,7 +334,7 @@ export default function ExportMassPanel({ massId, initialFormat = 'lyrics' }: Ex
                 />
                 <span>
                   <span className="block text-sm text-stone-700">Slides de separação entre momentos</span>
-                  <span className="block text-xs text-stone-400 mt-0.5">Slide clean com o logo entre cada momento</span>
+                  <span className="block text-xs text-stone-400 mt-0.5">Mantém a sequência da celebração fácil de seguir</span>
                 </span>
               </label>
               <label className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-stone-100/50 transition-colors">
@@ -312,7 +344,10 @@ export default function ExportMassPanel({ massId, initialFormat = 'lyrics' }: Ex
                   onCheckedChange={(v) => setOptions(p => ({ ...p, includeNotes: v as boolean }))}
                   className="border-stone-300"
                 />
-                <span className="text-sm text-stone-700">Notas das músicas</span>
+                <span>
+                  <span className="block text-sm text-stone-700">Notas do apresentador</span>
+                  <span className="block text-xs text-stone-400 mt-0.5">Ficam nas notas do primeiro slide da música, não são projetadas</span>
+                </span>
               </label>
             </div>
           </div>

@@ -5,25 +5,11 @@ import { transposeText } from '@/lib/chord-processor';
 import { getClerkSession } from '@/lib/api-middleware';
 import { premiumRequiredResponse, userCanUseFeature } from '@/lib/premium';
 import { findMembershipByEmail } from '@/lib/mass-collaboration';
+import { MASS_MOMENT_LABELS, MASS_MOMENT_ORDER } from '@/lib/mass-export';
 import * as fs from 'fs';
 import * as path from 'path';
 
 import * as fontkit from 'fontkit';
-
-const MOMENT_ORDER: Record<string, number> = {
-  ENTRADA: 1, ATO_PENITENCIAL: 2, GLORIA: 3, SALMO_RESPONSORIAL: 4,
-  ACLAMACAO_EVANGELHO: 5, OFERENDAS: 6, SANTO: 7, PAI_NOSSO: 8,
-  SAUDACAO_PAZ: 9, CORDEIRO_DEUS: 10, COMUNHAO: 11, ACAO_GRACAS: 12,
-  FINAL: 13, OUTRO: 99,
-};
-
-const MOMENT_LABELS: Record<string, string> = {
-  ENTRADA: 'Entrada', ATO_PENITENCIAL: 'Ato Penitencial', GLORIA: 'Glória',
-  SALMO_RESPONSORIAL: 'Salmo Responsorial', ACLAMACAO_EVANGELHO: 'Aclamação ao Evangelho',
-  OFERENDAS: 'Ofertório', SANTO: 'Santo', PAI_NOSSO: 'Pai Nosso',
-  SAUDACAO_PAZ: 'Saudação da Paz', CORDEIRO_DEUS: 'Cordeiro de Deus',
-  COMUNHAO: 'Comunhão', ACAO_GRACAS: 'Ação de Graças', FINAL: 'Final', OUTRO: 'Outro',
-};
 
 function stripChords(text: string): string {
   return text.replace(/\[[^\]]+\]/g, '').replace(/^#mic#\s*\n?/, '');
@@ -283,8 +269,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
       // ── Sort and group items ───────────────────────────────────────
       const sorted = [...(massData.MassItem || [])].sort((a: any, b: any) => {
-        const oA = MOMENT_ORDER[a.moment] ?? 99;
-        const oB = MOMENT_ORDER[b.moment] ?? 99;
+        const oA = MASS_MOMENT_ORDER[a.moment] ?? 99;
+        const oB = MASS_MOMENT_ORDER[b.moment] ?? 99;
         return oA !== oB ? oA - oB : (a.order ?? 0) - (b.order ?? 0);
       });
 
@@ -307,7 +293,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
       for (let mIdx = 0; mIdx < moments.length; mIdx++) {
         const moment = moments[mIdx];
-        const momentLabel = MOMENT_LABELS[moment] || moment.replace(/_/g, ' ');
+        const momentLabel = MASS_MOMENT_LABELS[moment] || moment.replace(/_/g, ' ');
 
         // ── Interlude slide between moments (not before the first) ──
         if (mIdx > 0 && includeMomentTitles) {
@@ -460,8 +446,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     // Sort by moment liturgical order, then by item order within moment
     const sortedMassItems = [...massData.MassItem].sort((a: any, b: any) => {
-      const oA = MOMENT_ORDER[a.moment] ?? 99;
-      const oB = MOMENT_ORDER[b.moment] ?? 99;
+      const oA = MASS_MOMENT_ORDER[a.moment] ?? 99;
+      const oB = MASS_MOMENT_ORDER[b.moment] ?? 99;
       return oA !== oB ? oA - oB : (a.order ?? 0) - (b.order ?? 0);
     });
 
@@ -472,7 +458,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const orderedMoments = Object.keys(itemsByMoment).sort(
-      (a, b) => (MOMENT_ORDER[a] ?? 99) - (MOMENT_ORDER[b] ?? 99)
+      (a, b) => (MASS_MOMENT_ORDER[a] ?? 99) - (MASS_MOMENT_ORDER[b] ?? 99)
     );
 
     const drawFooter = (pg: PDFPage) => {
@@ -636,7 +622,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     for (const moment of orderedMoments) {
-      const momentLabel = MOMENT_LABELS[moment] || moment.replace(/_/g, ' ');
+      const momentLabel = MASS_MOMENT_LABELS[moment] || moment.replace(/_/g, ' ');
 
       if (includeMomentTitles) {
         ensureSpace(lineHeight * 4);
