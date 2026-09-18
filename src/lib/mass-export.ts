@@ -40,6 +40,7 @@ export const MASS_MOMENT_LABELS: Record<string, string> = {
 };
 
 const CHORD_TOKEN = /\[(?:[A-G](?:#|b)?(?:maj|min|m|sus|dim|aug|add)?\d*(?:\/[A-G](?:#|b)?)?|N\.?C\.?)\]/gi;
+const UNFINISHED_CHORD_LINE = /^\s*\[(?:[A-G](?:#|b)?(?:maj|min|m|sus|dim|aug|add)?\d*(?:\/[A-G](?:#|b)?)?|N\.?C\.?)\s*$/gim;
 const MARKDOWN_MARKERS = /\*\*|__|~~/g;
 
 export function getMassMomentLabel(moment: string): string {
@@ -50,6 +51,7 @@ export function stripSongMarkup(value: string): string {
   return value
     .replace(/^\s*#mic#\s*\r?\n?/i, '')
     .replace(CHORD_TOKEN, '')
+    .replace(UNFINISHED_CHORD_LINE, '')
     .replace(MARKDOWN_MARKERS, '')
     .replace(/\r\n?/g, '\n');
 }
@@ -57,6 +59,7 @@ export function stripSongMarkup(value: string): string {
 export function normaliseLyricLine(value: string): string {
   return value
     .replace(CHORD_TOKEN, '')
+    .replace(UNFINISHED_CHORD_LINE, '')
     .replace(MARKDOWN_MARKERS, '')
     .replace(/\s+/g, ' ')
     .trim();
@@ -144,12 +147,10 @@ export interface SongSlideLayout {
   fontSize: number;
 }
 
-const SONG_SLIDE_DENSITIES = [
-  { columns: 1, maxCharacters: 52, maxLinesPerColumn: 10, fontSize: 29 },
-  { columns: 2, maxCharacters: 32, maxLinesPerColumn: 12, fontSize: 21 },
-  { columns: 3, maxCharacters: 23, maxLinesPerColumn: 15, fontSize: 16 },
-  { columns: 4, maxCharacters: 18, maxLinesPerColumn: 19, fontSize: 12 },
-] as const;
+const SONG_SLIDE_CONTENT_WIDTH = 11.95;
+const SONG_SLIDE_GUTTER = 0.42;
+const SONG_SLIDE_CONTENT_HEIGHT_POINTS = 5.28 * 72;
+const FONT_SIZES = [36, 34, 32, 30, 28, 26, 24, 22, 20, 18, 16, 14, 12, 10] as const;
 
 function buildSongSlideLines(value: string, maxCharacters: number): string[] {
   const paragraphs = stripSongMarkup(value)
@@ -172,28 +173,53 @@ function distributeSongLines(lines: string[], columnCount: number): string[][] {
     .filter((line, lineIndex, column) => line || (lineIndex > 0 && lineIndex < column.length - 1)));
 }
 
+function getColumnWidth(columnCount: number): number {
+  return (SONG_SLIDE_CONTENT_WIDTH - SONG_SLIDE_GUTTER * (columnCount - 1)) / columnCount;
+}
+
+function getCharactersPerLine(columnWidth: number, fontSize: number): number {
+  // Arial's average glyph width is roughly half the font size. The safety
+  // margin prevents PowerPoint from adding an unexpected extra line.
+  return Math.max(12, Math.floor((columnWidth * 72) / (fontSize * 0.52)));
+}
+
+function getLineHeight(fontSize: number): number {
+  return fontSize * 1.18 + (fontSize >= 20 ? 4 : 1);
+}
+
 /**
- * Fits a complete song on one projection slide. The layout moves through
- * balanced columns before reducing the font for unusually dense lyrics.
+ * Fits a complete song on one projection slide using the actual column width,
+ * wrapped-line count and available height — not only its original line count.
  */
 export function createSongSlideLayout(value: string): SongSlideLayout {
-  for (const density of SONG_SLIDE_DENSITIES) {
-    const lines = buildSongSlideLines(value, density.maxCharacters);
-    if (lines.length <= density.columns * density.maxLinesPerColumn) {
-      return {
-        columns: distributeSongLines(lines, density.columns),
-        fontSize: density.fontSize,
-      };
+  const candidates: SongSlideLayout[] = [];
+
+  for (const columnCount of [1, 2, 3]) {
+    const columnWidth = getColumnWidth(columnCount);
+    for (const fontSize of FONT_SIZES) {
+      const lines = buildSongSlideLines(value, getCharactersPerLine(columnWidth, fontSize));
+      const linesPerColumn = Math.ceil(lines.length / columnCount);
+      if (linesPerColumn * getLineHeight(fontSize) <= SONG_SLIDE_CONTENT_HEIGHT_POINTS) {
+        candidates.push({ columns: distributeSongLines(lines, columnCount), fontSize });
+        break;
+      }
     }
   }
 
-  const fallback = SONG_SLIDE_DENSITIES.at(-1)!;
-  const lines = buildSongSlideLines(value, fallback.maxCharacters);
-  const linesPerColumn = Math.ceil(lines.length / fallback.columns);
-  return {
-    columns: distributeSongLines(lines, fallback.columns),
-    fontSize: Math.max(9, fallback.fontSize - Math.ceil((linesPerColumn - fallback.maxLinesPerColumn) / 5)),
-  };
+  // Prefer fewer columns only when they stay comfortably readable. If a song
+  // needs a denser layout, a larger font in another column is the better read.
+  for (const minimumFontSize of [22, 18, 12]) {
+    const readable = candidates
+      .filter(candidate => candidate.fontSize >= minimumFontSize)
+      .sort((a, b) => a.columns.length - b.columns.length || b.fontSize - a.fontSize);
+    if (readable[0]) return readable[0];
+  }
+
+  const fallbackColumns = 3;
+  const fallbackWidth = getColumnWidth(fallbackColumns);
+  const fallbackFontSize = 10;
+  const fallbackLines = buildSongSlideLines(value, getCharactersPerLine(fallbackWidth, fallbackFontSize));
+  return { columns: distributeSongLines(fallbackLines, fallbackColumns), fontSize: fallbackFontSize };
 }
 
 export function sanitiseExportFilename(value: string): string {

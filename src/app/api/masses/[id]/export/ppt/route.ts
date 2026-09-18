@@ -51,6 +51,7 @@ function cleanChordText(value: string): string {
   return value
     .replace(/^\s*#mic#\s*\r?\n?/i, '')
     .replace(/\*\*|__|~~/g, '')
+    .replace(/^\s*\[(?:[A-G](?:#|b)?(?:maj|min|m|sus|dim|aug|add)?\d*(?:\/[A-G](?:#|b)?)?|N\.?C\.?)\s*$/gim, '')
     .replace(/\[([^\]]+)\]/g, '$1 ')
     .replace(/\r\n?/g, '\n');
 }
@@ -250,32 +251,32 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         const slide = pptx.addSlide();
         addChrome(slide, momentLabel);
         slide.addText(song.title, {
-          x: 0.8, y: 0.82, w: 9.8, h: 0.35,
-          fontFace: FONT, fontSize: 15, bold: true, color: theme.foreground, margin: 0,
+          x: 0.8, y: 0.68, w: 9.8, h: 0.28,
+          fontFace: FONT, fontSize: 13.5, bold: true, color: theme.foreground, margin: 0,
         });
         const songMeta = [song.author, song.capo ? `Capo ${song.capo}` : null]
           .filter(Boolean)
           .join('  ·  ');
         if (songMeta) {
           slide.addText(songMeta, {
-            x: 0.8, y: 1.22, w: 8.5, h: 0.2,
-            fontFace: FONT, fontSize: 9.5, color: theme.muted, margin: 0,
+            x: 0.8, y: 1.0, w: 8.5, h: 0.16,
+            fontFace: FONT, fontSize: 8.5, color: theme.muted, margin: 0,
           });
         }
         slide.addShape(pptx.ShapeType.line, {
-          x: 0.8, y: 1.57, w: 1.05, h: 0,
+          x: 0.8, y: 1.27, w: 1.05, h: 0,
           line: { color: theme.accent, width: 1.5 },
         });
 
-        const contentX = 0.8;
-        const contentWidth = 11.75;
-        const gutter = 0.32;
+        const contentX = 0.75;
+        const contentWidth = 11.95;
+        const gutter = 0.42;
         const columnWidth = (contentWidth - gutter * (layout.columns.length - 1)) / layout.columns.length;
         layout.columns.forEach((column, columnIndex) => {
           slide.addText(column.join('\n'), {
-            x: contentX + columnIndex * (columnWidth + gutter), y: 1.86, w: columnWidth, h: 4.72,
+            x: contentX + columnIndex * (columnWidth + gutter), y: 1.48, w: columnWidth, h: 5.28,
             fontFace: FONT, fontSize: layout.fontSize, color: theme.foreground,
-            align: 'left', valign: 'middle', paraSpaceAfter: layout.fontSize >= 20 ? 8 : 4, margin: 0,
+            align: 'left', valign: 'top', paraSpaceAfter: layout.fontSize >= 20 ? 5 : 2, margin: 0,
           });
         });
 
