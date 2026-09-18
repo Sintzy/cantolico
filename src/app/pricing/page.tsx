@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Check, Heart } from 'lucide-react';
+import { ArrowRight, Check, Heart, X } from 'lucide-react';
 import { auth } from '@clerk/nextjs/server';
 import { Button } from '@/components/ui/button';
 import { PricingCheckout } from '@/components/PricingCheckout';
@@ -15,29 +15,48 @@ export const metadata = buildMetadata({
   type: 'website',
 });
 
-const freeFeatures = [
-  'Pesquisar e ver músicas',
-  'Favoritos',
-  'Até 3 playlists',
-  'Até 3 missas/repertórios',
-  'PDFs com marca Cantólico',
+type PlanFeature = {
+  label: string;
+  included: boolean;
+};
+
+const freeFeatures: PlanFeature[] = [
+  { label: 'Pesquisar e ver todos os cânticos', included: true },
+  { label: 'Guardar favoritos', included: true },
+  { label: 'Até 3 playlists', included: true },
+  { label: 'Até 3 missas ou repertórios', included: true },
+  { label: 'PDFs com marca Cantólico', included: true },
+  { label: 'Playlists e missas ilimitadas', included: false },
+  { label: 'PDFs sem marca Cantólico', included: false },
+  { label: 'Exportação PowerPoint', included: false },
+  { label: 'Duplicar missas', included: false },
 ];
 
-const premiumFeatures = [
-  'Playlists ilimitadas',
-  'Missas e repertórios ilimitados',
-  'PDFs sem marca Cantólico',
-  'Exportação PowerPoint',
-  'Duplicar missas',
+const premiumFeatures: PlanFeature[] = [
+  { label: 'Tudo o que está incluído no Free', included: true },
+  { label: 'Playlists ilimitadas', included: true },
+  { label: 'Missas e repertórios ilimitados', included: true },
+  { label: 'PDFs sem marca Cantólico', included: true },
+  { label: 'Exportação PowerPoint pronta a projetar', included: true },
+  { label: '1 cântico · 1 slide, com letra adaptativa', included: true },
+  { label: 'Duplicar missas', included: true },
 ];
 
-function FeatureList({ features }: { features: string[] }) {
+function FeatureList({ features }: { features: PlanFeature[] }) {
   return (
     <ul className="space-y-3 text-sm text-muted-foreground">
       {features.map(feature => (
-        <li key={feature} className="flex items-start gap-3">
-          <Check className="mt-0.5 h-4 w-4 shrink-0 text-rose-700 dark:text-rose-300" />
-          <span>{feature}</span>
+        <li key={feature.label} className={`flex items-start gap-3 ${feature.included ? '' : 'text-muted-foreground/70'}`}>
+          {feature.included ? (
+            <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm bg-rose-700 text-white dark:bg-rose-300 dark:text-rose-950">
+              <Check className="h-3 w-3" strokeWidth={3} />
+            </span>
+          ) : (
+            <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border border-muted-foreground/35">
+              <X className="h-3 w-3 text-muted-foreground/55" strokeWidth={2.5} />
+            </span>
+          )}
+          <span>{feature.label}</span>
         </li>
       ))}
     </ul>
@@ -75,14 +94,14 @@ export default async function PricingPage() {
 
       <section className="px-5 py-10 md:py-14">
         <div className="mx-auto grid max-w-screen-lg gap-5 lg:grid-cols-2">
-          <article className="flex min-h-[420px] flex-col rounded-lg border border-border bg-card p-6 md:p-7">
+          <article className="flex flex-col rounded-lg border border-border bg-card p-6 md:p-7">
             <div>
               <p className="text-sm font-medium text-muted-foreground">Free</p>
               <div className="mt-4 flex items-end gap-2">
                 <span className="text-4xl font-semibold tracking-tight">0 €</span>
               </div>
               <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-                Para pesquisar, guardar favoritos e preparar repertórios simples.
+                Para conheceres o Cantólico e preparares repertórios simples.
               </p>
             </div>
 
@@ -97,7 +116,7 @@ export default async function PricingPage() {
             </div>
           </article>
 
-          <article className="flex min-h-[420px] flex-col rounded-lg border border-rose-700/30 bg-card p-6 shadow-sm dark:border-rose-300/25 md:p-7">
+          <article className="flex flex-col rounded-lg border border-rose-700/30 bg-card p-6 shadow-sm dark:border-rose-300/25 md:p-7">
             <div>
               <div className="flex items-center justify-between gap-3">
                 <p className="text-sm font-medium text-muted-foreground">Premium</p>
@@ -110,6 +129,9 @@ export default async function PricingPage() {
                 <span className="pb-1 text-sm text-muted-foreground">/mês</span>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">Ou 24,99 €/ano, pago anualmente.</p>
+              <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+                Para preparares missas completas, exportares apresentações e deixares a organização resolvida.
+              </p>
             </div>
 
             <div className="mt-7">
