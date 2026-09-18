@@ -1,9 +1,8 @@
 /**
  * Shared, presentation-safe helpers for Mass exports.
  *
- * The important rule here is that a projector should never have to trade
- * readability for completeness. Long verses are continued on a new slide
- * instead of silently shrinking the type.
+ * Songs are laid out as a complete, balanced reading surface: one song is
+ * always one slide, using columns only when the lyric density needs them.
  */
 
 export const MASS_MOMENT_ORDER: Record<string, number> = {
@@ -138,6 +137,63 @@ export function getProjectionFontSize(lines: string[]): number {
   if (longestLine > 46) return 30;
   if (lines.length >= 5) return 32;
   return 36;
+}
+
+export interface SongSlideLayout {
+  columns: string[][];
+  fontSize: number;
+}
+
+const SONG_SLIDE_DENSITIES = [
+  { columns: 1, maxCharacters: 52, maxLinesPerColumn: 10, fontSize: 29 },
+  { columns: 2, maxCharacters: 32, maxLinesPerColumn: 12, fontSize: 21 },
+  { columns: 3, maxCharacters: 23, maxLinesPerColumn: 15, fontSize: 16 },
+  { columns: 4, maxCharacters: 18, maxLinesPerColumn: 19, fontSize: 12 },
+] as const;
+
+function buildSongSlideLines(value: string, maxCharacters: number): string[] {
+  const paragraphs = stripSongMarkup(value)
+    .split(/\n\s*\n+/)
+    .map(paragraph => paragraph
+      .split('\n')
+      .flatMap(line => wrapLyricLine(line, maxCharacters))
+      .filter(Boolean))
+    .filter(paragraph => paragraph.length > 0);
+
+  return paragraphs.flatMap((paragraph, index) => (
+    index === 0 ? paragraph : ['', ...paragraph]
+  ));
+}
+
+function distributeSongLines(lines: string[], columnCount: number): string[][] {
+  const perColumn = Math.ceil(lines.length / columnCount);
+  return Array.from({ length: columnCount }, (_, index) => lines
+    .slice(index * perColumn, (index + 1) * perColumn)
+    .filter((line, lineIndex, column) => line || (lineIndex > 0 && lineIndex < column.length - 1)));
+}
+
+/**
+ * Fits a complete song on one projection slide. The layout moves through
+ * balanced columns before reducing the font for unusually dense lyrics.
+ */
+export function createSongSlideLayout(value: string): SongSlideLayout {
+  for (const density of SONG_SLIDE_DENSITIES) {
+    const lines = buildSongSlideLines(value, density.maxCharacters);
+    if (lines.length <= density.columns * density.maxLinesPerColumn) {
+      return {
+        columns: distributeSongLines(lines, density.columns),
+        fontSize: density.fontSize,
+      };
+    }
+  }
+
+  const fallback = SONG_SLIDE_DENSITIES.at(-1)!;
+  const lines = buildSongSlideLines(value, fallback.maxCharacters);
+  const linesPerColumn = Math.ceil(lines.length / fallback.columns);
+  return {
+    columns: distributeSongLines(lines, fallback.columns),
+    fontSize: Math.max(9, fallback.fontSize - Math.ceil((linesPerColumn - fallback.maxLinesPerColumn) / 5)),
+  };
 }
 
 export function sanitiseExportFilename(value: string): string {

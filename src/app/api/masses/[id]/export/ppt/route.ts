@@ -6,9 +6,8 @@ import { transposeText } from '@/lib/chord-processor';
 import { findMembershipByEmail } from '@/lib/mass-collaboration';
 import { premiumRequiredResponse, userCanUseFeature } from '@/lib/premium';
 import {
-  createLyricPages,
+  createSongSlideLayout,
   getMassMomentLabel,
-  getProjectionFontSize,
   MASS_MOMENT_ORDER,
   sanitiseExportFilename,
   stripSongMarkup,
@@ -245,42 +244,44 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         const transposedText = withChords && item.transpose
           ? transposeText(originalText, item.transpose)
           : originalText;
-        const pages = createLyricPages(normaliseForProjection(transposedText, withChords));
-        if (pages.length === 0) continue;
+        const layout = createSongSlideLayout(normaliseForProjection(transposedText, withChords));
+        if (layout.columns.every(column => column.length === 0)) continue;
 
-        pages.forEach((lines, pageIndex) => {
-          const slide = pptx.addSlide();
-          const pageLabel = pages.length > 1 ? `${pageIndex + 1} / ${pages.length}` : undefined;
-          addChrome(slide, momentLabel, pageLabel);
-
-          slide.addText(pageIndex === 0 ? song.title : `${song.title} · continuação`, {
-            x: 0.8, y: 0.82, w: 9.8, h: 0.35,
-            fontFace: FONT, fontSize: 15, bold: true, color: theme.foreground, margin: 0,
-          });
-          const songMeta = [pageIndex === 0 ? song.author : null, pageIndex === 0 && song.capo ? `Capo ${song.capo}` : null]
-            .filter(Boolean)
-            .join('  ·  ');
-          if (songMeta) {
-            slide.addText(songMeta, {
-              x: 0.8, y: 1.22, w: 8.5, h: 0.2,
-              fontFace: FONT, fontSize: 9.5, color: theme.muted, margin: 0,
-            });
-          }
-          slide.addShape(pptx.ShapeType.line, {
-            x: 0.8, y: 1.57, w: 1.05, h: 0,
-            line: { color: theme.accent, width: 1.5 },
-          });
-          slide.addText(lines.join('\n'), {
-            x: 1.18, y: 1.86, w: 10.95, h: 4.45,
-            fontFace: FONT, fontSize: getProjectionFontSize(lines),
-            color: theme.foreground, align: 'center', valign: 'middle',
-            paraSpaceAfter: 10, margin: 0,
-          });
-
-          if (includeNotes && item.note && pageIndex === 0) {
-            slide.addNotes(`Nota para ${song.title}:\n${item.note}`);
-          }
+        const slide = pptx.addSlide();
+        addChrome(slide, momentLabel);
+        slide.addText(song.title, {
+          x: 0.8, y: 0.82, w: 9.8, h: 0.35,
+          fontFace: FONT, fontSize: 15, bold: true, color: theme.foreground, margin: 0,
         });
+        const songMeta = [song.author, song.capo ? `Capo ${song.capo}` : null]
+          .filter(Boolean)
+          .join('  ·  ');
+        if (songMeta) {
+          slide.addText(songMeta, {
+            x: 0.8, y: 1.22, w: 8.5, h: 0.2,
+            fontFace: FONT, fontSize: 9.5, color: theme.muted, margin: 0,
+          });
+        }
+        slide.addShape(pptx.ShapeType.line, {
+          x: 0.8, y: 1.57, w: 1.05, h: 0,
+          line: { color: theme.accent, width: 1.5 },
+        });
+
+        const contentX = 0.8;
+        const contentWidth = 11.75;
+        const gutter = 0.32;
+        const columnWidth = (contentWidth - gutter * (layout.columns.length - 1)) / layout.columns.length;
+        layout.columns.forEach((column, columnIndex) => {
+          slide.addText(column.join('\n'), {
+            x: contentX + columnIndex * (columnWidth + gutter), y: 1.86, w: columnWidth, h: 4.72,
+            fontFace: FONT, fontSize: layout.fontSize, color: theme.foreground,
+            align: 'left', valign: 'middle', paraSpaceAfter: layout.fontSize >= 20 ? 8 : 4, margin: 0,
+          });
+        });
+
+        if (includeNotes && item.note) {
+          slide.addNotes(`Nota para ${song.title}:\n${item.note}`);
+        }
       }
     }
 

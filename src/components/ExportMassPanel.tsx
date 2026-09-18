@@ -274,7 +274,7 @@ export default function ExportMassPanel({ massId, initialFormat = 'lyrics' }: Ex
             <div className="bg-stone-50 rounded-xl border border-stone-100 divide-y divide-stone-100">
               <div className="px-4 py-3">
                 <span className="block text-sm text-stone-700">Conteúdo</span>
-                <span className="block text-xs text-stone-400 mt-0.5">As letras são automaticamente divididas para permanecerem grandes e legíveis.</span>
+                <span className="block text-xs text-stone-400 mt-0.5">Cada música ocupa um único slide; quando necessário, a letra é organizada em colunas.</span>
                 <div className="flex gap-2 mt-3">
                   {([
                     { id: 'lyrics', label: 'Letras limpas' },
