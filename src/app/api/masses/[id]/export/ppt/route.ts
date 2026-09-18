@@ -1,85 +1,88 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminSupabase as supabase } from '@/lib/supabase-admin';
-import { transposeText } from '@/lib/chord-processor';
 import pptxgen from 'pptxgenjs';
+import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { getClerkSession } from '@/lib/api-middleware';
-import { premiumRequiredResponse, userCanUseFeature } from '@/lib/premium';
+import { transposeText } from '@/lib/chord-processor';
 import { findMembershipByEmail } from '@/lib/mass-collaboration';
+import { premiumRequiredResponse, userCanUseFeature } from '@/lib/premium';
+import {
+  createLyricPages,
+  getMassMomentLabel,
+  getProjectionFontSize,
+  MASS_MOMENT_ORDER,
+  sanitiseExportFilename,
+  stripSongMarkup,
+} from '@/lib/mass-export';
 
-const MOMENT_ORDER: Record<string, number> = {
-  ENTRADA: 1, ATO_PENITENCIAL: 2, GLORIA: 3, SALMO_RESPONSORIAL: 4,
-  ACLAMACAO_EVANGELHO: 5, OFERENDAS: 6, SANTO: 7, PAI_NOSSO: 8,
-  SAUDACAO_PAZ: 9, CORDEIRO_DEUS: 10, COMUNHAO: 11, ACAO_GRACAS: 12,
-  FINAL: 13, OUTRO: 99,
-};
+const SLIDE_WIDTH = 13.333;
+const SLIDE_HEIGHT = 7.5;
+const FONT = 'Arial';
 
-const MOMENT_LABELS: Record<string, string> = {
-  ENTRADA: 'Entrada', ATO_PENITENCIAL: 'Ato Penitencial', GLORIA: 'Glória',
-  SALMO_RESPONSORIAL: 'Salmo Responsorial', ACLAMACAO_EVANGELHO: 'Aclamação ao Evangelho',
-  OFERENDAS: 'Ofertório', SANTO: 'Santo', PAI_NOSSO: 'Pai Nosso',
-  SAUDACAO_PAZ: 'Saudação da Paz', CORDEIRO_DEUS: 'Cordeiro de Deus',
-  COMUNHAO: 'Comunhão', ACAO_GRACAS: 'Ação de Graças', FINAL: 'Final', OUTRO: 'Outro',
-};
+type ThemeName = 'dark' | 'light';
 
-function stripChords(text: string): string {
-  return text.replace(/\[[^\]]+\]/g, '').replace(/^#mic#\s*\n?/, '');
+interface PresentationTheme {
+  background: string;
+  foreground: string;
+  muted: string;
+  accent: string;
+  decoration: string;
 }
 
-function splitVerses(text: string): string[] {
-  const cleaned = text.replace(/^#mic#\s*\n?/, '').trim();
-  const verses = cleaned.split(/\n{2,}/);
-  return verses.map(v => v.trim()).filter(v => v.length > 0);
+const THEMES: Record<ThemeName, PresentationTheme> = {
+  dark: {
+    background: '101924', foreground: 'F8F5EE', muted: 'AEB9C5',
+    accent: 'D8B26A', decoration: '233448',
+  },
+  light: {
+    background: 'FAF7F1', foreground: '1E2A36', muted: '687582',
+    accent: 'A6463A', decoration: 'E9E0D3',
+  },
+};
+
+function formatDate(date: string | null): string | null {
+  if (!date) return null;
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toLocaleDateString('pt-PT', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  });
 }
 
-// Returns lines without chord brackets, preserving lyric lines
-function extractLyricLines(text: string): string[] {
-  const clean = stripChords(text);
-  return clean.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+function cleanChordText(value: string): string {
+  return value
+    .replace(/^\s*#mic#\s*\r?\n?/i, '')
+    .replace(/\*\*|__|~~/g, '')
+    .replace(/\[([^\]]+)\]/g, '$1 ')
+    .replace(/\r\n?/g, '\n');
+}
+
+function normaliseForProjection(value: string, withChords: boolean): string {
+  return withChords ? cleanChordText(value) : stripSongMarkup(value);
 }
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const session = await getClerkSession();
     if (!session) {
       return NextResponse.json({ error: 'Login necessário' }, { status: 401 });
     }
-
-    const canExportPpt = await userCanUseFeature(session.user.id, 'export_ppt');
-    if (!canExportPpt) {
-      return premiumRequiredResponse(
-        'export_ppt',
-        'A exportação PowerPoint faz parte do Cantólico Premium.'
-      );
-    }
-
-    const { id } = await params;
     const { searchParams } = new URL(request.url);
-    const format = searchParams.get('format') || 'lyrics';
     const includeHeader = searchParams.get('includeHeader') !== '0';
     const includeNotes = searchParams.get('includeNotes') !== '0';
     const includeMomentTitles = searchParams.get('includeMomentTitles') !== '0';
-    const oneVersePerSlide = searchParams.get('oneVersePerSlide') !== '0';
-    const theme = searchParams.get('theme') || 'dark';
-
-    const isDark = theme === 'dark';
-
-    // Theme colors
-    const BG = isDark ? '0d0d1a' : 'ffffff';
-    const TEXT_PRIMARY = isDark ? 'f5f0e8' : '1c1917';
-    const TEXT_SECONDARY = isDark ? 'a8a29e' : '78716c';
-    const ACCENT = 'c0392b'; // rose-700 equivalent
-    const MOMENT_COLOR = isDark ? 'd4c5b0' : '44403c';
-    const CHORD_COLOR = isDark ? 'f59e0b' : 'b45309'; // amber
+    const themeName: ThemeName = searchParams.get('theme') === 'light' ? 'light' : 'dark';
+    const withChords = searchParams.get('format') === 'chords';
 
     const { data: massData, error } = await supabase
       .from('Mass')
       .select(`
-        id, name, description, date, parish, celebrant, celebration, liturgicalColor, visibility, userId,
+        id, name, date, parish, celebration, visibility, userId,
         MassItem (
           id, moment, order, note, transpose,
           Song!MassItem_songId_fkey (
             id, title, author, capo,
-            SongVersion!SongVersion_songId_fkey (sourceText, lyricsPlain, keyOriginal)
+            SongVersion!SongVersion_songId_fkey (sourceText, lyricsPlain)
           )
         )
       `)
@@ -102,328 +105,196 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         return NextResponse.json({ error: 'Não tens permissão para exportar esta missa' }, { status: 403 });
       }
     }
+
+    // The UI has always presented PowerPoint as Premium. Enforce that promise
+    // on the route too, so a direct URL cannot bypass it.
+    const canExport = await userCanUseFeature(session.user.id, 'export_ppt');
+    if (!canExport) {
+      return premiumRequiredResponse('export_ppt', 'Exportar apresentações PowerPoint faz parte do Premium.');
+    }
+
+    const theme = THEMES[themeName];
     const pptx = new pptxgen();
     pptx.author = 'Cantólico';
     pptx.company = 'Cantólico';
+    pptx.subject = 'Apresentação para projeção litúrgica';
     pptx.title = massData.name;
-    pptx.layout = 'LAYOUT_WIDE'; // 13.33 x 7.5 inches
-
-    const W = 13.33;
-    const H = 7.5;
+    pptx.defineLayout({ name: 'CANTOLICO_WIDE', width: SLIDE_WIDTH, height: SLIDE_HEIGHT });
+    pptx.layout = 'CANTOLICO_WIDE';
 
     const addBackground = (slide: pptxgen.Slide) => {
+      slide.background = { color: theme.background };
       slide.addShape(pptx.ShapeType.rect, {
-        x: 0, y: 0, w: W, h: H,
-        fill: { color: BG },
-        line: { color: BG },
+        x: 0, y: 0, w: 0.13, h: SLIDE_HEIGHT,
+        fill: { color: theme.accent }, line: { color: theme.accent },
+      });
+      slide.addShape(pptx.ShapeType.ellipse, {
+        x: 10.9, y: -1.15, w: 3.4, h: 3.4,
+        fill: { color: theme.decoration, transparency: 35 },
+        line: { color: theme.decoration, transparency: 100 },
+      });
+      slide.addShape(pptx.ShapeType.ellipse, {
+        x: -1.25, y: 6.5, w: 2.2, h: 2.2,
+        fill: { color: theme.decoration, transparency: 45 },
+        line: { color: theme.decoration, transparency: 100 },
       });
     };
 
-    const addCross = (slide: pptxgen.Slide, x: number, y: number, size = 0.14, color = ACCENT) => {
-      slide.addShape(pptx.ShapeType.rect, {
-        x: x + size * 0.4, y, w: size * 0.2, h: size,
-        fill: { color }, line: { color },
+    const addChrome = (slide: pptxgen.Slide, momentLabel: string, pageLabel?: string) => {
+      addBackground(slide);
+      slide.addText('CANTÓLICO', {
+        x: 0.55, y: 0.34, w: 1.35, h: 0.18,
+        fontFace: FONT, fontSize: 7.5, bold: true, charSpacing: 1.7,
+        color: theme.accent, margin: 0,
       });
-      slide.addShape(pptx.ShapeType.rect, {
-        x, y: y + size * 0.2, w: size, h: size * 0.2,
-        fill: { color }, line: { color },
+      slide.addText(momentLabel.toUpperCase(), {
+        x: 0.55, y: 6.94, w: 6.6, h: 0.18,
+        fontFace: FONT, fontSize: 7.5, bold: true, charSpacing: 1.1,
+        color: theme.muted, margin: 0,
       });
-    };
-
-    const addFooter = (slide: pptxgen.Slide, songTitle?: string) => {
-      if (songTitle) {
-        slide.addText(songTitle, {
-          x: 0.6, y: H - 0.42, w: W - 1.5, h: 0.3,
-          fontSize: 8.5,
-          color: isDark ? '4a4560' : 'c4bfbb',
-          fontFace: 'Helvetica',
-          italic: true,
-          align: 'left',
-          valign: 'middle',
+      if (pageLabel) {
+        slide.addText(pageLabel, {
+          x: 11.6, y: 6.94, w: 1.15, h: 0.18,
+          fontFace: FONT, fontSize: 7.5, align: 'right', color: theme.muted, margin: 0,
         });
       }
-      slide.addText('cantolico.pt ✝', {
-        x: W - 1.6, y: H - 0.42, w: 1.4, h: 0.3,
-        fontSize: 8.5,
-        color: isDark ? '3a3550' : 'd6d3d1',
-        fontFace: 'Helvetica',
-        align: 'right',
-        valign: 'middle',
+    };
+
+    const addCover = () => {
+      const slide = pptx.addSlide();
+      addBackground(slide);
+      slide.addText('CELEBRAÇÃO', {
+        x: 0.8, y: 1.12, w: 3.2, h: 0.23,
+        fontFace: FONT, fontSize: 10, bold: true, charSpacing: 2.2,
+        color: theme.accent, margin: 0,
+      });
+
+      const titleLines = String(massData.name).split(/\s+/).reduce((lines: string[], word: string) => {
+        const last = lines.at(-1) || '';
+        if (last && `${last} ${word}`.length > 30) lines.push(word);
+        else if (last) lines[lines.length - 1] = `${last} ${word}`;
+        else lines.push(word);
+        return lines;
+      }, []);
+      const titleSize = titleLines.length > 2 ? 29 : titleLines.length > 1 ? 36 : 42;
+      slide.addText(titleLines.join('\n'), {
+        x: 0.8, y: 1.56, w: 10.9, h: 2.4,
+        fontFace: FONT, fontSize: titleSize, bold: true, color: theme.foreground, margin: 0,
+      });
+
+      const metadata = [massData.celebration, formatDate(massData.date), massData.parish].filter(Boolean);
+      if (metadata.length > 0) {
+        slide.addShape(pptx.ShapeType.line, {
+          x: 0.82, y: 4.4, w: 1.25, h: 0,
+          line: { color: theme.accent, width: 1.2 },
+        });
+        slide.addText(metadata.join('\n'), {
+          x: 0.8, y: 4.68, w: 7.8, h: 1.1,
+          fontFace: FONT, fontSize: 15, color: theme.muted, margin: 0,
+        });
+      }
+      slide.addText('Preparado para projeção', {
+        x: 0.8, y: 6.72, w: 3.2, h: 0.2,
+        fontFace: FONT, fontSize: 8.5, color: theme.muted, italic: true, margin: 0,
       });
     };
 
-    // ── Cover slide ──────────────────────────────────────────────────
-    if (includeHeader) {
-      const cover = pptx.addSlide();
-      addBackground(cover);
-
-      // Decorative top accent line
-      cover.addShape(pptx.ShapeType.rect, {
-        x: 0, y: 0, w: W, h: 0.06,
-        fill: { color: ACCENT }, line: { color: ACCENT },
+    const addMomentSlide = (momentLabel: string, index: number) => {
+      const slide = pptx.addSlide();
+      addChrome(slide, momentLabel);
+      slide.addText(String(index).padStart(2, '0'), {
+        x: 0.75, y: 1.28, w: 2.5, h: 1.55,
+        fontFace: FONT, fontSize: 76, bold: true, color: theme.decoration, margin: 0,
       });
-
-      // Cross symbol
-      addCross(cover, W / 2 - 0.07, 1.6, 0.18, ACCENT);
-
-      // Mass name
-      cover.addText(massData.name, {
-        x: 1.0, y: 2.1, w: W - 2.0, h: 1.4,
-        fontSize: 40,
-        bold: true,
-        color: TEXT_PRIMARY,
-        fontFace: 'Helvetica',
-        align: 'center',
-        valign: 'middle',
+      slide.addText('MOMENTO DA CELEBRAÇÃO', {
+        x: 0.84, y: 3.2, w: 4.5, h: 0.22,
+        fontFace: FONT, fontSize: 10, bold: true, charSpacing: 1.8,
+        color: theme.accent, margin: 0,
       });
-
-      const metaLines: string[] = [];
-      if (massData.celebration) metaLines.push(massData.celebration);
-      if (massData.date) {
-        metaLines.push(new Date(massData.date).toLocaleDateString('pt-PT', {
-          weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-        }));
-      }
-      if (massData.parish) metaLines.push(massData.parish);
-
-      if (metaLines.length > 0) {
-        cover.addText(metaLines.join('  ·  '), {
-          x: 1.0, y: 3.6, w: W - 2.0, h: 0.6,
-          fontSize: 15,
-          color: TEXT_SECONDARY,
-          fontFace: 'Helvetica',
-          align: 'center',
-          valign: 'middle',
-        });
-      }
-
-      // Divider line
-      cover.addShape(pptx.ShapeType.rect, {
-        x: W / 2 - 0.8, y: 4.5, w: 1.6, h: 0.02,
-        fill: { color: isDark ? '3a3550' : 'd6d3d1' }, line: { color: isDark ? '3a3550' : 'd6d3d1' },
+      slide.addText(momentLabel, {
+        x: 0.8, y: 3.67, w: 10.5, h: 0.9,
+        fontFace: FONT, fontSize: 35, bold: true, color: theme.foreground, margin: 0,
       });
+    };
 
-      cover.addText('Qui bene cantat, bis orat', {
-        x: 1.0, y: 4.7, w: W - 2.0, h: 0.4,
-        fontSize: 11,
-        color: isDark ? '4a4560' : 'b0a89e',
-        fontFace: 'Helvetica',
-        italic: true,
-        align: 'center',
-      });
-
-      cover.addShape(pptx.ShapeType.rect, {
-        x: 0, y: H - 0.06, w: W, h: 0.06,
-        fill: { color: ACCENT }, line: { color: ACCENT },
-      });
-    }
-
-    // ── Sort and group items ─────────────────────────────────────────
-    const sorted = [...(massData.MassItem || [])].sort((a: any, b: any) => {
-      const oA = MOMENT_ORDER[a.moment] ?? 99;
-      const oB = MOMENT_ORDER[b.moment] ?? 99;
-      return oA !== oB ? oA - oB : (a.order ?? 0) - (b.order ?? 0);
+    const sortedItems = [...(massData.MassItem || [])].sort((a: any, b: any) => {
+      const momentDifference = (MASS_MOMENT_ORDER[a.moment] ?? 99) - (MASS_MOMENT_ORDER[b.moment] ?? 99);
+      return momentDifference || ((a.order ?? 0) - (b.order ?? 0));
     });
+    const itemsByMoment = sortedItems.reduce<Record<string, any[]>>((groups, item: any) => {
+      (groups[item.moment] ||= []).push(item);
+      return groups;
+    }, {});
 
-    const byMoment: Record<string, any[]> = {};
-    for (const item of sorted) {
-      if (!byMoment[item.moment]) byMoment[item.moment] = [];
-      byMoment[item.moment].push(item);
-    }
+    if (includeHeader) addCover();
 
-    // ── Moment + song slides ─────────────────────────────────────────
-    for (const moment of Object.keys(byMoment)) {
-      const momentLabel = MOMENT_LABELS[moment] || moment.replace(/_/g, ' ');
+    let momentIndex = 0;
+    for (const [moment, items] of Object.entries(itemsByMoment)) {
+      momentIndex += 1;
+      const momentLabel = getMassMomentLabel(moment);
+      if (includeMomentTitles) addMomentSlide(momentLabel, momentIndex);
 
-      // Moment title slide
-      if (includeMomentTitles) {
-        const ms = pptx.addSlide();
-        addBackground(ms);
-        ms.addShape(pptx.ShapeType.rect, {
-          x: 0, y: 0, w: W, h: 0.06,
-          fill: { color: ACCENT }, line: { color: ACCENT },
-        });
-        addCross(ms, W / 2 - 0.07, H / 2 - 0.55, 0.14, ACCENT);
-        ms.addText(momentLabel, {
-          x: 1.0, y: H / 2 - 0.2, w: W - 2.0, h: 0.8,
-          fontSize: 32,
-          bold: true,
-          color: MOMENT_COLOR,
-          fontFace: 'Helvetica',
-          align: 'center',
-          valign: 'middle',
-          charSpacing: 2,
-        });
-        ms.addShape(pptx.ShapeType.rect, {
-          x: W / 2 - 0.8, y: H / 2 + 0.65, w: 1.6, h: 0.02,
-          fill: { color: isDark ? '3a3550' : 'd6d3d1' }, line: { color: isDark ? '3a3550' : 'd6d3d1' },
-        });
-        addFooter(ms);
-      }
-
-      for (const item of byMoment[moment]) {
+      for (const item of items) {
         const song = item.Song;
-        if (!song) continue;
-        const version = song.SongVersion?.[0];
-        const rawText = format === 'chords'
-          ? (version?.sourceText || version?.lyricsPlain || '')
-          : (version?.lyricsPlain || version?.sourceText || '');
-        const displayText = format === 'chords' && item.transpose
-          ? transposeText(rawText, item.transpose)
-          : rawText;
-        if (!displayText) continue;
+        const version = song?.SongVersion?.[0];
+        if (!song || !version) continue;
 
-        // Song title slide
-        const titleSlide = pptx.addSlide();
-        addBackground(titleSlide);
-        titleSlide.addShape(pptx.ShapeType.rect, {
-          x: 0, y: 0, w: W, h: 0.06,
-          fill: { color: ACCENT }, line: { color: ACCENT },
-        });
+        const originalText = withChords
+          ? (version.sourceText || version.lyricsPlain || '')
+          : (version.lyricsPlain || version.sourceText || '');
+        const transposedText = withChords && item.transpose
+          ? transposeText(originalText, item.transpose)
+          : originalText;
+        const pages = createLyricPages(normaliseForProjection(transposedText, withChords));
+        if (pages.length === 0) continue;
 
-        const songMeta: string[] = [];
-        if (song.author) songMeta.push(song.author);
-        if (song.capo && song.capo > 0) songMeta.push(`Capo ${song.capo}`);
+        pages.forEach((lines, pageIndex) => {
+          const slide = pptx.addSlide();
+          const pageLabel = pages.length > 1 ? `${pageIndex + 1} / ${pages.length}` : undefined;
+          addChrome(slide, momentLabel, pageLabel);
 
-        addCross(titleSlide, W / 2 - 0.07, H / 2 - 0.7, 0.14, ACCENT);
-        titleSlide.addText(song.title, {
-          x: 1.0, y: H / 2 - 0.25, w: W - 2.0, h: 0.9,
-          fontSize: 36,
-          bold: true,
-          color: TEXT_PRIMARY,
-          fontFace: 'Helvetica',
-          align: 'center',
-          valign: 'middle',
-        });
-        if (songMeta.length > 0) {
-          titleSlide.addText(songMeta.join('  ·  '), {
-            x: 1.0, y: H / 2 + 0.7, w: W - 2.0, h: 0.4,
-            fontSize: 12,
-            color: TEXT_SECONDARY,
-            fontFace: 'Helvetica',
-            align: 'center',
+          slide.addText(pageIndex === 0 ? song.title : `${song.title} · continuação`, {
+            x: 0.8, y: 0.82, w: 9.8, h: 0.35,
+            fontFace: FONT, fontSize: 15, bold: true, color: theme.foreground, margin: 0,
           });
-        }
-        addFooter(titleSlide, momentLabel);
-
-        // Lyric slides
-        if (oneVersePerSlide) {
-          const verses = splitVerses(format === 'chords' ? displayText : stripChords(displayText));
-          for (const verse of verses) {
-            const lyricSlide = pptx.addSlide();
-            addBackground(lyricSlide);
-
-            lyricSlide.addText(song.title, {
-              x: 0.6, y: 0.25, w: W - 1.2, h: 0.45,
-              fontSize: 13,
-              bold: true,
-              color: isDark ? '5a5580' : 'c4bfbb',
-              fontFace: 'Helvetica',
-              align: 'left',
+          const songMeta = [pageIndex === 0 ? song.author : null, pageIndex === 0 && song.capo ? `Capo ${song.capo}` : null]
+            .filter(Boolean)
+            .join('  ·  ');
+          if (songMeta) {
+            slide.addText(songMeta, {
+              x: 0.8, y: 1.22, w: 8.5, h: 0.2,
+              fontFace: FONT, fontSize: 9.5, color: theme.muted, margin: 0,
             });
-
-            // Accent top-left dash
-            lyricSlide.addShape(pptx.ShapeType.rect, {
-              x: 0.6, y: 0.72, w: 0.3, h: 0.025,
-              fill: { color: ACCENT }, line: { color: ACCENT },
-            });
-
-            const lines = verse.split('\n');
-            const FONT_SIZE = 24;
-            const LINE_H = 0.44;
-            const totalH = lines.length * LINE_H;
-            const startY = Math.max(1.0, (H - totalH) / 2 - 0.2);
-
-            if (format === 'chords') {
-              // Render chord lines in amber and lyric lines in primary
-              let y = startY;
-              for (const line of lines) {
-                const isChordLine = /^\s*(?:\[[A-G][^\]]*\]\s*)+\s*$/.test(line);
-                if (isChordLine) {
-                  const chordDisplay = line.replace(/\[([^\]]+)\]/g, '$1 ').trim();
-                  lyricSlide.addText(chordDisplay, {
-                    x: 0.7, y, w: W - 1.4, h: LINE_H * 0.7,
-                    fontSize: 14,
-                    bold: true,
-                    color: CHORD_COLOR,
-                    fontFace: 'Helvetica',
-                    align: 'center',
-                  });
-                  y += LINE_H * 0.7;
-                } else {
-                  const lyricLine = line.replace(/\[[^\]]+\]/g, '');
-                  lyricSlide.addText(lyricLine, {
-                    x: 0.7, y, w: W - 1.4, h: LINE_H,
-                    fontSize: FONT_SIZE,
-                    color: TEXT_PRIMARY,
-                    fontFace: 'Helvetica',
-                    align: 'center',
-                  });
-                  y += LINE_H;
-                }
-              }
-            } else {
-              lyricSlide.addText(verse, {
-                x: 0.7, y: startY, w: W - 1.4, h: totalH + 0.3,
-                fontSize: FONT_SIZE,
-                color: TEXT_PRIMARY,
-                fontFace: 'Helvetica',
-                align: 'center',
-                valign: 'middle',
-                paraSpaceAfter: 2,
-              });
-            }
-
-            addFooter(lyricSlide, song.title);
           }
-        } else {
-          // All lyrics on one slide (scrollable not great for ppt, but preserves compact view)
-          const lyricSlide = pptx.addSlide();
-          addBackground(lyricSlide);
-          lyricSlide.addText(song.title, {
-            x: 0.6, y: 0.25, w: W - 1.2, h: 0.45,
-            fontSize: 13, bold: true,
-            color: isDark ? '5a5580' : 'c4bfbb',
-            fontFace: 'Helvetica', align: 'left',
+          slide.addShape(pptx.ShapeType.line, {
+            x: 0.8, y: 1.57, w: 1.05, h: 0,
+            line: { color: theme.accent, width: 1.5 },
           });
-          const lines = extractLyricLines(displayText);
-          const fontSize = lines.length > 20 ? 12 : lines.length > 12 ? 15 : 18;
-          lyricSlide.addText(lines.join('\n'), {
-            x: 0.7, y: 0.9, w: W - 1.4, h: H - 1.5,
-            fontSize, color: TEXT_PRIMARY, fontFace: 'Helvetica',
-            align: 'center', valign: 'top',
+          slide.addText(lines.join('\n'), {
+            x: 1.18, y: 1.86, w: 10.95, h: 4.45,
+            fontFace: FONT, fontSize: getProjectionFontSize(lines),
+            color: theme.foreground, align: 'center', valign: 'middle',
+            paraSpaceAfter: 10, margin: 0,
           });
-          addFooter(lyricSlide, song.title);
-        }
 
-        // Note slide
-        if (includeNotes && item.note) {
-          const noteSlide = pptx.addSlide();
-          addBackground(noteSlide);
-          noteSlide.addText('Nota', {
-            x: 0.6, y: 0.3, w: 2, h: 0.4,
-            fontSize: 11, color: ACCENT, fontFace: 'Helvetica', bold: true,
-          });
-          noteSlide.addText(item.note, {
-            x: 0.7, y: 1.0, w: W - 1.4, h: H - 2.0,
-            fontSize: 20, color: TEXT_PRIMARY, fontFace: 'Helvetica',
-            align: 'center', valign: 'middle',
-          });
-          addFooter(noteSlide, song.title);
-        }
+          if (includeNotes && item.note && pageIndex === 0) {
+            slide.addNotes(`Nota para ${song.title}:\n${item.note}`);
+          }
+        });
       }
     }
 
     const pptxBytes = await pptx.write({ outputType: 'arraybuffer' });
+    const filename = `${sanitiseExportFilename(massData.name)} - Missa.pptx`;
     return new NextResponse(Buffer.from(pptxBytes as ArrayBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        'Content-Disposition': `attachment; filename="${encodeURIComponent(massData.name)} - Missa.pptx"`,
+        'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
       },
     });
-  } catch (err) {
-    console.error('Erro ao exportar PPTX:', err);
-    return NextResponse.json({ error: 'Erro ao exportar PPTX' }, { status: 500 });
+  } catch (error) {
+    console.error('Erro ao exportar PPTX:', error);
+    return NextResponse.json({ error: 'Erro ao exportar PowerPoint' }, { status: 500 });
   }
 }
