@@ -270,7 +270,7 @@ function generateSecurityEmailHtml(alert: any, session: any) {
             <p><strong>Sistema de Logs Cantolico</strong></p>
             <p>Este é um email automático do sistema de segurança.</p>
             <p>Para mais informações, acesse: <a href="https://cantolico.pt/logs">cantolico.pt/logs</a></p>
-            <p>© ${new Date().getFullYear()} Cantolico - Todos os direitos reservados</p>
+            <p>© ${new Date().getFullYear()} Cantólico · Código e conteúdos originais do Cantólico licenciados sob CC BY-NC 4.0. Conteúdos de terceiros mantêm os respetivos direitos.</p>
         </div>
     </div>
 </body>

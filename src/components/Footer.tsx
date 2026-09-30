@@ -51,7 +51,7 @@ export default function Footer() {
           {/* Brand */}
           <div className="space-y-4">
             <Link href="/" className="inline-flex items-center gap-2.5">
-              <Image src={Icons.SITE_IMAGES.logo} alt="Cantólico" width={26} height={26} className="dark:invert" />
+              <Image src={Icons.SITE_IMAGES.logo} alt="Cantólico" width={26} height={26} />
               <span className="text-base font-semibold text-stone-900 tracking-tight">
                 Can<span className="text-rose-700">♱</span>ólico!
               </span>
@@ -144,7 +144,7 @@ export default function Footer() {
 
         <div className="mt-10 flex items-center justify-between border-t border-stone-100 pt-6" data-nosnippet>
           <span className="text-xs text-stone-400">
-            © {new Date().getFullYear()} Cantólico. Todos os direitos reservados.
+            © {new Date().getFullYear()} Cantólico · Código e conteúdos originais do Cantólico licenciados sob CC BY-NC 4.0. Conteúdos de terceiros mantêm os respetivos direitos.
           </span>
           <span className="flex items-center gap-1.5 text-xs text-stone-400">
             <span className="text-rose-700 text-xs leading-none">✝</span>
