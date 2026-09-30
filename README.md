@@ -1,6 +1,6 @@
 # 🎵 Can♱ólico! - Modern Catholic Digital Hymnal
 
-[![Next.js](https://img.shields.io/badge/Next.js-15.4.2-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16.2.4-black?style=flat-square&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![Supabase](https://img.shields.io/badge/Supabase-green?style=flat-square&logo=supabase)](https://supabase.com/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38B2AC?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
@@ -46,7 +46,7 @@
 ## 🛠️ Technical Stack
 
 ### **Frontend**
-- **[Next.js 15](https://nextjs.org/)** - React framework with App Router
+- **[Next.js 16](https://nextjs.org/)** - React framework with App Router
 - **[TypeScript](https://www.typescriptlang.org/)** - Type-safe development
 - **[Tailwind CSS](https://tailwindcss.com/)** - Utility-first styling
 - **[Shadcn/ui](https://ui.shadcn.com/)** - Modern component library
@@ -110,7 +110,7 @@ src/
 
 ## 🔐 Authentication & Security
 
-- **NextAuth.js** integration with multiple providers
+- **Clerk** authentication and session management
 - **Role-based permissions** (User, Reviewer, Admin)
 - **Secure API endpoints** with session validation
 - **Content moderation** and spam prevention

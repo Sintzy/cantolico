@@ -11,6 +11,7 @@
     "preview": "vinext dev",
     "lint": "vinext lint",
     "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test src/lib/*.test.ts",
     "git-info": "node scripts/git-info.js",
     "dev:next": "node scripts/git-info.js && next dev --webpack",
     "build:next": "node scripts/git-info.js && next build --webpack",
@@ -44,7 +45,7 @@
     "@tombatossals/react-chords": "^0.2.10",
     "@vercel/analytics": "^1.5.0",
     "@vercel/otel": "^2.1.2",
-    "bcryptjs": "^3.0.2",
+    "@supabase/supabase-js": "^2.56.1",
     "browser-image-compression": "^2.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -60,7 +61,6 @@
     "next-themes": "^0.4.6",
     "nitro": "3.0.260610-beta",
     "pdf-lib": "^1.17.1",
-    "pdfmake": "^0.2.10",
     "pptxgenjs": "^3.12.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -68,7 +68,6 @@
     "react-is": "^19.2.4",
     "react-server-dom-webpack": "^19.2.8",
     "react-simplemde-editor": "^5.2.0",
-    "react-youtube": "^10.1.0",
     "recharts": "^3.1.0",
     "remove-accents": "^0.5.0",
     "resend": "^4.7.0",
@@ -82,7 +81,6 @@
     "zod": "^4.1.5"
   },
   "devDependencies": {
-    "@supabase/supabase-js": "^2.56.1",
     "@tailwindcss/postcss": "^4",
     "@tailwindcss/vite": "^4.3.3",
     "@types/fontkit": "^2.0.9",
@@ -91,20 +89,12 @@
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.0.5",
     "@vitejs/plugin-rsc": "^0.5.34",
-    "baseline-browser-mapping": "^2.10.19",
-    "dotenv": "^17.2.3",
     "tailwindcss": "^4",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",
     "vite": "^8.2.1"
   },
-  "description": "[![Next.js](https://img.shields.io/badge/Next.js-15.4.2-black?style=flat-square&logo=next.js)](https://nextjs.org/)\r [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)\r [![Supabase](https://img.shields.io/badge/Supabase-green?style=flat-square&logo=supabase)](https://supabase.com/)\r [![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38B2AC?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)",
-  "main": "index.js",
-  "directories": {
-    "doc": "docs"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "description": "Collaborative digital hymnal for Catholic liturgical music.",
+  "license": "CC-BY-NC-4.0",
   "type": "module"
 }
