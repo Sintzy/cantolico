@@ -40,7 +40,7 @@ function toSongSummary(song: any) {
 }
 
 export async function GET(request: NextRequest) {
-  const access = withPartnerApiAuth(request);
+  const access = await withPartnerApiAuth(request);
   if (access.error) return access.error;
 
   const { searchParams } = request.nextUrl;

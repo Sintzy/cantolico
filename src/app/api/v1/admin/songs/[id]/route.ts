@@ -37,7 +37,7 @@ async function auditApiMutation(actorId: number, apiKeyName: string, action: str
 }
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
-  const access = withPartnerApiAuth(request, 'songs:write');
+  const access = await withPartnerApiAuth(request, 'songs:write');
   if (access.error) return access.error;
   const actorId = await getApiActorId();
   if (!actorId) return partnerApiError('api_misconfigured', 'CANTOLICO_API_ACTOR_USER_ID deve indicar uma conta ADMIN válida.', 503);
@@ -123,7 +123,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 }
 
 export async function DELETE(request: NextRequest, context: RouteContext) {
-  const access = withPartnerApiAuth(request, 'songs:delete');
+  const access = await withPartnerApiAuth(request, 'songs:delete');
   if (access.error) return access.error;
   const actorId = await getApiActorId();
   if (!actorId) return partnerApiError('api_misconfigured', 'CANTOLICO_API_ACTOR_USER_ID deve indicar uma conta ADMIN válida.', 503);
