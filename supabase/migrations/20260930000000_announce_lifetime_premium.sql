@@ -19,7 +19,7 @@ select
   'Mudámos a infraestrutura do Cantólico. Como o projeto é sem fins lucrativos, seria incoerente manter o preço anterior. O Premium passou a ser uma compra única de 15 €, sem renovação automática — para que fique mais acessível a todos. [Saber mais](/pricing)',
   'ANNOUNCEMENT',
   'POPUP',
-  array['ALL']::text[],
+  array['ALL'::"BannerPage"],
   true,
   100,
   now(),
