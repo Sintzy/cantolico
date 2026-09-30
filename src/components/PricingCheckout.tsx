@@ -2,11 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { ArrowRight, Loader2, Settings } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Loader2, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-type CheckoutInterval = 'monthly' | 'yearly';
-type LoadingState = CheckoutInterval | 'portal';
+type LoadingState = 'checkout' | 'portal';
 
 interface PlanState {
   isPremium: boolean;
@@ -64,11 +63,11 @@ export function PricingCheckout() {
     window.location.href = data.url;
   }
 
-  async function startCheckout(interval: CheckoutInterval) {
-    setLoading(interval);
+  async function startCheckout() {
+    setLoading('checkout');
 
     try {
-      await redirectToStripe('/api/billing/checkout', { interval });
+      await redirectToStripe('/api/billing/checkout');
     } catch (checkoutError) {
       setError(checkoutError instanceof Error ? checkoutError.message : 'Erro ao iniciar pagamento');
       setLoading(null);
@@ -87,30 +86,28 @@ export function PricingCheckout() {
   }
 
   const checkoutButtons = (
-    <>
-      <Button className="w-full" onClick={() => startCheckout('monthly')} disabled={Boolean(loading)}>
-        {loading === 'monthly' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-        Aderir mensal - 2,99 €/mês
-      </Button>
-      <Button className="w-full" variant="outline" onClick={() => startCheckout('yearly')} disabled={Boolean(loading)}>
-        {loading === 'yearly' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="mr-2 h-4 w-4" />}
-        Ou aderir anual - 24,99 €/ano
-      </Button>
-    </>
+    <Button className="w-full" onClick={startCheckout} disabled={Boolean(loading)}>
+      {loading === 'checkout' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="mr-2 h-4 w-4" />}
+      Comprar Premium vitalício — 15 €
+    </Button>
   );
 
-  if (planState?.canManageBilling) {
+  if (planState?.isPremium) {
     return (
       <div className="space-y-3">
-        <Button className="w-full" onClick={openPortal} disabled={loading === 'portal'}>
-          {loading === 'portal' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Settings className="mr-2 h-4 w-4" />}
-          Gerir subscrição
-        </Button>
-        <p className="text-xs text-muted-foreground">
-          {planState.isPremium
-            ? 'O teu Premium está ativo. Alterações e faturas ficam no portal seguro do Stripe.'
-            : 'Tens uma subscrição Stripe associada. Podes confirmar o estado, faturas e pagamentos no portal seguro do Stripe.'}
-        </p>
+        <div className="flex items-start gap-2 rounded-md border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>O teu acesso Premium está ativo.</p>
+        </div>
+        {planState.canManageBilling && (
+          <>
+            <Button className="w-full" variant="outline" onClick={openPortal} disabled={loading === 'portal'}>
+              {loading === 'portal' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Settings className="mr-2 h-4 w-4" />}
+              Gerir subscrição antiga
+            </Button>
+            <p className="text-xs text-muted-foreground">A tua conta ainda tem uma subscrição antiga. Podes geri-la ou cancelá-la no portal seguro da Stripe.</p>
+          </>
+        )}
         {error && <p className="text-xs text-destructive">{error}</p>}
       </div>
     );
@@ -120,17 +117,12 @@ export function PricingCheckout() {
     <div className="space-y-3">
       {checkoutStatus === 'success' && (
         <div className="rounded-md border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
-          Pagamento recebido. O Premium fica ativo assim que o webhook do Stripe confirmar a subscrição.
+          Pagamento recebido. O Premium fica ativo assim que o webhook do Stripe confirmar o pagamento.
         </div>
       )}
       {checkoutStatus === 'cancelled' && (
         <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
           Checkout cancelado. Podes voltar a tentar quando quiseres.
-        </div>
-      )}
-      {planState?.isPremium && (
-        <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-          Esta conta já tem acesso Premium, mas ainda não tem uma subscrição Stripe associada.
         </div>
       )}
       {checkoutButtons}

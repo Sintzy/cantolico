@@ -134,6 +134,7 @@ export async function getUserPremiumState(userId: number): Promise<PremiumState>
 
   let isPremium = isPremiumState({ plan, status, premiumUntil });
   let stripeCustomerId = data.stripeCustomerId || null;
+  let stripeSubscriptionId = data.stripeSubscriptionId || null;
 
   if (!isPremium && (data.stripeSubscriptionId || data.stripeCustomerId)) {
     const synced = await syncPremiumStateFromStripe({
@@ -150,11 +151,14 @@ export async function getUserPremiumState(userId: number): Promise<PremiumState>
       status = synced.status;
       premiumUntil = synced.premiumUntil;
       stripeCustomerId = synced.stripeCustomerId || stripeCustomerId;
+      stripeSubscriptionId = synced.stripeSubscriptionId || stripeSubscriptionId;
       isPremium = isPremiumState({ plan, status, premiumUntil });
     }
   }
 
-  const canManageBilling = Boolean(stripeCustomerId);
+  // A customer ID is also created for a one-time Checkout payment. Only a
+  // stored subscription may be managed in the Stripe billing portal.
+  const canManageBilling = Boolean(stripeCustomerId && stripeSubscriptionId);
   const premiumSource = canManageBilling
     ? 'stripe'
     : isPremium
