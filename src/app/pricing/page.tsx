@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 
 export const metadata = buildMetadata({
   title: 'Planos | Cantólico',
-  description: 'Planos Free e Premium do Cantólico para preparar repertórios, missas, PDFs e PowerPoint.',
+  description: 'Acesso Premium vitalício do Cantólico para preparar repertórios, missas, PDFs e PowerPoint.',
   path: '/pricing',
   type: 'website',
 });
@@ -78,15 +78,15 @@ export default async function PricingPage() {
             <div className="mb-5 flex items-center gap-3">
               <span className="h-px w-6 bg-border" />
               <span className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                Planos
+                Acesso Premium
               </span>
             </div>
             <h1 className="font-display text-[clamp(2.5rem,6vw,4.8rem)] leading-none">
               Mais organização para quem prepara cânticos.
             </h1>
             <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
-              O acesso às músicas continua gratuito. O Premium desbloqueia organização ilimitada,
-              PDFs limpos e PowerPoint para quem prepara missas e ensaios com frequência.
+              O acesso às músicas continua gratuito. Por 15 €, uma única vez, o Premium desbloqueia
+              organização ilimitada, PDFs limpos e PowerPoint para sempre.
             </p>
           </div>
         </div>
@@ -125,10 +125,9 @@ export default async function PricingPage() {
                 </span>
               </div>
               <div className="mt-4 flex flex-wrap items-end gap-x-2 gap-y-1">
-                <span className="text-4xl font-semibold tracking-tight">2,99 €</span>
-                <span className="pb-1 text-sm text-muted-foreground">/mês</span>
+                <span className="text-4xl font-semibold tracking-tight">15 €</span>
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">Ou 24,99 €/ano, pago anualmente.</p>
+              <p className="mt-2 text-xs font-medium text-emerald-700 dark:text-emerald-300">Pagamento único · acesso vitalício · sem renovação automática</p>
               <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
                 Para preparares missas completas, exportares apresentações e deixares a organização resolvida.
               </p>

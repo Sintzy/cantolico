@@ -1,6 +1,5 @@
 const STRIPE_API_BASE = 'https://api.stripe.com/v1';
 
-export type BillingInterval = 'monthly' | 'yearly';
 export type StripePlanStatus = 'inactive' | 'active' | 'past_due' | 'canceled';
 
 export interface StripeSubscription {
@@ -30,10 +29,13 @@ export function getStripeSecretKey(): string {
   return key;
 }
 
-export function getStripePriceId(interval: BillingInterval): string {
-  const envName = interval === 'yearly'
-    ? 'STRIPE_PREMIUM_YEARLY_PRICE_ID'
-    : 'STRIPE_PREMIUM_MONTHLY_PRICE_ID';
+/**
+ * The Premium product is deliberately a one-time Stripe Price. Keeping this
+ * separate from the retired recurring price variables prevents a deployment
+ * from accidentally creating a subscription again.
+ */
+export function getStripeLifetimePriceId(): string {
+  const envName = 'STRIPE_PREMIUM_LIFETIME_PRICE_ID';
   const priceId = process.env[envName];
 
   if (!priceId) {
@@ -41,7 +43,7 @@ export function getStripePriceId(interval: BillingInterval): string {
   }
 
   if (!priceId.startsWith('price_')) {
-    throw new Error(`${envName} must be a Stripe Price ID starting with price_, not a numeric amount`);
+    throw new Error(`${envName} must be a one-time Stripe Price ID starting with price_, not a numeric amount`);
   }
 
   return priceId;

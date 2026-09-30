@@ -128,6 +128,23 @@ async function syncSubscription(subscription: StripeSubscription) {
     return;
   }
 
+  // A previous recurring subscription can emit delayed cancellation events
+  // after the person has bought the lifetime product. Do not let those events
+  // revoke a one-time Premium purchase (which has no subscription ID or end).
+  const { data: existingUser } = await supabase
+    .from('User')
+    .select('plan, premiumUntil, stripeSubscriptionId')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (
+    existingUser?.plan === 'premium' &&
+    !existingUser.premiumUntil &&
+    !existingUser.stripeSubscriptionId
+  ) {
+    return;
+  }
+
   const update = {
     plan,
     planStatus,
@@ -148,8 +165,50 @@ async function syncSubscription(subscription: StripeSubscription) {
   }
 }
 
+async function grantLifetimePremium(session: any) {
+  if (session.payment_status !== 'paid') {
+    console.warn('[STRIPE WEBHOOK] Pagamento Premium ainda não confirmado:', session.id);
+    return;
+  }
+
+  const rawUserId = session.metadata?.userId || session.client_reference_id;
+  const userId = Number(rawUserId);
+  const customerId = typeof session.customer === 'string' ? session.customer : null;
+
+  if (!Number.isFinite(userId) || !customerId) {
+    console.warn('[STRIPE WEBHOOK] Compra Premium sem utilizador ou cliente:', session.id);
+    return;
+  }
+
+  const supabase = createAdminSupabaseClient();
+  const { error } = await supabase
+    .from('User')
+    .update({
+      plan: 'premium',
+      planStatus: 'active',
+      // null is the durable representation of lifetime access in the existing
+      // schema. Clearing the subscription ID is also what distinguishes it
+      // from a legacy recurring plan in the billing portal.
+      premiumUntil: null,
+      stripeCustomerId: customerId,
+      stripeSubscriptionId: null,
+      updatedAt: new Date().toISOString(),
+    })
+    .eq('id', userId);
+
+  if (error) {
+    console.error('[STRIPE WEBHOOK] Erro ao ativar Premium vitalício:', error);
+    throw error;
+  }
+}
+
 async function handleCheckoutCompleted(session: any) {
   if (session.metadata?.type === 'donation') {
+    return;
+  }
+
+  if (session.metadata?.type === 'premium_lifetime') {
+    await grantLifetimePremium(session);
     return;
   }
 
@@ -191,6 +250,7 @@ export async function POST(request: Request) {
   try {
     switch (event.type) {
       case 'checkout.session.completed':
+      case 'checkout.session.async_payment_succeeded':
         await handleCheckoutCompleted(event.data.object);
         break;
       case 'customer.subscription.created':

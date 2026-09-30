@@ -73,11 +73,11 @@ export default function PrivacyPolicyPage() {
                   <li className="list-disc"><strong>Dados de sessão:</strong> Geridos pelo Clerk para manter o login ativo</li>
                   <li className="list-disc"><strong>Analytics anónimos:</strong> Páginas visitadas e funcionalidades utilizadas (via Vercel Analytics, sem dados pessoais identificáveis)</li>
                   <li className="list-disc"><strong>Endereço IP:</strong> Registado pelos servidores Vercel para fins de segurança e performance</li>
-                  <li className="list-disc"><strong>Dados de subscrição:</strong> Identificadores de cliente e de subscrição Stripe, plano, estado e data de validade do acesso Premium</li>
+                  <li className="list-disc"><strong>Dados de pagamento Premium:</strong> Identificador de cliente Stripe, estado do pagamento e estado do acesso Premium; identificadores de subscrição apenas para contas antigas</li>
                 </ul>
               </div>
               <p className="text-sm text-muted-foreground italic">
-                Não recolhemos nem armazenamos os dados completos do cartão ou de outro meio de pagamento. Esses dados são recolhidos e tratados diretamente pela Stripe. Para gerir o Premium, tratamos apenas os dados de subscrição indicados acima.
+                Não recolhemos nem armazenamos os dados completos do cartão ou de outro meio de pagamento. Esses dados são recolhidos e tratados diretamente pela Stripe. Para processar a compra Premium, tratamos apenas os dados indicados acima.
               </p>
             </CardContent>
           </Card>
@@ -94,7 +94,7 @@ export default function PrivacyPolicyPage() {
                 <li className="list-disc"><strong>Identificação:</strong> Mostrar o seu nome nas submissões e no perfil público</li>
                 <li className="list-disc"><strong>Comunicação:</strong> Notificações sobre o estado das suas submissões e atualizações importantes do serviço</li>
                 <li className="list-disc"><strong>Funcionalidades:</strong> Playlists pessoais, favoritos, histórico e planeamento de missas</li>
-                <li className="list-disc"><strong>Subscrição Premium:</strong> Criar e gerir a subscrição, confirmar pagamentos através da Stripe, conceder o acesso Premium e disponibilizar o portal de faturação</li>
+                <li className="list-disc"><strong>Compra Premium:</strong> Confirmar o pagamento único através da Stripe e conceder o acesso Premium vitalício</li>
                 <li className="list-disc"><strong>Moderação:</strong> Contactar em caso de violação dos termos de utilização</li>
                 <li className="list-disc"><strong>Melhoria do serviço:</strong> Analytics anónimos para perceber que funcionalidades são mais utilizadas</li>
               </ul>
@@ -132,7 +132,7 @@ export default function PrivacyPolicyPage() {
                     <li className="list-disc">Histórico de navegação</li>
                     <li className="list-disc">Dados de sessão e tokens de autenticação</li>
                     <li className="list-disc">Endereço IP</li>
-                    <li className="list-disc">Identificadores e estado da subscrição Premium</li>
+                    <li className="list-disc">Identificadores e estado do pagamento Premium</li>
                   </ul>
                 </div>
               </div>
@@ -167,8 +167,8 @@ export default function PrivacyPolicyPage() {
                 </div>
                 <div className="border rounded-lg p-4">
                   <h3 className="font-medium mb-1">Stripe <span className="text-sm text-muted-foreground">(stripe.com)</span></h3>
-                  <p className="text-sm mb-1">Serviço de processamento de pagamentos e gestão de subscrições Premium. O checkout e o portal de faturação são disponibilizados pela Stripe.</p>
-                  <p className="text-sm text-muted-foreground">Dados processados: email, dados necessários para o pagamento e faturação, identificadores de cliente e de subscrição. O Cantólico recebe e guarda apenas os identificadores da Stripe, o estado da subscrição e a respetiva validade; não recebe nem armazena os dados completos do meio de pagamento. Consulte a <a href="https://stripe.com/privacy" className="text-primary underline" target="_blank" rel="noopener noreferrer">Política de Privacidade da Stripe</a>.</p>
+                  <p className="text-sm mb-1">Serviço de processamento do pagamento único Premium. O checkout e as faturas são disponibilizados pela Stripe.</p>
+                  <p className="text-sm text-muted-foreground">Dados processados: email, dados necessários para o pagamento e faturação e identificador de cliente. O Cantólico recebe e guarda apenas os identificadores da Stripe e o estado do acesso Premium; não recebe nem armazena os dados completos do meio de pagamento. Consulte a <a href="https://stripe.com/privacy" className="text-primary underline" target="_blank" rel="noopener noreferrer">Política de Privacidade da Stripe</a>.</p>
                 </div>
                 <div className="border rounded-lg p-4 border-dashed">
                   <h3 className="font-medium mb-1">Google AdSense <span className="text-sm text-muted-foreground">(futuro — não ativo de momento)</span></h3>

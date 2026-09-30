@@ -189,41 +189,38 @@ export default function TermsPage() {
             </CardContent>
           </Card>
 
-          {/* 6. Planos, Subscrições e Pagamentos */}
+          {/* 6. Planos e Pagamentos */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl">6. Planos, Subscrições e Pagamentos</CardTitle>
+              <CardTitle className="text-xl">6. Planos e Pagamentos</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p>
                 O Cantólico disponibiliza um plano gratuito e um plano <strong>Premium</strong> opcional. O acesso ao
-                cancioneiro e às funcionalidades incluídas no plano gratuito mantém-se disponível sem subscrição paga.
+                cancioneiro e às funcionalidades incluídas no plano gratuito mantém-se disponível sem pagamento.
                 O Premium desbloqueia ferramentas adicionais, como playlists e missas ilimitadas, exportação de PDFs sem
                 marca Cantólico, exportação PowerPoint e duplicação de missas. As funcionalidades incluídas em cada plano
                 são as apresentadas na página de preços no momento da adesão.
               </p>
               <div>
-                <h3 className="font-medium mb-2">Adesão e cobrança:</h3>
+                <h3 className="font-medium mb-2">Compra e pagamento:</h3>
                 <ul className="space-y-1 ml-4">
-                  <li className="list-disc">O Premium está disponível em modalidade mensal ou anual, pelos preços indicados na página de preços e no checkout antes da confirmação</li>
-                  <li className="list-disc">A subscrição é renovada automaticamente no fim de cada período, salvo cancelamento pelo utilizador antes da próxima renovação</li>
+                  <li className="list-disc">O Premium é disponibilizado através de uma compra única de 15 €, apresentada na página de preços e no checkout antes da confirmação</li>
+                  <li className="list-disc">A compra concede acesso Premium vitalício e não tem renovação automática nem cobranças recorrentes</li>
                   <li className="list-disc">Os pagamentos são processados de forma segura pela Stripe; o Cantólico não guarda os dados completos do cartão ou de outro meio de pagamento</li>
-                  <li className="list-disc">O utilizador deve manter válidos e atualizados os dados de pagamento associados à sua subscrição</li>
                 </ul>
               </div>
               <div>
-                <h3 className="font-medium mb-2">Gestão, cancelamento e falhas de pagamento:</h3>
+                <h3 className="font-medium mb-2">Gestão e reembolsos:</h3>
                 <ul className="space-y-1 ml-4">
-                  <li className="list-disc">A subscrição, os dados de pagamento e as faturas podem ser geridos no portal de faturação Stripe, acessível a partir da página de preços</li>
-                  <li className="list-disc">O cancelamento impede novas renovações, mantendo o acesso Premium até ao fim do período já pago, salvo indicação diferente no checkout</li>
-                  <li className="list-disc">Se um pagamento falhar ou ficar em atraso, o acesso Premium poderá ser limitado, suspenso ou cancelado após as tentativas de cobrança aplicáveis</li>
+                  <li className="list-disc">Os dados de pagamento e as faturas ficam disponíveis através da Stripe, quando aplicável</li>
+                  <li className="list-disc">Não é necessário cancelar o Premium, pois não existem renovações automáticas</li>
                   <li className="list-disc">Os pedidos de reembolso são analisados caso a caso, sem prejuízo dos direitos legalmente aplicáveis aos consumidores</li>
                 </ul>
               </div>
               <p>
-                Podemos alterar os preços ou as funcionalidades dos planos para períodos futuros. Quando uma alteração afetar
-                uma subscrição ativa, será comunicada com antecedência razoável e o utilizador poderá cancelar antes de a
-                alteração entrar em vigor.
+                Podemos alterar os preços ou as funcionalidades para compras futuras. Essas alterações não modificam o
+                acesso já adquirido.
               </p>
             </CardContent>
           </Card>
@@ -235,7 +232,7 @@ export default function TermsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p>
-                Atualmente, o Cantólico não exibe publicidade. A subscrição Premium e os donativos voluntários ajudam a
+                Atualmente, o Cantólico não exibe publicidade. A compra Premium e os donativos voluntários ajudam a
                 suportar a sustentabilidade da plataforma. A adesão ao Premium não constitui um donativo.
               </p>
               <p>

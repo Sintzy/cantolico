@@ -164,8 +164,8 @@ export default function DonationsPage({
               <Sparkles className="mb-3 h-5 w-5 text-rose-700 dark:text-rose-300" />
               <h3 className="text-sm font-semibold">Premium também ajuda</h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                Se usas muito o Cantólico, o Premium desbloqueia extras e contribui de forma recorrente
-                para a sustentabilidade do projeto.
+                Se usas muito o Cantólico, a compra Premium desbloqueia extras e também ajuda
+                a sustentabilidade do projeto.
               </p>
             </div>
 
