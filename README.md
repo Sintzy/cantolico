@@ -54,7 +54,6 @@
 
 ### **Backend & Database**
 - **[Supabase](https://supabase.com/)** - PostgreSQL database with real-time features
-- **[NextAuth.js](https://next-auth.js.org/)** - Authentication and session management
 - **Server-Side Rendering** - Optimized performance and SEO
 
 ### **Music & Content**
@@ -133,7 +132,12 @@ Can♱ólico! is built for and by the Catholic music community. We encourage:
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0).
+
+You are free to share and adapt the material for non-commercial purposes, provided appropriate credit is given. Commercial use requires prior written permission.
+
+See [LICENSE.md](./LICENSE.md) for the full license terms.
+
 [![License: CC BY-NC 4.0](https://licensebuttons.net/l/by-nc/4.0/80x15.png)](https://creativecommons.org/licenses/by-nc/4.0/)
 
 
