@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { partnerApiData, partnerApiHeaders, withPartnerApiAuth } from '@/lib/partner-api';
 
 export async function GET(request: NextRequest) {
-  const access = withPartnerApiAuth(request);
+  const access = await withPartnerApiAuth(request);
   if (access.error) return access.error;
 
   return partnerApiData(
@@ -15,14 +15,10 @@ export async function GET(request: NextRequest) {
           list: '/api/v1/songs',
           get: '/api/v1/songs/{id_or_slug}',
         },
-        admin_songs: {
-          list_and_create: '/api/v1/admin/songs',
-          update_and_delete: '/api/v1/admin/songs/{id}',
-        },
       },
       authentication: {
         schemes: ['Authorization: Bearer <api_key>', 'X-API-Key: <api_key>'],
-        scopes: ['songs:read', 'songs:write', 'songs:delete', 'admin:*'],
+        scopes: ['songs:read'],
       },
       license: 'O conteúdo deve manter a atribuição de autoria e respeitar as condições de uso do Can♱ólico.',
     },

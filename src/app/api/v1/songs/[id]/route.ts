@@ -7,7 +7,7 @@ import { partnerSongSelect, toPartnerSong } from '@/lib/partner-api-songs';
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(request: NextRequest, context: RouteContext) {
-  const access = withPartnerApiAuth(request);
+  const access = await withPartnerApiAuth(request);
   if (access.error) return access.error;
 
   const { id } = await context.params;

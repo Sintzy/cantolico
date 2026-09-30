@@ -172,6 +172,9 @@ export default function AdminDashboard() {
             <Link href="/admin/dashboard/news">Gestão Notícias</Link>
           </Button>
           <Button asChild variant="outline" className="w-full sm:w-auto">
+            <Link href="/admin/dashboard/api">Credenciais API</Link>
+          </Button>
+          <Button asChild variant="outline" className="w-full sm:w-auto">
             <Link href="/admin/dashboard/fastcreate">Publicação Rápida</Link>
           </Button>
           <Button asChild variant="outline" className="w-full sm:w-auto">

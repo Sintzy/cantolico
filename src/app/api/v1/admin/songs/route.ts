@@ -60,7 +60,7 @@ async function auditApiMutation(actorId: number, apiKeyName: string, action: str
 }
 
 export async function GET(request: NextRequest) {
-  const access = withPartnerApiAuth(request, 'songs:write');
+  const access = await withPartnerApiAuth(request, 'songs:write');
   if (access.error) return access.error;
 
   const page = parsePositiveInteger(request.nextUrl.searchParams.get('page'), 1, 10_000);
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const access = withPartnerApiAuth(request, 'songs:write');
+  const access = await withPartnerApiAuth(request, 'songs:write');
   if (access.error) return access.error;
 
   const actorId = await getApiActorId();

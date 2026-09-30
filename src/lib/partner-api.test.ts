@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   authenticatePartnerApi,
+  generatePartnerApiKey,
+  hashPartnerApiKey,
   parsePositiveInteger,
   readPartnerApiKey,
   resetPartnerApiRateLimitsForTests,
@@ -17,6 +19,16 @@ test('accepts Bearer and X-API-Key authentication for configured partners', () =
 
   assert.equal(bearer.ok, true);
   assert.equal(header.ok, true);
+});
+
+test('generates a non-recoverable, URL-safe partner API key', () => {
+  const first = generatePartnerApiKey();
+  const second = generatePartnerApiKey();
+
+  assert.match(first.key, /^ctk_[A-Za-z0-9_-]{43}$/);
+  assert.equal(first.hash, hashPartnerApiKey(first.key));
+  assert.equal(first.prefix, first.key.slice(0, 12));
+  assert.notEqual(first.key, second.key);
 });
 
 test('does not enable the partner API without a configured key', () => {

@@ -1,4 +1,4 @@
-import { timingSafeEqual } from 'node:crypto';
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 
 const DEFAULT_RATE_LIMIT = 120;
@@ -34,6 +34,25 @@ type PartnerApiKey = {
   name: string;
   scopes: string[];
 };
+
+type DatabasePartnerApiKey = {
+  id: string;
+  name: string;
+  secretHash: string;
+  scopes: string[];
+  rateLimit: number;
+  isActive: boolean;
+  expiresAt: string | null;
+};
+
+export function hashPartnerApiKey(key: string): string {
+  return createHash('sha256').update(key).digest('hex');
+}
+
+export function generatePartnerApiKey(): { key: string; prefix: string; hash: string } {
+  const key = `ctk_${randomBytes(32).toString('base64url')}`;
+  return { key, prefix: key.slice(0, 12), hash: hashPartnerApiKey(key) };
+}
 
 type PartnerApiEnvironment = Partial<NodeJS.ProcessEnv>;
 
@@ -158,6 +177,66 @@ export function authenticatePartnerApi(
   return { ok: true, key: receivedKey, name: matchedKey.name, scopes: matchedKey.scopes, limit, ...rateLimit };
 }
 
+async function authenticateDatabasePartnerApi(
+  receivedKey: string,
+  requiredScope: PartnerApiScope,
+  now: number,
+): Promise<PartnerApiAuthResult | null> {
+  // Keep the pure authentication helpers usable in tests and scripts that do
+  // not have Supabase configured. The database client validates its runtime
+  // environment during module initialization.
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return null;
+
+  const { adminSupabase } = await import('@/lib/supabase-admin');
+  const { data, error } = await adminSupabase
+    .from('PartnerApiKey')
+    .select('id,name,secretHash,scopes,rateLimit,isActive,expiresAt')
+    .eq('secretHash', hashPartnerApiKey(receivedKey))
+    .maybeSingle();
+
+  // An empty result is normal: it may be an old environment-managed key.
+  if (error) {
+    // Keep existing environment credentials working until the migration is applied.
+    if (error.code !== '42P01') console.error('[PARTNER_API_KEY_LOOKUP]', error);
+    return null;
+  }
+  if (!data) return null;
+
+  const apiKey = data as DatabasePartnerApiKey;
+  if (!apiKey.isActive) return { ok: false, code: 'invalid_api_key', status: 401 };
+  if (apiKey.expiresAt && new Date(apiKey.expiresAt).getTime() <= now) {
+    return { ok: false, code: 'invalid_api_key', status: 401 };
+  }
+
+  const hasScope = apiKey.scopes.includes('admin:*')
+    || apiKey.scopes.includes(requiredScope)
+    || (requiredScope.startsWith('songs:') && apiKey.scopes.includes('songs:*'));
+  if (!hasScope) return { ok: false, code: 'insufficient_scope', status: 403 };
+
+  const limit = Math.min(Math.max(apiKey.rateLimit, 1), 10_000);
+  const rateLimit = consumeRateLimit(receivedKey, limit, now);
+  if (!rateLimit.allowed) {
+    return {
+      ok: false,
+      code: 'rate_limit_exceeded',
+      status: 429,
+      retryAfter: Math.max(1, Math.ceil((rateLimit.resetAt - now) / 1000)),
+    };
+  }
+
+  // This deliberately does not delay the API response. Failure to record usage
+  // must never make a valid partner request fail.
+  void adminSupabase
+    .from('PartnerApiKey')
+    .update({ lastUsedAt: new Date(now).toISOString(), updatedAt: new Date(now).toISOString() })
+    .eq('id', apiKey.id)
+    .then(({ error: updateError }) => {
+      if (updateError) console.error('[PARTNER_API_KEY_USAGE]', updateError);
+    });
+
+  return { ok: true, key: receivedKey, name: apiKey.name, scopes: apiKey.scopes, limit, ...rateLimit };
+}
+
 export function partnerApiError(
   code: PartnerApiErrorCode | 'invalid_request' | 'not_found' | 'internal_error',
   message: string,
@@ -207,11 +286,16 @@ export function partnerApiHeaders(auth?: Extract<PartnerApiAuthResult, { ok: tru
   return headers;
 }
 
-export function withPartnerApiAuth(
+export async function withPartnerApiAuth(
   request: Request,
   requiredScope: PartnerApiScope = 'songs:read',
-): { auth: Extract<PartnerApiAuthResult, { ok: true }>; error?: never } | { auth?: never; error: NextResponse } {
-  const result = authenticatePartnerApi(request.headers, process.env, Date.now(), requiredScope);
+): Promise<{ auth: Extract<PartnerApiAuthResult, { ok: true }>; error?: never } | { auth?: never; error: NextResponse }> {
+  const now = Date.now();
+  const receivedKey = readPartnerApiKey(request.headers);
+  const databaseResult = receivedKey
+    ? await authenticateDatabasePartnerApi(receivedKey, requiredScope, now)
+    : null;
+  const result = databaseResult || authenticatePartnerApi(request.headers, process.env, now, requiredScope);
   if (result.ok) return { auth: result };
 
   const response = partnerApiError(
