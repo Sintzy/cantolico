@@ -19,6 +19,7 @@ import {
   ListMusic,
   Menu,
   Music,
+  Sparkles,
   Plus,
   Search,
   Settings,
@@ -32,6 +33,7 @@ export default function Navbar() {
   const { resolvedTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [playlistsOpen, setPlaylistsOpen] = useState(false);
+  const [massesOpen, setMassesOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<MusicResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -39,11 +41,13 @@ export default function Navbar() {
   const [isPremium, setIsPremium] = useState(false);
 
   const playlistsRef = useRef<HTMLDivElement>(null);
+  const massesRef = useRef<HTMLDivElement>(null);
   const mobileRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onClickOutside = (e: MouseEvent) => {
       if (playlistsRef.current && !playlistsRef.current.contains(e.target as Node)) setPlaylistsOpen(false);
+      if (massesRef.current && !massesRef.current.contains(e.target as Node)) setMassesOpen(false);
       if (mobileRef.current && !mobileRef.current.contains(e.target as Node)) setMobileOpen(false);
     };
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -110,7 +114,7 @@ export default function Navbar() {
   const role = session?.user?.role;
   const showAdmin = role === "ADMIN";
   const showReview = role === "ADMIN" || role === "REVIEWER";
-  const close = () => { setMobileOpen(false); setPlaylistsOpen(false); setSearchQuery(""); };
+  const close = () => { setMobileOpen(false); setPlaylistsOpen(false); setMassesOpen(false); setSearchQuery(""); };
 
   const linkCls = "flex items-center gap-2 px-3 py-2 text-sm font-medium text-stone-600 hover:text-stone-900 hover:bg-stone-100 rounded-lg transition-colors";
 
@@ -133,6 +137,43 @@ export default function Navbar() {
             <Music className="h-3.5 w-3.5" />
             Cânticos
           </Link>
+
+          <Link href="/sugestoes" prefetch={false} onClick={close} className={linkCls}>
+            <Sparkles className="h-3.5 w-3.5" />
+            Sugestões
+          </Link>
+
+          <div className="relative flex items-center" ref={massesRef}>
+            <Link href="/missas" prefetch={false} onClick={close} className={`${linkCls} pr-1`}>
+              <Church className="h-3.5 w-3.5" />
+              Missas
+            </Link>
+            <button
+              onClick={() => setMassesOpen(value => !value)}
+              aria-label="Abrir opções de Missas"
+              aria-expanded={massesOpen}
+              aria-haspopup="menu"
+              className="-ml-1 inline-flex h-8 w-6 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700"
+            >
+              <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${massesOpen ? "rotate-180" : ""}`} />
+            </button>
+            {massesOpen && (
+              <div className="absolute left-0 top-full mt-1.5 w-52 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg shadow-stone-200/50" role="menu">
+                <Link href="/missas" prefetch={false} onClick={close} className="flex items-center gap-2.5 px-4 py-3 text-sm text-stone-700 hover:bg-stone-50">
+                  <Church className="h-3.5 w-3.5 text-stone-400" />
+                  As minhas Missas
+                </Link>
+                <Link href="/missas/explore" prefetch={false} onClick={close} className="flex items-center gap-2.5 border-t border-stone-100 px-4 py-3 text-sm text-stone-700 hover:bg-stone-50">
+                  <Globe className="h-3.5 w-3.5 text-stone-400" />
+                  Explorar Missas
+                </Link>
+                <Link href={session?.user ? "/missas/create" : "/sign-in"} prefetch={false} onClick={close} className="flex items-center gap-2.5 border-t border-stone-100 px-4 py-3 text-sm text-stone-700 hover:bg-stone-50">
+                  <Plus className="h-3.5 w-3.5 text-stone-400" />
+                  Nova Missa
+                </Link>
+              </div>
+            )}
+          </div>
 
           <div className="relative" ref={playlistsRef}>
             <button
@@ -165,18 +206,6 @@ export default function Navbar() {
               </div>
             )}
           </div>
-
-          {session?.user && (
-            <Link href="/missas" prefetch={false} onClick={close} className={linkCls}>
-              <Church className="h-3.5 w-3.5" />
-              Missas
-            </Link>
-          )}
-
-          <Link href="/musics/create" prefetch={false} onClick={close} className={linkCls}>
-            <Plus className="h-3.5 w-3.5" />
-            Nova
-          </Link>
 
           <Link href="/pricing" prefetch={false} onClick={close} className={linkCls}>
             <Crown className="h-3.5 w-3.5 text-stone-400" />
@@ -278,11 +307,13 @@ export default function Navbar() {
             )}
             {[
               { href: "/musics", icon: Music, label: "Músicas" },
+              { href: "/sugestoes", icon: Sparkles, label: "Sugestões" },
+              { href: "/missas", icon: Church, label: "Missas" },
               { href: "/playlists/explore", icon: Globe, label: "Playlists públicas" },
               ...(session?.user ? [{ href: "/playlists", icon: Heart, label: "Minhas playlists" }] : [{ href: "/sign-in", icon: Heart, label: "Iniciar sessão" }]),
-              ...(session?.user ? [{ href: "/missas", icon: Church, label: "Missas" }] : []),
-              { href: "/musics/create", icon: Plus, label: "Nova música" },
               { href: "/pricing", icon: Crown, label: "Planos" },
+              { href: session?.user ? "/missas/create" : "/sign-in", icon: Plus, label: "Nova Missa" },
+              { href: "/musics/create", icon: Plus, label: "Nova música" },
               ...(session?.user ? [{ href: "/account", icon: Settings, label: "Minha Conta" }] : []),
               ...(session?.user ? [{ href: "/starred-songs", icon: Heart, label: "Favoritos" }] : []),
               ...(showAdmin ? [{ href: "/admin/dashboard", icon: Crown, label: "Admin" }] : []),

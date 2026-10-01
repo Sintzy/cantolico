@@ -4,7 +4,7 @@
   "private": true,
   "packageManager": "pnpm@10.28.1",
   "scripts": {
-    "dev": "node scripts/git-info.js && vinext dev",
+    "dev": "node scripts/git-info.js && next dev --webpack",
     "build": "node scripts/git-info.js && vinext build",
     "vercel-build": "node scripts/git-info.js && NITRO_PRESET=vercel vite build",
     "start": "node scripts/git-info.js && vinext start",

@@ -126,19 +126,14 @@ html {
 }
 
 body {
-  background:
-    radial-gradient(circle at top left, hsl(var(--accent) / 0.3), transparent 28rem),
-    hsl(var(--background));
+  background: hsl(var(--background));
   color: hsl(var(--foreground));
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
 
 .dark body {
-  background:
-    radial-gradient(circle at top left, hsl(351 78% 30% / 0.16), transparent 28rem),
-    radial-gradient(circle at bottom right, hsl(38 34% 20% / 0.18), transparent 32rem),
-    hsl(var(--background));
+  background: hsl(var(--background));
 }
 
 :focus-visible {
