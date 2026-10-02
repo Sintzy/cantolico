@@ -128,7 +128,7 @@ export default function Navbar() {
           <span className="hidden sm:inline text-base font-semibold text-stone-900 tracking-tight">
             Can<span className="text-rose-700">♱</span>ólico!
           </span>
-          <span className="hidden sm:inline text-[10px] font-semibold tracking-wide text-stone-400 bg-stone-100 rounded px-1 py-0.5 leading-none select-none">v2</span>
+          <span className="hidden sm:inline text-[10px] font-semibold tracking-wide text-stone-400 bg-stone-100 rounded px-1 py-0.5 leading-none select-none">v2.1</span>
         </Link>
 
         {/* Desktop nav */}
