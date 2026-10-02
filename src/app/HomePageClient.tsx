@@ -105,13 +105,7 @@ export default function HomePageClient() {
                   <span className="h-2.5 w-2.5 rounded-full bg-rose-400" />
                 </div>
               </div>
-              <div className="px-5 pt-4 pb-2">
-                <div className="flex items-center gap-2 rounded-lg bg-stone-50 border border-stone-200 px-3 py-2.5">
-                  <Search className="h-3.5 w-3.5 text-stone-400" />
-                  <span className="text-sm text-stone-400">Pesquisar cânticos...</span>
-                </div>
-              </div>
-              <div className="divide-y divide-stone-100 px-3 pb-4 pt-1">
+              <div className="divide-y divide-stone-100 px-3 py-4">
                 {[
                   { title: "Deus está Aqui", moment: "Entrada", extra: "Javier Gacias" },
                   { title: "Fiat", moment: "Final", extra: "Maite López" },
