@@ -7,6 +7,7 @@ import {
   partnerApiHeaders,
   withPartnerApiAuth,
 } from '@/lib/partner-api';
+import { partnerSongUrl } from '@/lib/partner-api-songs';
 import { LITURGICAL_MOMENTS } from '@/types/mass';
 
 const songTypes = ['ACORDES', 'PARTITURA'] as const;
@@ -27,6 +28,7 @@ function toSongSummary(song: any) {
   return {
     id: song.id,
     slug: song.slug,
+    url: partnerSongUrl(song),
     title: song.title,
     author: song.author,
     type: song.type,

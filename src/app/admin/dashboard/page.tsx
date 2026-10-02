@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useFormStatus } from 'react-dom';
 import { useSession } from '@/hooks/useClerkSession';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -9,9 +10,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Spinner, type SpinnerProps } from '@/components/ui/shadcn-io/spinner';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { Users, Music, Clock, TrendingUp, Activity, AlertCircle } from 'lucide-react';
+import { Users, Music, Clock, TrendingUp, Activity, AlertCircle, CalendarDays } from 'lucide-react';
 import BannerDisplay from '@/components/BannerDisplay';
 import { toast } from 'sonner';
+import { syncLiturgicalCalendarAction } from './liturgia/actions';
 
 interface DashboardStats {
   totalUsers: number;
@@ -67,6 +69,17 @@ const getActivityColor = (type: string) => {
       return 'bg-gray-50 border-gray-200';
   }
 };
+
+function SyncLiturgicalCalendarButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <Button type="submit" variant="outline" className="w-full sm:w-auto" disabled={pending}>
+      <CalendarDays className="mr-2 h-4 w-4" />
+      {pending ? 'A sincronizar liturgia…' : 'Sincronizar liturgia'}
+    </Button>
+  );
+}
 
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
@@ -156,6 +169,7 @@ export default function AdminDashboard() {
           <Button onClick={fetchStats} variant="outline" size="sm" className="w-full sm:w-auto">
             Atualizar
           </Button>
+          <form action={syncLiturgicalCalendarAction} className="w-full sm:w-auto"><SyncLiturgicalCalendarButton /></form>
           <Button asChild variant="outline" className="w-full sm:w-auto">
             <Link href="/admin/dashboard/users">Gestão Utilizadores</Link>
           </Button>
