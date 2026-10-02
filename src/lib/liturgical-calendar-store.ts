@@ -150,9 +150,14 @@ export async function syncLiturgicalCalendar() {
     syncedAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }));
+  // The source is first consolidated above, then keyed once more at the exact
+  // database conflict key. This makes the bulk upsert safe even if an upstream
+  // feed changes its event format and produces repeated dates.
+  const rowsByDate = new Map(rows.map(row => [row.date, row]));
+  const calendarRows = [...rowsByDate.values()];
   const { error: calendarUpsertError } = await adminSupabase
     .from('LiturgicalCalendarDay')
-    .upsert(rows, { onConflict: 'date' });
+    .upsert(calendarRows, { onConflict: 'date' });
   if (calendarUpsertError) throw calendarUpsertError;
 
   const { data: calendarDays, error: calendarDaysError } = await adminSupabase
@@ -181,7 +186,7 @@ export async function syncLiturgicalCalendar() {
     return !suggestions.length || suggestions.some(item => item.calendarHash !== day.sourceHash || item.algorithmVersion !== ALGORITHM_VERSION);
   });
 
-  if (!daysToGenerate.length) return { calendarDays: celebrations.length, generatedDays: 0, generatedSuggestions: 0 };
+  if (!daysToGenerate.length) return { calendarDays: calendarRows.length, generatedDays: 0, generatedSuggestions: 0 };
 
   let songs: Array<Record<string, unknown>> = [];
   try {
@@ -239,5 +244,5 @@ export async function syncLiturgicalCalendar() {
     if (insertError) throw insertError;
   }
 
-  return { calendarDays: celebrations.length, generatedDays: daysToGenerate.length, generatedSuggestions: rowsToInsert.length };
+  return { calendarDays: calendarRows.length, generatedDays: daysToGenerate.length, generatedSuggestions: rowsToInsert.length };
 }
