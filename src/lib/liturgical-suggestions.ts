@@ -37,6 +37,12 @@ export interface SuggestionSong {
   moments: string[];
 }
 
+export interface SongSuggestionUsage {
+  songId: string;
+  moment: string;
+  celebrationDate: string;
+}
+
 const COLOR_WORDS: Array<[LiturgicalColor, string[]]> = [
   ['VERMELHO', ['vermelho']],
   ['ROXO', ['roxo', 'violeta']],
@@ -188,6 +194,19 @@ function normalise(text: string) {
   return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
 
+function stableNumber(value: string) {
+  let hash = 2_166_136_261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16_777_619);
+  }
+  return hash >>> 0;
+}
+
+function daysBetween(from: string, to: string) {
+  return Math.max(0, Math.floor((Date.parse(`${to}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`)) / 86_400_000));
+}
+
 function fallbackMomentsFor(title: string) {
   const value = normalise(title);
   const moments = new Set<string>();
@@ -288,7 +307,12 @@ function themesFor(celebration: CalendarCelebration) {
   return [...themes];
 }
 
-export function buildSuggestions(celebration: CalendarCelebration, songs: Array<Record<string, unknown>>) {
+export function buildRotatingSuggestions(
+  celebration: CalendarCelebration,
+  songs: Array<Record<string, unknown>>,
+  history: SongSuggestionUsage[] = [],
+  limit = 3,
+) {
   const themes = themesFor(celebration);
   const preparedSongs: SuggestionSong[] = songs.map(song => ({
     id: String(song.id),
@@ -298,18 +322,33 @@ export function buildSuggestions(celebration: CalendarCelebration, songs: Array<
     moments: normalizeMoments(parseMomentsFromPostgreSQL((song.moments || []) as string[])),
   }));
 
+  const alreadySelected = new Set<string>();
   return MOMENTS
     .map(([key, label, guidance]) => {
-      const candidates = preparedSongs
+      const matchingSongs = preparedSongs
         .filter(song => song.moments.includes(key))
         .map(song => {
           const text = normalise(`${song.title} ${song.tags.join(' ')}`);
           const themeMatches = themes.filter(theme => text.includes(normalise(theme))).length;
-          return { ...song, score: themeMatches * 100 + song.tags.length };
+          const usage = history.filter(item => item.songId === song.id && item.moment === key);
+          const lastUse = usage.reduce<string | null>((latest, item) => !latest || item.celebrationDate > latest ? item.celebrationDate : latest, null);
+          const daysSinceLastUse = lastUse ? daysBetween(lastUse, celebration.date) : 120;
+          const recentUses = usage.filter(item => daysBetween(item.celebrationDate, celebration.date) <= 90).length;
+          const rotationScore = Math.min(daysSinceLastUse, 120) - recentUses * 24;
+          const deterministicTieBreaker = stableNumber(`${celebration.date}:${key}:${song.id}`) % 1000 / 1000;
+          return { ...song, score: themeMatches * 100 + song.tags.length * 2 + rotationScore + deterministicTieBreaker };
         })
-        .sort((a, b) => b.score - a.score || a.title.localeCompare(b.title, 'pt-PT'))
-        .slice(0, 3)
+        .sort((a, b) => b.score - a.score || a.title.localeCompare(b.title, 'pt-PT'));
+      const candidates = (matchingSongs.filter(song => !alreadySelected.has(song.id)).length >= limit
+        ? matchingSongs.filter(song => !alreadySelected.has(song.id))
+        : matchingSongs)
+        .slice(0, limit)
         .map(({ score: _score, ...song }) => song);
+      candidates.forEach(song => alreadySelected.add(song.id));
       return { key, label, guidance, songs: candidates };
     });
+}
+
+export function buildSuggestions(celebration: CalendarCelebration, songs: Array<Record<string, unknown>>) {
+  return buildRotatingSuggestions(celebration, songs);
 }
