@@ -70,6 +70,7 @@ function consolidateCalendarDays(celebrations: CalendarCelebration[]) {
       categories: [...new Set(dayCelebrations.flatMap(celebration => celebration.categories || []))],
       color: primary.color || additional.find(celebration => celebration.color)?.color || null,
       summary: {
+        readings: [],
         ...primary.summary,
         alternatives: [...alternatives],
       },

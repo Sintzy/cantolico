@@ -9,7 +9,7 @@ export const metadata: Metadata = buildMetadata({
   path: '/developers',
 });
 
-const baseUrl = 'https://cantolico.pt/api/v1';
+const baseUrl = 'https://www.cantolico.pt/api/v1';
 
 function CodeBlock({ children }: { children: string }) {
   return <pre className="overflow-x-auto rounded-xl border border-stone-800 bg-stone-950 p-4 text-xs leading-relaxed text-stone-100 sm:text-sm"><code>{children}</code></pre>;
