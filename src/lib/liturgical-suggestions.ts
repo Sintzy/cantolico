@@ -47,8 +47,6 @@ const COLOR_WORDS: Array<[LiturgicalColor, string[]]> = [
 const MOMENTS = [
   ['ENTRADA', 'Entrada', 'Reunir a assembleia e abrir a celebração.'],
   ['ATO_PENITENCIAL', 'Ato penitencial', 'Um canto breve de súplica e reconciliação.'],
-  ['GLORIA', 'Glória', 'Hino de louvor, quando previsto na celebração.'],
-  ['SALMO_RESPONSORIAL', 'Salmo responsorial', 'Privilegia a versão correspondente às leituras do dia.'],
   ['ACLAMACAO_EVANGELHO', 'Aclamação ao Evangelho', 'Aclamação breve antes do Evangelho.'],
   ['OFERENDAS', 'Ofertório', 'Para a preparação dos dons.'],
   ['SANTO', 'Santo', 'Canto do Ordinário da Missa.'],
@@ -56,6 +54,22 @@ const MOMENTS = [
   ['COMUNHAO', 'Comunhão', 'Para acompanhar a procissão de comunhão.'],
   ['FINAL', 'Final', 'Envio da comunidade em missão.'],
 ] as const;
+
+// The catalogue contains both the original form names and the newer mass-export
+// names. Suggestions use one canonical key, so songs remain discoverable while
+// the library is gradually normalized.
+const MOMENT_ALIASES: Record<string, string> = {
+  ACLAMACAO: 'ACLAMACAO_EVANGELHO',
+  ACLAMACAO_EVANGELHO: 'ACLAMACAO_EVANGELHO',
+  OFERTORIO: 'OFERENDAS',
+  OFERENDAS: 'OFERENDAS',
+  CORDEIRO_DE_DEUS: 'CORDEIRO_DEUS',
+  CORDEIRO_DEUS: 'CORDEIRO_DEUS',
+};
+
+function normalizeMoments(moments: string[]) {
+  return moments.map(moment => MOMENT_ALIASES[moment] || moment);
+}
 
 function unfoldIcs(ics: string) {
   return ics.replace(/\r?\n[ \t]/g, '');
@@ -241,12 +255,10 @@ export function buildSuggestions(celebration: CalendarCelebration, songs: Array<
     title: String(song.title),
     slug: typeof song.slug === 'string' ? song.slug : null,
     tags: parseTagsFromPostgreSQL((song.tags || []) as string[]),
-    moments: parseMomentsFromPostgreSQL((song.moments || []) as string[]),
+    moments: normalizeMoments(parseMomentsFromPostgreSQL((song.moments || []) as string[])),
   }));
 
-  const isPurpleSeason = celebration.color === 'ROXO';
   return MOMENTS
-    .filter(([key]) => !(isPurpleSeason && key === 'GLORIA'))
     .map(([key, label, guidance]) => {
       const candidates = preparedSongs
         .filter(song => song.moments.includes(key))
