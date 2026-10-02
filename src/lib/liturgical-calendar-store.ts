@@ -92,8 +92,7 @@ export async function syncLiturgicalCalendar() {
 
   const from = localDate(-HISTORY_DAYS);
   const until = localDate(FUTURE_DAYS);
-  const celebrations = parseSnlCalendar(await response.text())
-    .filter(celebration => celebration.date >= from && celebration.date <= until);
+  const celebrations = parseSnlCalendar(await response.text());
   if (!celebrations.length) throw new Error('O calendário SNL não devolveu celebrações para o período pedido.');
 
   const rows = celebrations.map(celebration => ({
