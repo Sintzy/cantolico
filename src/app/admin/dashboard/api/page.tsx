@@ -144,7 +144,9 @@ export default function PartnerApiKeysPage() {
         <CardContent className="space-y-1 text-sm text-muted-foreground">
           <p><code>GET /api/v1/songs?q=gloria&amp;moment=GLORIA&amp;page=1&amp;per_page=25</code></p>
           <p><code>GET /api/v1/songs/&#123;id-ou-slug&#125;</code></p>
+          <p><code>GET /api/v1/liturgical-suggestions?date=YYYY-MM-DD</code></p>
           <p>A credencial só permite <strong className="font-medium text-foreground">songs:read</strong>; podes revogá-la aqui a qualquer momento.</p>
+          <a href="/developers" className="inline-flex pt-2 font-medium text-rose-700 hover:underline">Abrir documentação para parceiros →</a>
         </CardContent>
       </Card>
 

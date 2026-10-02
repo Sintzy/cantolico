@@ -15,6 +15,9 @@ export async function GET(request: NextRequest) {
           list: '/api/v1/songs',
           get: '/api/v1/songs/{id_or_slug}',
         },
+        liturgical_suggestions: {
+          get: '/api/v1/liturgical-suggestions?date=YYYY-MM-DD',
+        },
       },
       authentication: {
         schemes: ['Authorization: Bearer <api_key>', 'X-API-Key: <api_key>'],

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { BookOpen, CalendarDays, ChevronLeft, ChevronRight, ExternalLink, Info, LoaderCircle, Music2 } from 'lucide-react';
+import { BookOpen, CalendarDays, ChevronLeft, ChevronRight, ExternalLink, Info, LoaderCircle, Music2, Sparkles } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 type Song = { id: string; title: string; slug: string | null; tags: string[] };
@@ -181,9 +181,9 @@ export default function SuggestionsPageClient() {
                     <h3 className="font-semibold text-stone-900">{suggestion.label}</h3>
                     <p className="mt-1 text-xs leading-relaxed text-stone-500">{suggestion.guidance}</p>
                     <div className="mt-4 space-y-2">
-                      {suggestion.songs.length ? suggestion.songs.map(song => (
-                        <Link key={song.id} href={`/musics/${song.slug || song.id}`} className="group flex items-center justify-between gap-3 rounded-lg bg-stone-50 px-3 py-2.5 text-sm font-medium text-stone-700 transition-colors hover:bg-rose-50 hover:text-rose-800">
-                          <span className="truncate">{song.title}</span><ChevronRight className="h-4 w-4 shrink-0 text-stone-400 group-hover:text-rose-700" />
+                      {suggestion.songs.length ? suggestion.songs.map((song, index) => (
+                        <Link key={song.id} href={`/musics/${song.slug || song.id}`} className={`group flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${index === 0 ? 'border border-rose-200 bg-rose-50 text-rose-900 shadow-sm hover:border-rose-300 hover:bg-rose-100' : 'bg-stone-50 text-stone-700 hover:bg-rose-50 hover:text-rose-800'}`}>
+                          <span className="min-w-0 truncate">{index === 0 && <span className="mr-2 inline-flex items-center gap-1 rounded-full bg-rose-700 px-1.5 py-0.5 align-middle text-[9px] font-bold uppercase tracking-wide text-white"><Sparkles className="h-2.5 w-2.5" />Principal</span>}{song.title}</span><ChevronRight className={`h-4 w-4 shrink-0 ${index === 0 ? 'text-rose-700' : 'text-stone-400 group-hover:text-rose-700'}`} />
                         </Link>
                       )) : <p className="rounded-lg bg-stone-50 px-3 py-3 text-sm text-stone-500">Ainda não há cânticos classificados neste momento.</p>}
                     </div>

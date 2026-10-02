@@ -83,6 +83,7 @@ export default function Footer() {
               {[
                 { href: "/musics", label: "Músicas" },
                 { href: "/sugestoes", label: "Sugestões para a Missa" },
+                { href: "/developers", label: "API para parceiros" },
                 { href: "/musics/create", label: "Nova Música" },
                 { href: "/playlists/explore", label: "Playlists Públicas" },
                 { href: "/terms", label: "Termos e Condições" },
