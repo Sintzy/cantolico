@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS public."LiturgicalSuggestion" (
   "calendarDayId" uuid NOT NULL REFERENCES public."LiturgicalCalendarDay"("id") ON DELETE CASCADE,
   "celebrationDate" date NOT NULL,
   "moment" text NOT NULL,
-  "songId" uuid NOT NULL REFERENCES public."Song"("id") ON DELETE CASCADE,
+  -- Song IDs are public slugs/text identifiers, not UUIDs.
+  "songId" text NOT NULL REFERENCES public."Song"("id") ON DELETE CASCADE,
   "position" smallint NOT NULL,
   "score" numeric(10, 3) NOT NULL,
   "calendarHash" text NOT NULL,

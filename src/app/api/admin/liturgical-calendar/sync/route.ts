@@ -3,7 +3,8 @@ import { getClerkSession } from '@/lib/api-middleware';
 import { syncLiturgicalCalendar } from '@/lib/liturgical-calendar-store';
 
 async function authorized(request: NextRequest) {
-  if (request.headers.get('authorization') === `Bearer ${process.env.CRON_SECRET}`) return true;
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret && request.headers.get('authorization') === `Bearer ${cronSecret}`) return true;
   const session = await getClerkSession();
   return session?.user?.role === 'ADMIN';
 }
