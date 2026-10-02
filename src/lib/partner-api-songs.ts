@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { LITURGICAL_MOMENTS } from '@/types/mass';
+import { absoluteUrl } from '@/lib/seo';
 
 export const SONG_TYPES = ['ACORDES', 'PARTITURA'] as const;
 export const SONG_INSTRUMENTS = ['ORGAO', 'GUITARRA', 'PIANO', 'CORO', 'OUTRO'] as const;
@@ -51,11 +52,17 @@ export function titleToApiSlug(title: string): string {
     .replace(/^-|-$/g, '');
 }
 
+export function partnerSongUrl(song: { id: unknown; slug?: unknown }) {
+  const identifier = typeof song.slug === 'string' && song.slug ? song.slug : String(song.id);
+  return absoluteUrl(`/musics/${encodeURIComponent(identifier)}`);
+}
+
 export function toPartnerSong(song: any) {
   const version = Array.isArray(song.SongVersion) ? song.SongVersion[0] || null : song.SongVersion || null;
   return {
     id: song.id,
     slug: song.slug,
+    url: partnerSongUrl(song),
     title: song.title,
     author: song.author,
     type: song.type,

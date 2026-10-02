@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStoredLiturgicalSuggestions } from '@/lib/liturgical-calendar-store';
 import { partnerApiData, partnerApiError, partnerApiHeaders, withPartnerApiAuth } from '@/lib/partner-api';
+import { partnerSongUrl } from '@/lib/partner-api-songs';
 
 function validDate(value: string | null) {
   return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T12:00:00Z`)));
@@ -30,7 +31,11 @@ export async function GET(request: NextRequest) {
     if (!data) {
       return partnerApiError('not_found', 'Ainda não existem sugestões preparadas para esta data.', 404);
     }
-    return partnerApiData({ ...data, format_version: 3 }, { headers: partnerApiHeaders(access.auth) });
+    const suggestions = data.suggestions.map(suggestion => ({
+      ...suggestion,
+      songs: suggestion.songs.map(song => ({ ...song, url: partnerSongUrl(song) })),
+    }));
+    return partnerApiData({ ...data, suggestions, format_version: 3 }, { headers: partnerApiHeaders(access.auth) });
   } catch (error) {
     console.error('[PARTNER_API_LITURGICAL_SUGGESTIONS]', error);
     return partnerApiError('internal_error', 'Não foi possível consultar as sugestões litúrgicas.', 500);
