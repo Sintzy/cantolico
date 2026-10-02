@@ -87,8 +87,17 @@ export async function getStoredLiturgicalSuggestions(date: string) {
 }
 
 export async function syncLiturgicalCalendar() {
-  const response = await fetch(SNL_CALENDAR_URL, { cache: 'no-store' });
-  if (!response.ok) throw new Error(`SNL respondeu com ${response.status}`);
+  // Cloudflare protects the SNL calendar from anonymous Undici requests. A
+  // descriptive user agent keeps this scheduled import identifiable and lets
+  // the same public .ics URL work from the Vercel runtime.
+  const response = await fetch(SNL_CALENDAR_URL, {
+    cache: 'no-store',
+    headers: {
+      Accept: 'text/calendar,text/plain;q=0.9,*/*;q=0.1',
+      'User-Agent': 'Cantolico Liturgical Calendar Sync/1.0 (+https://cantolico.pt)',
+    },
+  });
+  if (!response.ok) throw new Error(`SNL respondeu com ${response.status} ${response.statusText}`.trim());
 
   const from = localDate(-HISTORY_DAYS);
   const until = localDate(FUTURE_DAYS);

@@ -16,7 +16,8 @@ export async function syncLiturgicalCalendarAction() {
     result = await syncLiturgicalCalendar();
   } catch (error) {
     console.error('Erro ao sincronizar a liturgia a partir do painel administrativo:', error);
-    redirect(`${adminPath}?error=${encodeURIComponent('Não foi possível sincronizar. Confirma a ligação ao SNL e tenta novamente.')}`);
+    const message = error instanceof Error ? error.message : 'Erro desconhecido no sincronizador.';
+    redirect(`${adminPath}?error=${encodeURIComponent(`Não foi possível sincronizar: ${message}`)}`);
   }
 
   revalidatePath('/sugestoes');
