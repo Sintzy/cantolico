@@ -43,6 +43,40 @@ function toCelebration(row: any): CalendarCelebration {
   };
 }
 
+function consolidateCalendarDays(celebrations: CalendarCelebration[]) {
+  const celebrationsByDate = new Map<string, CalendarCelebration[]>();
+  celebrations.forEach(celebration => {
+    const sameDay = celebrationsByDate.get(celebration.date) || [];
+    sameDay.push(celebration);
+    celebrationsByDate.set(celebration.date, sameDay);
+  });
+
+  return [...celebrationsByDate.values()].map(dayCelebrations => {
+    const [primary, ...additional] = dayCelebrations;
+    if (!additional.length) return primary;
+
+    // SNL occasionally publishes two valid observances for the same civil day
+    // (for example, a weekday and its evening celebration). LiturgicalCalendarDay
+    // intentionally has one stable record per date, so retain the extra entries
+    // as named alternatives instead of losing them or duplicating the upsert key.
+    const alternatives = new Set(primary.summary?.alternatives || []);
+    additional.forEach(celebration => {
+      const detail = [celebration.title, celebration.description].filter(Boolean).join(' — ');
+      alternatives.add(detail);
+    });
+
+    return {
+      ...primary,
+      categories: [...new Set(dayCelebrations.flatMap(celebration => celebration.categories || []))],
+      color: primary.color || additional.find(celebration => celebration.color)?.color || null,
+      summary: {
+        ...primary.summary,
+        alternatives: [...alternatives],
+      },
+    };
+  });
+}
+
 export async function getStoredLiturgicalSuggestions(date: string) {
   const { data: calendarDay, error: calendarError } = await adminSupabase
     .from('LiturgicalCalendarDay')
@@ -101,7 +135,7 @@ export async function syncLiturgicalCalendar() {
 
   const from = localDate(-HISTORY_DAYS);
   const until = localDate(FUTURE_DAYS);
-  const celebrations = parseSnlCalendar(await response.text());
+  const celebrations = consolidateCalendarDays(parseSnlCalendar(await response.text()));
   if (!celebrations.length) throw new Error('O calendário SNL não devolveu celebrações para o período pedido.');
 
   const rows = celebrations.map(celebration => ({
