@@ -1,6 +1,7 @@
 import { parseMomentsFromPostgreSQL, parseTagsFromPostgreSQL } from '@/lib/utils';
 
 export const SNL_CALENDAR_URL = 'https://www.liturgia.pt/agenda/agenda.ics';
+export const PARTNER_CATALOG_URL = process.env.CANTOLICO_SUGGESTIONS_API_URL || 'https://cantolico.pt/api/v1/songs';
 export const PUBLIC_CATALOG_URL = 'https://cantolico.pt/api/musics/search?limit=500';
 
 export type LiturgicalColor = 'VERDE' | 'ROXO' | 'BRANCO' | 'VERMELHO' | 'ROSA' | null;
@@ -229,6 +230,45 @@ export async function fetchPublicCatalog() {
       moments: fallbackMomentsFor(candidate.title),
     }];
   });
+}
+
+type PartnerCatalogPage = {
+  data?: unknown;
+  meta?: { total_pages?: unknown };
+};
+
+export async function fetchPartnerCatalog(
+  apiKey = process.env.CANTOLICO_SUGGESTIONS_API_KEY,
+  apiUrl = PARTNER_CATALOG_URL,
+) {
+  if (!apiKey) throw new Error('CANTOLICO_SUGGESTIONS_API_KEY não está configurada.');
+
+  const songs: Array<Record<string, unknown>> = [];
+  let page = 1;
+  let totalPages = 1;
+
+  while (page <= totalPages) {
+    const url = new URL(apiUrl);
+    url.searchParams.set('page', String(page));
+    url.searchParams.set('per_page', '100');
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      next: { revalidate: 3600 },
+    });
+    if (!response.ok) throw new Error(`API pública respondeu com ${response.status}`);
+
+    const payload = await response.json() as PartnerCatalogPage;
+    if (!Array.isArray(payload.data)) throw new Error('A API pública devolveu um catálogo inválido.');
+    songs.push(...payload.data.filter((song): song is Record<string, unknown> => Boolean(song && typeof song === 'object')));
+
+    const candidateTotalPages = Number(payload.meta?.total_pages);
+    totalPages = Number.isInteger(candidateTotalPages) && candidateTotalPages > 0
+      ? Math.min(candidateTotalPages, 100)
+      : page;
+    page += 1;
+  }
+
+  return songs;
 }
 
 function themesFor(celebration: CalendarCelebration) {

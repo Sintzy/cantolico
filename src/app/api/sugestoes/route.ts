@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminSupabase } from '@/lib/supabase-admin';
-import { SNL_CALENDAR_URL, buildSuggestions, fetchPublicCatalog, inferLiturgicalColor, parseSnlCalendar, summariseCelebration } from '@/lib/liturgical-suggestions';
+import { SNL_CALENDAR_URL, buildSuggestions, fetchPartnerCatalog, fetchPublicCatalog, inferLiturgicalColor, parseSnlCalendar, summariseCelebration } from '@/lib/liturgical-suggestions';
 
 export const revalidate = 21600;
 
@@ -16,15 +15,17 @@ export async function GET(request: NextRequest) {
     const calendarResponse = await fetch(SNL_CALENDAR_URL, { next: { revalidate: 21600 } });
 
     if (!calendarResponse.ok) throw new Error(`SNL respondeu com ${calendarResponse.status}`);
-    const { data: songs, error: songsError } = await adminSupabase
-      .from('Song')
-      .select('id,title,slug,tags,moments')
-      .order('title', { ascending: true });
-    let catalogSongs: Array<Record<string, unknown>> = (songs || []) as Array<Record<string, unknown>>;
-    let catalogSource: 'supabase' | 'public-fallback' | 'unavailable' = 'supabase';
+    let catalogSongs: Array<Record<string, unknown>> = [];
+    let catalogSource: 'partner-api' | 'public-fallback' | 'unavailable' = 'unavailable';
 
-    if (songsError || !catalogSongs.length) {
-      console.warn('Catálogo Supabase indisponível para sugestões; a usar catálogo público.', songsError?.message || 'sem resultados');
+    try {
+      catalogSongs = await fetchPartnerCatalog();
+      catalogSource = catalogSongs.length ? 'partner-api' : 'unavailable';
+    } catch (partnerError) {
+      console.warn('API pública autenticada indisponível para sugestões; a usar catálogo público.', partnerError);
+    }
+
+    if (!catalogSongs.length) {
       try {
         catalogSongs = await fetchPublicCatalog();
         catalogSource = catalogSongs.length ? 'public-fallback' : 'unavailable';
