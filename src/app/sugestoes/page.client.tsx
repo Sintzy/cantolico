@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { FormEvent, useEffect, useState } from 'react';
-import { AlertTriangle, BookOpen, CalendarDays, ChevronLeft, ChevronRight, Church, Clock3, ExternalLink, Info, LoaderCircle, LocateFixed, MapPin, Search, Sparkles } from 'lucide-react';
+import { AlertTriangle, BookOpen, CalendarDays, Check, ChevronLeft, ChevronRight, Church, Clock3, ExternalLink, Info, LoaderCircle, LocateFixed, MapPin, Search, Sparkles } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 type Song = { id: string; title: string; slug: string | null; tags: string[] };
@@ -195,35 +195,33 @@ export default function SuggestionsPageClient() {
                 <DialogTrigger asChild>
                   <button type="button" className="inline-flex h-9 items-center gap-2 rounded-md border border-stone-200 bg-white px-3 text-sm font-medium text-stone-700 transition-colors hover:border-stone-300 hover:bg-stone-50 hover:text-stone-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700"><MapPin className="h-4 w-4 text-rose-700" /><span className="hidden sm:inline">Onde vais à Missa?</span><span className="sm:hidden">Missa</span></button>
                 </DialogTrigger>
-                <DialogContent className="max-h-[80vh] overflow-y-auto bg-white sm:max-w-lg">
-                  <DialogHeader>
-                    <DialogTitle>Onde vais à Missa?</DialogTitle>
-                    <DialogDescription>Escolhe uma igreja para preparar os cânticos da próxima celebração.</DialogDescription>
+                <DialogContent className="max-h-[calc(100vh-2rem)] w-[calc(100%-2rem)] max-w-[42rem] gap-0 overflow-hidden border-stone-200 bg-white p-0 shadow-2xl sm:max-w-[42rem]">
+                  <DialogHeader className="gap-1 px-5 pb-4 pt-5 sm:px-6 sm:pt-6">
+                    <DialogTitle className="text-xl font-semibold tracking-tight text-stone-900">Onde vais à Missa?</DialogTitle>
+                    <DialogDescription className="max-w-md text-sm leading-relaxed text-stone-500">Escolhe uma igreja para preparar os cânticos da próxima celebração.</DialogDescription>
                   </DialogHeader>
-                  <div className="space-y-4">
-                    <div className="flex justify-end">
-                      <button type="button" onClick={useLocation} disabled={churchLoading} className="inline-flex h-8 items-center justify-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-rose-800 disabled:cursor-wait disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700"><LocateFixed className="h-3.5 w-3.5" /> Usar localização</button>
-                    </div>
+                  <div className="overflow-y-auto border-t border-stone-100 px-5 py-4 sm:px-6 sm:py-5">
                     <form onSubmit={searchLocality} className="flex gap-2">
                       <label className="sr-only" htmlFor="church-locality">Localidade</label>
                       <div className="relative min-w-0 flex-1"><MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" /><input id="church-locality" value={locality} onChange={event => setLocality(event.target.value)} placeholder="Localidade, por exemplo Fátima" className="h-10 w-full rounded-md border border-stone-200 bg-white py-2 pl-9 pr-3 text-sm text-stone-800 outline-none transition-colors placeholder:text-stone-400 focus:border-rose-700 focus:ring-2 focus:ring-rose-700/15" /></div>
-                      <button type="submit" disabled={churchLoading} className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-stone-900 px-3 text-sm font-medium text-white transition-colors hover:bg-rose-700 disabled:cursor-wait disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700"><Search className="h-4 w-4" /><span className="sr-only sm:not-sr-only">Pesquisar</span></button>
+                      <button type="button" onClick={useLocation} disabled={churchLoading} title="Usar a minha localização" aria-label="Usar a minha localização" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-stone-200 bg-white text-stone-500 transition-colors hover:border-stone-300 hover:bg-stone-50 hover:text-rose-800 disabled:cursor-wait disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700"><LocateFixed className="h-4 w-4" /></button>
+                      <button type="submit" disabled={churchLoading} className="inline-flex h-10 items-center justify-center rounded-md bg-stone-900 px-3 text-sm font-medium text-white transition-colors hover:bg-rose-700 disabled:cursor-wait disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700"><Search className="h-4 w-4" /><span className="sr-only">Pesquisar</span></button>
                     </form>
 
-                    {churchLoading && <p className="flex items-center gap-2 text-sm text-stone-500"><LoaderCircle className="h-4 w-4 animate-spin text-rose-700" /> A procurar missas…</p>}
-                    {churchError && <p role="alert" className="flex items-start gap-2 text-sm text-amber-900"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{churchError}</p>}
-                    {!churchLoading && !churchError && churches.length === 0 && <p className="text-sm text-stone-500">Pesquisa uma localidade ou usa a localização.</p>}
+                    {churchLoading && <p className="mt-4 flex items-center gap-2 text-sm text-stone-500"><LoaderCircle className="h-4 w-4 animate-spin text-rose-700" /> A procurar missas…</p>}
+                    {churchError && <p role="alert" className="mt-4 flex items-start gap-2 text-sm text-amber-900"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{churchError}</p>}
+                    {!churchLoading && !churchError && churches.length === 0 && <p className="mt-4 text-sm text-stone-500">Pesquisa uma localidade ou usa a localização.</p>}
 
                     {churches.length > 0 && (
-                      <div className="space-y-2">
+                      <div className="mt-4 divide-y divide-stone-100 overflow-hidden rounded-md border border-stone-200 bg-white">
                         {churches.map(church => {
                           const isSelected = selectedChurch?.id === church.id;
                           const scheduledDate = nextMassDate(church);
-                          return <article key={church.id} className={`rounded-lg border p-3.5 transition-colors ${isSelected ? 'border-rose-300 bg-rose-50/40 ring-1 ring-rose-700/10' : 'border-stone-200 bg-white'}`}>
-                            <div className="flex gap-3"><Church className="mt-0.5 h-4 w-4 shrink-0 text-stone-400" /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-start justify-between gap-2"><h3 className="font-medium text-stone-900">{church.nome}</h3>{distanceLabel(church.distancia_m) && <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-600">{distanceLabel(church.distancia_m)}</span>}</div>{church.endereco && <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-stone-500">{church.endereco}</p>}</div></div>
-                            <p className="mt-2.5 flex items-center gap-1.5 text-sm font-medium text-stone-700"><Clock3 className="h-4 w-4 text-rose-700" />{massLabel(church)}</p>
-                            {(church.horario_condicional || church.aviso?.texto || church.aviso?.missa_alternada) && <p className="mt-2 text-xs leading-relaxed text-amber-800">{church.aviso?.texto || 'Horário sujeito a confirmação.'}</p>}
-                            <div className="mt-3 flex flex-wrap items-center justify-between gap-3"><a href={church.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-stone-500 underline underline-offset-2 hover:text-stone-800">Fonte: horariosmissas.pt <ExternalLink className="h-3 w-3" /></a><button type="button" onClick={() => prepareForChurch(church)} disabled={!scheduledDate} className="rounded-md bg-rose-700 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-rose-800 disabled:cursor-not-allowed disabled:bg-stone-300">{isSelected ? 'Missa escolhida' : scheduledDate ? 'Preparar esta missa' : 'Sem próxima missa'}</button></div>
+                          return <article key={church.id} className={`px-4 py-3.5 transition-colors ${isSelected ? 'bg-rose-50/60' : 'hover:bg-stone-50/70'}`}>
+                            <div className="flex min-w-0 items-start gap-3"><Church className="mt-0.5 h-4 w-4 shrink-0 text-stone-400" /><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-3"><h3 className="truncate text-sm font-semibold text-stone-900">{church.nome}</h3>{distanceLabel(church.distancia_m) && <span className="shrink-0 rounded-full bg-stone-100 px-2 py-0.5 text-xs tabular-nums text-stone-600">{distanceLabel(church.distancia_m)}</span>}</div>{church.endereco && <p className="mt-1 truncate text-xs leading-relaxed text-stone-500">{church.endereco}</p>}</div></div>
+                            <div className="mt-2.5 flex items-center justify-between gap-3 pl-7"><p className="flex min-w-0 items-center gap-1.5 truncate text-sm text-stone-700"><Clock3 className="h-3.5 w-3.5 shrink-0 text-rose-700" />{massLabel(church)}</p><button type="button" onClick={() => prepareForChurch(church)} disabled={!scheduledDate} className="shrink-0 text-sm font-medium text-rose-700 transition-colors hover:text-rose-900 disabled:cursor-not-allowed disabled:text-stone-400">{isSelected ? <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" /> Escolhida</span> : scheduledDate ? 'Preparar' : 'Sem horário'}</button></div>
+                            {(church.horario_condicional || church.aviso?.texto || church.aviso?.missa_alternada) && <p className="mt-2 line-clamp-1 pl-7 text-xs text-amber-800">{church.aviso?.texto || 'Horário sujeito a confirmação.'}</p>}
+                            <a href={church.url} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 pl-7 text-[11px] text-stone-400 transition-colors hover:text-stone-600">Fonte: horariosmissas.pt <ExternalLink className="h-3 w-3" /></a>
                           </article>;
                         })}
                       </div>
