@@ -1,12 +1,23 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { BookOpen, CalendarDays, ChevronLeft, ChevronRight, ExternalLink, Info, LoaderCircle, Music2, Sparkles } from 'lucide-react';
+import { FormEvent, useEffect, useState } from 'react';
+import { AlertTriangle, BookOpen, CalendarDays, ChevronLeft, ChevronRight, Church, Clock3, ExternalLink, Info, LoaderCircle, LocateFixed, MapPin, Search, Sparkles } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 type Song = { id: string; title: string; slug: string | null; tags: string[] };
 type Suggestion = { key: string; label: string; guidance: string; songs: Song[] };
+type ChurchResult = {
+  id: number;
+  nome: string;
+  endereco?: string | null;
+  url: string;
+  distancia_m?: number;
+  estado?: 'a_decorrer' | 'hoje' | 'outro_dia' | 'sem_horario';
+  proxima_missa?: { hora?: string | null; dia?: string | null; minutos_ate?: number | null } | null;
+  horario_condicional?: boolean;
+  aviso?: { texto?: string | null; missa_alternada?: boolean } | null;
+};
 type Data = {
   celebration: {
     date: string;
@@ -47,6 +58,28 @@ function dateLabel(value: string) {
   return new Intl.DateTimeFormat('pt-PT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${value}T12:00:00`));
 }
 
+function isoDateInLisbon(value: Date) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Lisbon', year: 'numeric', month: '2-digit', day: '2-digit' }).format(value);
+}
+
+function nextMassDate(church: ChurchResult) {
+  const minutes = church.proxima_missa?.minutos_ate;
+  if (typeof minutes !== 'number' || minutes < 0) return null;
+  return isoDateInLisbon(new Date(Date.now() + minutes * 60_000));
+}
+
+function massLabel(church: ChurchResult) {
+  const next = church.proxima_missa;
+  if (!next?.hora || !next.dia) return 'Horário de missa indisponível';
+  if (church.estado === 'a_decorrer') return `Missa a decorrer · começou às ${next.hora}`;
+  return `${next.dia}, ${next.hora}`;
+}
+
+function distanceLabel(meters?: number) {
+  if (typeof meters !== 'number') return null;
+  return meters < 1000 ? `${meters} m` : `${(meters / 1000).toLocaleString('pt-PT', { maximumFractionDigits: 1 })} km`;
+}
+
 const readingLabels = {
   FIRST_READING: '1ª leitura',
   SECOND_READING: '2ª leitura',
@@ -59,6 +92,12 @@ export default function SuggestionsPageClient() {
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [locality, setLocality] = useState('');
+  const [churches, setChurches] = useState<ChurchResult[]>([]);
+  const [churchLoading, setChurchLoading] = useState(false);
+  const [churchError, setChurchError] = useState<string | null>(null);
+  const [selectedChurch, setSelectedChurch] = useState<ChurchResult | null>(null);
+  const [isChurchSearchOpen, setIsChurchSearchOpen] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -74,6 +113,53 @@ export default function SuggestionsPageClient() {
 
   const celebrationSummary = data?.celebration.summary;
   const alternativeCelebrations = celebrationSummary?.alternatives || [];
+
+  async function findChurches(url: string) {
+    setChurchLoading(true);
+    setChurchError(null);
+    setSelectedChurch(null);
+    try {
+      const response = await fetch(url, { cache: 'no-store' });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'Não foi possível pesquisar igrejas.');
+      setChurches(payload.igrejas || []);
+    } catch (searchError) {
+      setChurches([]);
+      setChurchError(searchError instanceof Error ? searchError.message : 'Não foi possível pesquisar igrejas.');
+    } finally {
+      setChurchLoading(false);
+    }
+  }
+
+  function searchLocality(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const query = locality.trim();
+    if (query.length < 2) {
+      setChurchError('Escreve pelo menos 2 caracteres para pesquisar uma localidade.');
+      return;
+    }
+    void findChurches(`/api/horarios-missas?mode=locality&q=${encodeURIComponent(query)}`);
+  }
+
+  function useLocation() {
+    if (!navigator.geolocation) {
+      setChurchError('Este navegador não suporta a localização. Pesquisa pela localidade.');
+      return;
+    }
+    setChurchError(null);
+    navigator.geolocation.getCurrentPosition(
+      position => void findChurches(`/api/horarios-missas?mode=near&lat=${position.coords.latitude}&lng=${position.coords.longitude}`),
+      () => setChurchError('Não foi possível obter a tua localização. Pesquisa pela localidade.'),
+      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 300_000 },
+    );
+  }
+
+  function prepareForChurch(church: ChurchResult) {
+    setSelectedChurch(church);
+    const churchDate = nextMassDate(church);
+    if (churchDate) setDate(churchDate);
+    setIsChurchSearchOpen(false);
+  }
 
   return (
     <div className="relative min-h-screen w-full bg-white">
@@ -108,6 +194,45 @@ export default function SuggestionsPageClient() {
               <button onClick={() => setDate(localToday())} className="h-9 rounded-md bg-stone-900 px-3 text-sm font-medium text-white transition-colors hover:bg-rose-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700">Hoje</button>
             </div>
           </div>
+        </section>
+
+        <section className="border-b border-stone-100 pb-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="button" onClick={() => setIsChurchSearchOpen(current => !current)} aria-expanded={isChurchSearchOpen} className="group inline-flex h-9 items-center gap-2 rounded-full border border-stone-200 bg-white px-3.5 text-sm text-stone-600 shadow-sm transition-all hover:border-rose-200 hover:bg-rose-50 hover:text-rose-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700"><MapPin className="h-3.5 w-3.5 text-rose-700" /><span>Onde vais à Missa?</span><ChevronRight className={`h-3.5 w-3.5 text-stone-400 transition-transform group-hover:text-rose-700 ${isChurchSearchOpen ? 'rotate-90' : ''}`} /></button>
+            {selectedChurch && <span className="inline-flex min-w-0 items-center gap-1.5 text-sm text-stone-500"><Church className="h-3.5 w-3.5 shrink-0 text-rose-700" /><span className="truncate">{selectedChurch.nome}</span><span className="text-stone-300">·</span><span className="shrink-0">{massLabel(selectedChurch)}</span></span>}
+          </div>
+
+          {isChurchSearchOpen && <div className="mt-4 max-w-3xl border-l-2 border-rose-200 pl-4 sm:pl-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <p className="flex-1 text-sm text-stone-500">Encontra uma igreja e prepara os cânticos para a próxima celebração.</p>
+              <button type="button" onClick={useLocation} disabled={churchLoading} className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-rose-800 disabled:cursor-wait disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700"><LocateFixed className="h-3.5 w-3.5" /> Usar localização</button>
+            </div>
+
+            <form onSubmit={searchLocality} className="mt-3 flex flex-col gap-2 sm:flex-row">
+              <label className="sr-only" htmlFor="church-locality">Localidade</label>
+              <div className="relative flex-1"><MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" /><input id="church-locality" value={locality} onChange={event => setLocality(event.target.value)} placeholder="Localidade, por exemplo Fátima" className="h-10 w-full rounded-md border border-stone-200 bg-white py-2 pl-9 pr-3 text-sm text-stone-800 outline-none transition-colors placeholder:text-stone-400 focus:border-rose-700 focus:ring-2 focus:ring-rose-700/15" /></div>
+              <button type="submit" disabled={churchLoading} className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-stone-900 px-4 text-sm font-medium text-white transition-colors hover:bg-rose-700 disabled:cursor-wait disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700"><Search className="h-4 w-4" /> Pesquisar</button>
+            </form>
+
+            {churchLoading && <p className="mt-3 flex items-center gap-2 text-sm text-stone-500"><LoaderCircle className="h-4 w-4 animate-spin text-rose-700" /> A procurar missas…</p>}
+            {churchError && <p role="alert" className="mt-3 flex items-start gap-2 text-sm text-amber-900"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{churchError}</p>}
+            {!churchLoading && !churchError && churches.length === 0 && <p className="mt-3 text-sm text-stone-500">Pesquisa uma localidade ou usa a localização.</p>}
+
+            {churches.length > 0 && (
+              <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                {churches.map(church => {
+                  const isSelected = selectedChurch?.id === church.id;
+                  const scheduledDate = nextMassDate(church);
+                  return <article key={church.id} className={`rounded-lg border bg-white p-4 transition-colors ${isSelected ? 'border-rose-300 ring-2 ring-rose-700/15' : 'border-stone-200'}`}>
+                    <div className="flex gap-3"><Church className="mt-0.5 h-4 w-4 shrink-0 text-stone-400" /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-start justify-between gap-2"><h3 className="font-medium text-stone-900">{church.nome}</h3>{distanceLabel(church.distancia_m) && <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-600">{distanceLabel(church.distancia_m)}</span>}</div>{church.endereco && <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-stone-500">{church.endereco}</p>}</div></div>
+                    <p className="mt-3 flex items-center gap-1.5 text-sm font-medium text-stone-700"><Clock3 className="h-4 w-4 text-rose-700" />{massLabel(church)}</p>
+                    {(church.horario_condicional || church.aviso?.texto || church.aviso?.missa_alternada) && <p className="mt-2 text-xs leading-relaxed text-amber-800">{church.aviso?.texto || 'Horário sujeito a confirmação.'}</p>}
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3"><a href={church.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-stone-500 underline underline-offset-2 hover:text-stone-800">Fonte: horariosmissas.pt <ExternalLink className="h-3 w-3" /></a><button type="button" onClick={() => prepareForChurch(church)} disabled={!scheduledDate} className="rounded-md bg-rose-700 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-rose-800 disabled:cursor-not-allowed disabled:bg-stone-300">{isSelected ? 'Missa escolhida' : scheduledDate ? 'Preparar esta missa' : 'Sem próxima missa'}</button></div>
+                  </article>;
+                })}
+              </div>
+            )}
+          </div>}
         </section>
 
         {loading && <div className="flex min-h-64 items-center justify-center gap-3 text-sm text-stone-500"><LoaderCircle className="h-5 w-5 animate-spin text-rose-700" /> A preparar sugestões…</div>}
