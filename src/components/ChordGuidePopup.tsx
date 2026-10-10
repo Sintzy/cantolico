@@ -40,6 +40,21 @@ export function ChordGuidePopup({ onClose }: ChordGuidePopupProps) {
               </div>
             </div>
 
+            <div className="bg-sky-50 p-4 rounded-lg border border-sky-200">
+              <h3 className="font-semibold text-sky-800 mb-2">
+                🎸 Formato Inline
+              </h3>
+              <div className="text-sm space-y-2">
+                <p className="text-gray-600">
+                  Coloca o acorde imediatamente antes da sílaba onde muda.
+                </p>
+                <div className="bg-white p-2 rounded text-xs font-mono border border-sky-100">
+                  Gló[D]ria a Deus nas al[G]turas<br />
+                  **Gló[D]ria [A7]a Deus!**
+                </div>
+              </div>
+            </div>
+
             <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
               <h3 className="font-semibold text-purple-800 mb-2">
                 🎼 Seções Especiais
