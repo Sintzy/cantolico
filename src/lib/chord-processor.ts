@@ -45,13 +45,22 @@ export function transposeKey(note: string | null, semitones: number): string | n
 
 export type ChordFormat = 'inline' | 'above' | 'intro';
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 /**
  * Processa formatação básica de Markdown (bold, italic, underline)
  */
 export function processMarkdownFormatting(text: string): string {
   if (!text) return text;
   
-  return text
+  return escapeHtml(text)
     // Bold: **texto** ou __texto__
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/__(.*?)__/g, '<strong>$1</strong>')
@@ -106,14 +115,14 @@ function processChordLineWithParentheses(line: string, chordClass: string): stri
       const closeIndex = text.indexOf(']', i);
       if (closeIndex !== -1) {
         const chord = text.substring(i + 1, closeIndex);
-        result += `<span class="chord ${chordClass}" data-chord-length="${chord.length}"><span class="inner">${chord}</span></span>`;
+        result += `<span class="chord ${chordClass}" data-chord-length="${chord.length}"><span class="inner">${escapeHtml(chord)}</span></span>`;
         i = closeIndex + 1;
         continue;
       }
     }
     
     // Qualquer outro caractere
-    result += text[i];
+    result += escapeHtml(text[i]);
     i++;
   }
   
@@ -205,16 +214,58 @@ function processInlineTextWithChords(line: string): { html: string; hasChords: b
   }
   groups.push(cur);
 
-  // Gera HTML: cada acorde + texto → <span class="cw"><b class="ch">Acorde</b>texto</span>
+  type MarkdownState = {
+    bold: boolean;
+    italic: boolean;
+    underline: boolean;
+  };
+
+  const markdownState: MarkdownState = { bold: false, italic: false, underline: false };
+  const openMarkdownTags = () =>
+    `${markdownState.bold ? '<strong>' : ''}${markdownState.italic ? '<em>' : ''}${markdownState.underline ? '<u>' : ''}`;
+  const closeMarkdownTags = () =>
+    `${markdownState.underline ? '</u>' : ''}${markdownState.italic ? '</em>' : ''}${markdownState.bold ? '</strong>' : ''}`;
+
+  // Mantém a formatação Markdown quando ela se estende por vários acordes.
+  // Cada grupo precisa de tags completas para não criar HTML cruzado entre spans.
+  const formatTextFragment = (text: string): string => {
+    let formatted = openMarkdownTags();
+
+    for (let index = 0; index < text.length; index++) {
+      const pair = text.slice(index, index + 2);
+
+      if (pair === '**' || pair === '__') {
+        formatted += markdownState.bold ? '</strong>' : '<strong>';
+        markdownState.bold = !markdownState.bold;
+        index++;
+      } else if (pair === '~~') {
+        formatted += markdownState.underline ? '</u>' : '<u>';
+        markdownState.underline = !markdownState.underline;
+        index++;
+      } else if (
+        (text[index] === '*' || text[index] === '_') &&
+        text[index - 1] !== text[index] &&
+        text[index + 1] !== text[index]
+      ) {
+        formatted += markdownState.italic ? '</em>' : '<em>';
+        markdownState.italic = !markdownState.italic;
+      } else {
+        formatted += escapeHtml(text[index]);
+      }
+    }
+
+    return `${formatted}${closeMarkdownTags()}`;
+  };
+
+  // Gera sempre um grupo para que os espaços antes/depois de acordes sejam
+  // preservados num contentor flex, mesmo quando a linha começa em texto.
   let html = '';
   for (const g of groups) {
-    if (g.chord !== undefined) {
-      const paren = g.parenBefore ? '<span class="ch-paren">(</span>' : '';
-      html += `<span class="cw">${paren}<b class="ch">${g.chord}</b>${processMarkdownFormatting(g.text)}</span>`;
-    } else {
-      const paren = g.parenBefore ? '(' : '';
-      html += processMarkdownFormatting(paren + g.text);
-    }
+    if (g.chord === undefined && !g.parenBefore && !g.text) continue;
+
+    const paren = g.parenBefore ? '<span class="ch-paren">(</span>' : '';
+    const chord = g.chord === undefined ? '' : `<b class="ch">${escapeHtml(g.chord)}</b>`;
+    html += `<span class="cw">${paren}${chord}${formatTextFragment(g.text)}</span>`;
   }
 
   return { html, hasChords: true };

@@ -446,7 +446,8 @@
 }
 
 /* Linhas com acordes embutidos — layout flex para alinhar acordes acima do texto */
-.chord-container-inline p.cl {
+.chord-container-inline p.cl,
+.chord-container-above p.cl {
 	display: flex !important;
 	flex-wrap: wrap !important;
 	align-items: flex-end !important;
@@ -456,14 +457,18 @@
 }
 
 /* Grupo acorde + sílaba/palavra */
-.chord-container-inline .cw {
+.chord-container-inline .cw,
+.chord-container-above .cw {
 	display: inline-flex !important;
 	flex-direction: column !important;
 	align-items: flex-start !important;
+	/* Espaços nos limites entre grupos não podem desaparecer no flex. */
+	white-space: pre-wrap !important;
 }
 
 /* O acorde em si (por cima da letra) */
-.chord-container-inline .ch {
+.chord-container-inline .ch,
+.chord-container-above .ch {
 	color: var(--chord-color) !important;
 	font-weight: 600 !important;
 	font-size: 0.82em !important;
@@ -477,13 +482,15 @@
 	user-select: none !important;
 }
 
-.chord-container-inline .ch:hover {
+.chord-container-inline .ch:hover,
+.chord-container-above .ch:hover {
 	text-decoration: underline !important;
 	cursor: pointer !important;
 }
 
 /* Parênteses dentro de grupos de acordes inline */
-.chord-container-inline .ch-paren {
+.chord-container-inline .ch-paren,
+.chord-container-above .ch-paren {
 	color: var(--text-color) !important;
 	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
 	font-weight: 600 !important;
