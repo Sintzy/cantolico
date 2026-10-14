@@ -19,7 +19,7 @@ export async function POST(_request: NextRequest) {
   const supabase = createAdminSupabaseClient();
   const { data: dbUser, error } = await supabase
     .from('User')
-    .select('stripeCustomerId, plan, planStatus, premiumUntil')
+    .select('role, stripeCustomerId, plan, planStatus, premiumUntil')
     .eq('id', user.supabaseUserId)
     .single();
 

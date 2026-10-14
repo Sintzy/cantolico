@@ -40,7 +40,13 @@ export function isPremiumState(input: {
   plan?: string | null;
   status?: string | null;
   premiumUntil?: string | null;
+  role?: string | null;
 }): boolean {
+  // Administrators receive every Premium entitlement without needing a
+  // separate paid plan. Keep this in the central access check so all feature
+  // gates (including future ones) enforce the same policy.
+  if (input.role === 'ADMIN') return true;
+
   if (input.plan !== 'premium') return false;
 
   if (input.status === 'canceled') {
@@ -113,7 +119,7 @@ async function syncPremiumStateFromStripe(data: {
 export async function getUserPremiumState(userId: number): Promise<PremiumState> {
   const { data, error } = await supabase
     .from('User')
-    .select('id, plan, planStatus, premiumUntil, stripeCustomerId, stripeSubscriptionId')
+    .select('id, role, plan, planStatus, premiumUntil, stripeCustomerId, stripeSubscriptionId')
     .eq('id', userId)
     .single();
 
@@ -132,7 +138,7 @@ export async function getUserPremiumState(userId: number): Promise<PremiumState>
   let status = (data.planStatus || 'inactive') as UserPlanStatus;
   let premiumUntil = data.premiumUntil || null;
 
-  let isPremium = isPremiumState({ plan, status, premiumUntil });
+  let isPremium = isPremiumState({ plan, status, premiumUntil, role: data.role });
   let stripeCustomerId = data.stripeCustomerId || null;
   let stripeSubscriptionId = data.stripeSubscriptionId || null;
 
@@ -152,7 +158,7 @@ export async function getUserPremiumState(userId: number): Promise<PremiumState>
       premiumUntil = synced.premiumUntil;
       stripeCustomerId = synced.stripeCustomerId || stripeCustomerId;
       stripeSubscriptionId = synced.stripeSubscriptionId || stripeSubscriptionId;
-      isPremium = isPremiumState({ plan, status, premiumUntil });
+      isPremium = isPremiumState({ plan, status, premiumUntil, role: data.role });
     }
   }
 
