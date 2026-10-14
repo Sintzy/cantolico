@@ -26,6 +26,7 @@ const songSelect = `
     youtubeLink,
     createdBy:User!SongVersion_createdById_fkey (
       name,
+      role,
       plan,
       planStatus,
       premiumUntil
@@ -144,6 +145,7 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ id: 
               ? {
                   name: createdBy.name,
                   isPremium: isPremiumState({
+                    role: createdBy.role,
                     plan: createdBy.plan,
                     status: createdBy.planStatus,
                     premiumUntil: createdBy.premiumUntil,
