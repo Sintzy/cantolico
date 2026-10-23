@@ -749,6 +749,7 @@ export interface Database {
           celebration: string | null
           liturgicalColor: 'VERDE' | 'ROXO' | 'BRANCO' | 'VERMELHO' | 'ROSA' | null
           visibility: 'PUBLIC' | 'PRIVATE' | 'NOT_LISTED'
+          hiddenMoments: string[]
           userId: number
           createdAt: string
           updatedAt: string
@@ -763,6 +764,7 @@ export interface Database {
           celebration?: string | null
           liturgicalColor?: 'VERDE' | 'ROXO' | 'BRANCO' | 'VERMELHO' | 'ROSA' | null
           visibility?: 'PUBLIC' | 'PRIVATE' | 'NOT_LISTED'
+          hiddenMoments?: string[]
           userId: number
           createdAt?: string
           updatedAt?: string
@@ -777,6 +779,7 @@ export interface Database {
           celebration?: string | null
           liturgicalColor?: 'VERDE' | 'ROXO' | 'BRANCO' | 'VERMELHO' | 'ROSA' | null
           visibility?: 'PUBLIC' | 'PRIVATE' | 'NOT_LISTED'
+          hiddenMoments?: string[]
           userId?: number
           createdAt?: string
           updatedAt?: string

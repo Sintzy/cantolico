@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { withUserProtection } from '@/lib/enhanced-api-protection';
-import { LiturgicalMoment } from '@/types/mass';
+import { LiturgicalMoment, normalizeHiddenMoments } from '@/types/mass';
 import { canEditMass as canEditMassForMembership, findMembershipByEmail } from '@/lib/mass-collaboration';
 
 interface RouteParams {
@@ -100,6 +100,23 @@ export const PUT = withUserProtection<any>(async (request: NextRequest, session:
     if (error) {
       console.error('Error updating mass item:', error);
       throw new Error(`Supabase error: ${error.message}`);
+    }
+
+    if (moment !== undefined) {
+      const { data: massWithHiddenMoments } = await supabase
+        .from('Mass')
+        .select('hiddenMoments')
+        .eq('id', massId)
+        .single();
+      const currentHiddenMoments = normalizeHiddenMoments(massWithHiddenMoments?.hiddenMoments);
+      const nextHiddenMoments = currentHiddenMoments.filter((hiddenMoment) => hiddenMoment !== moment);
+
+      if (nextHiddenMoments.length !== currentHiddenMoments.length) {
+        await supabase
+          .from('Mass')
+          .update({ hiddenMoments: nextHiddenMoments })
+          .eq('id', massId);
+      }
     }
 
     return NextResponse.json({

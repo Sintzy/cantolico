@@ -60,6 +60,7 @@ import {
   formatMassTime,
   getColorHex,
   LiturgicalColor,
+  normalizeHiddenMoments,
 } from '@/types/mass';
 import EditMassModal from '@/components/EditMassModal';
 import ExportMassModal from '@/components/ExportMassModal';
@@ -214,7 +215,10 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
         trackEvent('mass_song_added', { source: 'mass_page' });
         setMass(prev => ({
           ...prev,
-          items: [...(prev.items || []), newItem]
+          items: [...(prev.items || []), newItem],
+          hiddenMoments: normalizeHiddenMoments(prev.hiddenMoments).filter(
+            (moment) => moment !== selectedMoment,
+          ),
         }));
         toast.success('Música adicionada');
         setShowAddSongModal(false);
@@ -339,6 +343,7 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
     const orderB = LITURGICAL_MOMENT_ORDER[b as LiturgicalMoment] || 99;
     return orderA - orderB;
   });
+  const hiddenMomentSet = new Set(normalizeHiddenMoments(mass.hiddenMoments));
 
   return (
     <div className="min-h-screen bg-white">
@@ -485,6 +490,7 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
             const isExpanded = expandedMoments.has(moment);
             const hasItems = items.length > 0;
 
+            if (hiddenMomentSet.has(moment) && !hasItems) return null;
             if (!hasItems && !canEdit) return null;
 
             return (
@@ -542,7 +548,7 @@ export default function MassPageClient({ initialMass }: MassPageClientProps) {
                               <p className="text-xs text-stone-400 mt-0.5 italic">{item.note}</p>
                             )}
                           </div>
-                          <div className="flex items-center gap-1 opacity-100 transition-opacity shrink-0 lg:opacity-0 lg:group-hover:opacity-100">
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                             {currentKey && (
                               <Badge variant="outline" className="text-xs shrink-0 bg-stone-50 text-stone-500 border-stone-200">
                                 TOM {formatKeyLabel(currentKey)}

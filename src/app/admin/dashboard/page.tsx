@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Spinner, type SpinnerProps } from '@/components/ui/shadcn-io/spinner';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { Users, Music, Clock, TrendingUp, Activity, AlertCircle, CalendarDays } from 'lucide-react';
+import { Users, Music, Clock, TrendingUp, Activity, AlertCircle, CalendarDays, Church } from 'lucide-react';
 import BannerDisplay from '@/components/BannerDisplay';
 import { toast } from 'sonner';
 import { syncLiturgicalCalendarAction } from './liturgia/actions';
@@ -178,6 +178,9 @@ export default function AdminDashboard() {
           </Button>
           <Button asChild variant="outline" className="w-full sm:w-auto">
             <Link href="/admin/dashboard/playlists">Gestão Playlists</Link>
+          </Button>
+          <Button asChild variant="outline" className="w-full sm:w-auto">
+            <Link href="/admin/dashboard/masses">Gestão Missas</Link>
           </Button>
           <Button asChild variant="outline" className="w-full sm:w-auto">
             <Link href="/admin/dashboard/banners">Gestão Banners</Link>
@@ -425,6 +428,12 @@ export default function AdminDashboard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-2v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-2" />
                 </svg>
                 <span className="text-sm">Gestão Playlists</span>
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="h-16 flex-col text-center p-4">
+              <Link href="/admin/dashboard/masses">
+                <Church className="h-5 w-5 mb-2" />
+                <span className="text-sm">Gestão Missas</span>
               </Link>
             </Button>
             <Button asChild variant="outline" className="h-16 flex-col text-center p-4">

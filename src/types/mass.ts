@@ -19,6 +19,37 @@ export const LITURGICAL_MOMENTS = [
 
 export type LiturgicalMoment = typeof LITURGICAL_MOMENTS[number];
 
+export const normalizeHiddenMoments = (value: unknown): LiturgicalMoment[] => {
+  if (!Array.isArray(value)) return [];
+  const requested = new Set(value);
+  return LITURGICAL_MOMENTS.filter((moment) => requested.has(moment));
+};
+
+export const getHideableMassMoments = (
+  items: Array<Pick<MassItem, 'moment'>>,
+): LiturgicalMoment[] => {
+  const usedMoments = new Set(items.map((item) => item.moment));
+  return LITURGICAL_MOMENTS.filter((moment) => !usedMoments.has(moment));
+};
+
+export const toggleMassMomentVisibility = (
+  hiddenMoments: unknown,
+  moment: LiturgicalMoment,
+  items: Array<Pick<MassItem, 'moment'>>,
+): LiturgicalMoment[] => {
+  const normalizedHiddenMoments = normalizeHiddenMoments(hiddenMoments);
+  if (!getHideableMassMoments(items).includes(moment)) return normalizedHiddenMoments;
+
+  const nextHiddenMoments = new Set(normalizedHiddenMoments);
+  if (nextHiddenMoments.has(moment)) {
+    nextHiddenMoments.delete(moment);
+  } else {
+    nextHiddenMoments.add(moment);
+  }
+
+  return LITURGICAL_MOMENTS.filter((candidate) => nextHiddenMoments.has(candidate));
+};
+
 export const LITURGICAL_MOMENT_LABELS: Record<LiturgicalMoment, string> = {
   ENTRADA: 'Entrada',
   ATO_PENITENCIAL: 'Ato Penitencial',
@@ -132,6 +163,7 @@ export interface Mass {
   celebration: string | null;
   liturgicalColor: LiturgicalColor | null;
   visibility: MassVisibility;
+  hiddenMoments: LiturgicalMoment[];
   userId: number;
   createdAt: string;
   updatedAt: string;
@@ -158,6 +190,7 @@ export interface MassForm {
   celebration: string;
   liturgicalColor: LiturgicalColor | '';
   visibility: MassVisibility;
+  hiddenMoments: LiturgicalMoment[];
 }
 
 export interface MassTemplate {
