@@ -32,6 +32,24 @@ export const getHideableMassMoments = (
   return LITURGICAL_MOMENTS.filter((moment) => !usedMoments.has(moment));
 };
 
+export const toggleMassMomentVisibility = (
+  hiddenMoments: unknown,
+  moment: LiturgicalMoment,
+  items: Array<Pick<MassItem, 'moment'>>,
+): LiturgicalMoment[] => {
+  const normalizedHiddenMoments = normalizeHiddenMoments(hiddenMoments);
+  if (!getHideableMassMoments(items).includes(moment)) return normalizedHiddenMoments;
+
+  const nextHiddenMoments = new Set(normalizedHiddenMoments);
+  if (nextHiddenMoments.has(moment)) {
+    nextHiddenMoments.delete(moment);
+  } else {
+    nextHiddenMoments.add(moment);
+  }
+
+  return LITURGICAL_MOMENTS.filter((candidate) => nextHiddenMoments.has(candidate));
+};
+
 export const LITURGICAL_MOMENT_LABELS: Record<LiturgicalMoment, string> = {
   ENTRADA: 'Entrada',
   ATO_PENITENCIAL: 'Ato Penitencial',

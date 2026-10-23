@@ -5,7 +5,6 @@ import { useSession } from '@/hooks/useClerkSession';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -14,7 +13,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -28,7 +26,6 @@ import {
   Trash2, 
   Crown, 
   UserCheck, 
-  UserPlus, 
   Send, 
   Loader2, 
   Church,
@@ -53,7 +50,7 @@ import {
   LITURGICAL_MOMENT_LABELS,
   LiturgicalMoment,
   getColorHex,
-  getHideableMassMoments,
+  toggleMassMomentVisibility,
 } from '@/types/mass';
 import { normalizeEmail } from '@/lib/mass-collaboration';
 
@@ -89,6 +86,7 @@ export default function EditMassModal({ mass, isOpen, onClose, onUpdate, onDelet
   const [liturgicalColor, setLiturgicalColor] = useState<LiturgicalColor | ''>('');
   const [visibility, setVisibility] = useState<MassVisibility>('PRIVATE');
   const [hiddenMoments, setHiddenMoments] = useState<LiturgicalMoment[]>([]);
+  const [isMomentOptionsOpen, setIsMomentOptionsOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [members, setMembers] = useState<MassMember[]>([]);
 
@@ -103,6 +101,7 @@ export default function EditMassModal({ mass, isOpen, onClose, onUpdate, onDelet
       setLiturgicalColor((mass.liturgicalColor as LiturgicalColor) || '');
       setVisibility(mass.visibility || 'PRIVATE');
       setHiddenMoments(mass.hiddenMoments || []);
+      setIsMomentOptionsOpen(false);
       
       // Parse date and time
       if (mass.date) {
@@ -126,7 +125,6 @@ export default function EditMassModal({ mass, isOpen, onClose, onUpdate, onDelet
   const isAdmin = session?.user?.role === 'ADMIN';
   const canManageMembers = isOwner || isAdmin;
   const canEditSettings = true; // Allow editing if modal is open (access already validated)
-  const hideableMoments = getHideableMassMoments(mass.items || []);
   const momentsWithSongs = new Set((mass.items || []).map((item) => item.moment));
   const visibleMomentCount = LITURGICAL_MOMENTS.length - hiddenMoments.length;
 
@@ -292,17 +290,14 @@ export default function EditMassModal({ mass, isOpen, onClose, onUpdate, onDelet
   };
 
   const toggleHiddenMoment = (moment: LiturgicalMoment) => {
-    if (!hideableMoments.includes(moment)) return;
-    setHiddenMoments((current) => current.includes(moment)
-      ? current.filter((item) => item !== moment)
-      : [...current, moment]);
+    setHiddenMoments((current) => toggleMassMomentVisibility(current, moment, mass.items || []));
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl h-[90vh] flex flex-col overflow-hidden border-stone-200 p-0">
+      <DialogContent className="flex h-[100dvh] w-screen max-w-none flex-col overflow-hidden rounded-none border-stone-200 p-0 sm:h-[calc(100dvh-3rem)] sm:w-[min(1180px,calc(100vw-3rem))] sm:max-w-none sm:rounded-2xl">
         {/* Header */}
-        <div className="shrink-0 flex items-center justify-between border-b border-stone-200 bg-stone-50 p-6">
+        <div className="flex shrink-0 items-center justify-between border-b border-stone-200 bg-white px-5 py-4 pr-14 sm:px-8 sm:py-5">
           <div className="flex items-center gap-3">
             <div 
               className="p-2 rounded-lg"
@@ -322,7 +317,7 @@ export default function EditMassModal({ mass, isOpen, onClose, onUpdate, onDelet
               />
             </div>
             <div>
-              <DialogTitle className="text-xl font-semibold">
+              <DialogTitle className="text-xl font-semibold sm:text-2xl">
                 {canEditSettings ? 'Editar Missa' : 'Detalhes da Missa'}
               </DialogTitle>
               <p className="text-sm text-muted-foreground mt-1">
@@ -330,7 +325,7 @@ export default function EditMassModal({ mass, isOpen, onClose, onUpdate, onDelet
               </p>
             </div>
           </div>
-          <Badge variant={isOwner ? 'default' : 'secondary'} className="px-3 py-1.5">
+          <Badge variant={isOwner ? 'default' : 'secondary'} className="hidden px-3 py-1.5 sm:inline-flex">
             {isOwner ? (
               <>
                 <Crown className="h-3 w-3 mr-1" />
@@ -346,7 +341,9 @@ export default function EditMassModal({ mass, isOpen, onClose, onUpdate, onDelet
         </div>
 
         {/* Content */}
-        <div className="flex-1 space-y-6 overflow-y-auto bg-stone-50/40 p-6 sm:p-8">
+        <div className="flex-1 overflow-y-auto bg-stone-50/70 p-4 sm:p-6 lg:p-8">
+          <div className="mx-auto grid max-w-6xl gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.8fr)] xl:items-start">
+            <div className="space-y-6">
           <section className="space-y-5 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
             <div>
               <p className="text-sm font-semibold text-stone-900">Celebração</p>
@@ -524,37 +521,43 @@ export default function EditMassModal({ mass, isOpen, onClose, onUpdate, onDelet
                     <p className="text-xs text-stone-500">{visibleMomentCount} de {LITURGICAL_MOMENTS.length} momentos visíveis</p>
                   </div>
                 </div>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button type="button" variant="outline" className="justify-between gap-3 border-stone-300 bg-white">
-                      Personalizar <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="end" className="max-h-[min(60vh,520px)] w-[min(25rem,calc(100vw-3rem))] overflow-y-auto p-2">
-                    <div className="px-2 pb-2 pt-1">
-                      <p className="text-sm font-semibold">Momentos litúrgicos</p>
-                      <p className="text-xs text-muted-foreground">Desseleciona os momentos que não vais usar.</p>
-                    </div>
-                    <div className="space-y-1">
-                      {LITURGICAL_MOMENTS.map((moment) => {
-                        const hasSongs = momentsWithSongs.has(moment);
-                        const isVisible = !hiddenMoments.includes(moment);
-                        return (
-                          <label key={moment} className={`flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-sm hover:bg-stone-50 ${hasSongs ? 'cursor-not-allowed opacity-60' : ''}`}>
-                            <Checkbox
-                              checked={isVisible}
-                              disabled={hasSongs || !canEditSettings}
-                              onCheckedChange={() => toggleHiddenMoment(moment)}
-                            />
-                            <span className="flex-1">{LITURGICAL_MOMENT_LABELS[moment]}</span>
-                            {hasSongs && <span className="text-xs text-stone-500">tem cânticos</span>}
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="justify-between gap-3 border-stone-300 bg-white"
+                  aria-expanded={isMomentOptionsOpen}
+                  aria-controls="mass-moment-options"
+                  onClick={() => setIsMomentOptionsOpen((current) => !current)}
+                >
+                  Personalizar
+                  <ChevronDown className={`h-4 w-4 transition-transform ${isMomentOptionsOpen ? 'rotate-180' : ''}`} />
+                </Button>
               </div>
+              {isMomentOptionsOpen && (
+                <div id="mass-moment-options" className="mt-4 rounded-xl border border-stone-200 bg-white p-3 sm:p-4">
+                  <div className="mb-3">
+                    <p className="text-sm font-semibold text-stone-900">Momentos litúrgicos</p>
+                    <p className="text-xs text-stone-500">Desseleciona os momentos que não vais usar. Os que têm cânticos ficam sempre visíveis.</p>
+                  </div>
+                  <div className="grid gap-1 sm:grid-cols-2">
+                    {LITURGICAL_MOMENTS.map((moment) => {
+                      const hasSongs = momentsWithSongs.has(moment);
+                      const isVisible = !hiddenMoments.includes(moment);
+                      return (
+                        <label key={moment} className={`flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${hasSongs ? 'cursor-not-allowed bg-stone-50 text-stone-400' : 'cursor-pointer hover:bg-stone-50'}`}>
+                          <Checkbox
+                            checked={isVisible}
+                            disabled={hasSongs || !canEditSettings}
+                            onCheckedChange={() => toggleHiddenMoment(moment)}
+                          />
+                          <span className="flex-1">{LITURGICAL_MOMENT_LABELS[moment]}</span>
+                          {hasSongs && <span className="text-xs">tem cânticos</span>}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               {hiddenMoments.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {hiddenMoments.map((moment) => <Badge key={moment} variant="secondary" className="gap-1"><EyeOff className="h-3 w-3" />{LITURGICAL_MOMENT_LABELS[moment]}</Badge>)}
@@ -563,7 +566,10 @@ export default function EditMassModal({ mass, isOpen, onClose, onUpdate, onDelet
             </div>
           </section>
 
+            </div>
+
             {/* Members Section - Only for owners */}
+            <div className="space-y-6">
             {canManageMembers && (
               <section className="space-y-4 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
                 <div className="flex items-center justify-between">
@@ -651,26 +657,28 @@ export default function EditMassModal({ mass, isOpen, onClose, onUpdate, onDelet
                 )}
               </section>
             )}
+            </div>
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="shrink-0 flex items-center justify-between p-6 border-t bg-muted/30 gap-4">
+        <div className="flex shrink-0 flex-col-reverse gap-3 border-t bg-white p-4 sm:flex-row sm:items-center sm:justify-between sm:px-8 sm:py-5">
           {(isOwner || isAdmin) && (
             <Button
               variant="destructive"
               onClick={handleDelete}
               disabled={loading}
-              className="px-4"
+              className="w-full sm:w-auto"
             >
               <Trash2 className="h-4 w-4 mr-2" />
               Apagar
             </Button>
           )}
-          <div className="flex items-center gap-3 ml-auto">
-            <Button variant="outline" onClick={onClose} disabled={loading} className="px-5">
+          <div className="flex w-full flex-col-reverse gap-2 sm:ml-auto sm:w-auto sm:flex-row sm:gap-3">
+            <Button variant="outline" onClick={onClose} disabled={loading} className="w-full sm:w-auto sm:px-5">
               Cancelar
             </Button>
-            <Button onClick={handleSave} disabled={loading || !name.trim()} className="px-6">
+            <Button onClick={handleSave} disabled={loading || !name.trim()} className="w-full sm:w-auto sm:px-6">
               {loading ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
