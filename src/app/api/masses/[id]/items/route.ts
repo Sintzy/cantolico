@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { withUserProtection } from '@/lib/enhanced-api-protection';
 import { randomUUID } from 'crypto';
-import { LiturgicalMoment } from '@/types/mass';
+import { LiturgicalMoment, normalizeHiddenMoments } from '@/types/mass';
 import { canEditMass as canEditMassForMembership, findMembershipByEmail } from '@/lib/mass-collaboration';
 
 import { getClerkSession } from '@/lib/api-middleware';
@@ -14,7 +14,7 @@ interface RouteParams {
 async function canEditMass(massId: string, userId: number, userEmail: string | undefined, userRole: string): Promise<boolean> {
   const { data: mass } = await supabase
     .from('Mass')
-    .select('userId')
+      .select('userId')
     .eq('id', massId)
     .single();
 
@@ -143,6 +143,19 @@ export const POST = withUserProtection<any>(async (request: NextRequest, session
       }
       console.error('Error adding song to mass:', insertError);
       throw new Error(`Supabase error: ${insertError.message}`);
+    }
+
+    // Adding a song makes the moment visible again, including for API callers
+    // that bypass the page's selector.
+    const { data: massWithHiddenMoments } = await supabase
+      .from('Mass')
+      .select('hiddenMoments')
+      .eq('id', massId)
+      .single();
+    const nextHiddenMoments = normalizeHiddenMoments(massWithHiddenMoments?.hiddenMoments)
+      .filter((hiddenMoment) => hiddenMoment !== moment);
+    if (nextHiddenMoments.length !== normalizeHiddenMoments(massWithHiddenMoments?.hiddenMoments).length) {
+      await supabase.from('Mass').update({ hiddenMoments: nextHiddenMoments }).eq('id', massId);
     }
 
     return NextResponse.json({

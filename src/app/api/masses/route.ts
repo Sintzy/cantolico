@@ -4,7 +4,7 @@ import { getClerkSession } from '@/lib/api-middleware';
 import { withUserProtection, withPublicMonitoring } from '@/lib/enhanced-api-protection';
 import { randomUUID } from 'crypto';
 import { requireEmailVerification } from '@/lib/email';
-import { Mass, MassVisibility, LiturgicalColor } from '@/types/mass';
+import { Mass, MassVisibility, LiturgicalColor, normalizeHiddenMoments } from '@/types/mass';
 import { canCreateMass, premiumRequiredResponse } from '@/lib/premium';
 import { escapeLikePattern, findMembershipByEmail } from '@/lib/mass-collaboration';
 
@@ -29,6 +29,7 @@ export const GET = withPublicMonitoring<any>(async (request: NextRequest) => {
         celebration,
         liturgicalColor,
         visibility,
+        hiddenMoments,
         userId,
         createdAt,
         updatedAt,
@@ -97,6 +98,7 @@ export const GET = withPublicMonitoring<any>(async (request: NextRequest) => {
           .select(`
             id, name, description, date, parish, celebrant, celebration,
             liturgicalColor, visibility, userId, createdAt, updatedAt,
+            hiddenMoments,
             User!Mass_userId_fkey (id, name, email, image),
             MassItem (id)
           `)
@@ -142,7 +144,8 @@ export const POST = withUserProtection<any>(async (request: NextRequest, session
       celebrant,
       celebration,
       liturgicalColor,
-      visibility = 'PRIVATE'
+      visibility = 'PRIVATE',
+      hiddenMoments
     }: {
       name: string;
       description?: string;
@@ -152,6 +155,7 @@ export const POST = withUserProtection<any>(async (request: NextRequest, session
       celebration?: string;
       liturgicalColor?: LiturgicalColor;
       visibility?: MassVisibility;
+      hiddenMoments?: unknown;
     } = body;
 
     // Verify email
@@ -191,6 +195,7 @@ export const POST = withUserProtection<any>(async (request: NextRequest, session
         celebration: celebration?.trim() || null,
         liturgicalColor: liturgicalColor || null,
         visibility,
+        hiddenMoments: normalizeHiddenMoments(hiddenMoments),
         userId: session.user.id
       })
       .select(`
@@ -203,6 +208,7 @@ export const POST = withUserProtection<any>(async (request: NextRequest, session
         celebration,
         liturgicalColor,
         visibility,
+        hiddenMoments,
         userId,
         createdAt,
         updatedAt,

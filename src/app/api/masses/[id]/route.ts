@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminSupabase as supabase } from '@/lib/supabase-admin';
 import { withUserProtection, withPublicMonitoring } from '@/lib/enhanced-api-protection';
-import { MassVisibility, LiturgicalColor } from '@/types/mass';
+import { getHideableMassMoments, MassVisibility, LiturgicalColor, normalizeHiddenMoments } from '@/types/mass';
 import { canEditMass, findMembershipByEmail } from '@/lib/mass-collaboration';
 
 import { getClerkSession } from '@/lib/api-middleware';
@@ -27,6 +27,7 @@ export const GET = withPublicMonitoring<any>(async (request: NextRequest, contex
         celebration,
         liturgicalColor,
         visibility,
+        hiddenMoments,
         userId,
         createdAt,
         updatedAt,
@@ -145,7 +146,7 @@ export const PUT = withUserProtection<any>(async (request: NextRequest, session:
     // Check ownership
     const { data: existingMass, error: fetchError } = await supabase
       .from('Mass')
-      .select('userId')
+      .select('userId, hiddenMoments, MassItem(moment)')
       .eq('id', id)
       .single();
 
@@ -188,7 +189,8 @@ export const PUT = withUserProtection<any>(async (request: NextRequest, session:
       celebrant,
       celebration,
       liturgicalColor,
-      visibility
+      visibility,
+      hiddenMoments
     }: {
       name?: string;
       description?: string;
@@ -198,6 +200,7 @@ export const PUT = withUserProtection<any>(async (request: NextRequest, session:
       celebration?: string;
       liturgicalColor?: LiturgicalColor | null;
       visibility?: MassVisibility;
+      hiddenMoments?: unknown;
     } = body;
 
     const updateData: any = {};
@@ -208,7 +211,23 @@ export const PUT = withUserProtection<any>(async (request: NextRequest, session:
     if (celebrant !== undefined) updateData.celebrant = celebrant?.trim() || null;
     if (celebration !== undefined) updateData.celebration = celebration?.trim() || null;
     if (liturgicalColor !== undefined) updateData.liturgicalColor = liturgicalColor || null;
-    if (visibility !== undefined && isOwner) updateData.visibility = visibility; // Only owner can change visibility
+    if (visibility !== undefined && (isOwner || session.user.role === 'ADMIN')) {
+      updateData.visibility = visibility;
+    }
+    if (hiddenMoments !== undefined) {
+      const normalizedHiddenMoments = normalizeHiddenMoments(hiddenMoments);
+      const hideableMoments = new Set(getHideableMassMoments(existingMass.MassItem || []));
+      const momentsWithSongs = normalizedHiddenMoments.filter((moment) => !hideableMoments.has(moment));
+
+      if (momentsWithSongs.length > 0) {
+        return NextResponse.json(
+          { error: 'Não é possível ocultar momentos que já têm cânticos' },
+          { status: 400 }
+        );
+      }
+
+      updateData.hiddenMoments = normalizedHiddenMoments;
+    }
 
     const { data: updatedMass, error: updateError } = await supabase
       .from('Mass')
@@ -224,6 +243,7 @@ export const PUT = withUserProtection<any>(async (request: NextRequest, session:
         celebration,
         liturgicalColor,
         visibility,
+        hiddenMoments,
         userId,
         createdAt,
         updatedAt,
