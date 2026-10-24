@@ -295,9 +295,9 @@ export default function EditMassModal({ mass, isOpen, onClose, onUpdate, onDelet
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="flex h-[100dvh] w-screen max-w-none flex-col overflow-hidden rounded-none border-stone-200 p-0 sm:h-[calc(100dvh-3rem)] sm:w-[min(1180px,calc(100vw-3rem))] sm:max-w-none sm:rounded-2xl">
+      <DialogContent className="flex h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-none flex-col overflow-hidden rounded-2xl border-stone-200 bg-white p-0 text-stone-900 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 sm:h-[calc(100dvh-3rem)] sm:w-[min(1180px,calc(100vw-3rem))] sm:max-w-none">
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between border-b border-stone-200 bg-white px-5 py-4 pr-14 sm:px-8 sm:py-5">
+        <div className="flex shrink-0 items-center justify-between border-b border-stone-200 bg-white px-5 py-4 pr-14 dark:border-zinc-800 dark:bg-zinc-950 sm:px-8 sm:py-5">
           <div className="flex items-center gap-3">
             <div 
               className="p-2 rounded-lg"
@@ -317,10 +317,10 @@ export default function EditMassModal({ mass, isOpen, onClose, onUpdate, onDelet
               />
             </div>
             <div>
-              <DialogTitle className="text-xl font-semibold sm:text-2xl">
+              <DialogTitle className="text-xl font-semibold text-stone-900 dark:text-zinc-100 sm:text-2xl">
                 {canEditSettings ? 'Editar Missa' : 'Detalhes da Missa'}
               </DialogTitle>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="mt-1 text-sm text-stone-500 dark:text-zinc-400">
                 {canEditSettings ? 'Gere os detalhes da celebração' : 'Visualizar informações da missa'}
               </p>
             </div>
@@ -341,13 +341,13 @@ export default function EditMassModal({ mass, isOpen, onClose, onUpdate, onDelet
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto bg-stone-50/70 p-4 sm:p-6 lg:p-8">
-          <div className="mx-auto grid max-w-6xl gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.8fr)] xl:items-start">
+        <div className="flex-1 overflow-y-auto bg-stone-50/70 p-3 dark:bg-zinc-950 sm:p-6 lg:p-8">
+          <div className="mx-auto grid max-w-6xl gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(300px,0.8fr)] lg:items-start lg:gap-6">
             <div className="space-y-6">
-          <section className="space-y-5 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+          <section className="space-y-5 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-5">
             <div>
-              <p className="text-sm font-semibold text-stone-900">Celebração</p>
-              <p className="text-xs text-stone-500">Informações que aparecem no cabeçalho da missa.</p>
+              <p className="text-sm font-semibold text-stone-900 dark:text-zinc-100">Celebração</p>
+              <p className="text-xs text-stone-500 dark:text-zinc-400">Informações que aparecem no cabeçalho da missa.</p>
             </div>
           {/* Name */}
           <div className="space-y-2">
@@ -507,24 +507,24 @@ export default function EditMassModal({ mass, isOpen, onClose, onUpdate, onDelet
 
           </section>
 
-          <section className="space-y-5 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+          <section className="space-y-5 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-5">
             <div>
-              <p className="text-sm font-semibold text-stone-900">Estrutura da celebração</p>
-              <p className="text-xs text-stone-500">Escolhe quais os momentos vazios que queres mostrar na lista.</p>
+              <p className="text-sm font-semibold text-stone-900 dark:text-zinc-100">Estrutura da celebração</p>
+              <p className="text-xs text-stone-500 dark:text-zinc-400">Escolhe quais os momentos vazios que queres mostrar na lista.</p>
             </div>
-            <div className="rounded-xl border border-stone-200 bg-stone-50 p-4">
+            <div className="rounded-xl border border-stone-200 bg-stone-50 p-3 dark:border-zinc-800 dark:bg-zinc-950 sm:p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3">
                   <div className="rounded-lg bg-stone-900 p-2 text-white"><ListFilter className="h-4 w-4" /></div>
                   <div>
-                    <p className="text-sm font-medium text-stone-900">Momentos apresentados</p>
-                    <p className="text-xs text-stone-500">{visibleMomentCount} de {LITURGICAL_MOMENTS.length} momentos visíveis</p>
+                    <p className="text-sm font-medium text-stone-900 dark:text-zinc-100">Momentos apresentados</p>
+                    <p className="text-xs text-stone-500 dark:text-zinc-400">{visibleMomentCount} de {LITURGICAL_MOMENTS.length} momentos visíveis</p>
                   </div>
                 </div>
                 <Button
                   type="button"
                   variant="outline"
-                  className="justify-between gap-3 border-stone-300 bg-white"
+                  className="justify-between gap-3 border-stone-300 bg-white dark:border-zinc-700 dark:bg-zinc-900"
                   aria-expanded={isMomentOptionsOpen}
                   aria-controls="mass-moment-options"
                   onClick={() => setIsMomentOptionsOpen((current) => !current)}
@@ -534,17 +534,17 @@ export default function EditMassModal({ mass, isOpen, onClose, onUpdate, onDelet
                 </Button>
               </div>
               {isMomentOptionsOpen && (
-                <div id="mass-moment-options" className="mt-4 rounded-xl border border-stone-200 bg-white p-3 sm:p-4">
+                <div id="mass-moment-options" className="mt-4 rounded-xl border border-stone-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900 sm:p-4">
                   <div className="mb-3">
-                    <p className="text-sm font-semibold text-stone-900">Momentos litúrgicos</p>
-                    <p className="text-xs text-stone-500">Desseleciona os momentos que não vais usar. Os que têm cânticos ficam sempre visíveis.</p>
+                    <p className="text-sm font-semibold text-stone-900 dark:text-zinc-100">Momentos litúrgicos</p>
+                    <p className="text-xs text-stone-500 dark:text-zinc-400">Desseleciona os momentos que não vais usar. Os que têm cânticos ficam sempre visíveis.</p>
                   </div>
                   <div className="grid gap-1 sm:grid-cols-2">
                     {LITURGICAL_MOMENTS.map((moment) => {
                       const hasSongs = momentsWithSongs.has(moment);
                       const isVisible = !hiddenMoments.includes(moment);
                       return (
-                        <label key={moment} className={`flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${hasSongs ? 'cursor-not-allowed bg-stone-50 text-stone-400' : 'cursor-pointer hover:bg-stone-50'}`}>
+                        <label key={moment} className={`flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${hasSongs ? 'cursor-not-allowed bg-stone-50 text-stone-400 dark:bg-zinc-950 dark:text-zinc-500' : 'cursor-pointer hover:bg-stone-50 dark:hover:bg-zinc-800'}`}>
                           <Checkbox
                             checked={isVisible}
                             disabled={hasSongs || !canEditSettings}
@@ -571,7 +571,7 @@ export default function EditMassModal({ mass, isOpen, onClose, onUpdate, onDelet
             {/* Members Section - Only for owners */}
             <div className="space-y-6">
             {canManageMembers && (
-              <section className="space-y-4 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+              <section className="space-y-4 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-5">
                 <div className="flex items-center justify-between">
                   <Label className="text-base font-medium flex items-center gap-2">
                     <Users className="w-4 h-4" />
@@ -662,7 +662,7 @@ export default function EditMassModal({ mass, isOpen, onClose, onUpdate, onDelet
         </div>
 
         {/* Footer */}
-        <div className="flex shrink-0 flex-col-reverse gap-3 border-t bg-white p-4 sm:flex-row sm:items-center sm:justify-between sm:px-8 sm:py-5">
+        <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-stone-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950 sm:flex-row sm:items-center sm:justify-between sm:px-8 sm:py-5">
           {(isOwner || isAdmin) && (
             <Button
               variant="destructive"
