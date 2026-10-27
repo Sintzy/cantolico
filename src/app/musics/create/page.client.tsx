@@ -41,7 +41,7 @@ export default function CreateNewMusicPage() {
   useEffect(() => {
     if (status === "loading") return;
     if (!session) {
-      router.push("/login");
+      router.push("/sign-in");
       return;
     }
     fetch("/api/user/moderation-status")
@@ -223,7 +223,7 @@ export default function CreateNewMusicPage() {
         <div className="mx-auto max-w-md px-5 py-16 text-center">
           <p className="text-stone-500 mb-6">Precisas de estar autenticado para criares uma música.</p>
           <button
-            onClick={() => router.push("/login")}
+            onClick={() => router.push("/sign-in")}
             className="rounded-lg bg-stone-900 px-6 py-2.5 text-sm font-medium text-white hover:bg-rose-700 transition-colors"
           >
             Fazer Login

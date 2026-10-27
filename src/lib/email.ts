@@ -1014,7 +1014,7 @@ export function createLoginAlertEmailTemplate(
     color: '#6c757d'
   } : {
     text: 'Alterar Palavra-passe',
-    url: 'https://cantolico.pt/login?reset=true',
+    url: 'https://cantolico.pt/sign-in?reset=true',
     color: '#6c757d'
   };
 

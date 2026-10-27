@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
     const session = await getClerkSession();
     if (!session) {
       // Redirecionar para login com return URL
-      return NextResponse.redirect(new URL(`/login?callbackUrl=${encodeURIComponent(`/playlists/invite/accept?token=${token}`)}`, request.url));
+      return NextResponse.redirect(new URL(`/sign-in?redirect_url=${encodeURIComponent(`/playlists/invite/accept?token=${token}`)}`, request.url));
     }
 
     // Verificar se o email do usuário logado corresponde ao email do convite

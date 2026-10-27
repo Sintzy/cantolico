@@ -92,7 +92,7 @@ export default function AdminDashboard() {
     if (status === 'loading') return;
     
     if (!session || session.user.role !== 'ADMIN') {
-      router.push('/login');
+      router.push('/sign-in');
       return;
     }
 

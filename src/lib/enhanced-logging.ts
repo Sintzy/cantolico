@@ -124,8 +124,6 @@ export async function withPerformanceMonitoring<T>(
 
 // Determinar se devemos fazer log das métricas (evitar spam)
 function shouldLogMetrics(url: string, method: string): boolean {
-  // Não logar endpoints de polling/realtime frequentes
-  if (url.includes('/api/logs/realtime')) return false;
   if (url.includes('/api/health')) return false;
   if (url.includes('/api/auth/session')) return false;
   

@@ -42,7 +42,7 @@ export default function CreatePlaylistPage() {
     if (status === "loading") return;
 
     if (!session) {
-      router.push("/login");
+      router.push("/sign-in");
       return;
     }
   }, [session, status, router]);
@@ -166,7 +166,7 @@ export default function CreatePlaylistPage() {
               Para criares e personalizares as tuas próprias playlists, precisas de estar autenticado na tua conta.
             </p>
             <Button asChild size="lg" className="bg-stone-900 hover:bg-rose-700 transition-colors text-white">
-              <Link href="/login">
+              <Link href="/sign-in">
                 <Plus className="h-4 w-4 mr-2" />
                 Fazer Login
               </Link>

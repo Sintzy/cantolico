@@ -36,8 +36,6 @@ const isAdminOnlyRoute = createRouteMatcher([
 const isAuthRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
-  '/login(.*)',
-  '/register(.*)',
 ]);
 
 export default clerkMiddleware(async (auth, req: NextRequest) => {

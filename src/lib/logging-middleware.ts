@@ -396,8 +396,8 @@ function shouldLogRequest(req: NextRequest): boolean {
       '/musics/create',
       '/playlists/create',
       '/auth/',
-      '/login',
-      '/register'
+      '/sign-in',
+      '/sign-up'
     ];
     
     // Se não for um path importante, não logar
