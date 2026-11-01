@@ -138,33 +138,30 @@ export default function AdminCreateMusicPage() {
       formData.append('spotifyLink', form.spotifyLink.trim());
 
       const validFiles = files.filter((file) => file.description?.trim().length > 0);
-      formData.append(
-        'files',
-        JSON.stringify(
-          validFiles.map((file) => ({
-            fileType: file.fileType,
-            fileName: file.file.name,
-            description: file.description.trim(),
-            fileSize: file.file.size,
-          })),
-        ),
-      );
-
       validFiles.forEach((fileData, index) => {
         formData.append(`file_${index}`, fileData.file);
+        formData.append(`fileType_${index}`, fileData.fileType);
+        formData.append(`fileDescription_${index}`, fileData.description.trim());
       });
+      formData.append('fileCount', String(validFiles.length));
 
       const response = await fetch('/api/musics/create', {
         method: 'POST',
         body: formData,
       });
 
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error('Resposta inválida do servidor');
+      const responseText = await response.text();
+      let data: { success?: boolean; error?: string };
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        console.error('Resposta inválida ao criar música:', {
+          status: response.status,
+          contentType: response.headers.get('content-type'),
+          responseText,
+        });
+        throw new Error('O servidor devolveu uma resposta inválida. Tenta novamente.');
       }
-
-      const data = await response.json();
       if (!response.ok || !data.success) {
         throw new Error(data.error || 'Erro ao criar música');
       }

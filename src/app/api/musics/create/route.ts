@@ -181,66 +181,53 @@ export const POST = withUserProtection<any>(async (req: NextRequest, session: an
     const pdfFile = formData.get("pdf") as File | null;
     const audioFile = formData.get("audio") as File | null;
 
-    // Novo sistema de ficheiros: processar array de ficheiros com descrições
-    const filesJson = formData.get("files")?.toString();
+    // Os anexos chegam em campos multipart individuais. Evitar um JSON dentro do
+    // multipart torna este endpoint compatível com os runtimes/proxies de upload.
     let filesData: Array<{fileType: FileType, fileName: string, description: string, file: File, fileBuffer: Buffer}> = [];
-    
-    if (filesJson) {
-      try {
-        const parsedFiles = JSON.parse(filesJson);
-        filesData = await Promise.all(
-          parsedFiles.map(async (f: any, index: number) => {
-            const file = formData.get(`file_${index}`) as File;
-            if (!file) return null;
+    const fileCountValue = formData.get("fileCount");
+    const fileCount = fileCountValue === null ? 0 : Number(fileCountValue);
 
-            // Validação rigorosa de ficheiros (anti-XSS)
-            const isPdf = f.fileType === 'PDF';
-            const isAudio = f.fileType === 'AUDIO';
+    if (!Number.isInteger(fileCount) || fileCount < 0 || fileCount > 40) {
+      return NextResponse.json({ error: "Número de ficheiros inválido" }, { status: 400 });
+    }
 
-            const fileBuffer = Buffer.from(await file.arrayBuffer());
+    for (let index = 0; index < fileCount; index++) {
+      const file = formData.get(`file_${index}`);
+      const fileType = formData.get(`fileType_${index}`)?.toString();
+      const description = formData.get(`fileDescription_${index}`)?.toString().trim();
 
-            if (isPdf) {
-              // Verificar PDF magic bytes
-              const pdfMagic = fileBuffer.slice(0, 5).toString('ascii');
-              if (pdfMagic !== '%PDF-') {
-                console.error(`Ficheiro ${file.name} rejeitado: não é um PDF válido`);
-                return null;
-              }
-            }
-
-            if (isAudio) {
-              // Verificar magic bytes de áudio
-              let isValidAudio = false;
-              if ((fileBuffer[0] === 0x49 && fileBuffer[1] === 0x44 && fileBuffer[2] === 0x33) ||
-                  (fileBuffer[0] === 0xFF && (fileBuffer[1] === 0xFB || fileBuffer[1] === 0xF3 || fileBuffer[1] === 0xF2)) ||
-                  (fileBuffer[0] === 0x52 && fileBuffer[1] === 0x49 && fileBuffer[2] === 0x46 && fileBuffer[3] === 0x46) ||
-                  (fileBuffer[0] === 0x4F && fileBuffer[1] === 0x67 && fileBuffer[2] === 0x67 && fileBuffer[3] === 0x53) ||
-                  (fileBuffer[4] === 0x66 && fileBuffer[5] === 0x74 && fileBuffer[6] === 0x79 && fileBuffer[7] === 0x70)) {
-                isValidAudio = true;
-              }
-              
-              if (!isValidAudio) {
-                console.error(`Ficheiro ${file.name} rejeitado: não é um áudio válido`);
-                return null;
-              }
-            }
-
-            return {
-              fileType: f.fileType,
-              fileName: f.fileName,
-              description: f.description,
-              file: file,
-              fileBuffer: fileBuffer
-            };
-          })
-        );
-        
-        // Filtrar nulls (ficheiros inválidos)
-        filesData = filesData.filter((f): f is NonNullable<typeof f> => f !== null);
-        
-      } catch (error) {
-        console.error("Erro ao processar ficheiros:", error);
+      if (!(file instanceof File) || (fileType !== FileType.PDF && fileType !== FileType.AUDIO)) {
+        return NextResponse.json({ error: `Dados inválidos para o ficheiro ${index + 1}` }, { status: 400 });
       }
+
+      if (!description || description.length > 300) {
+        return NextResponse.json({ error: `A descrição do ficheiro ${index + 1} é obrigatória e pode ter no máximo 300 caracteres` }, { status: 400 });
+      }
+
+      const maxSize = fileType === FileType.PDF ? 50 * 1024 * 1024 : 20 * 1024 * 1024;
+      if (file.size > maxSize) {
+        return NextResponse.json({ error: `${file.name} excede o tamanho máximo permitido` }, { status: 400 });
+      }
+
+      const fileBuffer = Buffer.from(await file.arrayBuffer());
+      if (fileType === FileType.PDF && fileBuffer.slice(0, 5).toString('ascii') !== '%PDF-') {
+        return NextResponse.json({ error: `${file.name} não é um PDF válido` }, { status: 400 });
+      }
+
+      if (fileType === FileType.AUDIO) {
+        const isValidAudio =
+          (fileBuffer[0] === 0x49 && fileBuffer[1] === 0x44 && fileBuffer[2] === 0x33) ||
+          (fileBuffer[0] === 0xFF && (fileBuffer[1] === 0xFB || fileBuffer[1] === 0xF3 || fileBuffer[1] === 0xF2)) ||
+          (fileBuffer[0] === 0x52 && fileBuffer[1] === 0x49 && fileBuffer[2] === 0x46 && fileBuffer[3] === 0x46) ||
+          (fileBuffer[0] === 0x4F && fileBuffer[1] === 0x67 && fileBuffer[2] === 0x67 && fileBuffer[3] === 0x53) ||
+          (fileBuffer[4] === 0x66 && fileBuffer[5] === 0x74 && fileBuffer[6] === 0x79 && fileBuffer[7] === 0x70);
+
+        if (!isValidAudio) {
+          return NextResponse.json({ error: `${file.name} não é um ficheiro de áudio válido` }, { status: 400 });
+        }
+      }
+
+      filesData.push({ fileType, fileName: file.name, description, file, fileBuffer });
     }
 
     const spotifyLink = formData.get("spotifyLink")?.toString() ?? null;
