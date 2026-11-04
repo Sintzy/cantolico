@@ -54,6 +54,7 @@ async function getMass(id: string, userId?: number, userEmail?: string, userRole
       celebration,
       liturgicalColor,
       visibility,
+      hiddenMoments,
       userId,
       createdAt,
       updatedAt,

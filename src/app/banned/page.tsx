@@ -18,7 +18,7 @@ export default function BannedPage() {
     if (status === "loading") return;
     
     if (!session) {
-      router.push("/login");
+      router.push("/sign-in");
       return;
     }
 

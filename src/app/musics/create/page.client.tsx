@@ -41,7 +41,7 @@ export default function CreateNewMusicPage() {
   useEffect(() => {
     if (status === "loading") return;
     if (!session) {
-      router.push("/login");
+      router.push("/sign-in");
       return;
     }
     fetch("/api/user/moderation-status")
@@ -179,20 +179,28 @@ export default function CreateNewMusicPage() {
       formData.append("youtubeLink", form.youtubeLink);
       formData.append("spotifyLink", form.spotifyLink);
       const validFiles = files.filter(f => f.description && f.description.trim().length > 0);
-      if (validFiles.length > 0) {
-        formData.append("files", JSON.stringify(validFiles.map(f => ({ fileType: f.fileType, fileName: f.file.name, description: f.description.trim(), fileSize: f.file.size }))));
-        validFiles.forEach((fileData, index) => formData.append(`file_${index}`, fileData.file));
-      } else {
-        formData.append("files", JSON.stringify([]));
-      }
+      // Os dados de cada anexo seguem em campos próprios do FormData. Assim não
+      // dependemos de fazer JSON.parse num campo multipart (que pode ser alterado
+      // por proxies ou runtimes de upload).
+      formData.append("fileCount", String(validFiles.length));
+      validFiles.forEach((fileData, index) => {
+        formData.append(`file_${index}`, fileData.file);
+        formData.append(`fileType_${index}`, fileData.fileType);
+        formData.append(`fileDescription_${index}`, fileData.description.trim());
+      });
       const res = await fetch("/api/musics/create", { method: "POST", body: formData });
-      const contentType = res.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        const text = await res.text();
-        console.error("Resposta não-JSON recebida:", text);
-        throw new Error("Resposta inválida do servidor");
+      const responseText = await res.text();
+      let data: { success?: boolean; error?: string };
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        console.error("Resposta inválida recebida ao submeter música:", {
+          status: res.status,
+          contentType: res.headers.get("content-type"),
+          responseText,
+        });
+        throw new Error("O servidor devolveu uma resposta inválida. Tenta novamente.");
       }
-      const data = await res.json();
       if (data.success) {
         trackEvent("song_create_submit_success", { source: "public_create_page", type: form.type });
         toast.success("A tua música foi enviada para revisão com sucesso!");
@@ -223,7 +231,7 @@ export default function CreateNewMusicPage() {
         <div className="mx-auto max-w-md px-5 py-16 text-center">
           <p className="text-stone-500 mb-6">Precisas de estar autenticado para criares uma música.</p>
           <button
-            onClick={() => router.push("/login")}
+            onClick={() => router.push("/sign-in")}
             className="rounded-lg bg-stone-900 px-6 py-2.5 text-sm font-medium text-white hover:bg-rose-700 transition-colors"
           >
             Fazer Login

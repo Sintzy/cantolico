@@ -1,1 +1,0 @@
-export { generateMetadata } from "./layout";

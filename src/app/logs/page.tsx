@@ -25,8 +25,7 @@ import {
   Trash2,
   Archive,
   Eye,
-  RefreshCw,
-  Settings
+  RefreshCw
 } from 'lucide-react';
 import { useLogger } from '@/hooks/useLogger';
 
@@ -375,12 +374,6 @@ export default function LogsPage() {
             <Download className="h-4 w-4 mr-2" />
             Exportar
           </Button>
-          <Link href="/logs/analytics">
-            <Button variant="outline">
-              <Settings className="h-4 w-4 mr-2" />
-              Analytics
-            </Button>
-          </Link>
           {/* Alertas button removed (API deleted) */}
         </div>
       </div>

@@ -128,7 +128,7 @@ function PlaylistsContent({ initialPlaylists }: PlaylistsClientProps) {
             <h1 className="text-2xl font-bold text-stone-900 mb-4">Playlists</h1>
             <p className="text-stone-500 mb-6">Faz login para ver as tuas playlists</p>
             <Button asChild>
-              <Link href="/login">Fazer Login</Link>
+              <Link href="/sign-in">Fazer Login</Link>
             </Button>
           </div>
         </div>

@@ -60,7 +60,7 @@ export default function PartnerApiKeysPage() {
   useEffect(() => {
     if (status === 'loading') return;
     if (!session || session.user.role !== 'ADMIN') {
-      router.replace('/login');
+      router.replace('/sign-in');
       return;
     }
     void loadKeys();

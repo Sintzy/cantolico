@@ -84,7 +84,7 @@ export default function HomePageClient() {
               </Link>
               {!hasUser && (
                 <Link
-                  href="/register"
+                  href="/sign-up"
                   prefetch={false}
                   className="inline-flex items-center gap-2 rounded-full border border-stone-300 px-7 py-3.5 text-sm font-medium tracking-wide text-stone-700 transition-colors duration-200 hover:border-stone-400 hover:text-stone-900"
                 >
@@ -343,7 +343,7 @@ export default function HomePageClient() {
                 </Link>
                 {!hasUser && (
                   <Link
-                    href="/register"
+                    href="/sign-up"
                     className="inline-flex items-center gap-2 rounded-full border border-stone-600 px-8 py-3.5 text-sm font-medium tracking-wide text-stone-300 transition-colors duration-200 hover:border-stone-400 hover:text-white"
                   >
                     Criar conta gratuita

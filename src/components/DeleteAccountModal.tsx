@@ -73,7 +73,7 @@ export default function DeleteAccountModal({
       // Se é auto-eliminação, fazer logout e redirecionar
       if (!isAdminAction) {
         await signOut({ redirect: false });
-        router.push('/register?message=account-deleted');
+        router.push('/sign-up?message=account-deleted');
       } else {
         // Se é ação de admin, chamar callback de sucesso
         onSuccess?.();
